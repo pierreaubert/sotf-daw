@@ -1,0 +1,43 @@
+{
+  "command": "cargo test -p sotf-plugin-aec --release --test audit_echo_paths --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+  "result": "failed: 8 of 24 scene/post-filter/rate combinations",
+  "rates": [
+    16000,
+    48000
+  ],
+  "delay_jump_erle_db": {
+    "16000": [
+      1.803073,
+      6.449995
+    ],
+    "48000": [
+      2.871421,
+      7.934986
+    ]
+  },
+  "drift_100ppm_erle_db": {
+    "16000": [
+      0.518969,
+      0.51897
+    ],
+    "48000": [
+      0.0,
+      0.0
+    ]
+  },
+  "order": "post-filter disabled, enabled",
+  "thresholds_db": {
+    "delay_jump": 12,
+    "drift": 6
+  },
+  "source_base": "37320859910d0c8282f1a5c4f2deaa3183f498da",
+  "additional_quiet_near_end_failure": {
+    "fixture": "near-end scale 0.25, after tracking correction but before post-filter correction",
+    "post_filter_near_end_snr_db": {
+      "16000": 1.796732,
+      "48000": 1.294743
+    },
+    "minimum_db": 10,
+    "cause": "independent near-end power was assimilated into the residual leakage estimate"
+  }
+}

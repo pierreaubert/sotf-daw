@@ -1,5 +1,14 @@
 # Unreleased
 
+- Keep the background explorer learning through delay changes and double-talk;
+  gate foreground promotion on sustained coherent improvement. Retain a 133 ms
+  initial gate and use 25 ms for subsequent tracking updates.
+- Protect quiet independent near-end onsets from being learned as residual echo
+  by checking residual coherence and its rise above the learned leakage floor.
+- Add independent public echo-path tests at 16/44.1/48 kHz for delay jumps,
+  ±100 ppm drift, nonlinear echo, near-end-only audio and three double-talk
+  levels, with exact callback partition comparisons and onset/recovery metrics.
+
 - Fix AUD103 direct construction using hidden 0.7 background learning and fixed
   48 kHz adaptive timing despite its reported 0.5 step and requested sample rate.
   Prepare the constructor from one canonical step binding and the actual rate.

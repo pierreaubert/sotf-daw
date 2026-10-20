@@ -62,9 +62,57 @@
       "id": 3,
       "plugin": "AEC",
       "audit_text": "[`aec_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/aec_plugin.rs):312\u2013490 adapts a microphone/reference pair to mono output with block buffering, resettable adaptive/postfilter state and finite draining that freezes learning. It consumes pending output before accumulating the next block, which helps block partition consistency. Reference alignment and the first adaptation interval matter more than a steady-state cancellation number.\n\n`stream_boundaries.rs` and integration tests cover stream mechanics. Extend independent echo-path ground truth with delay jumps, clock drift, nonlinear loudspeaker distortion, near-end-only speech and double-talk. Report ERLE only during suitable far-end intervals, plus near-end speech distortion. Classical options include robust delay estimation, two-path adaptation and coherence-based double-talk control. A small neural residual-echo suppressor/nonlinear front end is a credible hybrid candidate [hybrid AEC research][R3]; keep adaptive cancellation and safe bypass operational without inference.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "requirement": "Track in-tail delay changes and fractional clock drift without starving background adaptation.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs",
+            "audit/artifacts/plugin-audit-20261018/aec-validation.json"
+          ],
+          "result": "Background learning stays active. Foreground promotion requires squared correlation >=0.5 and >=1 dB smoothed improvement for 133 ms initially, 25 ms thereafter. Delay-jump ERLE improves from 1.8\u20132.9 dB to 28.0\u201335.6 dB without the post-filter. Both signs of 100 ppm drift reach 4.4\u20139.6 dB without suppression, 13.9\u201317.2 dB with it. The documented regression floor is 3 dB; there is no clock synchronization."
+        },
+        {
+          "requirement": "Preserve independent near-end audio, including quiet onsets, double-talk and near-end-only audio after learned echo.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs",
+            "audit/artifacts/plugin-audit-20261018/aec-validation.json"
+          ],
+          "result": "Residual coherence and a rise above the learned floor prevent quiet near-end assimilation into leakage. Three near-end levels (0.25/1/2) pass >=10 dB SNR, with observed minimum 20.58 dB including onset. Quiet post-filter baseline was 1.29\u20131.80 dB SNR. Cold/after-echo near-end-only segments exceed 139 dB SNR with the post-filter."
+        },
+        {
+          "requirement": "Use independent echo-path ground truth, separate far-end ERLE from near-end distortion, and verify reference alignment, initial adaptation and partitions.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs",
+            "audit/artifacts/plugin-audit-20261018/aec-validation.json"
+          ],
+          "result": "60 scene/rate/post-filter combinations at 16/44.1/48 kHz use independently generated two-tap, fractional-delay and nonlinear echo. Regular and 193/1/511/67 callbacks are bit-identical. The exact 256-frame latency and first output block are checked independently. Eight 250 ms convergence windows per linear case report initial learning; onset and far-end recovery are measured separately."
+        },
+        {
+          "requirement": "Preserve reset, frozen finite drain, constructor timing, parameters and realtime allocation contracts.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs",
+            "audit/artifacts/plugin-audit-20261018/aec-validation.json"
+          ],
+          "result": "Full release QA-feature selection: 63 tests passed, including frozen nonzero-tail oracles and cold callback/drain/reset allocation checks. Strict all-target QA Clippy passes. No parameter/preset schema change or inference dependency."
+        }
+      ],
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs",
+        "audit/artifacts/plugin-audit-20261018/aec-tracking-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/aec-validation.json",
+        "audit/artifacts/plugin-audit-20261018/aec-clippy.json"
+      ],
+      "validation_limits": [
+        "Independent deterministic colored-noise engineering fixtures, not recorded speech or perceptual results.",
+        "One 50 ms prepared tail and default 0.5 step at three rates; no out-of-tail compensation, clock synchronization or universal ERLE guarantee.",
+        "The initial 6 dB drift target is not achieved at 48 kHz without suppression; the final 3 dB regression floor documents half-power reduction.",
+        "Neural residual echo/nonlinear models remain deferred optional research in the separate backlog."
+      ]
     },
     {
       "id": 4,
@@ -1933,6 +1981,15 @@
       ],
       "result": "1776 actual internal2x/4x retained-host cases and216 finite EOF cases pass. Finite support/process/drain envelopes implemented; required EQ row recommendations mapped to verified artifacts, closing plugin23 production scope.",
       "limitations": "FIR transport shared as primitive; bounded f64 matrices, no universal/f32/deadline claim. Cross-wrapper/platform shared work and optional ML tracked separately. Overall33/45."
+    },
+    {
+      "name": "AEC coherent foreground promotion and quiet near-end protection",
+      "state": "verified",
+      "plugin_ids": [
+        3
+      ],
+      "result": "60 independent cases with onset/recovery/initial-convergence gates; 63 release tests and strict Clippy pass. Two reproduced production failures corrected. Overall 34/45.",
+      "limitations": "Bounded in-tail tracking with a 3 dB drift floor; noise fixtures do not establish speech-corpus or perceptual performance. Optional ML remains separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

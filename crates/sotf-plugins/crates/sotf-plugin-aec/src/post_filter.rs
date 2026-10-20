@@ -155,9 +155,22 @@ impl ResidualEchoSuppressor {
         // protects balanced double-talk.
         // In that case bypass suppression (copy input directly).
         let echo_active = self.dtd_echo_power > 1e-12;
+        // Parseval's identity makes this a normalized error/echo correlation.
+        // Error is zero-padded, so correlation with echo is conservative. A
+        // quiet, independent near-end onset must not become learned leakage.
+        let cross: Complex<f32> = error_spectrum[..self.spectrum_size]
+            .iter()
+            .zip(&echo_estimate_spectrum[..self.spectrum_size])
+            .map(|(&error, &echo)| error * echo.conj())
+            .sum();
+        let residual_coherence = cross.norm_sqr() / (raw_mic_pwr * raw_echo_pwr).max(1e-20);
         let double_talk = echo_active
             && (raw_mic_pwr > self.dtd_threshold * (raw_echo_pwr + 1e-20)
-                || self.dtd_mic_power > self.dtd_threshold * self.dtd_echo_power);
+                || self.dtd_mic_power > self.dtd_threshold * self.dtd_echo_power
+                // A 6 dB rise over the learned floor, with less than 10%
+                // coherent power, protects quieter independent near-end speech.
+                || (residual_coherence < 0.1
+                    && raw_mic_pwr > 4.0 * self.residual_leakage * (raw_echo_pwr + 1e-20)));
 
         if echo_active && !double_talk {
             let observed = (raw_mic_pwr / (raw_echo_pwr + 1e-20)).clamp(0.001, 1.0);

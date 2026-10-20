@@ -9,7 +9,7 @@ Removes echo from audio streams in real-time. When a microphone picks up audio p
 ## Features
 
 - **PBFDAF algorithm**: Efficient frequency-domain adaptive filtering
-- **Two-path architecture**: Stable foreground plus a background explorer with double-talk adaptation gating
+- **Two-path architecture**: Stable foreground plus a continuously adapting background explorer with coherence-gated promotion
 - **Post-filter**: Leakage-model residual echo suppression with click-free wet/dry switching
 - **Real-time processing**: Low-latency operation suitable for live audio
 - **Input policy**: Non-finite microphone/reference samples are replaced by silence before adaptation
@@ -27,6 +27,36 @@ This corrects an older constructor-only discrepancy: direct `new` processing
 used a hidden background step of 0.7 and 48 kHz adaptive timing at every rate.
 The configured and explicitly initialized paths keep their existing behavior.
 Initialization remains available to start a fresh stream at a new rate.
+
+## Echo-path tracking and near-end protection
+
+The background continues learning through ambiguous residuals such as delay
+changes and double-talk. Promotion to the audible foreground requires at least
+1 dB of smoothed improvement and squared microphone/estimate correlation of
+0.5 in every qualifying block. Initial promotion requires 133 ms of evidence;
+subsequent promotions require 25 ms to reduce drift-induced staleness.
+The post-filter also bypasses an incoherent residual-power rise of 6 dB above
+its learned leakage floor, preserving quieter near-end onsets.
+
+`tests/audit_echo_paths.rs` builds microphone audio independently with a two-tap
+path, a 7-to-19 ms delay jump, both signs of 100 ppm fractional clock drift,
+memoryless nonlinear distortion, and independent colored-noise near-end
+excitation at three levels, plus near-end-only audio after a learned echo path. It compares latency-aligned output across regular
+and irregular callbacks at 16/44.1/48 kHz with the post-filter on and off.
+The first two seconds of adaptation are reported in 250 ms windows; output
+latency is checked independently at 256 frames. ERLE is measured only in
+far-end-only windows; double-talk reports error relative
+to the known near-end signal, including onset and subsequent far-end recovery.
+These are deterministic engineering fixtures rather than recorded speech tests.
+
+The current fixtures achieve 28–36 dB delay-jump ERLE without the post-filter,
+at least 20 dB near-end SNR, and 4.4–9.6 dB ERLE under drift without the
+post-filter (13.9–17.2 dB with it). Drift has a documented 3 dB regression floor,
+representing removal of at least half the echo power; an initial 6 dB target
+was not met at 48 kHz without suppression. This plugin does not synchronize
+independent clocks or compensate reference delays beyond the prepared tail.
+Exact commands, measurements, and baseline failures are recorded under
+`audit/artifacts/plugin-audit-20261018/aec-*.json` at the workspace root.
 
 ## Finite streams
 

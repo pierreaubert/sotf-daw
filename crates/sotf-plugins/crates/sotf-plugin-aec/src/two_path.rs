@@ -26,6 +26,8 @@ pub struct TwoPathAec {
     transfer_count: usize,
     /// Threshold for transfer (number of consecutive better frames)
     transfer_threshold: usize,
+    tracking_transfer_threshold: usize,
+    foreground_ready: bool,
     block_size: usize,
     /// Pre-allocated output buffer to avoid returning borrows
     output_buf: Vec<f32>,
@@ -65,6 +67,7 @@ impl TwoPathAec {
             self.double_talk_blocks as f32,
             if self.double_talk { 1.0 } else { 0.0 },
             self.background_adaptation_scale,
+            if self.foreground_ready { 1.0 } else { 0.0 },
         ];
         for weight in self
             .foreground
@@ -105,11 +108,12 @@ impl TwoPathAec {
             power_bg: 1.0,
             power_alpha,
             transfer_count: 0,
-            // Require 25 consecutive blocks (≈ 133 ms at 48 kHz / 256) where
-            // background has at least 1 dB advantage (power ratio < 0.794).
-            // The old value of 5 blocks (≈ 27 ms) triggered rapid foreground /
-            // background ping-pong on non-stationary signals.
+            // Initial promotion needs 133 ms of better, coherent estimates.
             transfer_threshold: (0.133 / block_seconds).ceil().max(1.0) as usize,
+            // Once initialized, require 25 ms of the same evidence. Waiting
+            // another 133 ms allowed clock drift to stale the audible path.
+            tracking_transfer_threshold: (0.025 / block_seconds).ceil().max(1.0) as usize,
+            foreground_ready: false,
             block_size,
             output_buf: vec![0.0; block_size],
             double_talk: false,
@@ -133,7 +137,10 @@ impl TwoPathAec {
         // The foreground is deliberately stable: only the background adapts.
         // Analyze the shared reference/FDL once in the background, then use it
         // to evaluate the foreground output without a second reference FFT.
-        self.background_adaptation_scale = if self.double_talk { 0.05 } else { 1.0 };
+        // The explorer must keep tracking during ambiguous residuals: a delay
+        // change and near-end speech can both trigger the foreground detector.
+        // Protect audible weights at promotion, rather than starving learning.
+        self.background_adaptation_scale = 1.0;
         let error_bg = self.background.process_with_adaptation(
             mic,
             reference,
@@ -141,6 +148,20 @@ impl TwoPathAec {
         );
         self.reference_fft_count += 1;
         let pow_bg: f32 = error_bg.iter().map(|x| x * x).sum::<f32>() / b as f32;
+        // Evaluate the current causal estimate, before this block's update.
+        // Squared normalized correlation >= 0.5 requires the explorer to explain
+        // at least 50% of microphone power before it may replace audible weights.
+        // Strong independent near-end energy prevents promotion, while a
+        // newly learned echo path can recover even if foreground DTD is active.
+        let (mut cross, mut estimate_energy, mut mic_energy) = (0.0_f64, 0.0_f64, 0.0_f64);
+        for (&sample, &error) in mic.iter().zip(error_bg) {
+            let sample = f64::from(sample);
+            let estimate = sample - f64::from(error);
+            cross += sample * estimate;
+            estimate_energy += estimate * estimate;
+            mic_energy += sample * sample;
+        }
+        let promotion_coherence = cross * cross / (mic_energy * estimate_energy).max(1e-30);
         let error_fg = self
             .foreground
             .process_with_shared_reference(mic, &self.background, 0.0);
@@ -169,14 +190,19 @@ impl TwoPathAec {
         // Check if background is consistently better by at least 1 dB
         // (power ratio 10^(-1/10) ≈ 0.794).  The old 5% margin (0.95) was too
         // loose and triggered transfers on routine fluctuations.
-        if self.power_bg < self.power_fg * 0.794 {
+        if self.power_bg < self.power_fg * 0.794 && promotion_coherence >= 0.5 {
             self.transfer_count += 1;
         } else {
             self.transfer_count = 0;
         }
 
         // Transfer background to foreground if sustained improvement
-        if self.transfer_count >= self.transfer_threshold {
+        let threshold = if self.foreground_ready {
+            self.tracking_transfer_threshold
+        } else {
+            self.transfer_threshold
+        };
+        if self.transfer_count >= threshold {
             self.transfer_bg_to_fg();
             self.transfer_count = 0;
         }
@@ -187,6 +213,7 @@ impl TwoPathAec {
     /// Transfer background filter weights to foreground.
     fn transfer_bg_to_fg(&mut self) {
         self.foreground.copy_weights_from(&self.background);
+        self.foreground_ready = true;
         self.power_fg = self.power_bg;
     }
 
@@ -207,6 +234,7 @@ impl TwoPathAec {
         self.power_fg = 1.0;
         self.power_bg = 1.0;
         self.transfer_count = 0;
+        self.foreground_ready = false;
         self.double_talk = false;
         self.double_talk_blocks = 0;
         self.background_adaptation_scale = 1.0;
@@ -386,9 +414,9 @@ mod tests {
         let after = aec.foreground_weight_energy();
         assert!(
             aec.double_talk_blocks() > 0,
-            "fixture must exercise the adaptation gate"
+            "fixture must exercise double-talk detection"
         );
-        assert_eq!(aec.background_adaptation_scale(), 0.05);
+        assert_eq!(aec.background_adaptation_scale(), 1.0);
         assert!((after - before).abs() < before.max(1e-6) * 0.08);
     }
 

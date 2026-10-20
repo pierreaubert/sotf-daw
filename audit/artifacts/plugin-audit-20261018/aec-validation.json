@@ -1,0 +1,677 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aec",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "results": [
+    {
+      "rate": 16000,
+      "scene": "Linear",
+      "post_filter": false,
+      "metric_db": 35.422809,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Linear",
+      "post_filter": true,
+      "metric_db": 59.033941,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "DelayJump",
+      "post_filter": false,
+      "metric_db": 35.567667,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "DelayJump",
+      "post_filter": true,
+      "metric_db": 59.499725,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Drift(-100)",
+      "post_filter": false,
+      "metric_db": 9.641136,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Drift(-100)",
+      "post_filter": true,
+      "metric_db": 17.145814,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Drift(100)",
+      "post_filter": false,
+      "metric_db": 9.640529,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Drift(100)",
+      "post_filter": true,
+      "metric_db": 17.153435,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Nonlinear",
+      "post_filter": false,
+      "metric_db": 26.643862,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "Nonlinear",
+      "post_filter": true,
+      "metric_db": 39.507965,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 16000,
+      "scene": "NearOnly",
+      "post_filter": false,
+      "metric_db": 333.873309,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "NearOnly",
+      "post_filter": true,
+      "metric_db": 139.068898,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "NearAfterEcho",
+      "post_filter": false,
+      "metric_db": 330.475461,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "NearAfterEcho",
+      "post_filter": true,
+      "metric_db": 139.015066,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "metric_db": 28.188039,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "metric_db": 28.188039,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "metric_db": 40.229239,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "metric_db": 40.229239,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "metric_db": 46.249839,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "metric_db": 46.249839,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "Linear",
+      "post_filter": false,
+      "metric_db": 28.718347,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Linear",
+      "post_filter": true,
+      "metric_db": 47.041681,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "DelayJump",
+      "post_filter": false,
+      "metric_db": 28.462683,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "DelayJump",
+      "post_filter": true,
+      "metric_db": 47.277669,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Drift(-100)",
+      "post_filter": false,
+      "metric_db": 4.809866,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Drift(-100)",
+      "post_filter": true,
+      "metric_db": 14.577111,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Drift(100)",
+      "post_filter": false,
+      "metric_db": 4.804889,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Drift(100)",
+      "post_filter": true,
+      "metric_db": 14.470417,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Nonlinear",
+      "post_filter": false,
+      "metric_db": 25.853373,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "Nonlinear",
+      "post_filter": true,
+      "metric_db": 41.202145,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 44100,
+      "scene": "NearOnly",
+      "post_filter": false,
+      "metric_db": 338.285898,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "NearOnly",
+      "post_filter": true,
+      "metric_db": 139.075851,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "NearAfterEcho",
+      "post_filter": false,
+      "metric_db": 334.922369,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "NearAfterEcho",
+      "post_filter": true,
+      "metric_db": 139.072902,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "metric_db": 22.109298,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "metric_db": 22.109298,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "metric_db": 34.150497,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "metric_db": 34.150498,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "metric_db": 40.171098,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "metric_db": 40.171097,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "Linear",
+      "post_filter": false,
+      "metric_db": 27.838218,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Linear",
+      "post_filter": true,
+      "metric_db": 47.786634,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "DelayJump",
+      "post_filter": false,
+      "metric_db": 28.027607,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "DelayJump",
+      "post_filter": true,
+      "metric_db": 49.1553,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Drift(-100)",
+      "post_filter": false,
+      "metric_db": 4.431016,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Drift(-100)",
+      "post_filter": true,
+      "metric_db": 14.34521,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Drift(100)",
+      "post_filter": false,
+      "metric_db": 4.389419,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Drift(100)",
+      "post_filter": true,
+      "metric_db": 13.873437,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Nonlinear",
+      "post_filter": false,
+      "metric_db": 24.905726,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "Nonlinear",
+      "post_filter": true,
+      "metric_db": 42.03622,
+      "metric": "far_end_erle"
+    },
+    {
+      "rate": 48000,
+      "scene": "NearOnly",
+      "post_filter": false,
+      "metric_db": 338.652044,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "NearOnly",
+      "post_filter": true,
+      "metric_db": 139.073282,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "NearAfterEcho",
+      "post_filter": false,
+      "metric_db": 335.290237,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "NearAfterEcho",
+      "post_filter": true,
+      "metric_db": 139.056753,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "metric_db": 20.659204,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "metric_db": 20.659204,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "metric_db": 32.700404,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "metric_db": 32.700404,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "metric_db": 38.721004,
+      "metric": "near_end_snr"
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "metric_db": 38.721004,
+      "metric": "near_end_snr"
+    }
+  ],
+  "phases": [
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "onset_snr_db": 28.022597,
+      "recovery_erle_db": 35.422809
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "onset_snr_db": 28.022597,
+      "recovery_erle_db": 59.034243
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "onset_snr_db": 40.063798,
+      "recovery_erle_db": 35.422809
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "onset_snr_db": 40.063794,
+      "recovery_erle_db": 59.034243
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "onset_snr_db": 46.084399,
+      "recovery_erle_db": 35.422809
+    },
+    {
+      "rate": 16000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "onset_snr_db": 46.084397,
+      "recovery_erle_db": 59.034332
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "onset_snr_db": 22.117201,
+      "recovery_erle_db": 28.718347
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "onset_snr_db": 22.117202,
+      "recovery_erle_db": 47.042181
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "onset_snr_db": 34.158401,
+      "recovery_erle_db": 28.718347
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "onset_snr_db": 34.1584,
+      "recovery_erle_db": 47.042217
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "onset_snr_db": 40.179001,
+      "recovery_erle_db": 28.718347
+    },
+    {
+      "rate": 44100,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "onset_snr_db": 40.178999,
+      "recovery_erle_db": 47.042391
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": false,
+      "onset_snr_db": 20.579264,
+      "recovery_erle_db": 27.838218
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(0.25)",
+      "post_filter": true,
+      "onset_snr_db": 20.579264,
+      "recovery_erle_db": 47.786929
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": false,
+      "onset_snr_db": 32.620464,
+      "recovery_erle_db": 27.838218
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(1.0)",
+      "post_filter": true,
+      "onset_snr_db": 32.620464,
+      "recovery_erle_db": 47.786999
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": false,
+      "onset_snr_db": 38.641064,
+      "recovery_erle_db": 27.838218
+    },
+    {
+      "rate": 48000,
+      "scene": "DoubleTalk(2.0)",
+      "post_filter": true,
+      "onset_snr_db": 38.641064,
+      "recovery_erle_db": 47.787299
+    }
+  ],
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib.rs": "f253238f96c80416223fb306ee669e3241640a3f9ea1f38bfb43a9ffd9b96ca5",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/params.rs": "e52c121134a27750bb09cacaa9d4dfabd6901e2f8cebb693cf86d6102f37f702",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/pbfdaf.rs": "6fa2e21b8bc1cfc62a8fac59ed5551063dcec876a47236a1ef752c6244190746",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/two_path.rs": "60cbcdabce2b0c40a5d67cc4b3bfd82e183a0e30003f2108f26983e4fa2d9f54",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/post_filter.rs": "e06c762be556ed22f5f65f468d8cd56e779d417a4a2ad545d20f8b437d1d1970",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/misc.rs": "d0fe7dd50097f9d663fd0044b8ac99ca26b9dc033df379b437a54cc074b44751",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/tests.rs": "a1ce140849e65a5f22257fd0d58bd51ce151bb9f2a14f2ae6c902fc0b72e69a3",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/aec_plugin.rs": "715fef019e699ece79c7061a25991f84a06ec9d168593f14962c48674acd1fb9",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/constructor_tests.rs": "bb420de4b865d1552c60054fac6bf57d4cfb1c13db62973eeb7460c91723d275",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/tests/drain.rs": "36330d298dd9b562c74f709ef539470c320b018394e2059fe493fac58cdb1eea",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/tests/audit_echo_paths.rs": "10c33e9ae2b007de536f79f333a8e0c7494c4ad1dcf99846f1913bf25ce4e714",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/tests/stream_boundaries.rs": "11151da4f9dcee27be3e55a3f913ca101097903280d30554cda4e3b8fabac04e",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/tests/integration.rs": "097a0a6111b567dde3b3e2a4f3d18467b51726c21208f8202ec423dd789baa97"
+  },
+  "output": "   Compiling sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)\n    Finished `release` profile [optimized] target(s) in 4.31s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aec-142b938bc38723a1)\n\nrunning 50 tests\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::param_index_coverage ... ok\ntest params::tests::roundtrip_serde ... ok\ntest pbfdaf::tests::test_pbfdaf_creation ... ok\ntest post_filter::tests::smoothing_coefficients_follow_seconds_not_blocks ... ok\ntest pbfdaf::tests::adaptive_partitions_are_causal_after_frequency_update ... ok\ntest post_filter::tests::test_full_echo_suppression ... ok\ntest post_filter::tests::leakage_model_preserves_near_end_during_balanced_double_talk ... ok\ntest pbfdaf::tests::test_pbfdaf_reset ... ok\ntest pbfdaf::tests::last_echo_estimate_is_frequency_domain_data ... ok\ntest post_filter::tests::test_no_echo_passthrough ... ok\ntest post_filter::tests::test_reset ... ok\ntest post_filter::tests::test_suppressor_creation ... ok\ntest tests::constructor_rejects_invalid_configuration ... ok\ntest pbfdaf::tests::delayed_echo_in_late_partition_converges_without_circular_alias ... ok\ntest tests::canonical_schema_is_the_runtime_state ... ok\ntest constructor_tests::constructor_adaptive_timing_matches_independent_seconds_and_block_arithmetic ... ok\ntest tests::initialize_clears_partial_input_and_restores_fixed_latency ... ok\ntest tests::structural_parameters_are_not_advertised_as_realtime ... ok\ntest pbfdaf::tests::test_pbfdaf_echo_cancellation ... ok\ntest tests::test_aec_plugin_creation ... ok\ntest tests::test_aec_plugin_parameters ... ok\ntest tests::test_aec_plugin_process ... ok\ntest tests::test_aec_rejects_mismatched_buffer_sizes ... ok\ntest tests::non_finite_input_is_silenced_and_never_poison_state ... ok\ntest tests::test_aec_large_host_block_does_not_overwrite_output_queue ... ok\ntest tests::reinitialize_matches_fresh_plugin_after_old_stream_was_queued ... ok\ntest tests::post_filter_toggle_is_ramped_and_keeps_suppressor_state_current ... ok\ntest tests::drain::drain_uses_frozen_nonconstant_suppressor_gains_with_direct_time_domain_oracle ... ok\ntest tests::test_two_path_transfer_threshold_not_too_aggressive ... ok\ntest tests::drain::native_tail_tracks_prepared_partitions_and_survives_reset ... ok\ntest two_path::tests::reference_fft_and_fdl_analysis_is_shared_by_both_paths ... ok\ntest two_path::tests::test_transfer_copies_background_state_to_foreground ... ok\ntest tests::test_post_filter_ifft_buf_size_never_changes ... ok\ntest two_path::tests::test_two_path_creation ... ok\ntest two_path::tests::test_two_path_reset ... ok\ntest two_path::tests::double_talk_freezes_foreground_and_recovers_afterwards ... ok\ntest tests::test_post_filter_dtd_preserves_near_end_speech ... ok\ntest two_path::tests::time_constants_are_sample_rate_derived ... ok\ntest two_path::tests::abrupt_echo_path_change_recovers_after_double_talk ... ok\ntest tests::latency_is_exactly_one_aec_block_for_every_callback_size ... ok\ntest two_path::tests::test_two_path_convergence ... ok\ntest tests::test_output_buffer_no_alloc_on_large_host_blocks ... ok\ntest tests::test_aec_echo_reduction ... ok\ntest tests::drain::drain_matches_direct_nonzero_last_partition_convolution_and_freezes_learning ... ok\ntest tests::test_pbfdaf_leakage_factor_is_meaningful ... ok\ntest constructor_tests::constructor_default_is_distinct_from_explicit_faster_background_learning ... ok\ntest tests::drain::wrong_process_clock_preserves_constructor_and_initialized_audio_epochs ... ok\ntest tests::drain::ordinary_zero_input_has_finite_support_while_learning_and_toggles_continue ... ok\ntest constructor_tests::zero_history_public_constructors_and_resets_have_identical_canonical_waveforms ... ok\n\ntest result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.52s\n\n     Running unittests bin/qa_aec.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aec-c14c20bfb1989ee6)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/audit_echo_paths.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_echo_paths-35f2b6e82c1d9cf9)\n\nrunning 1 test\nAEC 16000 Linear post=false metric_db=35.422809\nAEC_CONVERGENCE 16000 post=false erle_250ms_windows=[0.0, 0.059044602832317675, 19.407532649119766, 22.50473045591924, 30.17514032210615, 33.846892430050076, 35.26681356338985, 35.43584416308572]\nAEC 16000 Linear post=true metric_db=59.033941\nAEC_CONVERGENCE 16000 post=true erle_250ms_windows=[3.886144597587629e-7, 0.05904500417375805, 31.97259950648418, 44.00852927797913, 54.483315985848826, 58.47699844892575, 59.745542963630825, 59.45281260224826]\nAEC 16000 DelayJump post=false metric_db=35.567667\nAEC 16000 DelayJump post=true metric_db=59.499725\nAEC 16000 Drift(-100) post=false metric_db=9.641136\nAEC 16000 Drift(-100) post=true metric_db=17.145814\nAEC 16000 Drift(100) post=false metric_db=9.640529\nAEC 16000 Drift(100) post=true metric_db=17.153435\nAEC 16000 Nonlinear post=false metric_db=26.643862\nAEC 16000 Nonlinear post=true metric_db=39.507965\nAEC 16000 NearOnly post=false metric_db=333.873309\nAEC 16000 NearOnly post=true metric_db=139.068898\nAEC 16000 NearAfterEcho post=false metric_db=330.475461\nAEC 16000 NearAfterEcho post=true metric_db=139.015066\nAEC 16000 DoubleTalk(0.25) post=false metric_db=28.188039\nAEC_PHASE 16000 DoubleTalk(0.25) post=false onset_snr_db=28.022597 recovery_erle_db=35.422809\nAEC 16000 DoubleTalk(0.25) post=true metric_db=28.188039\nAEC_PHASE 16000 DoubleTalk(0.25) post=true onset_snr_db=28.022597 recovery_erle_db=59.034243\nAEC 16000 DoubleTalk(1.0) post=false metric_db=40.229239\nAEC_PHASE 16000 DoubleTalk(1.0) post=false onset_snr_db=40.063798 recovery_erle_db=35.422809\nAEC 16000 DoubleTalk(1.0) post=true metric_db=40.229239\nAEC_PHASE 16000 DoubleTalk(1.0) post=true onset_snr_db=40.063794 recovery_erle_db=59.034243\nAEC 16000 DoubleTalk(2.0) post=false metric_db=46.249839\nAEC_PHASE 16000 DoubleTalk(2.0) post=false onset_snr_db=46.084399 recovery_erle_db=35.422809\nAEC 16000 DoubleTalk(2.0) post=true metric_db=46.249839\nAEC_PHASE 16000 DoubleTalk(2.0) post=true onset_snr_db=46.084397 recovery_erle_db=59.034332\nAEC 44100 Linear post=false metric_db=28.718347\nAEC_CONVERGENCE 44100 post=false erle_250ms_windows=[0.0, 0.013636316155545926, 20.063452174650685, 21.768121368573276, 27.1956168673622, 28.176820994393044, 28.682529254337656, 28.734882529440256]\nAEC 44100 Linear post=true metric_db=47.041681\nAEC_CONVERGENCE 44100 post=true erle_250ms_windows=[3.839140966662435e-7, 0.0136366881771564, 30.612436450011703, 45.59791670797808, 51.620339586163965, 52.17803924093974, 51.70329238792974, 50.91029802766785]\nAEC 44100 DelayJump post=false metric_db=28.462683\nAEC 44100 DelayJump post=true metric_db=47.277669\nAEC 44100 Drift(-100) post=false metric_db=4.809866\nAEC 44100 Drift(-100) post=true metric_db=14.577111\nAEC 44100 Drift(100) post=false metric_db=4.804889\nAEC 44100 Drift(100) post=true metric_db=14.470417\nAEC 44100 Nonlinear post=false metric_db=25.853373\nAEC 44100 Nonlinear post=true metric_db=41.202145\nAEC 44100 NearOnly post=false metric_db=338.285898\nAEC 44100 NearOnly post=true metric_db=139.075851\nAEC 44100 NearAfterEcho post=false metric_db=334.922369\nAEC 44100 NearAfterEcho post=true metric_db=139.072902\nAEC 44100 DoubleTalk(0.25) post=false metric_db=22.109298\nAEC_PHASE 44100 DoubleTalk(0.25) post=false onset_snr_db=22.117201 recovery_erle_db=28.718347\nAEC 44100 DoubleTalk(0.25) post=true metric_db=22.109298\nAEC_PHASE 44100 DoubleTalk(0.25) post=true onset_snr_db=22.117202 recovery_erle_db=47.042181\nAEC 44100 DoubleTalk(1.0) post=false metric_db=34.150497\nAEC_PHASE 44100 DoubleTalk(1.0) post=false onset_snr_db=34.158401 recovery_erle_db=28.718347\nAEC 44100 DoubleTalk(1.0) post=true metric_db=34.150498\nAEC_PHASE 44100 DoubleTalk(1.0) post=true onset_snr_db=34.158400 recovery_erle_db=47.042217\nAEC 44100 DoubleTalk(2.0) post=false metric_db=40.171098\nAEC_PHASE 44100 DoubleTalk(2.0) post=false onset_snr_db=40.179001 recovery_erle_db=28.718347\nAEC 44100 DoubleTalk(2.0) post=true metric_db=40.171097\nAEC_PHASE 44100 DoubleTalk(2.0) post=true onset_snr_db=40.178999 recovery_erle_db=47.042391\nAEC 48000 Linear post=false metric_db=27.838218\nAEC_CONVERGENCE 48000 post=false erle_250ms_windows=[0.0, 0.2681155646684919, 18.932687589011458, 21.49501258008202, 25.932798746045663, 27.638964787049446, 27.79780122642807, 27.87350331735821]\nAEC 48000 Linear post=true metric_db=47.786634\nAEC_CONVERGENCE 48000 post=true erle_250ms_windows=[3.845214956252103e-7, 0.2681159489870433, 35.56639442363921, 45.200247685948185, 50.110158330360264, 51.529805735818655, 50.6926261651389, 49.604282808819804]\nAEC 48000 DelayJump post=false metric_db=28.027607\nAEC 48000 DelayJump post=true metric_db=49.155300\nAEC 48000 Drift(-100) post=false metric_db=4.431016\nAEC 48000 Drift(-100) post=true metric_db=14.345210\nAEC 48000 Drift(100) post=false metric_db=4.389419\nAEC 48000 Drift(100) post=true metric_db=13.873437\nAEC 48000 Nonlinear post=false metric_db=24.905726\nAEC 48000 Nonlinear post=true metric_db=42.036220\nAEC 48000 NearOnly post=false metric_db=338.652044\nAEC 48000 NearOnly post=true metric_db=139.073282\nAEC 48000 NearAfterEcho post=false metric_db=335.290237\nAEC 48000 NearAfterEcho post=true metric_db=139.056753\nAEC 48000 DoubleTalk(0.25) post=false metric_db=20.659204\nAEC_PHASE 48000 DoubleTalk(0.25) post=false onset_snr_db=20.579264 recovery_erle_db=27.838218\nAEC 48000 DoubleTalk(0.25) post=true metric_db=20.659204\nAEC_PHASE 48000 DoubleTalk(0.25) post=true onset_snr_db=20.579264 recovery_erle_db=47.786929\nAEC 48000 DoubleTalk(1.0) post=false metric_db=32.700404\nAEC_PHASE 48000 DoubleTalk(1.0) post=false onset_snr_db=32.620464 recovery_erle_db=27.838218\nAEC 48000 DoubleTalk(1.0) post=true metric_db=32.700404\nAEC_PHASE 48000 DoubleTalk(1.0) post=true onset_snr_db=32.620464 recovery_erle_db=47.786999\nAEC 48000 DoubleTalk(2.0) post=false metric_db=38.721004\nAEC_PHASE 48000 DoubleTalk(2.0) post=false onset_snr_db=38.641064 recovery_erle_db=27.838218\nAEC 48000 DoubleTalk(2.0) post=true metric_db=38.721004\nAEC_PHASE 48000 DoubleTalk(2.0) post=true onset_snr_db=38.641064 recovery_erle_db=47.787299\ntest independent_echo_paths_preserve_near_end_and_track_changes ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.70s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-26037035a0517597)\n\nrunning 9 tests\ntest wrong_buffer_sizes_return_error ... ok\ntest info_and_channels ... ok\ntest process_silence ... ok\ntest reset_restarts_latency ... ok\ntest parameter_roundtrip_and_validation ... ok\ntest process_with_independent_mic_ref ... ok\ntest initialize_changes_sample_rate ... ok\ntest new_and_from_params ... ok\ntest post_filter_toggle ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/stream_boundaries.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/stream_boundaries-6e507e2988fae5db)\n\nrunning 3 tests\ntest eos_retains_the_final_identity_sample ... ok\ntest drain_validation_is_transactional_and_reset_restores_continuation ... ok\ntest cold_drain_and_reset_require_no_allocations_or_deallocations ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests sotf_plugin_aec\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "limits": [
+    "Independent colored-noise engineering fixtures, not recorded speech or perceptual validation.",
+    "Single 50 ms prepared tail, default step 0.5, three sample rates.",
+    "Drift regression floor is 3 dB (half-power reduction); initial 6 dB target not met at 48 kHz without suppression. No clock synchronization or out-of-tail delay compensation."
+  ],
+  "convergence": [
+    {
+      "rate": 16000,
+      "post_filter": false,
+      "erle_250ms_windows": [
+        0.0,
+        0.059044602832317675,
+        19.407532649119766,
+        22.50473045591924,
+        30.17514032210615,
+        33.846892430050076,
+        35.26681356338985,
+        35.43584416308572
+      ]
+    },
+    {
+      "rate": 16000,
+      "post_filter": true,
+      "erle_250ms_windows": [
+        3.886144597587629e-07,
+        0.05904500417375805,
+        31.97259950648418,
+        44.00852927797913,
+        54.483315985848826,
+        58.47699844892575,
+        59.745542963630825,
+        59.45281260224826
+      ]
+    },
+    {
+      "rate": 44100,
+      "post_filter": false,
+      "erle_250ms_windows": [
+        0.0,
+        0.013636316155545926,
+        20.063452174650685,
+        21.768121368573276,
+        27.1956168673622,
+        28.176820994393044,
+        28.682529254337656,
+        28.734882529440256
+      ]
+    },
+    {
+      "rate": 44100,
+      "post_filter": true,
+      "erle_250ms_windows": [
+        3.839140966662435e-07,
+        0.0136366881771564,
+        30.612436450011703,
+        45.59791670797808,
+        51.620339586163965,
+        52.17803924093974,
+        51.70329238792974,
+        50.91029802766785
+      ]
+    },
+    {
+      "rate": 48000,
+      "post_filter": false,
+      "erle_250ms_windows": [
+        0.0,
+        0.2681155646684919,
+        18.932687589011458,
+        21.49501258008202,
+        25.932798746045663,
+        27.638964787049446,
+        27.79780122642807,
+        27.87350331735821
+      ]
+    },
+    {
+      "rate": 48000,
+      "post_filter": true,
+      "erle_250ms_windows": [
+        3.845214956252103e-07,
+        0.2681159489870433,
+        35.56639442363921,
+        45.200247685948185,
+        50.110158330360264,
+        51.529805735818655,
+        50.6926261651389,
+        49.604282808819804
+      ]
+    }
+  ]
+}
