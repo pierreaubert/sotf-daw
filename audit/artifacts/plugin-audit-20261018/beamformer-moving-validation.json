@@ -1,0 +1,1350 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-beamformer",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/steering.rs": "58536f8907ca93c24415824a3288c72afb99f1422a083b3efa493f841471801f",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib.rs": "ef5cf5431d1b03f822cd932ff99b30a47732d4476199e0251c5d1d34a5e644f3",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/superdirective.rs": "c722083fe69e3612c6bd7401130efee71416be8cc5d6356424a3b1ca668ae0ba",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/params.rs": "f61c0bd928a00b6d3cfed7a90b1de06c1e8f371d5d24e0d591dc55ab065a480f",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr.rs": "237927e8dd0c8d32ea4e7df203e94e9463347afda19cf552771cb51c9f48d3f3",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/gsc.rs": "df3b65ac1940cbcfce2a3ac8855cfc2482673f32dbc5e20c854121ea095683ac",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/numerical_tests.rs": "654c8fa7d9f5e36b82b63eed81cd1e5b2220f42f48937c4f31e2732dbb5491fa",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/recovery_tests.rs": "11325486690bfc6acd921e99d0508ca7523a97a8b5115998ac83048937f90a55",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/types.rs": "78a051db8ba20c29d446e56ee4739e4f79c3a97091179bb1da5a251fb29df98e",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs": "0171e531e942a79eeed3437395948782e78505dfaf820b3842bcece7f815cb67",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin_params.rs": "96b80382992886d8c4505b7799996e3e4e165bbd35c9753395a860675f0593fa",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/misc.rs": "899b7897e7f2ada9dbf3eafdf84fa08ebf5a73f2bf971fc9bdd3ec7d2cb7a9b5",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests.rs": "a5fec4b0a5acf93465c7f6921a1cac1b137e7e868c63cf7432077f3f53be00c9",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/default.rs": "0263e247f635cec63d32fd1c3059a1a8f1846e2bacdf78d2e4bf6259f964a586",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests/tail_metadata.rs": "6ec1e566c9b2bdee0da2984349599290400a6c26741f77157fbe9d1d4e0bfde8",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests/drain.rs": "c1748b5d1dbc56914618437b889881fd73661fc2fbf9fad5b8d658b1953ef52a",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/tail_metadata.rs": "48b7dba890f1c1daec417f66ab2a795b877410083aad4630bd3e57204eeb9a65",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs": "f7b511aece8565175cbc39f3494881ba39c9fd6edda38e9d458982b335b41d23",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs": "23d7505587a90eb227f9f4089470130da65229a8e06c49e4756db18d584ff191",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/stream_boundaries.rs": "f9e7343909c8a05085c45ca8370108ea3d67af9c4b444c09155456bcc2d12d59",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/spectral_recovery.rs": "1e666ea39ed3edb0a2b25e99924ac8229f7a085b0fa12e8834e7be865cbf4d1b",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/numerical_recovery.rs": "e9504ebda8defb4a3ea41685bac1bf9608c44c16382ce86c1c1fd39b3d89685c",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/gsc_reference.rs": "0032d4575284bb706025cc14d9e10463296d97d5825fc10dac93cb4f9f916761",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/integration.rs": "07ce65495d9321db558d6ea2a97663ddc17d5ab9476761fb20d1edb9d3eb7c1d"
+  },
+  "results": [
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 136.48615057116797
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 136.48615057116797
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 320.8278537048934
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 136.77865886962434
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 136.77865886962434
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 320.82645279785874
+    },
+    {
+      "improvement_vs_uniform_db": 0.00026016727270066387,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.47408899615443
+    },
+    {
+      "improvement_vs_uniform_db": 0.00026016727270066387,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.47408899615443
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.47382882888172
+    },
+    {
+      "improvement_vs_uniform_db": 5.901821583478101e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 5.901821583478101e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 5.898670807844866e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9624490398323373
+    },
+    {
+      "improvement_vs_uniform_db": 5.898670807844866e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9624490398323373
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9624484499652564
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003317643947534472,
+      "kind": 0,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.43275060640315
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003317643947534472,
+      "kind": 1,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.43275060640315
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.4324188420084
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 136.48615057116797
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 134.18953408593694
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 320.8278537048934
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 136.9117541573124
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 59.73726400454004
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 147.70952885491891
+    },
+    {
+      "improvement_vs_uniform_db": 0.0002603503556773841,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.4740888669125
+    },
+    {
+      "improvement_vs_uniform_db": 0.028416784110355572,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.502245300667184
+    },
+    {
+      "improvement_vs_uniform_db": 3.123249028590337e-07,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.47382882888172
+    },
+    {
+      "improvement_vs_uniform_db": 5.857155407052019e-07,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.6496860217979465,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.14254505052018507,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 5.846837210626269e-07,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 3.9787362995326254
+    },
+    {
+      "improvement_vs_uniform_db": 0.6504428457868837,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 4.629178560635788
+    },
+    {
+      "improvement_vs_uniform_db": 5.15700149550349e-10,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 3.9787357153646035
+    },
+    {
+      "improvement_vs_uniform_db": 0.00031531886975587104,
+      "kind": 0,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.43562379064757
+    },
+    {
+      "improvement_vs_uniform_db": -4.726780531813578,
+      "kind": 1,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 49.70852793996423
+    },
+    {
+      "improvement_vs_uniform_db": -3.1392496581311917e-06,
+      "kind": 2,
+      "mics": 4,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.43530533252815
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 135.40951062318754
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 134.90113610582017
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Stationary",
+      "target_snr_db": 144.60784182587875
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 136.88380160405853
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 50.52324161768971
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Motion",
+      "target_snr_db": 145.70103175970598
+    },
+    {
+      "improvement_vs_uniform_db": 0.00026446310054320304,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.474093505528145
+    },
+    {
+      "improvement_vs_uniform_db": -0.001682479785304945,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.472146562642294
+    },
+    {
+      "improvement_vs_uniform_db": -9.6077450424132e-08,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mismatch",
+      "target_snr_db": 54.47382894635015
+    },
+    {
+      "improvement_vs_uniform_db": 5.264432395502241,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 1.8653213094105905,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 4.145282590282388,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 5.832914098243992e-07,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 5.532522330172274
+    },
+    {
+      "improvement_vs_uniform_db": 1.7796950429206093,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 7.312216789801473
+    },
+    {
+      "improvement_vs_uniform_db": -4.2440596668765895e-09,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "Mixed",
+      "target_snr_db": 5.5325217426368045
+    },
+    {
+      "improvement_vs_uniform_db": -31.966329193087756,
+      "kind": 0,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 22.480502484797423
+    },
+    {
+      "improvement_vs_uniform_db": -15.680265479977166,
+      "kind": 1,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 38.76656619790801
+    },
+    {
+      "improvement_vs_uniform_db": -4.5566004753037376e-07,
+      "kind": 2,
+      "mics": 8,
+      "rate": 16000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.446831222225136
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 136.3531901156638
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 136.3531901156638
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 325.59906625006397
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 136.59894868620387
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 136.59894868620387
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 325.59766534283403
+    },
+    {
+      "improvement_vs_uniform_db": 0.00037293691176479505,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.48607043731256
+    },
+    {
+      "improvement_vs_uniform_db": 0.00037293691176479505,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.48607043731256
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.4856975004008
+    },
+    {
+      "improvement_vs_uniform_db": 6.46551161168031e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.46551161168031e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.837372272239936e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9296666533522813
+    },
+    {
+      "improvement_vs_uniform_db": 6.837372272239936e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9296666533522813
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9296659696150544
+    },
+    {
+      "improvement_vs_uniform_db": 0.00031663468747003944,
+      "kind": 0,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.249917161468375
+    },
+    {
+      "improvement_vs_uniform_db": 0.00031663468747003944,
+      "kind": 1,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.249917161468375
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.249600526780895
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 136.3531901156638
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 135.3977944510799
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 325.59906625006397
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 136.8107946713806
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 59.73965846589036
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 147.7629727013272
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003793515871408795,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.48607622953908
+    },
+    {
+      "improvement_vs_uniform_db": 0.06877780237246814,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.5544746803244
+    },
+    {
+      "improvement_vs_uniform_db": 6.224488729593229e-07,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.4856975004008
+    },
+    {
+      "improvement_vs_uniform_db": 4.795234835369386,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.6498769026662188,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.7527115874515072,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.709909792333745e-07,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 3.971201123708581
+    },
+    {
+      "improvement_vs_uniform_db": 0.6587045451638716,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 4.629904997881473
+    },
+    {
+      "improvement_vs_uniform_db": -1.7584260631017756e-09,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 3.971200450959176
+    },
+    {
+      "improvement_vs_uniform_db": -31.641570841786475,
+      "kind": 0,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 22.611732665882478
+    },
+    {
+      "improvement_vs_uniform_db": -5.417774734043126,
+      "kind": 1,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 48.835528773625825
+    },
+    {
+      "improvement_vs_uniform_db": -4.435273378048211e-06,
+      "kind": 2,
+      "mics": 4,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.25329907239558
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 135.3772113912274
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 134.98462336433744
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Stationary",
+      "target_snr_db": 144.61884574888077
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 136.72676386563955
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 50.54178971447678
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Motion",
+      "target_snr_db": 145.69380745821124
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003789938387946354,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.48607901081033
+    },
+    {
+      "improvement_vs_uniform_db": 0.0004777138162532913,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.48617773078778
+    },
+    {
+      "improvement_vs_uniform_db": 8.299893714830315e-07,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.485700846960896
+    },
+    {
+      "improvement_vs_uniform_db": 5.418452017956357,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 1.8753346413696543,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 2.9428064753354564,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.49926896965506e-07,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 5.5322332437758925
+    },
+    {
+      "improvement_vs_uniform_db": 1.8327290836835408,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 7.364961677532536
+    },
+    {
+      "improvement_vs_uniform_db": 3.4832742417093054e-09,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "Mixed",
+      "target_snr_db": 5.5322325973322695
+    },
+    {
+      "improvement_vs_uniform_db": -34.29974136819421,
+      "kind": 0,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 19.968235304580688
+    },
+    {
+      "improvement_vs_uniform_db": -15.447017083608138,
+      "kind": 1,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 38.82095958916676
+    },
+    {
+      "improvement_vs_uniform_db": -1.3700165033399838e-06,
+      "kind": 2,
+      "mics": 8,
+      "rate": 48000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.2679753027584
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 136.45979682789275
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 136.45979682789275
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 328.609366206745
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 136.6753788616397
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 136.6753788616397
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 328.6079652985744
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003691079061201959,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58081106224126
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003691079061201959,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58081106224126
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58044195433514
+    },
+    {
+      "improvement_vs_uniform_db": 6.697147518166856e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.697147518166856e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 6.744325457804617e-07,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9217318413492195
+    },
+    {
+      "improvement_vs_uniform_db": 6.744325457804617e-07,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9217318413492195
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 2.9217311669166737
+    },
+    {
+      "improvement_vs_uniform_db": 0.0002672990724640023,
+      "kind": 0,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.08938256631737
+    },
+    {
+      "improvement_vs_uniform_db": 0.0002672990724640023,
+      "kind": 1,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.08938256631737
+    },
+    {
+      "improvement_vs_uniform_db": 0.0,
+      "kind": 2,
+      "mics": 2,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.089115267244914
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 136.45979682789275
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 135.20836101437501
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 328.609366206745
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 136.8547676254999
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 59.84415963969895
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 147.67856056692912
+    },
+    {
+      "improvement_vs_uniform_db": 0.0003728145684949193,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58081236549639
+    },
+    {
+      "improvement_vs_uniform_db": 0.1000959846288135,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.68053553555671
+    },
+    {
+      "improvement_vs_uniform_db": 2.403407249885568e-06,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58044195433514
+    },
+    {
+      "improvement_vs_uniform_db": 4.260449781519203,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.6510572275891773,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 0.3418727339970942,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 7.311645135541853e-07,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 3.9695545462143307
+    },
+    {
+      "improvement_vs_uniform_db": 0.661674038058139,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 4.631227853107957
+    },
+    {
+      "improvement_vs_uniform_db": 1.6476315868185416e-09,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 3.9695538166974487
+    },
+    {
+      "improvement_vs_uniform_db": -32.5277992605003,
+      "kind": 0,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 21.565338897142745
+    },
+    {
+      "improvement_vs_uniform_db": -5.492463285210785,
+      "kind": 1,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 48.60067487243225
+    },
+    {
+      "improvement_vs_uniform_db": 3.2318936342452613e-07,
+      "kind": 2,
+      "mics": 4,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.0931384808324
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 135.4389022429356
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 134.81509205879172
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Stationary",
+      "target_snr_db": 144.6512361560335
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 136.74593813157213
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 50.85317968508824
+    },
+    {
+      "improvement_vs_uniform_db": null,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Motion",
+      "target_snr_db": 145.6232345570386
+    },
+    {
+      "improvement_vs_uniform_db": 0.00036287860396183873,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58080713212392
+    },
+    {
+      "improvement_vs_uniform_db": 3.7549451222018865e-05,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.58048180297118
+    },
+    {
+      "improvement_vs_uniform_db": 6.175568220976701e-07,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mismatch",
+      "target_snr_db": 55.580444871076786
+    },
+    {
+      "improvement_vs_uniform_db": 5.538304803241171,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 1.886854835168509,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 3.109877954480697,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Diffuse",
+      "target_snr_db": null
+    },
+    {
+      "improvement_vs_uniform_db": 1.4780019372373745,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 7.010381192277193
+    },
+    {
+      "improvement_vs_uniform_db": 1.8556720077363675,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 7.388051262776186
+    },
+    {
+      "improvement_vs_uniform_db": 2.0738296110636945e-09,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "Mixed",
+      "target_snr_db": 5.5323792571136465
+    },
+    {
+      "improvement_vs_uniform_db": -35.06538978697202,
+      "kind": 0,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 19.043678954621754
+    },
+    {
+      "improvement_vs_uniform_db": -15.190560341279667,
+      "kind": 1,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 38.91850840031411
+    },
+    {
+      "improvement_vs_uniform_db": 1.236631953189795e-06,
+      "kind": 2,
+      "mics": 8,
+      "rate": 96000,
+      "scene": "NoiseThenTarget",
+      "target_snr_db": 54.109069978225726
+    }
+  ],
+  "output": "   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)\n    Finished `release` profile [optimized] target(s) in 15.10s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_beamformer-6a59e5a3933e45e7)\n\nrunning 61 tests\ntest gsc::tests::fractional_delay_uses_next_older_sample ... ok\ntest gsc::tests::decaying_states_do_not_retain_subnormal_values ... ok\ntest gsc::tests::test_gsc_blocking_matrix_orthogonal ... ok\ntest gsc::tests::test_gsc_creation ... ok\ntest gsc::tests::test_gsc_delay_compensation ... ok\ntest gsc::tests::test_gsc_process_sample ... ok\ntest mvdr::numerical_tests::invalid_covariance_replaces_the_entire_bin_with_steered_fallback ... ok\ntest gsc::tests::test_gsc_reset ... ok\ntest mvdr::recovery_tests::invalid_fft_frame_preserves_history_and_next_finite_frame_learns ... ok\ntest gsc::tests::bounded_adaptation_matches_full_microphone_fir_energy ... ok\nMVDR independent diagonal normalization maximum error: 7.757480358958225e-8\ntest mvdr::recovery_tests::detector_classification_matches_wide_power_ratio_across_scales ... ok\ntest mvdr::recovery_tests::unrepresentable_bin_preserves_complete_history_and_updates_valid_neighbors ... ok\ntest mvdr::recovery_tests::representable_overload_keeps_the_existing_smoothing_decay ... ok\ntest mvdr::recovery_tests::wide_retry_matches_independent_complex_covariance_recurrence ... ok\ntest mvdr::tests::singular_fallback_is_steered_and_distortionless ... ok\ntest mvdr::tests::target_presence_estimator_is_scale_invariant_and_marks_noise_dirty ... ok\ntest mvdr::numerical_tests::diagonal_covariance_weights_match_independent_wide_normalization ... ok\ntest mvdr::tests::test_mvdr_apply_weights ... ok\ntest mvdr::tests::test_mvdr_creation ... ok\ntest mvdr::tests::test_mvdr_reset ... ok\ntest mvdr::tests::test_mvdr_weights_no_nan ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::param_index_coverage ... ok\ntest steering::tests::test_angle_convention_broadside ... ok\ntest params::tests::roundtrip_serde ... ok\ntest params::tests::runtime_and_ui_state_share_canonical_algorithm_serde ... ok\ntest steering::tests::test_broadside_steering ... ok\ntest steering::tests::test_endfire_steering ... ok\ntest mvdr::recovery_tests::finite_overload_does_not_permanently_force_delay_and_sum ... ok\ntest steering::tests::test_linear_array_positions ... ok\ntest steering::tests::test_steering_delays ... ok\ntest superdirective::tests::steered_fallback_preserves_look_direction ... ok\ntest steering::tests::test_steering_vector_unit_magnitude ... ok\ntest tests::malformed_construction_returns_errors ... ok\ntest mvdr::recovery_tests::ordinary_covariance_matches_original_f32_recurrence_exactly ... ok\ntest superdirective::tests::test_superdirective_weights_finite ... ok\ntest superdirective::tests::test_superdirective_apply ... ok\ntest superdirective::tests::test_superdirective_creation ... ok\ntest gsc::tests::test_gsc_noise_cancellation ... ok\ntest tests::synthetic_startup_prefix_solves_weights_without_learning_covariance ... ok\ntest tests::process_validates_buffers_and_sample_rate_before_mutating_state ... ok\ntest tests::steering_is_structural_and_does_not_rebuild_live_state ... ok\ntest tests::mvdr_skips_weight_solves_when_covariance_is_unchanged ... ok\ntest tests::drain::learned_mvdr_covariance_and_weights_are_unchanged_by_drain ... ok\ntest tests::test_beamformer_gsc_process ... ok\ntest tests::test_mvdr_noise_detection_uses_all_channels ... ok\ntest tests::test_beamformer_superdirective_process ... ok\ntest tests::test_beamformer_mvdr_process ... ok\ntest tests::test_mvdr_process_uses_preallocated_weight_application ... ok\ntest tests::test_stft_ola_output_not_silent ... ok\ntest tests::test_beamformer_plugin_creation ... ok\ntest tests::test_beamformer_parameters ... ok\ntest tests::test_stft_trigger_fires_at_fft_size_not_hop ... ok\ntest tests::sample_rate_reinitialization_discards_old_grid_and_pending_audio ... ok\ntest tests::tail_metadata::ordinary_zero_continuation_keeps_learning_without_extending_audio_support ... ok\ntest gsc::tests::prepared_detector_uses_physical_time_across_construction_reset_and_reinitialize ... ok\ntest tests::stft_output_is_causal_and_block_partition_invariant ... ok\ntest gsc::tests::target_plane_waves_are_distortionless_across_angles ... ok\ntest gsc::tests::invalid_evidence_preserves_detectors_and_recovers_without_reset ... ok\ntest tests::drain::gsc_drain_matches_fractional_delay_and_nonzero_last_learned_tap ... ok\ntest tests::drain::spectral_drain_matches_independent_windowed_circular_convolution_and_freezes_weights ... ok\n\ntest result: ok. 61 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s\n\n     Running unittests bin/qa_beamformer.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_beamformer-25143513efd4d85b)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/audit_array_robustness.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_array_robustness-b4ea071afd876165)\n\nrunning 2 tests\nMVDR_ROBUST mics=2 spacing=0.01 angle=-45 bin=1 wng_db=2.957644 interference_power=0.999877702\nMVDR_ROBUST mics=2 spacing=0.01 angle=-45 bin=5 wng_db=1.857211 interference_power=0.996949204\nMVDR_ROBUST mics=2 spacing=0.01 angle=-45 bin=11 wng_db=-0.000000 interference_power=0.987850084\nMVDR_ROBUST mics=2 spacing=0.01 angle=-45 bin=43 wng_db=0.000000 interference_power=0.952520975\nMVDR_ROBUST mics=2 spacing=0.01 angle=0 bin=1 wng_db=2.914114 interference_power=0.999775404\nMVDR_ROBUST mics=2 spacing=0.01 angle=0 bin=5 wng_db=1.087944 interference_power=0.994409447\nMVDR_ROBUST mics=2 spacing=0.01 angle=0 bin=11 wng_db=0.000000 interference_power=0.983536352\nMVDR_ROBUST mics=2 spacing=0.01 angle=0 bin=43 wng_db=-0.000000 interference_power=0.935683616\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=93.75 wng_db=3.010300 diffuse_di_db=0.000107 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=187.5 wng_db=3.010300 diffuse_di_db=0.000427 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=468.75 wng_db=3.010300 diffuse_di_db=0.002668 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=1031.25 wng_db=3.010300 diffuse_di_db=0.012911 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=1968.75 wng_db=3.010300 diffuse_di_db=0.047020 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=4031.25 wng_db=3.010300 diffuse_di_db=0.196422 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.01 angle=0 hz=7968.75 wng_db=3.010300 diffuse_di_db=0.755055 directivity_loss_db=0.000000\nMVDR_ROBUST mics=2 spacing=0.01 angle=45 bin=1 wng_db=2.966048 interference_power=0.999897359\nMVDR_ROBUST mics=2 spacing=0.01 angle=45 bin=5 wng_db=2.022374 interference_power=0.997437573\nMVDR_ROBUST mics=2 spacing=0.01 angle=45 bin=11 wng_db=-0.000000 interference_power=0.988866315\nMVDR_ROBUST mics=2 spacing=0.01 angle=45 bin=43 wng_db=0.000000 interference_power=0.956490798\nMVDR_ROBUST mics=2 spacing=0.05 angle=-45 bin=1 wng_db=1.857211 interference_power=0.996949204\nMVDR_ROBUST mics=2 spacing=0.05 angle=-45 bin=5 wng_db=0.000000 interference_power=0.972388920\nMVDR_ROBUST mics=2 spacing=0.05 angle=-45 bin=11 wng_db=-0.000000 interference_power=0.939285312\nMVDR_ROBUST mics=2 spacing=0.05 angle=-45 bin=43 wng_db=-0.000000 interference_power=0.764741024\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=93.75 wng_db=0.679275 diffuse_di_db=0.031600 directivity_loss_db=-0.000002\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=0.075212 directivity_loss_db=0.047810\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=468.75 wng_db=-0.000000 diffuse_di_db=0.190280 directivity_loss_db=0.454299\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=1031.25 wng_db=-0.000000 diffuse_di_db=0.427536 directivity_loss_db=1.284862\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=1968.75 wng_db=0.000000 diffuse_di_db=0.838003 directivity_loss_db=1.466454\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=4031.25 wng_db=-0.000000 diffuse_di_db=1.732636 directivity_loss_db=0.743474\nBEAMFORMER mics=2 spacing=0.01 angle=30 hz=7968.75 wng_db=0.420384 diffuse_di_db=2.639162 directivity_loss_db=-0.000001\nMVDR_ROBUST mics=2 spacing=0.05 angle=0 bin=1 wng_db=1.087944 interference_power=0.994409447\nMVDR_ROBUST mics=2 spacing=0.05 angle=0 bin=5 wng_db=0.000000 interference_power=0.962589540\nMVDR_ROBUST mics=2 spacing=0.05 angle=0 bin=11 wng_db=0.000000 interference_power=0.917770929\nMVDR_ROBUST mics=2 spacing=0.05 angle=0 bin=43 wng_db=-0.000000 interference_power=0.683721542\nMVDR_ROBUST mics=2 spacing=0.05 angle=45 bin=1 wng_db=2.022374 interference_power=0.997437573\nMVDR_ROBUST mics=2 spacing=0.05 angle=45 bin=5 wng_db=-0.000000 interference_power=0.974698558\nMVDR_ROBUST mics=2 spacing=0.05 angle=45 bin=11 wng_db=0.000000 interference_power=0.944359677\nMVDR_ROBUST mics=2 spacing=0.05 angle=45 bin=43 wng_db=-0.000000 interference_power=0.784098890\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=93.75 wng_db=0.000000 diffuse_di_db=0.074071 directivity_loss_db=0.047569\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=0.149383 directivity_loss_db=0.317105\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=468.75 wng_db=0.000000 diffuse_di_db=0.382743 directivity_loss_db=1.858624\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=1031.25 wng_db=-0.000000 diffuse_di_db=0.882398 directivity_loss_db=4.009861\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=1968.75 wng_db=0.000000 diffuse_di_db=1.806234 directivity_loss_db=3.941078\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=4031.25 wng_db=0.000000 diffuse_di_db=4.045186 directivity_loss_db=1.714483\nBEAMFORMER mics=2 spacing=0.01 angle=80 hz=7968.75 wng_db=1.139647 diffuse_di_db=5.302738 directivity_loss_db=0.000000\nMVDR_ROBUST mics=4 spacing=0.01 angle=-45 bin=1 wng_db=5.073422 interference_power=0.998779528\nMVDR_ROBUST mics=4 spacing=0.01 angle=-45 bin=5 wng_db=-0.000000 interference_power=0.978686732\nMVDR_ROBUST mics=4 spacing=0.01 angle=-45 bin=11 wng_db=-0.000000 interference_power=0.953317050\nMVDR_ROBUST mics=4 spacing=0.01 angle=-45 bin=43 wng_db=-0.000000 interference_power=0.822037943\nMVDR_ROBUST mics=4 spacing=0.01 angle=0 bin=1 wng_db=4.415814 interference_power=0.997760754\nMVDR_ROBUST mics=4 spacing=0.01 angle=0 bin=5 wng_db=-0.000000 interference_power=0.971156731\nMVDR_ROBUST mics=4 spacing=0.01 angle=0 bin=11 wng_db=0.000000 interference_power=0.936926379\nMVDR_ROBUST mics=4 spacing=0.01 angle=0 bin=43 wng_db=-0.000000 interference_power=0.761960344\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=93.75 wng_db=3.010300 diffuse_di_db=0.002668 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=187.5 wng_db=3.010300 diffuse_di_db=0.010671 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=468.75 wng_db=3.010300 diffuse_di_db=0.066607 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=1031.25 wng_db=3.010300 diffuse_di_db=0.320307 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=1968.75 wng_db=3.010300 diffuse_di_db=1.136063 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=4031.25 wng_db=3.010300 diffuse_di_db=3.674021 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=0 hz=7968.75 wng_db=3.010300 diffuse_di_db=2.532002 directivity_loss_db=0.000000\nMVDR_ROBUST mics=4 spacing=0.01 angle=45 bin=1 wng_db=5.211865 interference_power=0.998974919\nMVDR_ROBUST mics=4 spacing=0.01 angle=45 bin=5 wng_db=0.000000 interference_power=0.980463918\nMVDR_ROBUST mics=4 spacing=0.01 angle=45 bin=11 wng_db=-0.000000 interference_power=0.957193676\nMVDR_ROBUST mics=4 spacing=0.01 angle=45 bin=43 wng_db=0.000000 interference_power=0.836444002\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.190280 directivity_loss_db=0.454299\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=0.387406 directivity_loss_db=1.191129\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=468.75 wng_db=0.000000 diffuse_di_db=1.004741 directivity_loss_db=1.365833\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=1031.25 wng_db=-0.000000 diffuse_di_db=2.148276 directivity_loss_db=0.369736\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=1968.75 wng_db=1.571333 diffuse_di_db=2.734668 directivity_loss_db=-0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=4031.25 wng_db=2.925554 diffuse_di_db=2.927758 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=30 hz=7968.75 wng_db=2.999056 diffuse_di_db=3.490347 directivity_loss_db=0.000001\nMVDR_ROBUST mics=4 spacing=0.05 angle=-45 bin=1 wng_db=-0.000000 interference_power=0.978686732\nMVDR_ROBUST mics=4 spacing=0.05 angle=-45 bin=5 wng_db=0.000000 interference_power=0.895025840\nMVDR_ROBUST mics=4 spacing=0.05 angle=-45 bin=11 wng_db=0.000000 interference_power=0.774670824\nMVDR_ROBUST mics=4 spacing=0.05 angle=-45 bin=43 wng_db=0.000000 interference_power=0.261555381\nMVDR_ROBUST mics=4 spacing=0.05 angle=0 bin=1 wng_db=-0.000000 interference_power=0.971156731\nMVDR_ROBUST mics=4 spacing=0.05 angle=0 bin=5 wng_db=0.000000 interference_power=0.858750490\nMVDR_ROBUST mics=4 spacing=0.05 angle=0 bin=11 wng_db=-0.000000 interference_power=0.699923513\nMVDR_ROBUST mics=4 spacing=0.05 angle=0 bin=43 wng_db=0.000000 interference_power=0.108000695\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=93.75 wng_db=0.000000 diffuse_di_db=0.382743 directivity_loss_db=1.858624\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=0.796127 directivity_loss_db=3.837281\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=468.75 wng_db=0.000000 diffuse_di_db=2.202862 directivity_loss_db=3.594063\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=1031.25 wng_db=0.000000 diffuse_di_db=5.054665 directivity_loss_db=0.611512\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=1968.75 wng_db=2.137612 diffuse_di_db=4.957805 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=4031.25 wng_db=2.985298 diffuse_di_db=2.519795 directivity_loss_db=-0.000000\nBEAMFORMER mics=2 spacing=0.05 angle=80 hz=7968.75 wng_db=2.969153 diffuse_di_db=2.745292 directivity_loss_db=0.000000\nMVDR_ROBUST mics=4 spacing=0.05 angle=45 bin=1 wng_db=0.000000 interference_power=0.980463918\nMVDR_ROBUST mics=4 spacing=0.05 angle=45 bin=5 wng_db=-0.000000 interference_power=0.903652382\nMVDR_ROBUST mics=4 spacing=0.05 angle=45 bin=11 wng_db=-0.000000 interference_power=0.792709552\nMVDR_ROBUST mics=4 spacing=0.05 angle=45 bin=43 wng_db=-0.000000 interference_power=0.306944564\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=93.75 wng_db=3.010300 diffuse_di_db=0.042653 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=187.5 wng_db=3.010300 diffuse_di_db=0.170083 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=468.75 wng_db=3.010300 diffuse_di_db=1.034591 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=1031.25 wng_db=3.010300 diffuse_di_db=3.753748 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=1968.75 wng_db=3.010300 diffuse_di_db=2.552732 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=4031.25 wng_db=3.010300 diffuse_di_db=2.779293 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=0 hz=7968.75 wng_db=3.010300 diffuse_di_db=3.130340 directivity_loss_db=0.000000\nMVDR_ROBUST mics=8 spacing=0.01 angle=-45 bin=1 wng_db=1.991515 interference_power=0.989823548\nMVDR_ROBUST mics=8 spacing=0.01 angle=-45 bin=5 wng_db=-0.000000 interference_power=0.934006808\nMVDR_ROBUST mics=8 spacing=0.01 angle=-45 bin=11 wng_db=-0.000000 interference_power=0.857413023\nMVDR_ROBUST mics=8 spacing=0.01 angle=-45 bin=43 wng_db=-0.000000 interference_power=0.499607238\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.796424 directivity_loss_db=1.484025\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=1.617103 directivity_loss_db=0.847955\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=468.75 wng_db=1.326718 diffuse_di_db=2.710098 directivity_loss_db=-0.000001\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=1031.25 wng_db=2.906511 diffuse_di_db=2.899878 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=1968.75 wng_db=3.001556 diffuse_di_db=3.475491 directivity_loss_db=-0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=4031.25 wng_db=2.999694 diffuse_di_db=2.914604 directivity_loss_db=0.000001\nBEAMFORMER mics=2 spacing=0.2 angle=30 hz=7968.75 wng_db=3.007699 diffuse_di_db=2.960619 directivity_loss_db=0.000001\nMVDR_ROBUST mics=8 spacing=0.01 angle=0 bin=1 wng_db=-0.000000 interference_power=0.981923683\nMVDR_ROBUST mics=8 spacing=0.01 angle=0 bin=5 wng_db=-0.000000 interference_power=0.911046285\nMVDR_ROBUST mics=8 spacing=0.01 angle=0 bin=11 wng_db=-0.000000 interference_power=0.809112177\nMVDR_ROBUST mics=8 spacing=0.01 angle=0 bin=43 wng_db=-0.000000 interference_power=0.360809104\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=93.75 wng_db=-0.000000 diffuse_di_db=1.709222 directivity_loss_db=4.015552\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=187.5 wng_db=-0.000000 diffuse_di_db=3.746657 directivity_loss_db=2.030803\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=468.75 wng_db=1.935686 diffuse_di_db=5.051970 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=1031.25 wng_db=2.968764 diffuse_di_db=2.505970 directivity_loss_db=-0.000001\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=1968.75 wng_db=2.977586 diffuse_di_db=2.721928 directivity_loss_db=-0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=4031.25 wng_db=3.000049 diffuse_di_db=3.116329 directivity_loss_db=0.000000\nBEAMFORMER mics=2 spacing=0.2 angle=80 hz=7968.75 wng_db=3.009599 diffuse_di_db=2.907051 directivity_loss_db=0.000001\nMVDR_ROBUST mics=8 spacing=0.01 angle=45 bin=1 wng_db=2.583655 interference_power=0.991444219\nMVDR_ROBUST mics=8 spacing=0.01 angle=45 bin=5 wng_db=0.000000 interference_power=0.939453405\nMVDR_ROBUST mics=8 spacing=0.01 angle=45 bin=11 wng_db=0.000000 interference_power=0.868974973\nMVDR_ROBUST mics=8 spacing=0.01 angle=45 bin=43 wng_db=0.000000 interference_power=0.535400818\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=93.75 wng_db=5.975280 diffuse_di_db=0.000574 directivity_loss_db=-0.000032\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=187.5 wng_db=6.015677 diffuse_di_db=0.002175 directivity_loss_db=0.000093\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=468.75 wng_db=5.200531 diffuse_di_db=0.018195 directivity_loss_db=0.000306\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=1031.25 wng_db=0.000000 diffuse_di_db=0.153674 directivity_loss_db=0.027103\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=1968.75 wng_db=0.000000 diffuse_di_db=0.555656 directivity_loss_db=0.805753\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=4031.25 wng_db=0.000000 diffuse_di_db=2.183296 directivity_loss_db=1.375440\nBEAMFORMER mics=4 spacing=0.01 angle=0 hz=7968.75 wng_db=3.349436 diffuse_di_db=4.070031 directivity_loss_db=-0.000000\nMVDR_ROBUST mics=8 spacing=0.05 angle=-45 bin=1 wng_db=-0.000000 interference_power=0.934006808\nMVDR_ROBUST mics=8 spacing=0.05 angle=-45 bin=5 wng_db=-0.000000 interference_power=0.690109346\nMVDR_ROBUST mics=8 spacing=0.05 angle=-45 bin=11 wng_db=0.000000 interference_power=0.388705983\nMVDR_ROBUST mics=8 spacing=0.05 angle=-45 bin=43 wng_db=3.267151 interference_power=0.000016436\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=93.75 wng_db=0.000000 diffuse_di_db=0.144860 directivity_loss_db=0.146105\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=187.5 wng_db=0.000000 diffuse_di_db=0.290522 directivity_loss_db=0.627598\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=468.75 wng_db=0.000000 diffuse_di_db=0.727693 directivity_loss_db=1.388494\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=1031.25 wng_db=0.000000 diffuse_di_db=1.553590 directivity_loss_db=0.880728\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=1968.75 wng_db=0.000000 diffuse_di_db=2.412494 directivity_loss_db=0.143953\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=4031.25 wng_db=-0.000000 diffuse_di_db=2.905589 directivity_loss_db=0.027614\nBEAMFORMER mics=4 spacing=0.01 angle=30 hz=7968.75 wng_db=0.000000 diffuse_di_db=4.269706 directivity_loss_db=0.550595\nMVDR_ROBUST mics=8 spacing=0.05 angle=0 bin=1 wng_db=-0.000000 interference_power=0.911046285\nMVDR_ROBUST mics=8 spacing=0.05 angle=0 bin=5 wng_db=-0.000000 interference_power=0.592619601\nMVDR_ROBUST mics=8 spacing=0.05 angle=0 bin=11 wng_db=-0.000000 interference_power=0.236937216\nMVDR_ROBUST mics=8 spacing=0.05 angle=0 bin=43 wng_db=5.468342 interference_power=0.000004526\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.289576 directivity_loss_db=0.784869\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=187.5 wng_db=-0.000000 diffuse_di_db=0.589344 directivity_loss_db=2.460317\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=468.75 wng_db=-0.000000 diffuse_di_db=1.545506 directivity_loss_db=4.006820\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=1031.25 wng_db=-0.000000 diffuse_di_db=3.473109 directivity_loss_db=2.492563\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=1968.75 wng_db=-0.000000 diffuse_di_db=4.049648 directivity_loss_db=2.893450\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=4031.25 wng_db=-0.000000 diffuse_di_db=6.934331 directivity_loss_db=2.006178\nBEAMFORMER mics=4 spacing=0.01 angle=80 hz=7968.75 wng_db=0.000000 diffuse_di_db=9.348137 directivity_loss_db=1.197976\nMVDR_ROBUST mics=8 spacing=0.05 angle=45 bin=1 wng_db=0.000000 interference_power=0.939453405\nMVDR_ROBUST mics=8 spacing=0.05 angle=45 bin=5 wng_db=0.000000 interference_power=0.714066788\nMVDR_ROBUST mics=8 spacing=0.05 angle=45 bin=11 wng_db=-0.000000 interference_power=0.429676475\nMVDR_ROBUST mics=8 spacing=0.05 angle=45 bin=43 wng_db=2.596340 interference_power=0.000023580\ntest mvdr_learned_close_interference_preserves_target_without_white_noise_boost ... ok\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=93.75 wng_db=5.200531 diffuse_di_db=0.018195 directivity_loss_db=0.000306\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=187.5 wng_db=-0.000000 diffuse_di_db=0.127059 directivity_loss_db=0.006559\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=468.75 wng_db=0.000000 diffuse_di_db=0.783145 directivity_loss_db=1.281800\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=1031.25 wng_db=-0.000000 diffuse_di_db=3.214945 directivity_loss_db=0.519599\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=1968.75 wng_db=5.286214 diffuse_di_db=4.358557 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=4031.25 wng_db=6.017131 diffuse_di_db=6.663223 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.05 angle=0 hz=7968.75 wng_db=6.003515 diffuse_di_db=5.105256 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.727693 directivity_loss_db=1.388494\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=1.425084 directivity_loss_db=0.993278\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=468.75 wng_db=0.000000 diffuse_di_db=2.556500 directivity_loss_db=0.058259\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=1031.25 wng_db=0.000000 diffuse_di_db=3.048207 directivity_loss_db=0.325048\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=1968.75 wng_db=-0.000000 diffuse_di_db=5.003102 directivity_loss_db=0.022009\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=4031.25 wng_db=5.983715 diffuse_di_db=6.426578 directivity_loss_db=0.000001\nBEAMFORMER mics=4 spacing=0.05 angle=30 hz=7968.75 wng_db=6.007924 diffuse_di_db=6.594437 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=93.75 wng_db=0.000000 diffuse_di_db=1.545504 directivity_loss_db=4.006821\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=3.194300 directivity_loss_db=2.734540\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=468.75 wng_db=0.000000 diffuse_di_db=4.182881 directivity_loss_db=3.412130\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=1031.25 wng_db=0.000000 diffuse_di_db=8.084016 directivity_loss_db=1.125151\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=1968.75 wng_db=0.244746 diffuse_di_db=10.328654 directivity_loss_db=-0.000001\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=4031.25 wng_db=5.858482 diffuse_di_db=5.167214 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.05 angle=80 hz=7968.75 wng_db=5.968913 diffuse_di_db=5.694269 directivity_loss_db=-0.000001\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=93.75 wng_db=0.000000 diffuse_di_db=0.504569 directivity_loss_db=0.685933\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=187.5 wng_db=0.000000 diffuse_di_db=1.919162 directivity_loss_db=1.557111\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=468.75 wng_db=4.969822 diffuse_di_db=4.280766 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=1031.25 wng_db=6.013567 diffuse_di_db=6.739689 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=1968.75 wng_db=6.008375 diffuse_di_db=5.091479 directivity_loss_db=0.000001\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=4031.25 wng_db=6.018247 diffuse_di_db=5.797465 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=0 hz=7968.75 wng_db=6.020030 diffuse_di_db=6.137860 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=93.75 wng_db=0.000000 diffuse_di_db=2.364352 directivity_loss_db=0.178417\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=2.858795 directivity_loss_db=0.005271\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=468.75 wng_db=0.000000 diffuse_di_db=4.879422 directivity_loss_db=0.120173\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=1031.25 wng_db=5.963473 diffuse_di_db=6.376927 directivity_loss_db=0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=1968.75 wng_db=6.008365 diffuse_di_db=6.545908 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=4031.25 wng_db=6.016465 diffuse_di_db=5.801750 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=30 hz=7968.75 wng_db=6.017292 diffuse_di_db=5.997691 directivity_loss_db=-0.000000\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=93.75 wng_db=0.000000 diffuse_di_db=4.057012 directivity_loss_db=2.732974\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=6.425525 directivity_loss_db=2.453152\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=468.75 wng_db=-0.000000 diffuse_di_db=10.324652 directivity_loss_db=0.115380\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=1031.25 wng_db=5.835834 diffuse_di_db=5.253443 directivity_loss_db=-0.000001\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=1968.75 wng_db=5.963890 diffuse_di_db=5.654149 directivity_loss_db=-0.000002\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=4031.25 wng_db=6.005871 diffuse_di_db=6.065093 directivity_loss_db=-0.000001\nBEAMFORMER mics=4 spacing=0.2 angle=80 hz=7968.75 wng_db=6.017767 diffuse_di_db=5.827374 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=93.75 wng_db=8.895003 diffuse_di_db=0.002590 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=187.5 wng_db=7.254429 diffuse_di_db=0.014523 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=468.75 wng_db=-0.000000 diffuse_di_db=0.185009 directivity_loss_db=0.075986\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=1031.25 wng_db=0.000000 diffuse_di_db=0.883689 directivity_loss_db=1.600156\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=1968.75 wng_db=0.000000 diffuse_di_db=2.879765 directivity_loss_db=0.788302\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=4031.25 wng_db=0.000000 diffuse_di_db=4.396674 directivity_loss_db=0.272111\nBEAMFORMER mics=8 spacing=0.01 angle=0 hz=7968.75 wng_db=2.621856 diffuse_di_db=6.557005 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.450607 directivity_loss_db=0.995436\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=187.5 wng_db=0.000000 diffuse_di_db=0.891088 directivity_loss_db=1.330334\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=468.75 wng_db=-0.000000 diffuse_di_db=2.001661 directivity_loss_db=0.449760\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=1031.25 wng_db=0.002905 diffuse_di_db=2.624604 directivity_loss_db=0.000000\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=1968.75 wng_db=0.000000 diffuse_di_db=2.838926 directivity_loss_db=0.407299\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=4031.25 wng_db=0.000000 diffuse_di_db=4.932400 directivity_loss_db=0.447056\nBEAMFORMER mics=8 spacing=0.01 angle=30 hz=7968.75 wng_db=2.634732 diffuse_di_db=6.871573 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.928686 directivity_loss_db=3.436485\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=1.926470 directivity_loss_db=3.768649\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=468.75 wng_db=-0.000000 diffuse_di_db=4.468469 directivity_loss_db=1.602641\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=1031.25 wng_db=0.000000 diffuse_di_db=4.511213 directivity_loss_db=3.567639\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=1968.75 wng_db=0.000000 diffuse_di_db=8.216176 directivity_loss_db=1.125234\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=4031.25 wng_db=0.000000 diffuse_di_db=10.929702 directivity_loss_db=0.331316\nBEAMFORMER mics=8 spacing=0.01 angle=80 hz=7968.75 wng_db=0.684962 diffuse_di_db=13.063083 directivity_loss_db=0.000007\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=93.75 wng_db=-0.000000 diffuse_di_db=0.185009 directivity_loss_db=0.075986\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=187.5 wng_db=-0.000000 diffuse_di_db=0.732874 directivity_loss_db=1.352767\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=468.75 wng_db=-0.000000 diffuse_di_db=3.569414 directivity_loss_db=0.191565\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=1031.25 wng_db=-0.000000 diffuse_di_db=5.310454 directivity_loss_db=0.361515\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=1968.75 wng_db=1.075007 diffuse_di_db=7.411346 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=4031.25 wng_db=9.018859 diffuse_di_db=9.690004 directivity_loss_db=0.000000\nBEAMFORMER mics=8 spacing=0.05 angle=0 hz=7968.75 wng_db=9.010768 diffuse_di_db=8.058304 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=93.75 wng_db=-0.000000 diffuse_di_db=2.001661 directivity_loss_db=0.449760\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=187.5 wng_db=0.000000 diffuse_di_db=2.586293 directivity_loss_db=0.003326\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=468.75 wng_db=-0.000000 diffuse_di_db=3.020335 directivity_loss_db=0.790643\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=1031.25 wng_db=0.000000 diffuse_di_db=5.755737 directivity_loss_db=0.367751\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=1968.75 wng_db=3.078857 diffuse_di_db=7.452196 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=4031.25 wng_db=9.008403 diffuse_di_db=9.644741 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.05 angle=30 hz=7968.75 wng_db=9.022573 diffuse_di_db=9.636618 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=93.75 wng_db=-0.000000 diffuse_di_db=4.468469 directivity_loss_db=1.602642\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=187.5 wng_db=-0.000000 diffuse_di_db=4.321518 directivity_loss_db=3.380466\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=468.75 wng_db=0.000000 diffuse_di_db=8.539101 directivity_loss_db=1.288819\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=1031.25 wng_db=0.000000 diffuse_di_db=11.768080 directivity_loss_db=0.296342\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=1968.75 wng_db=0.913861 diffuse_di_db=13.610923 directivity_loss_db=-0.000006\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=4031.25 wng_db=8.886015 diffuse_di_db=8.022609 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.05 angle=80 hz=7968.75 wng_db=8.982096 diffuse_di_db=8.549958 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=93.75 wng_db=0.000000 diffuse_di_db=2.670046 directivity_loss_db=0.971551\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=187.5 wng_db=-0.000000 diffuse_di_db=4.281760 directivity_loss_db=0.132150\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=468.75 wng_db=0.479426 diffuse_di_db=7.231370 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=1031.25 wng_db=9.016295 diffuse_di_db=9.787652 directivity_loss_db=0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=1968.75 wng_db=9.002741 diffuse_di_db=8.024280 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=4031.25 wng_db=9.028772 diffuse_di_db=8.780048 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=0 hz=7968.75 wng_db=9.030506 diffuse_di_db=9.162308 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=93.75 wng_db=0.000000 diffuse_di_db=2.834316 directivity_loss_db=0.301229\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=187.5 wng_db=-0.000000 diffuse_di_db=4.701748 directivity_loss_db=0.509891\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=468.75 wng_db=2.505689 diffuse_di_db=7.333236 directivity_loss_db=0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=1031.25 wng_db=9.012466 diffuse_di_db=9.712881 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=1968.75 wng_db=9.023732 diffuse_di_db=9.586988 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=4031.25 wng_db=9.028195 diffuse_di_db=8.796391 directivity_loss_db=0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=30 hz=7968.75 wng_db=9.028266 diffuse_di_db=9.048593 directivity_loss_db=-0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=93.75 wng_db=0.000000 diffuse_di_db=8.033639 directivity_loss_db=1.222884\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=187.5 wng_db=0.000000 diffuse_di_db=10.717884 directivity_loss_db=0.376530\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=468.75 wng_db=0.635992 diffuse_di_db=13.501630 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=1031.25 wng_db=8.871490 diffuse_di_db=8.091103 directivity_loss_db=-0.000000\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=1968.75 wng_db=8.981255 diffuse_di_db=8.509666 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=4031.25 wng_db=9.020868 diffuse_di_db=8.975720 directivity_loss_db=0.000001\nBEAMFORMER mics=8 spacing=0.2 angle=80 hz=7968.75 wng_db=9.029756 diffuse_di_db=8.761307 directivity_loss_db=0.000001\nBEAMFORMER_SUMMARY minimum_wng_db=-0.000000 maximum_target_error=0.099916131 maximum_directivity_loss_db=4.015552\ntest superdirective_weights_bound_white_noise_and_steering_error ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/audit_moving_sources.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_moving_sources-232e5d5fd7d8948d)\n\nrunning 1 test\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":136.48615057116797}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":136.48615057116797}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":320.8278537048934}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":136.77865886962434}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":136.77865886962434}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":320.82645279785874}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00026016727270066387,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.47408899615443}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00026016727270066387,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.47408899615443}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.47382882888172}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.901821583478101e-7,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.901821583478101e-7,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.898670807844866e-7,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":2.9624490398323373}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.898670807844866e-7,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":2.9624490398323373}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":2.9624484499652564}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003317643947534472,\"kind\":0,\"mics\":2,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.43275060640315}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003317643947534472,\"kind\":1,\"mics\":2,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.43275060640315}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.4324188420084}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":136.48615057116797}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":134.18953408593694}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":320.8278537048934}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":136.9117541573124}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":59.73726400454004}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":147.70952885491891}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0002603503556773841,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.4740888669125}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.028416784110355572,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.502245300667184}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":3.123249028590337e-7,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.47382882888172}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.857155407052019e-7,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.6496860217979465,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.14254505052018507,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.846837210626269e-7,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":3.9787362995326254}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.6504428457868837,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":4.629178560635788}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.15700149550349e-10,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":3.9787357153646035}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00031531886975587104,\"kind\":0,\"mics\":4,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.43562379064757}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-4.726780531813578,\"kind\":1,\"mics\":4,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":49.70852793996423}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-3.1392496581311917e-6,\"kind\":2,\"mics\":4,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.43530533252815}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":135.40951062318754}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":134.90113610582017}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"Stationary\",\"target_snr_db\":144.60784182587875}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":136.88380160405853}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":50.52324161768971}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"Motion\",\"target_snr_db\":145.70103175970598}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00026446310054320304,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.474093505528145}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-0.001682479785304945,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.472146562642294}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-9.6077450424132e-8,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"Mismatch\",\"target_snr_db\":54.47382894635015}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.264432395502241,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.8653213094105905,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":4.145282590282388,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.832914098243992e-7,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":5.532522330172274}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.7796950429206093,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":7.312216789801473}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-4.2440596668765895e-9,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"Mixed\",\"target_snr_db\":5.5325217426368045}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-31.966329193087756,\"kind\":0,\"mics\":8,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":22.480502484797423}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-15.680265479977166,\"kind\":1,\"mics\":8,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":38.76656619790801}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-4.5566004753037376e-7,\"kind\":2,\"mics\":8,\"rate\":16000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.446831222225136}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":136.3531901156638}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":136.3531901156638}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":325.59906625006397}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":136.59894868620387}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":136.59894868620387}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":325.59766534283403}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00037293691176479505,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.48607043731256}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00037293691176479505,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.48607043731256}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.4856975004008}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.46551161168031e-7,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.46551161168031e-7,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.837372272239936e-7,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":2.9296666533522813}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.837372272239936e-7,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":2.9296666533522813}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":2.9296659696150544}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00031663468747003944,\"kind\":0,\"mics\":2,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.249917161468375}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00031663468747003944,\"kind\":1,\"mics\":2,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.249917161468375}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.249600526780895}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":136.3531901156638}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":135.3977944510799}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":325.59906625006397}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":136.8107946713806}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":59.73965846589036}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":147.7629727013272}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003793515871408795,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.48607622953908}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.06877780237246814,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.5544746803244}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.224488729593229e-7,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.4856975004008}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":4.795234835369386,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.6498769026662188,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.7527115874515072,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.709909792333745e-7,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":3.971201123708581}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.6587045451638716,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":4.629904997881473}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-1.7584260631017756e-9,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":3.971200450959176}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-31.641570841786475,\"kind\":0,\"mics\":4,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":22.611732665882478}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-5.417774734043126,\"kind\":1,\"mics\":4,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":48.835528773625825}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-4.435273378048211e-6,\"kind\":2,\"mics\":4,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.25329907239558}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":135.3772113912274}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":134.98462336433744}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"Stationary\",\"target_snr_db\":144.61884574888077}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":136.72676386563955}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":50.54178971447678}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"Motion\",\"target_snr_db\":145.69380745821124}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003789938387946354,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.48607901081033}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0004777138162532913,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.48617773078778}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":8.299893714830315e-7,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"Mismatch\",\"target_snr_db\":55.485700846960896}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.418452017956357,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.8753346413696543,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":2.9428064753354564,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.49926896965506e-7,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":5.5322332437758925}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.8327290836835408,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":7.364961677532536}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":3.4832742417093054e-9,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"Mixed\",\"target_snr_db\":5.5322325973322695}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-34.29974136819421,\"kind\":0,\"mics\":8,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":19.968235304580688}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-15.447017083608138,\"kind\":1,\"mics\":8,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":38.82095958916676}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-1.3700165033399838e-6,\"kind\":2,\"mics\":8,\"rate\":48000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.2679753027584}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":136.45979682789275}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":136.45979682789275}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":328.609366206745}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":136.6753788616397}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":136.6753788616397}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":328.6079652985744}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003691079061201959,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58081106224126}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003691079061201959,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58081106224126}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58044195433514}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.697147518166856e-7,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.697147518166856e-7,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.744325457804617e-7,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":2.9217318413492195}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.744325457804617e-7,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":2.9217318413492195}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":2.9217311669166737}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0002672990724640023,\"kind\":0,\"mics\":2,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.08938256631737}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0002672990724640023,\"kind\":1,\"mics\":2,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.08938256631737}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0,\"kind\":2,\"mics\":2,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.089115267244914}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":136.45979682789275}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":135.20836101437501}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":328.609366206745}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":136.8547676254999}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":59.84415963969895}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":147.67856056692912}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.0003728145684949193,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58081236549639}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.1000959846288135,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.68053553555671}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":2.403407249885568e-6,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58044195433514}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":4.260449781519203,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.6510572275891773,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.3418727339970942,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":7.311645135541853e-7,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":3.9695545462143307}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.661674038058139,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":4.631227853107957}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.6476315868185416e-9,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":3.9695538166974487}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-32.5277992605003,\"kind\":0,\"mics\":4,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":21.565338897142745}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-5.492463285210785,\"kind\":1,\"mics\":4,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":48.60067487243225}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":3.2318936342452613e-7,\"kind\":2,\"mics\":4,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.0931384808324}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":135.4389022429356}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":134.81509205879172}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"Stationary\",\"target_snr_db\":144.6512361560335}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":136.74593813157213}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":50.85317968508824}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":null,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"Motion\",\"target_snr_db\":145.6232345570386}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.00036287860396183873,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58080713212392}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":0.000037549451222018865,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.58048180297118}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":6.175568220976701e-7,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"Mismatch\",\"target_snr_db\":55.580444871076786}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":5.538304803241171,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.886854835168509,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":3.109877954480697,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"Diffuse\",\"target_snr_db\":null}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.4780019372373745,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":7.010381192277193}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.8556720077363675,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":7.388051262776186}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":2.0738296110636945e-9,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"Mixed\",\"target_snr_db\":5.5323792571136465}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-35.06538978697202,\"kind\":0,\"mics\":8,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":19.043678954621754}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":-15.190560341279667,\"kind\":1,\"mics\":8,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":38.91850840031411}\nMOVING_ARRAY {\"improvement_vs_uniform_db\":1.236631953189795e-6,\"kind\":2,\"mics\":8,\"rate\":96000,\"scene\":\"NoiseThenTarget\",\"target_snr_db\":54.109069978225726}\ntest public_moving_and_mismatched_arrays_preserve_targets_and_control_diffuse_noise ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.76s\n\n     Running tests/gsc_reference.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/gsc_reference-a22043774c122958)\n\nrunning 3 tests\ntest extreme_burst_then_small_references_matches_wide_reference_without_reset ... ok\ntest learned_cancellation_clamps_only_unrepresentable_output ... ok\nGSC direct-f64 maximum normalized error: 4.7457538315809344e-8\ntest adaptive_gsc_matches_direct_f64_equations_across_scales_and_delays ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-60e52701411da81f)\n\nrunning 15 tests\ntest construct_from_params ... ok\ntest beamformer_type_is_structural ... ok\ntest construct_default ... ok\ntest parameters_listed_by_trait ... ok\ntest process_silence_is_finite ... ok\ntest initialize_changes_sample_rate ... ok\ntest process_mvdr ... ok\ntest process_gsc ... ok\ntest process_superdirective ... ok\ntest latency_depends_on_type ... ok\ntest invalid_parameter_type_rejected ... ok\ntest steer_angle_out_of_range_is_rejected ... ok\ntest structural_parameters_require_rebuild ... ok\ntest unknown_parameter_rejected ... ok\ntest reset_then_process_again ... ok\n\ntest result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/numerical_recovery.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/numerical_recovery-edac2bc92ed442f9)\n\nrunning 2 tests\ntest gsc_finite_extreme_input_recovers_without_reset ... ok\ntest mvdr_prolonged_silence_is_exact_zero_before_and_after_reset ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s\n\n     Running tests/spectral_recovery.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/spectral_recovery-fe5185c7c79c0f69)\n\nrunning 2 tests\ntest spectral_overflow_emits_finite_audio_then_recovers_ordinary_waveform ... ok\nAUD101 recovery hop=16: rms=1.116874977463e-2, healthy=2.331174003196e-3, loss_db=13.608597\nAUD101 recovery hop=256: rms=9.066341638557e-3, healthy=1.750264663515e-3, loss_db=14.286567\nAUD101 recovery hop=512: rms=9.066346066163e-3, healthy=1.750263949471e-3, loss_db=14.286575\nAUD101 recovery hop=1024: rms=9.066346125218e-3, healthy=1.750263950330e-3, loss_db=14.286575\nAUD101 recovery hop=1536: rms=8.931382420722e-3, healthy=1.750263950330e-3, loss_db=14.156303\nAUD101 recovery hop=1800: rms=1.766377955338e-3, healthy=1.750263950330e-3, loss_db=0.079602\nAUD101 recovery hop=2048: rms=1.750264147560e-3, healthy=1.750263950330e-3, loss_db=0.000001\nAUD101 recovery hop=2304: rms=1.750263955370e-3, healthy=1.750263950330e-3, loss_db=0.000000\nAUD101 maximum 4096-frame-window rejection loss through 2048 hops: 14.286575 dB\nAUD101 final waveform max absolute error=9.313225746155e-10, rms=1.750263955370e-3\ntest mvdr_recovers_interference_rejection_after_finite_overload_without_reset ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\n\n     Running tests/stream_boundaries.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/stream_boundaries-22c7d42256128efb)\n\nrunning 8 tests\ntest eos_retains_the_final_identity_sample ... ok\ntest cold_spectral_overflow_retry_rejection_and_recovery_are_allocation_free ... ok\ntest first_callback_and_reset_are_allocation_free_on_fresh_threads ... ok\ntest cold_drain_and_reset_require_no_allocations_or_deallocations ... ok\ntest drain_validation_is_transactional_and_reset_restores_continuation ... ok\ntest startup_dense_identity_preserves_every_sample_and_reset ... ok\ntest startup_impulse_at_every_hop_phase_preserves_amplitude ... ok\ntest cold_extreme_gsc_and_quiet_mvdr_callbacks_do_not_allocate_or_free ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.77s\n\n     Running tests/tail_metadata.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/tail_metadata-3f090780bbd6c5ff)\n\nrunning 3 tests\ntest native_bound_follows_prepared_geometry_and_stays_constant_through_lifecycle ... ok\ntest spectral_overflow_residue_clears_within_the_same_support ... ok\ntest every_hop_phase_clears_with_ordinary_adaptation_inside_the_native_bound ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s\n\n   Doc-tests sotf_plugin_beamformer\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "limits": [
+    "Engineering plane-wave multitone fixtures; seven-direction quadrature is a discrete diffuse approximation, not a recorded speech/noise corpus.",
+    "Public matrix uses a 5 cm array and broadside steering with +/-3 degree source motion; static frequency-domain matrices cover other spacing/look angles.",
+    "Mixture error includes residual noise; target distortion is measured separately in target-only and noise-to-target scenes."
+  ]
+}

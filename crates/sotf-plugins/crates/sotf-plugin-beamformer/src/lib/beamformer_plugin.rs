@@ -107,7 +107,7 @@ impl BeamformerPlugin {
             beamformer_type: BeamformerType::Mvdr,
             mvdr: MvdrBeamformer::new(num_mics, spectrum_size),
             superdirective: Some(superdirective),
-            gsc: GscBeamformer::new(num_mics, &delays, 32, 0.01),
+            gsc: GscBeamformer::new_with_sample_rate(num_mics, &delays, 32, 0.01, sample_rate),
             steering_vectors,
             input_buffers: vec![vec![0.0; FFT_SIZE]; num_mics],
             // The first frame covers [-hop, hop): a zero prefix supplies the
@@ -243,7 +243,8 @@ impl BeamformerPlugin {
             0.0,
             self.sample_rate as f32,
         );
-        self.gsc = GscBeamformer::new(self.num_mics, &delays, 32, 0.01);
+        self.gsc =
+            GscBeamformer::new_with_sample_rate(self.num_mics, &delays, 32, 0.01, self.sample_rate);
     }
 }
 

@@ -1,0 +1,74 @@
+{
+  "commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "sotf-plugin-beamformer",
+        "--all-targets",
+        "--features",
+        "qa",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "output": "    Checking sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 0.59s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "run",
+        "-p",
+        "sotf-plugin-beamformer",
+        "--release",
+        "--features",
+        "qa",
+        "--bin",
+        "qa-beamformer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "output": "    Finished `release` profile [optimized] target(s) in 0.27s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-beamformer`\n=== QA: Beamformer Plugin ===\n\n[Test 1] GSC mode processing (512 frames)\n  GSC process completed: PASS\n\n[Test 2] MVDR mode processing\n  MVDR process completed: PASS\n\n[Test 3] MVDR Real-time Safety (Zero Allocations)\n  MVDR Zero Allocations: PASS\n\n[Test 4] Active covariance/adaptation callback deadlines (8 microphones)\n  algorithm 0: p50/p95/max 0.269/0.285/0.295 ms, deadline 10.667 ms\n  algorithm 1: p50/p95/max 0.021/0.021/0.021 ms, deadline 10.667 ms\n  algorithm 2: p50/p95/max 0.270/0.290/0.294 ms, deadline 10.667 ms\n\n[Test 2] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 3] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 4] Performance Benchmark\n  Processed 5.0s of audio in 7.27ms\n  Estimated CPU Usage: 0.15%\n  Performance: PASS\n\n[ALL PASS] Beamformer QA Complete.\n"
+    }
+  ],
+  "qa_source_sha256": "ced1a6a6f2bae25898406ba4e125490377d2db29bf47ec1f189d86e6afaac668",
+  "production_source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/steering.rs": "58536f8907ca93c24415824a3288c72afb99f1422a083b3efa493f841471801f",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib.rs": "ef5cf5431d1b03f822cd932ff99b30a47732d4476199e0251c5d1d34a5e644f3",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/superdirective.rs": "c722083fe69e3612c6bd7401130efee71416be8cc5d6356424a3b1ca668ae0ba",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/params.rs": "f61c0bd928a00b6d3cfed7a90b1de06c1e8f371d5d24e0d591dc55ab065a480f",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr.rs": "237927e8dd0c8d32ea4e7df203e94e9463347afda19cf552771cb51c9f48d3f3",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/gsc.rs": "df3b65ac1940cbcfce2a3ac8855cfc2482673f32dbc5e20c854121ea095683ac",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/numerical_tests.rs": "654c8fa7d9f5e36b82b63eed81cd1e5b2220f42f48937c4f31e2732dbb5491fa",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/recovery_tests.rs": "11325486690bfc6acd921e99d0508ca7523a97a8b5115998ac83048937f90a55",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/types.rs": "78a051db8ba20c29d446e56ee4739e4f79c3a97091179bb1da5a251fb29df98e",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs": "0171e531e942a79eeed3437395948782e78505dfaf820b3842bcece7f815cb67",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin_params.rs": "96b80382992886d8c4505b7799996e3e4e165bbd35c9753395a860675f0593fa",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/misc.rs": "899b7897e7f2ada9dbf3eafdf84fa08ebf5a73f2bf971fc9bdd3ec7d2cb7a9b5",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests.rs": "a5fec4b0a5acf93465c7f6921a1cac1b137e7e868c63cf7432077f3f53be00c9",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/default.rs": "0263e247f635cec63d32fd1c3059a1a8f1846e2bacdf78d2e4bf6259f964a586",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests/tail_metadata.rs": "6ec1e566c9b2bdee0da2984349599290400a6c26741f77157fbe9d1d4e0bfde8",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/tests/drain.rs": "c1748b5d1dbc56914618437b889881fd73661fc2fbf9fad5b8d658b1953ef52a",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/tail_metadata.rs": "48b7dba890f1c1daec417f66ab2a795b877410083aad4630bd3e57204eeb9a65",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs": "f7b511aece8565175cbc39f3494881ba39c9fd6edda38e9d458982b335b41d23",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs": "23d7505587a90eb227f9f4089470130da65229a8e06c49e4756db18d584ff191",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/stream_boundaries.rs": "f9e7343909c8a05085c45ca8370108ea3d67af9c4b444c09155456bcc2d12d59",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/spectral_recovery.rs": "1e666ea39ed3edb0a2b25e99924ac8229f7a085b0fa12e8834e7be865cbf4d1b",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/numerical_recovery.rs": "e9504ebda8defb4a3ea41685bac1bf9608c44c16382ce86c1c1fd39b3d89685c",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/gsc_reference.rs": "0032d4575284bb706025cc14d9e10463296d97d5825fc10dac93cb4f9f916761",
+    "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/integration.rs": "07ce65495d9321db558d6ea2a97663ddc17d5ab9476761fb20d1edb9d3eb7c1d"
+  }
+}

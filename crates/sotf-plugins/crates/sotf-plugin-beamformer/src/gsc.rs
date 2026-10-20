@@ -37,6 +37,11 @@ pub struct GscBeamformer {
     delay_write_pos: usize,
     max_delay_samples: usize,
     steering_delays: Vec<f32>,
+    detector_alpha: f64,
+    coherent_power: f64,
+    array_power: f64,
+    mix_alpha: f64,
+    cancellation_mix: f64,
 }
 
 impl GscBeamformer {
@@ -48,6 +53,21 @@ impl GscBeamformer {
     /// * `filter_length` - NLMS filter length (default: 64)
     /// * `mu` - NLMS step size (default: 0.01)
     pub fn new(num_mics: usize, steering_delays: &[f32], filter_length: usize, mu: f32) -> Self {
+        Self::new_with_sample_rate(num_mics, steering_delays, filter_length, mu, 48_000.0)
+    }
+
+    /// Creates a GSC with sample-rate-aware spatial-coherence detection.
+    ///
+    /// # Panics
+    ///
+    /// Panics if fewer than two microphones are requested.
+    pub fn new_with_sample_rate(
+        num_mics: usize,
+        steering_delays: &[f32],
+        filter_length: usize,
+        mu: f32,
+        sample_rate: f64,
+    ) -> Self {
         assert!(num_mics >= 2, "GSC requires at least 2 microphones");
 
         // Fixed beamformer: uniform real-valued weights for delay-and-sum.
@@ -102,6 +122,15 @@ impl GscBeamformer {
             delay_write_pos: 0,
             max_delay_samples: max_delay,
             steering_delays: steering_delays.to_vec(),
+            // Smooth spatial powers over 10 ms so target zero crossings do
+            // not masquerade as uncorrelated interference and enable learning.
+            detector_alpha: (-1.0 / (sample_rate.max(1.0) * 0.010)).exp(),
+            coherent_power: 0.0,
+            array_power: 0.0,
+            // Fade learned cancellation over 5 ms when a coherent target
+            // appears, protecting it from mismatch in retained noise weights.
+            mix_alpha: (-1.0 / (sample_rate.max(1.0) * 0.005)).exp(),
+            cancellation_mix: 1.0,
         }
     }
 
@@ -137,6 +166,11 @@ impl GscBeamformer {
     #[cfg(test)]
     pub(crate) fn learned_snapshot(&self) -> Vec<Vec<f64>> {
         self.adaptive_weights.clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn detector_snapshot(&self) -> [f64; 3] {
+        [self.coherent_power, self.array_power, self.cancellation_mix]
     }
 
     #[allow(clippy::needless_range_loop)]
@@ -209,10 +243,41 @@ impl GscBeamformer {
         let error = fbf_output - noise_estimate;
 
         // NLMS weight update: w += μ * e * u / (||u||² + δ)
-        let instantaneous_reference_power: f64 = references.iter().map(|value| value * value).sum();
-        let target_dominant =
-            instantaneous_reference_power < fbf_output * fbf_output * f64::from(0.01_f32);
-        if adapt && !target_dominant {
+        let mut valid_evidence = false;
+        if adapt {
+            let coherent = fbf_output * fbf_output * m as f64;
+            let total = self.aligned_samples[..m].iter().map(|x| x * x).sum::<f64>();
+            // Unusable samples must not leave recursive detector state NaN
+            // after their finite delay/reference history has cleared.
+            valid_evidence = coherent.is_finite() && total.is_finite();
+            if valid_evidence {
+                self.coherent_power = self.detector_alpha * self.coherent_power
+                    + (1.0 - self.detector_alpha) * coherent;
+                self.array_power =
+                    self.detector_alpha * self.array_power + (1.0 - self.detector_alpha) * total;
+                // Long silence must not retain slow subnormal detector tails.
+                // Every squared nonzero finite f32 sample is normal in f64.
+                if self.coherent_power.is_subnormal() {
+                    self.coherent_power = 0.0;
+                }
+                if self.array_power.is_subnormal() {
+                    self.array_power = 0.0;
+                }
+            }
+        }
+        // Use the same coherent fraction as spectral MVDR target protection.
+        // The ratio is independent of signal scale and blocks adaptation on
+        // modest steering/calibration mismatch, not just perfectly equal mics.
+        let target_dominant = self.coherent_power >= 0.65 * self.array_power;
+        if valid_evidence {
+            let target_mix = if target_dominant { 0.0 } else { 1.0 };
+            self.cancellation_mix =
+                self.mix_alpha * self.cancellation_mix + (1.0 - self.mix_alpha) * target_mix;
+            if self.cancellation_mix.is_subnormal() {
+                self.cancellation_mix = 0.0;
+            }
+        }
+        if valid_evidence && !target_dominant {
             let step = f64::from(self.mu) * error / total_ref_power;
             for r in 0..num_refs {
                 let mut buf_idx = self.ref_write_pos;
@@ -231,6 +296,7 @@ impl GscBeamformer {
                     };
                 }
             }
+            self.bound_adaptive_energy();
         }
 
         // Advance write position
@@ -239,10 +305,52 @@ impl GscBeamformer {
         // Cancellation can exceed the f32 range even when all inputs are
         // finite. Saturate only at the public sample boundary, preserving
         // the wider signal and adaptation internally.
-        if error.is_finite() {
-            error.clamp(f64::from(f32::MIN), f64::from(f32::MAX)) as f32
+        let output = fbf_output - self.cancellation_mix * noise_estimate;
+        if output.is_finite() {
+            output.clamp(f64::from(f32::MIN), f64::from(f32::MAX)) as f32
         } else {
             0.0
+        }
+    }
+
+    fn bound_adaptive_energy(&mut self) {
+        // Unit total microphone FIR energy gives a 0 dB sensor-white-noise
+        // gain floor. Only scale blocked cancellation; preserve fixed summation.
+        // Every blocking row is diag*e_r + off*ones. Its Gram matrix is
+        // diag^2*I + (2*diag*off + M*off^2)*ones. Use that identity to bound
+        // microphone-space FIR energy in O(taps*references), without forming
+        // a microphone-by-tap matrix or allocating on the audio thread.
+        let m = self.num_mics as f64;
+        let off = f64::from(self.blocking_matrix[0][1]);
+        let diag = f64::from(self.blocking_matrix[0][0]) - off;
+        let cross = (2.0 * diag + m * off) * off;
+        let mut adaptive_energy = 0.0;
+        let mut first_sum = 0.0;
+        for tap in 0..self.filter_length {
+            let mut sum = 0.0;
+            let mut squares = 0.0;
+            for row in &self.adaptive_weights {
+                sum += row[tap];
+                squares += row[tap] * row[tap];
+            }
+            adaptive_energy += diag * diag * squares + cross * sum * sum;
+            if tap == 0 {
+                first_sum = sum;
+            }
+        }
+        let fixed = f64::from(self.fbf_weights[0]);
+        let fixed_energy = m * fixed * fixed;
+        // Include the tiny fixed/blocking cross term from f32 construction.
+        let linear = -2.0 * fixed * (diag + m * off) * first_sum;
+        if fixed_energy + linear + adaptive_energy > 1.0 {
+            let capacity = 1.0 - fixed_energy;
+            let scale = ((linear * linear + 4.0 * adaptive_energy * capacity).sqrt() - linear)
+                / (2.0 * adaptive_energy);
+            for row in &mut self.adaptive_weights {
+                for weight in row {
+                    *weight *= scale;
+                }
+            }
         }
     }
 
@@ -259,6 +367,9 @@ impl GscBeamformer {
         }
         self.ref_write_pos = 0;
         self.delay_write_pos = 0;
+        self.coherent_power = 0.0;
+        self.array_power = 0.0;
+        self.cancellation_mix = 1.0;
     }
 
     /// Common steering-compensation latency in whole samples.
@@ -274,6 +385,128 @@ impl GscBeamformer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn decaying_states_do_not_retain_subnormal_values() {
+        let mut core = GscBeamformer::new(2, &[0.0, 0.0], 32, 0.01);
+        core.coherent_power = f64::MIN_POSITIVE;
+        core.array_power = f64::MIN_POSITIVE;
+        core.cancellation_mix = f64::MIN_POSITIVE;
+        assert_eq!(core.process_sample(&[0.0, 0.0]), 0.0);
+        assert!(
+            core.detector_snapshot()
+                .iter()
+                .all(|x| *x == 0.0 || x.is_normal())
+        );
+    }
+
+    #[test]
+    fn invalid_evidence_preserves_detectors_and_recovers_without_reset() {
+        for mics in [2, 8] {
+            for bad in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+                let mut core = GscBeamformer::new(mics, &vec![0.0; mics], 32, 0.01);
+                for n in 0..4096 {
+                    let input: Vec<f32> = (0..mics)
+                        .map(|mic| (n as f32 * 0.11 + mic as f32 * 1.7).sin() * 0.25)
+                        .collect();
+                    core.process_sample(&input);
+                }
+                let weights = core.learned_snapshot();
+                let detector = core.detector_snapshot();
+                let mut input = vec![0.25; mics];
+                input[0] = bad;
+                assert!(core.process_sample(&input).is_finite());
+                assert_eq!(core.learned_snapshot(), weights);
+                assert_eq!(core.detector_snapshot(), detector);
+                for n in 0..9600 {
+                    let target = (n as f32 * 0.07).sin() * 0.25;
+                    let output = core.process_sample(&vec![target; mics]);
+                    assert!(output.is_finite());
+                    if n >= 4800 {
+                        assert!((output - target).abs() < 1e-6);
+                    }
+                }
+                assert!(core.detector_snapshot().iter().all(|x| x.is_finite()));
+            }
+        }
+    }
+
+    #[test]
+    fn prepared_detector_uses_physical_time_across_construction_reset_and_reinitialize() {
+        use sotf_host::plugin::{Plugin, ProcessContext};
+        let rates = [16_000_u32, 44_100, 48_000, 96_000];
+        for (index, &initial_rate) in rates.iter().enumerate() {
+            let mut plugin = crate::BeamformerPlugin::from_params(
+                initial_rate,
+                crate::BeamformerPluginParams {
+                    beamformer_type: 2,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let mut rate = initial_rate;
+            for pass in 0..3 {
+                if pass == 1 {
+                    plugin.reset();
+                }
+                if pass == 2 {
+                    rate = rates[(index + 1) % rates.len()];
+                    plugin.initialize(f64::from(rate)).unwrap();
+                }
+                assert_eq!(plugin.gsc.detector_snapshot(), [0.0, 0.0, 1.0]);
+                let frames = rate as usize / 50;
+                let input: Vec<f32> = (0..frames).flat_map(|_| [1.0, 0.0]).collect();
+                plugin
+                    .process(
+                        &input,
+                        &mut vec![0.0; frames],
+                        &ProcessContext::new(rate, frames),
+                    )
+                    .unwrap();
+                let expected = -(-(frames as f64) / (f64::from(rate) * 0.010)).exp_m1();
+                let actual = plugin.gsc.detector_snapshot();
+                assert!((actual[0] - expected * 0.5).abs() < 1e-12, "rate={rate}");
+                assert!((actual[1] - expected).abs() < 1e-12, "rate={rate}");
+                assert_eq!(actual[2], 1.0);
+            }
+        }
+    }
+
+    #[test]
+    fn bounded_adaptation_matches_full_microphone_fir_energy() {
+        for mics in 2..=8 {
+            for amplitude in [1.0, 1e30] {
+                let mut core = GscBeamformer::new(mics, &vec![0.0; mics], 32, 0.01);
+                for (r, row) in core.adaptive_weights.iter_mut().enumerate() {
+                    for (tap, w) in row.iter_mut().enumerate() {
+                        *w = amplitude * if (r + tap) % 3 == 0 { -2.0 } else { 1.0 };
+                    }
+                }
+                core.bound_adaptive_energy();
+                let mut energy = 0.0;
+                for tap in 0..32 {
+                    let mut sum = 0.0;
+                    for mic in 0..mics {
+                        let cancellation: f64 = core
+                            .adaptive_weights
+                            .iter()
+                            .zip(&core.blocking_matrix)
+                            .map(|(w, b)| w[tap] * f64::from(b[mic]))
+                            .sum();
+                        let coefficient = if tap == 0 {
+                            f64::from(core.fbf_weights[mic])
+                        } else {
+                            0.0
+                        } - cancellation;
+                        energy += coefficient * coefficient;
+                        sum += coefficient;
+                    }
+                    assert!((sum - if tap == 0 { 1.0 } else { 0.0 }).abs() < 1e-6);
+                }
+                assert!((energy - 1.0).abs() < 2e-12, "mics={mics}, energy={energy}");
+            }
+        }
+    }
 
     #[test]
     fn test_gsc_creation() {

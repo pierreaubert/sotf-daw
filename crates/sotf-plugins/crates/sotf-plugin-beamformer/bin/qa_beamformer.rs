@@ -58,7 +58,7 @@ fn main() {
     });
     println!("  MVDR Zero Allocations: PASS");
 
-    println!("\n[Test 4] Worst-layout callback deadlines (8 microphones)");
+    println!("\n[Test 4] Active covariance/adaptation callback deadlines (8 microphones)");
     for algorithm in 0..=2 {
         let mut candidate = BeamformerPlugin::from_params(
             sample_rate,
@@ -71,7 +71,18 @@ fn main() {
         .unwrap();
         candidate.initialize(f64::from(sample_rate)).unwrap();
         let callback_frames = 512;
-        let input = vec![0.05; callback_frames * 8];
+        // Independent sensor excitation keeps covariance solves and GSC
+        // adaptation active. Identical constant channels only time target-only
+        // fast paths and miss the cost of adaptive-weight constraints.
+        let input: Vec<f32> = (0..callback_frames * 8)
+            .map(|index| {
+                let mut value = (index as u32).wrapping_add(0x9e37_79b9);
+                value = (value ^ (value >> 16)).wrapping_mul(0x85eb_ca6b);
+                value = (value ^ (value >> 13)).wrapping_mul(0xc2b2_ae35);
+                value ^= value >> 16;
+                ((f64::from(value) / f64::from(u32::MAX) - 0.5) * 0.1) as f32
+            })
+            .collect();
         let mut output = vec![0.0; callback_frames];
         let context = ProcessContext::new(sample_rate, callback_frames);
         for _ in 0..8 {

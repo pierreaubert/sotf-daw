@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-beamformer",
+    "--release",
+    "--features",
+    "qa",
+    "--test",
+    "audit_moving_sources",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "    Finished `release` profile [optimized] target(s) in 0.21s\n     Running tests/audit_moving_sources.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_moving_sources-232e5d5fd7d8948d)\n\nrunning 1 test\nMOVING_ARRAY rate=48000 mics=4 scene=Stationary kind=0 target_snr_db=136.353190 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Stationary kind=1 target_snr_db=135.397794 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Stationary kind=2 target_snr_db=325.599066 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Motion kind=0 target_snr_db=136.810795 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Motion kind=1 target_snr_db=59.739658 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Motion kind=2 target_snr_db=11.653899 improvement_vs_uniform_db=-inf\nMOVING_ARRAY rate=48000 mics=4 scene=Mismatch kind=0 target_snr_db=55.486076 improvement_vs_uniform_db=0.000379\nMOVING_ARRAY rate=48000 mics=4 scene=Mismatch kind=1 target_snr_db=55.554475 improvement_vs_uniform_db=0.068778\nMOVING_ARRAY rate=48000 mics=4 scene=Mismatch kind=2 target_snr_db=0.610196 improvement_vs_uniform_db=-54.875501\nMOVING_ARRAY rate=48000 mics=4 scene=Diffuse kind=0 target_snr_db=-inf improvement_vs_uniform_db=4.795235\nMOVING_ARRAY rate=48000 mics=4 scene=Diffuse kind=1 target_snr_db=-inf improvement_vs_uniform_db=0.649877\nMOVING_ARRAY rate=48000 mics=4 scene=Diffuse kind=2 target_snr_db=-inf improvement_vs_uniform_db=2.640484\nMOVING_ARRAY rate=48000 mics=4 scene=Mixed kind=0 target_snr_db=3.971201 improvement_vs_uniform_db=0.000001\nMOVING_ARRAY rate=48000 mics=4 scene=Mixed kind=1 target_snr_db=4.629905 improvement_vs_uniform_db=0.658705\nMOVING_ARRAY rate=48000 mics=4 scene=Mixed kind=2 target_snr_db=1.088023 improvement_vs_uniform_db=-2.883178\n\nthread 'public_moving_and_mismatched_arrays_preserve_targets_and_control_diffuse_noise' (326082203) panicked at crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs:184:5:\n48000/4/Motion/2: SNR 11.654, improvement -inf\n48000/4/Mismatch/2: SNR 0.610, improvement -54.876\n48000/4/Mixed/2: SNR 1.088, improvement -2.883\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest public_moving_and_mismatched_arrays_preserve_targets_and_control_diffuse_noise ... FAILED\n\nfailures:\n\nfailures:\n    public_moving_and_mismatched_arrays_preserve_targets_and_control_diffuse_noise\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s\n\nerror: test failed, to rerun pass `-p sotf-plugin-beamformer --test audit_moving_sources`\n"
+}

@@ -1,5 +1,15 @@
 # Unreleased
 
+- Protect GSC targets under microphone mismatch and after noise learning with
+  sample-rate-aware 10 ms spatial coherence, frozen adaptation and a 5 ms
+  fade to fixed summation. Bound complete microphone FIR energy at one using
+  an allocation-free blocking Gram calculation.
+- Keep invalid evidence out of recursive detectors; reset and freeze detector/
+  fade state with the existing lifecycle and finite-drain contracts.
+- Add 162 independent public motion/mismatch/diffuse/noise-to-target cases at
+  16/48/96 kHz, and 168 direct f64 GSC rate/scale/delay/microphone references.
+- Exercise active eight-microphone covariance/adaptation in deadline QA.
+
 - Bound MVDR/superdirective squared weight norm at one while preserving the
   look response, giving physical steering a 0 dB white-noise-gain floor and
   limiting gain/delay/geometry error amplification without realtime allocation.

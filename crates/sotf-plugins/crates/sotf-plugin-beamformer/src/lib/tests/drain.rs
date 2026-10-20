@@ -177,7 +177,13 @@ fn gsc_drain_matches_fractional_delay_and_nonzero_last_learned_tap() {
                     )
                     .unwrap();
                     plugin.initialize(f64::from(rate)).unwrap();
-                    plugin.gsc = GscBeamformer::new(2, &[delay, 0.0], 32, 0.1);
+                    plugin.gsc = GscBeamformer::new_with_sample_rate(
+                        2,
+                        &[delay, 0.0],
+                        32,
+                        0.1,
+                        f64::from(rate),
+                    );
                     let source: Vec<f32> = (0..length)
                         .map(|n| 0.125 + (n % 13) as f32 / 64.0)
                         .collect();
@@ -190,8 +196,10 @@ fn gsc_drain_matches_fractional_delay_and_nonzero_last_learned_tap() {
                     weights[31] = -0.125;
                     plugin.gsc.install_test_weights(&weights);
                     let learned = plugin.gsc.learned_snapshot();
+                    let detector = plugin.gsc.detector_snapshot();
                     collect_tail(&mut plugin, rate, capacity, &mut output);
                     assert_eq!(plugin.gsc.learned_snapshot(), learned);
+                    assert_eq!(plugin.gsc.detector_snapshot(), detector);
                     assert_eq!(output.len(), length + delay.ceil() as usize + 31);
                     let aligned = |n: usize| -> f64 {
                         let whole = delay.floor() as usize;
@@ -211,7 +219,8 @@ fn gsc_drain_matches_fractional_delay_and_nonzero_last_learned_tap() {
                     for (frame, &actual) in output.iter().enumerate().skip(length) {
                         let blocked = 0.5 * aligned(frame);
                         let previous = frame.checked_sub(31).map_or(0.0, |n| 0.5 * aligned(n));
-                        let expected = 0.5 * aligned(frame) - 0.25 * blocked + 0.125 * previous;
+                        let expected = 0.5 * aligned(frame)
+                            - detector[2] * (0.25 * blocked - 0.125 * previous);
                         assert!(
                             (actual as f64 - expected).abs() < 2e-6,
                             "rate={rate},delay={delay},length={length},capacity={capacity},frame={frame}: {actual} != {expected}"

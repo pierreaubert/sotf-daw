@@ -398,7 +398,7 @@
       "id": 11,
       "plugin": "Beamformer",
       "audit_text": "[`beamformer_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs):310\u2013490 supports MVDR/GSC/superdirective paths, fixed structural microphone/type configuration, resettable adaptation and bounded frozen-learning drains. Startup covariance conditioning and steering mismatch are key failure cases. Matrix operations and spectral hops dominate cost, particularly as microphone count increases.\n\n`gsc_reference.rs`, `numerical_recovery.rs`, `spectral_recovery.rs` and `stream_boundaries.rs` provide good numerical/lifecycle coverage. Add array geometry errors, microphone gain/delay mismatch, diffuse noise and moving sources; measure white-noise gain, directivity and target distortion. Classical diagonal loading and uncertainty-aware steering are priorities. Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "requirement": "Bound spectral weight sensitivity to microphone gain, delay and geometry errors while preserving look response.",
@@ -406,7 +406,8 @@
           "evidence": [
             "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs",
             "audit/artifacts/plugin-audit-20261018/beamformer-wng-baseline.json",
-            "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json"
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json"
           ],
           "result": "Reproduced 0.09469 target-response error from a gain perturbation norm of 0.08149 at 2 microphones/1 cm/30 degrees/187.5 Hz. MVDR/superdirective now cap squared weight norm at one by preserving the steering-parallel component and shrinking the orthogonal component. 189 fixed points, 567 physical perturbations and 72 learned MVDR points pass. Minimum WNG is 0 dB to numeric tolerance; maximum tested target error is 0.09992. Diffuse directivity remains no worse than uniform delay-and-sum, with up to 4.015552 dB loss versus the original loaded solution."
         },
@@ -415,21 +416,59 @@
           "status": "implemented_and_verified",
           "evidence": [
             "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json",
-            "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json"
+            "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json"
           ],
           "result": "92 full release QA-feature tests pass, including preallocated weight updates, covariance recovery, frozen drains, native tail bounds and cold allocation checks. Strict all-target QA Clippy passes; no public parameter schema or latency change."
+        },
+        {
+          "requirement": "Preserve moving and mismatched targets through GSC adaptation, including a target following noise learning.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-trained-gsc-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json"
+          ],
+          "result": "Reproduced 0.61 dB GSC target SNR under small microphone errors and 3.30 dB target SNR after prior noise learning at 96 kHz/eight microphones. A 10 ms spatial-coherence detector, 5 ms fade to fixed summation, and bounded microphone FIR energy now preserve over 54 dB target SNR in both scenarios. Independent explicit FIR energy checks cover all 2\u20138 microphone counts, including wider-scale coefficient stress."
+        },
+        {
+          "requirement": "Extend public array geometry/gain/delay mismatch, moving-source and diffuse-noise mixtures with separate target distortion measurements.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json"
+          ],
+          "result": "162 public rate/microphone/scene/algorithm combinations: 16/48/96 kHz, 2/4/8 microphones, fixed and +/-3 degree moving targets, +/-0.5 dB gain, +/-0.05 sample delay and +/-1 mm position errors, seven-direction diffuse quadrature, mixtures and noise-to-target transitions. Target-only and post-noise distortion are separate from mixture residual error. Minimum isolated target SNR across all algorithms exceeds 19 dB; mixed error matches or improves uniform summation to numerical precision. Regular/irregular callbacks are bit-identical, reset replay and finite-drain output are checked."
+        },
+        {
+          "requirement": "Verify detector clock binding, finite/invalid-input recovery, frozen drain and realtime cost on current production sources.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json",
+            "audit/artifacts/plugin-audit-20261018/beamformer-moving-gates.json",
+            "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/gsc_reference.rs"
+          ],
+          "result": "97 release tests pass, including 168 direct f64 scale/rate/microphone/delay cases (maximum normalized error 4.745754e-8), independent detector construction/reset/reinitialization timing, invalid-evidence recovery, denormal-state prevention and frozen detector/mix drain. Strict all-target QA Clippy passes. Active eight-microphone covariance/adaptation is allocation-free, with measured maximum 0.295 ms versus a 10.667 ms buffer on this host. No parameter schema or latency change."
         }
       ],
       "evidence": [
         "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_array_robustness.rs",
         "audit/artifacts/plugin-audit-20261018/beamformer-wng-baseline.json",
         "audit/artifacts/plugin-audit-20261018/beamformer-wng-validation.json",
-        "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json"
+        "audit/artifacts/plugin-audit-20261018/beamformer-wng-clippy.json",
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/audit_moving_sources.rs",
+        "audit/artifacts/plugin-audit-20261018/beamformer-moving-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/beamformer-trained-gsc-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/beamformer-moving-validation.json",
+        "audit/artifacts/plugin-audit-20261018/beamformer-moving-gates.json"
       ],
-      "remaining_production_scope": [
-        "Public moving-source and diffuse-noise mixtures, including gain/delay/geometry mismatch across all three algorithms.",
-        "GSC target distortion and adaptive sensitivity under uncertainty.",
-        "Broader sample rates, startup covariance and source-motion measurements beyond the focused 48 kHz frequency-domain matrix."
+      "validation_limits": [
+        "Engineering continuous-time multitone plane waves; seven-direction diffuse quadrature is a discrete field approximation, not speech-corpus or perceptual validation.",
+        "Public motion matrix uses broadside steering and 5 cm spacing; the separate fixed-frequency matrix covers other spacings/look directions. No universal moving-source distortion guarantee.",
+        "GSC coherent-target fallback can forgo adaptive suppression in target-dominated mixtures. Spectral robustness costs up to 4.02 dB diffuse directivity relative to the original unbounded loaded solution.",
+        "Timing samples demonstrate this host and active-input fixture only; they do not guarantee deadlines on every platform or scheduling condition.",
+        "Optional neural covariance-mask work remains deferred in the separate ML backlog."
       ]
     },
     {
@@ -2029,6 +2068,15 @@
       ],
       "result": "Bound MVDR and superdirective weight norms without changing look response; independent mismatch/directivity fixtures plus 92 release tests and strict Clippy pass. Overall remains 34/45.",
       "limitations": "Up to 4.02 dB diffuse-directivity tradeoff. Moving-source and public diffuse-mixture/GSC uncertainty work remains open; optional neural masks remain separate."
+    },
+    {
+      "name": "Beamformer public moving sources and GSC coherent-target protection",
+      "state": "verified",
+      "plugin_ids": [
+        11
+      ],
+      "result": "162 public motion/mismatch/diffuse/noise-to-target combinations and 168 direct GSC references pass. Corrects target cancellation before and after prior noise learning. Current-source full release suite: 97 passed; strict Clippy and active eight-microphone allocation/deadline QA pass. Closes plugin 11 production scope; overall 35/45.",
+      "limitations": "Conservative target fallback can retain more mixture noise; discrete multitone/diffuse fixtures and host-specific timing are bounded engineering evidence. Optional neural masks remain separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

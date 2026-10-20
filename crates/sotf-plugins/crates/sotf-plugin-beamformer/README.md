@@ -35,8 +35,11 @@ load.
 MVDR learns covariance only when a frame is not dominated by the configured
 look direction. This estimator is normalized by frame energy, so its decision
 does not depend on microphone gain or absolute FFT scaling. GSC aligns every
-microphone before both fixed summation and blocking, and protects target-only
-frames from adaptive cancellation.
+microphone before both fixed summation and blocking. It smooths spatial coherent
+and total power over 10 ms, freezes learning when the coherent fraction reaches
+0.65, and fades learned cancellation toward fixed summation over 5 ms. This also
+protects a target arriving after prior noise learning. All timing uses the
+prepared sample rate. Unusable evidence leaves recursive detector state intact.
 
 MVDR and superdirective report 512 samples of STFT latency. GSC reports the
 ceiling of its maximum fractional steering-compensation delay. All warmed
@@ -73,9 +76,41 @@ This trades diffuse-noise directivity for microphone-error tolerance. The
 independent array fixtures measure up to 4.02 dB less diffuse directivity than
 the original loaded solution, while remaining no worse than delay-and-sum.
 They cover 189 fixed frequency/geometry/angle points, 567 gain/delay/position
-perturbations and 72 learned MVDR close-interference points. GSC uses its existing
-adaptive FIR policy; this spectral weight bound does not cover GSC. Moving
-sources and public mixed target/diffuse-noise streams remain audit work.
+perturbations and 72 learned MVDR close-interference points. GSC separately bounds total microphone-space FIR energy at one, scaling only
+its blocked adaptive component. Its calculation uses an exact blocking-Gram
+identity in O(taps × references), with existing storage. The corresponding frozen-weight sensor-white-noise gain
+is bounded even after noise learning; coherent target protection
+selects fixed summation when mismatch could leak a target into learned references.
+This conservative fallback can forgo adaptive noise reduction in target-dominated
+mixtures.
+
+## Moving sources and microphone mismatch
+
+`tests/audit_moving_sources.rs` exercises all three public algorithms in 162
+rate/microphone/scene combinations: 16/48/96 kHz, 2/4/8 microphones, static and
+±3° moving targets, ±0.5 dB gain/±0.05-sample delay/±1 mm position mismatch,
+seven-direction isotropic-field quadrature, mixed target/noise and noise followed
+by a moving mismatched target. The independent continuous-time fixtures compare
+bit-identical regular/irregular callbacks, exact declared transport latency,
+reset replay and finite draining. Target distortion and mixture error are
+reported separately relative to a nominal uniform-array target reference.
+
+The reproduced 48 kHz/four-mic GSC mismatch failure improves from 0.61 dB to
+55.49 dB target SNR. An eight-mic/96 kHz target after noise learning improves
+from 3.30 dB to over 54 dB. Across the final matrix, isolated target SNR exceeds
+19 dB for every algorithm (GSC exceeds 54 dB after noise learning); mixed-scene
+error is no worse than uniform summation to numerical precision. These are
+engineering multitone fixtures, not speech-corpus or perceptual guarantees.
+Public motion uses broadside steering and 5 cm spacing; separate frequency-domain
+matrices cover other spacing/look angles.
+
+`tests/gsc_reference.rs` compares 168 scale/rate/microphone/delay combinations
+against direct f64 time-indexed equations and explicit microphone FIR energy,
+including reset and full-range saturation. Detector construction/reset/rate
+changes and frozen detector/mix state during drain have independent unit checks.
+The QA binary measures eight-microphone callbacks with active covariance and
+adaptation rather than identical constant channels. Exact commands, baseline
+failures and measurements live under workspace `audit/artifacts/plugin-audit-20261018/beamformer-*.json`.
 
 ## Stream boundaries
 
