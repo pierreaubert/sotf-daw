@@ -31,3 +31,7 @@ pub use binaural_decoder_plugin::*;
 #[cfg(test)]
 #[path = "lib/sofa_delay_tests.rs"]
 mod sofa_delay_tests;
+
+#[cfg(test)]
+#[path = "lib/head_clock_tests.rs"]
+mod head_clock_tests;

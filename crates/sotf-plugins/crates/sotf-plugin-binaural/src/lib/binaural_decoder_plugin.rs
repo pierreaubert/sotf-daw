@@ -2012,27 +2012,10 @@ impl BinauralDecoderPlugin {
         finite_tail.saturating_add(reverb_tail)
     }
 
-    fn process_stream(
-        &mut self,
-        input: &[f32],
-        output: &mut [f32],
-        context: &ProcessContext,
-    ) -> Result<usize, String> {
-        let nf = context.num_frames;
-        validate_interleaved_io(
-            "BinauralDecoder",
-            nf,
-            self.config.input_channels,
-            2,
-            input.len(),
-            output.len(),
-        )?;
-
-        // Advance head-angle smoothers and check whether the angles have changed
-        // enough (> 0.5°) to require an HRTF recompute.
-        let yaw = self.smoothing.head_yaw_deg.next_n(nf);
-        let pitch = self.smoothing.head_pitch_deg.next_n(nf);
-        let roll = self.smoothing.head_roll_deg.next_n(nf);
+    fn request_head_rotation(&mut self) {
+        let yaw = self.smoothing.head_yaw_deg.current();
+        let pitch = self.smoothing.head_pitch_deg.current();
+        let roll = self.smoothing.head_roll_deg.current();
         let angle_changed = (yaw - self.smoothing.last_hrtf_yaw).abs() > 0.5
             || (pitch - self.smoothing.last_hrtf_pitch).abs() > 0.5
             || (roll - self.smoothing.last_hrtf_roll).abs() > 0.5;
@@ -2053,6 +2036,23 @@ impl BinauralDecoderPlugin {
                 self.smoothing.last_hrtf_roll = roll;
             }
         }
+    }
+
+    fn process_stream(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        let nf = context.num_frames;
+        validate_interleaved_io(
+            "BinauralDecoder",
+            nf,
+            self.config.input_channels,
+            2,
+            input.len(),
+            output.len(),
+        )?;
 
         let mut ip = 0;
         let mut op = 0;
@@ -2060,7 +2060,9 @@ impl BinauralDecoderPlugin {
         let n = self.config.fft_size;
         while op < nf {
             if ip < nf {
-                let to_copy = (n - self.input.input_fill).min(nf - ip);
+                // Complete one source hop before requesting/preparing its HRTF.
+                // Reading a whole callback ahead would use future head angles.
+                let to_copy = (self.config.hop_size - self.input.input_fill).min(nf - ip);
                 let input_mask = n - 1;
                 for ch in 0..self.config.input_channels {
                     let off = ch * n;
@@ -2085,8 +2087,18 @@ impl BinauralDecoderPlugin {
                 self.input.input_fill += to_copy;
                 self.input.write_pos = (self.input.write_pos + to_copy) & input_mask;
                 ip += to_copy;
+                if self.drain.remaining.is_none() {
+                    // Advance in identical sample steps across callback splits.
+                    // Partial-hop automation then affects only future samples.
+                    for _ in 0..to_copy {
+                        self.smoothing.head_yaw_deg.advance();
+                        self.smoothing.head_pitch_deg.advance();
+                        self.smoothing.head_roll_deg.advance();
+                    }
+                }
             }
             while self.input.input_fill >= self.config.hop_size {
+                self.request_head_rotation();
                 self.process_audio_block();
                 self.input.read_pos = (self.input.read_pos + self.config.hop_size) & (n - 1);
                 self.input.input_fill -= self.config.hop_size;

@@ -475,9 +475,30 @@
       "id": 12,
       "plugin": "Binaural decoder",
       "audit_text": "[`binaural_decoder_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/binaural_decoder_plugin.rs):1907\u20132065 uses FFT streaming, asynchronous orientation updates and a tail bound including reflections and optionally three RT60 periods. The latter is a truncation policy for recursive late reverb, not exact finite mathematical support. Orientation is smoothed/thresholded by callback; motion-to-audio latency needs measurement beyond static HRIR accuracy.\n\n`sofa_resampling.rs`, decoder tests and integration tests cover important file/rate paths. Extend SOFA delay/coordinate conventions, head-turn sweeps, stale worker updates, maximum HRIR dimensions and tail cutoff audibility. Classical minimum-phase-plus-ITD interpolation, robust crossfades and individualized HRTF selection are useful. ML HRTF selection from measurements/preferences is plausible offline; online inference must not delay head tracking unpredictably.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Make head-orientation smoothing and request cadence follow source time across callback partitions, empty calls and EOF.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-clock-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json"
+          ],
+          "result": "Reproduced empty callback jumping yaw from 0 to 90 degrees and EOF padding advancing orientation. Source samples now advance the three smoothers identically, and completed source hops trigger requests. 36 schedules at 44.1/48/96 kHz and FFT 64/256/1024 are bit-identical across four callback shapes, including three-axis interruptions within a partial hop. First-hop angle matches independent 10 ms timing within 0.001 degrees; reset clears pending phase. 130 regular release tests plus the explicit transition timing test pass; strict QA all-target Clippy passes. All 40002 measured transition callbacks have zero allocations/frees."
+        }
+      ],
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/binaural-head-clock-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/binaural-head-clock-validation.json"
+      ],
+      "remaining_production_scope": [
+        "Stale queued/in-flight worker results, head-turn audio sweeps (including yaw wrap) and measured end-to-end motion-to-audio latency.",
+        "SOFA coordinate/delay conventions, maximum HRIR dimensions and support admission on current sources.",
+        "Recursive late-reverb truncation/cutoff audibility and robust interrupted crossfades.",
+        "Ordinary callback prepared-clock validation before mutating source/control state."
+      ]
     },
     {
       "id": 13,
@@ -2077,6 +2098,15 @@
       ],
       "result": "162 public motion/mismatch/diffuse/noise-to-target combinations and 168 direct GSC references pass. Corrects target cancellation before and after prior noise learning. Current-source full release suite: 97 passed; strict Clippy and active eight-microphone allocation/deadline QA pass. Closes plugin 11 production scope; overall 35/45.",
       "limitations": "Conservative target fallback can retain more mixture noise; discrete multitone/diffuse fixtures and host-specific timing are bounded engineering evidence. Optional neural masks remain separate."
+    },
+    {
+      "name": "Binaural source-clocked orientation requests",
+      "state": "verified_partial",
+      "plugin_ids": [
+        12
+      ],
+      "result": "Fix empty/EOF head-time advancement and callback-dependent request trajectories; 36 deterministic schedules, 130 regular release tests, explicit 40002-callback transition timing and strict Clippy pass. Overall remains 35/45.",
+      "limitations": "Deterministic request sink does not prove asynchronous publication freshness or motion-to-audio latency. Coordinate/maximum-support and tail-cutoff requirements remain open; optional ML remains separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

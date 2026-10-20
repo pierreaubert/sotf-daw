@@ -1,5 +1,13 @@
 # Unreleased
 
+- Advance head orientation from source samples and request HRTF updates at
+  completed source hops, making request trajectories independent of callback
+  partitions and respecting controls changed inside a partially filled hop.
+- Prevent empty callbacks from snapping head angles to their targets and freeze
+  orientation through synthetic EOF input. Retain fixed FFT latency.
+- Add 36 deterministic three-axis request schedules, independent first-hop
+  timing, and empty/partial/reset/EOF clock regression checks.
+
 ## Maintenance
 
 - Resample HRIRs with `Fft::new_custom`, preserving the historical

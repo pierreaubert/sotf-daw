@@ -24,3 +24,19 @@ Initialization stages file loading, resampling and support validation before
 changing live clocks/history; rejected preparation preserves active/pending
 filter owners and partial drain state. Later unrelated preparation errors retain
 their existing behavior.
+
+## Head-orientation source clock
+
+Orientation advances in per-sample steps of accepted source audio, and HRTF
+requests are sampled at completed source-hop boundaries. Host callback sizes and
+partial-hop parameter changes therefore produce identical request sequences.
+Empty callbacks and synthetic EOF padding do not advance orientation; reset
+clears the pending input-hop phase. The fixed FFT transport latency is unchanged.
+
+`src/lib/head_clock_tests.rs` verifies 36 request schedules across 44.1/48/96 kHz,
+FFT sizes 64/256/1024, four callback patterns and interrupted three-axis motion.
+It checks the first request against independent 10 ms one-pole timing and covers
+empty, partial, reset and drain boundaries. A deterministic request sink isolates
+this clock test from background-thread scheduling. Real worker publication
+staleness, end-to-end motion-to-audio latency, coordinate/delay boundaries and
+recursive tail-cutoff audibility remain separate audit work.

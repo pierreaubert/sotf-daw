@@ -66,3 +66,9 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
   ILD. Full reflection ITD/pinna convolution is not claimed.
 - Optional RTPGHI (Real-Time Phase Gradient Heap Integration) processor from `math-dsp` for phase reconstruction.
 - The `sofa-reader` dev dependency is used only in benchmarks.
+
+## Head-tracking clock
+
+- Advance head smoothers from accepted source samples; send requests at completed source-hop boundaries, preserving partial-hop automation timing.
+- Empty callbacks and synthetic EOF input must not advance orientation. Reset discards the pending input-hop phase.
+- `src/lib/head_clock_tests.rs` uses a deterministic request sink. It proves scheduling partition invariance, not asynchronous worker latency or stale-result rejection.

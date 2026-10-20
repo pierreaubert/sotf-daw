@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "head_clock_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "output": "   Compiling math-rir v0.5.13 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-rir)\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 15.54s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-c88022d35d76891c)\n\nrunning 2 tests\n\nthread 'head_clock_tests::empty_callbacks_and_partial_source_hops_do_not_send_future_angles' (326287602) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs:94:9:\nassertion `left == right` failed: empty callback advanced head time\n  left: 90.0\n right: 0.0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'head_clock_tests::head_requests_follow_source_hops_across_callback_partitions' (326287603) panicked at crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/head_clock_tests.rs:56:5:\nassertion `left == right` failed: synthetic EOF input advanced orientation\n  left: [10.2890625, 4.585224, 3.3667107]\n right: [11.518342, 4.883233, 0.94778675]\ntest head_clock_tests::head_requests_follow_source_hops_across_callback_partitions ... FAILED\ntest head_clock_tests::empty_callbacks_and_partial_source_hops_do_not_send_future_angles ... FAILED\n\nfailures:\n\nfailures:\n    head_clock_tests::empty_callbacks_and_partial_source_hops_do_not_send_future_angles\n    head_clock_tests::head_requests_follow_source_hops_across_callback_partitions\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 93 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-binaural --lib`\n"
+}
