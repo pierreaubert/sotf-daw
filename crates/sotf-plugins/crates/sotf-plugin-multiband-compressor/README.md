@@ -4,6 +4,28 @@ SOTF Multiband Compressor plugin for multiband dynamic range compression.
 
 Splits the signal into frequency bands and applies independent compression to each band for frequency-selective dynamics control.
 
+## Crossover precision and validation
+
+Crossover coefficients, state and serial split intermediates use f64; band audio
+returns to f32 before dynamics processing. This corrects low-cutoff rounding
+error at high sample rates and changes multiband numerical output. Parameter
+formats, automation, latency and one-band processing retain their contracts.
+Processing adds no heap allocation or deallocation. CPU cost has not been
+benchmarked for this precision change.
+
+The existing cascaded LR4 topology remains: each split operates on the preceding
+high-pass output. With three or more bands, the sum is not generally a flat
+all-pass response because low bands do not receive the later splits' phase
+rotation. No-gain-reduction reconstruction is checked against this topology,
+including its interband phase and transient timing.
+
+`tests/audit_signal_paths.rs` uses independent f64 Tustin/DF-I filter references
+and detector/gain trajectories. Its 252 cases cover 1–5 bands, 44.1–192 kHz,
+solo/sum closure, M/S, lookahead, peak/RMS detection, knee, attack/release,
+continuous stereo linking and near-threshold modulation. Successful callbacks
+are checked for finite output and zero heap activity. Release allocation checks
+require `--features qa`.
+
 ## Finite streams
 
 Call `initialize` before processing and repeatedly call `drain` after the last

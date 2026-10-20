@@ -1,3 +1,13 @@
+## Unreleased crossover precision and signal validation
+
+- Use f64 crossover coefficients, state and serial split intermediates, casting
+  final band samples to f32. Fix measured complex-response error of 0.00471 at
+  96 kHz/120 Hz without relaxing the 0.002 validation bound.
+- Add independent no-reduction, transient, stereo-link and near-threshold
+  detector/knee/attack/release references: 252 cases, zero callback heap activity.
+- Preserve cascaded topology, latency and parameter formats. Multiband numeric
+  audio changes; no flat multiway reconstruction or CPU performance claim.
+
 ## Unreleased explicit recursive rendering
 
 - Add native `set_recursive_tail_render_frames` job policy for a chosen recursive

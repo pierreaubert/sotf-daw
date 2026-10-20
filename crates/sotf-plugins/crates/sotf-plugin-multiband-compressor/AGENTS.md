@@ -21,9 +21,15 @@ cargo test -p sotf-plugin-multiband-compressor
 
 ## Important Notes
 
-- Uses LR4 crossovers for phase-coherent band splitting
+- Uses cascaded LR4 crossovers with f64 coefficients, state and split
+  intermediates; cast to f32 only at band buffers. Preserve precision at low
+  cutoffs/high sample rates. Three-plus-band sums are not generally flat
+  all-pass responses: later crossover phase is absent from earlier low bands.
 - Re-exports `CROSSOVER_PRESETS` from sotf-host for standard frequency splits
 - Each band has independent threshold, ratio, attack, release, knee, makeup gain
+- `tests/audit_signal_paths.rs` validates against independent DF-I/Tustin and
+  dynamics references with fixed bounds; do not substitute production filter
+  helpers into the oracle. Release heap checks require `--features qa`.
 
 ## Explicit recursive render policy
 

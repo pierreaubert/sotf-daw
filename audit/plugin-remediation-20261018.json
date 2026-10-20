@@ -1149,17 +1149,22 @@
         },
         {
           "task": "Extend no-reduction reconstruction, interband transient timing, stereo-link and near-threshold modulation validation",
-          "status": "pending",
-          "evidence": "Existing compressor_accuracy/detector/range/hold/lookahead suites pass but recommended additional multiband coverage remains to implement."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/src/lib/multiband_compressor_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/tests/audit_signal_paths.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-compressor-signal-paths.json"
+          ],
+          "result": "Independent f64 Tustin/DF-I cascade, detector and dB gain references validate 120 unity impulse configurations, 96 near-threshold trajectories and 36 per-band linked trajectories. Covers 1\u20135 bands, 44.1\u2013192 kHz, mono/stereo/M/S, 0/5 ms lookahead, solo/sum closure, Peak/RMS, knee 0/6 dB, attack 0.1/10 ms, release 20/200 ms and link 0/0.5/1. New tests exposed 0.0047128 complex error at 96 kHz/120 Hz; local f64 crossover coefficients/state/cascade fix retains topology and f32 band buffers. All 252 cases pass unchanged bounds: worst complex 7.9235e-8, sample 2.3144e-8, peak 0 frames, envelope 0.008692 dB, band gain 0.006536 dB; all measured callbacks finite with zero allocations/deallocations. Final crate 173 passed, 0 ignored; release 3 passed; strict QA Clippy passed. Three focused facade tests passed. Bridge compressor filter matched no tests and is not behavioral validation. Multiway topology is unchanged and not claimed flat; CPU cost unbenchmarked."
         },
         {
           "task": "Verify single-band alias/factory defaults and separately measured detector/release/knee behavior for audit completion",
           "status": "pending",
-          "evidence": "Facade alias and factory paths still require source/consumer review; optional offline ML remains excluded from production scope."
+          "evidence": "Source review confirms facade CompressorPlugin is a type alias and canonical/bridge factories force num_bands=1; direct alias constructor still uses multiband defaults. AB Compare compressor path does not force one band and requires separate compatibility review. Three focused facade tests pass; bridge filter executes zero tests. Exported formats are not validated in this batch."
         }
       ],
       "evidence": [
-        "Explicit native recursive rendering is implemented and validated; no claim of exact finite IIR support or automatic cutoff. Entry34 partial; overall29/45 complete."
+        "Explicit recursive rendering and extended independent signal validation implemented; multiband crossover precision corrected. Entry34 remains partial pending alias/factory compatibility closure; overall29/45 complete."
       ]
     },
     {
