@@ -113,8 +113,7 @@ heap-free. Recursive tail metadata stays `Unknown`, while the existing empty-ban
 finite-stream policy remains covered separately. The fixture validates rate
 metadata and history handling; it is not a physical resampler.
 
-These matrices cover standard 1x filters and stated endpoints. Optimized filter
-families, advanced extremes, mixed-realization trajectories, oversampled host
+These matrices cover standard 1x filters and stated endpoints. Advanced extremes, mixed-realization trajectories, oversampled host
 rate changes and broader tail-policy review remain separate audit requirements.
 
 
@@ -139,5 +138,25 @@ A further 3,168 retained-SVF `DawHost` cases verify rate rebuilds at base
 routes reset SVF integrators, retain the selected factor, keep zero latency and
 Unknown recursive tails, and use explicitly checked compiled-linear/graph paths.
 Maximum new/old-rate reference error is 9.32e-10. Tested processing callbacks stay
-heap-free. Native optimized biquad designs and advanced/mixed realizations retain
-their separate audit requirements.
+heap-free. Advanced/mixed realizations retain separate audit requirements.
+
+
+Native optimized biquads use shared `math-audio` commit `63e8495`. PeakMatched
+boosts keep their matched pole radius/angle and satisfy unity DC/Nyquist plus the
+requested center gain. Cuts invert the corresponding minimum-phase boost. The
+optimized shelves preserve their fixed-slope poles and endpoint/geometric-midpoint
+constraints, using a cancellation-resistant positive numerator split. They now
+select minimum phase for both gain signs. Negative-gain audio intentionally
+changes: deep matched cuts reach the requested gain, and tiny optimized cuts
+approach identity without a phase jump. Filter names and preset fields remain.
+
+The independent native matrix covers 2,304 impulse prefixes at the same fixed
+2e-5 bound (maximum error 2.99e-8), four rates, three frequencies, Q/gain endpoints,
+orders 2/4/6/8, DF-I/TDF-II and both routes. Optimized shelves use independent
+analog-polynomial references; matched peaks use endpoint constraints and complex
+center-response spectral factoring. All 1,440 actual f64 sections have stable
+poles and minimum-phase zeros, including long-tail sections beyond the 4,096-frame
+prefix. Tested processing callbacks have zero measured heap activity. Shared f64
+response tests verify center/endpoints, reciprocal phase and zero-gain continuity;
+this does not establish an analog bandwidth match or CPU deadline. Optimized
+transitions and actual oversampled host rate changes remain separate work.

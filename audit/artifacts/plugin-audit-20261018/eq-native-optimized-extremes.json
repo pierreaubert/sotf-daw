@@ -1,0 +1,160 @@
+{
+  "scope": "Production native f64 optimized biquad gain/phase and endpoint impulse validation; optional ML separate. EQ remains partial.",
+  "tracking_issue": 9,
+  "math_commit": "63e84954eea025decafb2840f052f4a55d20db15",
+  "math_parent": "bceee0489fcee2940ca17660e54239fabc84d29f",
+  "math_branch": "feat/sotf-daw-issue-9-optimized-audit",
+  "math_source_sha256": {
+    "crates/math-iir-fir/src/iir/biquad.rs": "32a6f7ebf60923581086b339f71282587e3824e797d279578e19075e860f2146",
+    "crates/math-iir-fir/src/iir/biquad/biquad_filter_type.rs": "c75a278fd0416c1c0edd9954a06e749118a4b926b9f06f552d75fd69a7330def",
+    "crates/math-iir-fir/tests/optimized_response_constraints.rs": "6a32729cd2f09876b517705455ce98d275d8313459c6d7ce33c2983cac93da91"
+  },
+  "before": {
+    "tests_failed": 2,
+    "constraint_cases": 72,
+    "maximum_gain_error_db": 23.62412005141225,
+    "maximum_reciprocal_complex_error": 18.33307749826485,
+    "minimum_jury_margin": -0.19912443204878616,
+    "tiny_cut_failure": "PeakMatched/-0.000001 dB/10 Hz probe at center 1000 Hz, Q 0.1, fs 48000 failed to approach identity."
+  },
+  "design": {
+    "shelves": "Preserve fixed-slope poles and DC/Nyquist/geometric-midpoint gain constraints. Use half-angle endpoint sums and the closed-form positive b0-b2=2*A*sqrt(2*A)*sin(w). Removes power subtraction/small quadratic divide and selects minimum phase for both signs. Q remains ignored by native shelf slope.",
+    "peak": "Keep boost poles r=exp(-pi*f/(Q*fs)), angle w=2*pi*f/fs. Unity endpoints fix b1 and b0+b2; center complex power fixes positive b0-b2. Stable factor uses exp_m1 for 1-r and a sum of nonnegative powers. Cuts swap boost numerator/denominator and normalize; zero gain is exact identity. No claim of complete analog bandwidth matching.",
+    "preset_behavior": "Names/fields unchanged; negative-gain audio intentionally corrected. No callback data structure or allocation added."
+  },
+  "shared_constraints": {
+    "command": "cargo +1.92.0 test -p math-iir-fir --test optimized_response_constraints --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "cases": 72,
+    "gain_signs_per_case": 2,
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "frequencies_hz": [
+      20,
+      1000,
+      20000
+    ],
+    "q": [
+      0.1,
+      20
+    ],
+    "gain_db": [
+      -24,
+      24
+    ],
+    "maximum_gain_error_db": 1.674273164553597e-08,
+    "gain_error_bound_db": 2e-06,
+    "maximum_reciprocal_complex_error": 7.267338475447238e-09,
+    "reciprocal_error_bound": 2e-07,
+    "minimum_pole_zero_jury_margin": 1.0750193213393544e-07,
+    "zero_and_tiny_gain_db": [
+      -1e-06,
+      0,
+      1e-06
+    ],
+    "tiny_gain_identity_complex_bound": 2e-06,
+    "release_same_results": true
+  },
+  "native_public_matrix": {
+    "command": "cargo test -p sotf-plugin-eq --test audit_extremes native_optimized_extreme_impulses --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "cases": 2304,
+    "types": [
+      "peak_matched",
+      "lowshelf_orf",
+      "highshelf_orf"
+    ],
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "frequencies_hz": [
+      20,
+      1000,
+      20000
+    ],
+    "q": [
+      0.1,
+      20
+    ],
+    "gain_db": [
+      -24,
+      24
+    ],
+    "orders": [
+      2,
+      4,
+      6,
+      8
+    ],
+    "forms": [
+      "DF-I",
+      "TDF-II"
+    ],
+    "routes": [
+      "legacy",
+      "ordered Stereo"
+    ],
+    "impulse_prefix_frames": 4096,
+    "maximum_absolute_error": 2.9802322387695312e-08,
+    "fixed_error_bound": 2e-05,
+    "reference": "Shelves use independent prewarped analog-polynomial bilinear model. Peak uses unity endpoint sums and a complex center-response spectral factor, with no production coefficient helpers. Gain/Q per-stage rules modeled independently.",
+    "callback_frames": [
+      17,
+      257,
+      1024
+    ],
+    "measured_allocations_and_deallocations_per_callback": [
+      0,
+      0
+    ]
+  },
+  "actual_coefficients": {
+    "command": "cargo test -p sotf-plugin-eq --lib audit_optimized_extreme --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "configurations": 576,
+    "actual_sections": 1440,
+    "minimum_pole_zero_jury_margin": 1.0750193213393544e-07,
+    "criterion": "All actual f64 coefficients finite; all three second-order Jury margins positive for denominator and numerator, certifying stable/minimum-phase roots beyond the impulse prefix."
+  },
+  "validation": [
+    {
+      "command": "cargo +1.92.0 test -p math-iir-fir --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "passed": 385,
+      "existing_ignored": 1
+    },
+    {
+      "command": "cargo +1.92.0 test -p math-iir-fir --release --test optimized_response_constraints --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+      "passed": 2
+    },
+    {
+      "command": "cargo +1.92.0 clippy -p math-iir-fir --all-targets --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "result": "passed"
+    },
+    {
+      "command": "cargo test -p sotf-plugin-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "passed": 172,
+      "existing_ignored": 11
+    },
+    {
+      "command": "cargo test -p sotf-plugin-eq --release --features qa --test audit_extremes --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+      "passed": 6
+    },
+    {
+      "command": "cargo clippy -p sotf-plugin-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "result": "passed"
+    }
+  ],
+  "validation_command_correction": "First release invocation omitted --features qa, so host test allocation helpers were unavailable at compile time. Corrected invocation with QA feature passed; no source/tolerance workaround.",
+  "worktree_preservation": "Shared fix developed in isolated worktree. Candidate CLI paths override used only for initial tests. After commit, original sibling HEAD bceee04 and empty tracked/staged diffs were asserted; candidate worktree detached and dedicated branch selected in normal sibling. Existing untracked audit-20261018.md and audit-20261018-implementation.md hashes preserved. Normal DAW suite/release/lint run without overrides. Root unrelated Cargo.lock/driver/engine edits not staged.",
+  "limits": [
+    "Native accuracy/stability matrices certify stated f64 endpoints and 4096-frame impulse prefixes, not a general transient/CPU deadline guarantee.",
+    "No dedicated native f32 endpoint accuracy/stability claim; current production EQ uses f64 sections.",
+    "Advanced extremes/mixed realizations, optimized coefficient trajectories, actual oversampled/advanced host rate changes and broader finite/recursive tail review remain open.",
+    "Historical ignored fixture-capture tests retained, no baseline regeneration or tolerance relaxation.",
+    "EQ partial, overall 32/45 production plugins complete."
+  ]
+}

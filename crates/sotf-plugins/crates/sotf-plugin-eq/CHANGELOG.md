@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Correct native optimized cut gain and phase through math-iir-fir (`63e8495`).
+  Matched cuts invert minimum-phase boosts; optimized shelves solve their existing
+  constraints without subtractive power cancellation and use minimum phase for
+  either sign. Negative-gain audio intentionally changes; names/preset fields stay.
+  Validate 2,304 independent native impulse cases and 1,440 realized sections,
+  with heap-free measured callbacks and the existing fixed error bound.
+
 - Accept exact serialized Q=0.1 and filter-bank replacements at that endpoint
   using the authoritative f64 minimum; keep the next lower value invalid.
 - Validate 6,144 standard-family extreme impulse prefixes against independent

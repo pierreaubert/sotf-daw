@@ -2,7 +2,8 @@
 //!
 //! Fixed bounds: 4096-frame unit-impulse prefixes, absolute output error 2e-5.
 //! The reference uses tan-prewarping and polynomial bilinear substitution, not
-//! the production trigonometric design or its processing helpers. Standard
+//! the production trigonometric design or its processing helpers. Native matched
+//! peaks use independent endpoint/center complex spectral factoring. Standard
 //! biquad shelves have fixed slope; SVF shelves preserve the user Q.
 
 // Rust guideline compliant 2026-02-21
@@ -680,5 +681,122 @@ fn retained_svf_rate_changes_through_host_reset_integrators_and_preserve_selecte
     println!(
         "{}",
         serde_json::json!({"case":"svf_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+// Independent spectral factor: unity DC/Nyquist fixes b1 and b0+b2;
+// the complex center response fixes |b0-b2|. Choose minimum phase and invert
+// the positive-gain transfer for cuts. No production coefficient helper is used.
+fn optimized_coefficients(d: Design, rate: u32) -> Vec<[f64; 5]> {
+    if d.kind != "peak_matched" {
+        return coefficients(
+            Design {
+                kind: if d.kind == "lowshelf_orf" {
+                    "lowshelf"
+                } else {
+                    "highshelf"
+                },
+                ..d
+            },
+            rate,
+        );
+    }
+    let w = 2.0 * PI * d.freq / f64::from(rate);
+    let count = d.order / 2;
+    let gain = 10.0_f64.powf(d.gain.abs() / count as f64 / 20.0);
+    (0..count)
+        .map(|stage| {
+            let prototype =
+                1.0 / (2.0 * (PI * (2 * stage + 1) as f64 / (2 * d.order) as f64).cos());
+            let q = if count == 1 { d.q } else { d.q * prototype };
+            let radius = (-PI * d.freq / (q * f64::from(rate))).exp();
+            let a = [1.0, -2.0 * radius * w.cos(), radius * radius];
+            let dc = (1.0 - radius).powi(2) + 4.0 * radius * (w / 2.0).sin().powi(2);
+            let nyquist = (1.0 - radius).powi(2) + 4.0 * radius * (w / 2.0).cos().powi(2);
+            let p = (dc + nyquist) / 2.0;
+            let b1 = (dc - nyquist) / 2.0;
+            let re = a[0] + a[1] * w.cos() + a[2] * (2.0 * w).cos();
+            let im = -a[1] * w.sin() - a[2] * (2.0 * w).sin();
+            let real_b = p * w.cos() + b1;
+            let difference =
+                (gain * gain * (re * re + im * im) - real_b * real_b).sqrt() / w.sin().abs();
+            let b = [(p + difference) / 2.0, b1, (p - difference) / 2.0];
+            let (num, den) = if d.gain < 0.0 { (a, b) } else { (b, a) };
+            assert!(den.iter().chain(num.iter()).all(|x| x.is_finite()));
+            assert!(
+                den[0] + den[1] + den[2] > 0.0
+                    && den[0] - den[1] + den[2] > 0.0
+                    && den[0] - den[2] > 0.0
+            );
+            [
+                num[0] / den[0],
+                num[1] / den[0],
+                num[2] / den[0],
+                den[1] / den[0],
+                den[2] / den[0],
+            ]
+        })
+        .collect()
+}
+
+#[test]
+fn native_optimized_extreme_impulses_match_independent_spectral_factors() {
+    let mut impulse = vec![0.0; 4096];
+    impulse[0] = 1.0;
+    let mut cases = 0;
+    let mut maximum = 0.0_f64;
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for kind in ["peak_matched", "lowshelf_orf", "highshelf_orf"] {
+            for freq in [20.0, 1000.0, 20000.0] {
+                for q in [0.1, 20.0] {
+                    for gain in [-24.0, 24.0] {
+                        for order in [2, 4, 6, 8] {
+                            let d = Design {
+                                kind,
+                                freq,
+                                q,
+                                gain,
+                                order,
+                            };
+                            let c = optimized_coefficients(d, rate);
+                            for tdf2 in [false, true] {
+                                let mut states = vec![State::default(); order / 2];
+                                let expected: Vec<_> = impulse
+                                    .iter()
+                                    .map(|&x| {
+                                        let mut y = f64::from(x);
+                                        for (state, &section) in states.iter_mut().zip(&c) {
+                                            y = state.process(y, section, tdf2);
+                                        }
+                                        y as f32
+                                    })
+                                    .collect();
+                                assert!(expected.iter().all(|x| x.is_finite()));
+                                for ordered in [false, true] {
+                                    let mut plugin = prepared(d, rate, tdf2, ordered);
+                                    let actual = render(plugin.as_mut(), &impulse, rate);
+                                    let error = actual
+                                        .iter()
+                                        .zip(&expected)
+                                        .map(|(&a, &b)| f64::from(a - b).abs())
+                                        .fold(0.0_f64, f64::max);
+                                    maximum = maximum.max(error);
+                                    assert!(
+                                        error < 2e-5,
+                                        "native optimized error {error}: {rate}/{kind}/{freq}/{q}/{gain}/{order}/{tdf2}/{ordered}"
+                                    );
+                                    cases += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 2304);
+    println!(
+        "{}",
+        serde_json::json!({"case":"native_optimized_extremes","cases":cases,"maximum_reference_error":maximum})
     );
 }

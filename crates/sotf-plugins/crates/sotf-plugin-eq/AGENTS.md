@@ -69,3 +69,11 @@ cargo test -p sotf-plugin-eq
   host-rate cases with independent models; saved 2x/4x selections still process
   SVF at base rate. SVF integrators reset on rate rebuild in both routes. Aliases
   under global SVF do not validate their native optimized biquad designs.
+
+- Native optimized biquads require shared math-audio commit `63e8495`. PeakMatched
+  cuts invert the corresponding minimum-phase boost; optimized shelves use the
+  positive closed-form numerator split for both gain signs. Zero gain is identity.
+  Keep the documented negative-gain behavior correction explicit and preserve
+  historical fixtures. `audit_extremes.rs` covers 2,304 independent native cases;
+  the unit matrix certifies all 1,440 actual section poles and zeros. These f64
+  native matrices do not cover advanced/mixed or oversampled host trajectories.
