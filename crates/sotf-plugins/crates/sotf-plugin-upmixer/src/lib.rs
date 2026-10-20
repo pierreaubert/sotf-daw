@@ -7,6 +7,7 @@ mod detection;
 mod drain;
 mod fft;
 mod frequency_domain;
+mod gain_clock;
 mod height;
 mod hr_processing;
 #[cfg(feature = "onnx")]

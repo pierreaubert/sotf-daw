@@ -60,6 +60,8 @@ pub(super) struct UpmixerFft {
 }
 
 pub(super) struct UpmixerGains {
+    pub(super) clock_phase: usize,
+    pub(super) pending_frames: usize,
     // Parameters
     /// Front direct gain (gainFS)
     pub(super) gain_front_direct: Smoother,
@@ -665,6 +667,8 @@ impl UpmixerPlugin {
         };
 
         let gains = UpmixerGains {
+            clock_phase: 0,
+            pending_frames: 0,
             gain_front_direct: Smoother::new(gain_front_direct, 5.0, sample_rate),
 
             gain_front_ambient: Smoother::new(gain_front_ambient, 5.0, sample_rate),
@@ -1470,6 +1474,13 @@ impl UpmixerPlugin {
     /// Order must match params::PARAMS exactly.
     /// NOTE: This sets the raw field only -- side effects are handled in set_parameter.
     pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
+        if Self::is_gain_clock_parameter(index)
+            && self.param_value(index) != Some(f64::from(UP[index].clamp_f64(value) as f32))
+        {
+            // Account for the old target through the exact accepted source
+            // position before a sub-hop retarget. Repeated snapshots do nothing.
+            self.flush_gain_clock();
+        }
         match index {
             // 0 => speaker_config -- handled as side effect in set_parameter
             0 => {} // no-op, side effect handles this
@@ -2134,6 +2145,7 @@ impl Plugin for UpmixerPlugin {
             ));
         }
 
+        self.flush_gain_clock();
         self.core.sample_rate = sample_rate;
 
         // Calculate ERB bands
@@ -2276,6 +2288,8 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn reset(&mut self) {
+        self.flush_gain_clock();
+        self.gains.clock_phase = 0;
         self.drain.reset();
         // Clear buffers
         // The first analysis window starts at -H. Its nonnegative half has
@@ -2495,24 +2509,6 @@ impl UpmixerPlugin {
             return Ok(0);
         }
 
-        // Update smoothers by the number of frames in this block
-        self.gains.gain_front_direct.next_n(n);
-        self.gains.gain_front_ambient.next_n(n);
-        self.gains.gain_rear_ambient.next_n(n);
-        self.height.height_gain.next_n(n);
-        self.gains.lfe_gain.next_n(n);
-        self.subharmonic.subharmonic_gain.next_n(n);
-        self.gains.stereo_width.next_n(n);
-        self.gains.center_spread.next_n(n);
-        self.surround.ambient_boost.next_n(n);
-        self.dialogue.dialogue_weight.next_n(n);
-        self.surround.surround_direct_bleed.next_n(n);
-        self.surround.rear_ambient_boost.next_n(n);
-        self.surround.rear_late_reflection.next_n(n);
-        self.height.height_direct_leak.next_n(n);
-        self.height.height_transient_reduction.next_n(n);
-        self.gains.hr_sharpen.next_n(n);
-
         // Update frequency/table-generating parameter smoothers and regenerate tables if changed
         {
             let prev_lfe = self.params.lfe_cutoff_hz;
@@ -2547,6 +2543,7 @@ impl UpmixerPlugin {
 
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
+            self.advance_gain_clock(n);
             let num_frames = context.num_frames;
             for i in 0..num_frames {
                 let left = input[i * 2];
@@ -2646,6 +2643,7 @@ impl UpmixerPlugin {
                             self.hr_buffers.hr_input_buffer_fill += hr_chunk;
                             hr_input_offset += hr_chunk;
                             remaining_hr_samples -= hr_chunk;
+                            self.advance_gain_clock(hr_chunk / 2);
 
                             // Process HR block if buffer is full
                             if self.hr_buffers.hr_input_buffer_fill >= self.fft.hr_fft_size * 2 {
@@ -2671,6 +2669,8 @@ impl UpmixerPlugin {
                                 self.hr_buffers.hr_input_buffer_fill = remaining;
                             }
                         }
+                    } else {
+                        self.advance_gain_clock(samples_to_copy / 2);
                     }
 
                     self.main_buffers.input_buffer_fill += samples_to_copy;

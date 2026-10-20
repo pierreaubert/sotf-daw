@@ -65,6 +65,13 @@ from the workspace root). The generator uses fixed seeds, so output is byte-stab
 - The `onnx` feature enables ML-guided upmixing via ONNX runtime (optional, not default).
 - `binaural_preview` mode renders the surround output to binaural 2ch for headphone monitoring.
 - FFT size and hop size determine latency. 50% overlap with Hann window is used for the overlap-add reconstruction.
+- Gain/routing smoothers use the common main/HR analysis clock in `gain_clock.rs`.
+  Flush elapsed sub-hop time before a changed target; same-value snapshots and
+  empty calls must not snap or shift the grid. Keep it independent of HR enable.
+- Preserve old-clock elapsed gain time on reset/reinitialization. HR input
+  chunks must clock controls before HR analysis; disabled HR still advances
+  through the same fixed quanta. Crossover tables and final output safety
+  are separate callback-timing limitations, not covered by this invariant.
 - Speaker configurations are defined in `params.rs` (`SPEAKER_CONFIGS`) and reference `SpeakerConfig` from sotf-host.
 - Output channel count changes dynamically based on selected speaker configuration. The engine must handle channel count changes between plugins.
 - VBAP uses triangulated speaker layouts for 3D panning (including height channels).

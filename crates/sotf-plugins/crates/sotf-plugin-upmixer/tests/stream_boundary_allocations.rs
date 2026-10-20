@@ -41,6 +41,44 @@ unsafe impl GlobalAlloc for CallbackAllocator {
 static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
 #[test]
+fn automated_gain_clock_and_partial_hop_reset_have_no_heap_activity() {
+    for fft in [2, 512, 4096] {
+        for hr in [false, true] {
+            let params = serde_json::from_value(serde_json::json!({"fft_size":fft,
+                "speaker_config":"9.1.6","enable_hr_direct":hr,"auto_gain_enabled":false}))
+            .unwrap();
+            let mut plugin = UpmixerPlugin::from_params(params);
+            plugin.initialize(48_000.0).unwrap();
+            plugin
+                .set_parameter(
+                    "gain_front_direct".into(),
+                    sotf_host::ParameterValue::Float(0.2),
+                )
+                .unwrap();
+            let input = vec![0.02; 257 * 2];
+            let mut output = vec![0.0; 257 * plugin.output_channels()];
+            let counts = std::thread::spawn(move || {
+                ALLOCATIONS.set(0);
+                DEALLOCATIONS.set(0);
+                TRACKING.set(true);
+                plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, 257))
+                    .unwrap();
+                plugin.reset();
+                plugin
+                    .process(&input, &mut output, &ProcessContext::new(48_000, 257))
+                    .unwrap();
+                TRACKING.set(false);
+                (ALLOCATIONS.get(), DEALLOCATIONS.get())
+            })
+            .join()
+            .unwrap();
+            assert_eq!(counts, (0, 0), "fft={fft} hr={hr}");
+        }
+    }
+}
+
+#[test]
 fn first_callback_and_reset_have_no_heap_activity() {
     let mut plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
     plugin.initialize(48_000.0).unwrap();

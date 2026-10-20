@@ -4,6 +4,33 @@ SOTF Upmixer plugin for stereo to surround upmixing.
 
 Converts stereo audio to surround formats (5.1 through 9.1.6) using FFT-based Direct/Ambient decomposition combined with VBAP panning for spatial placement.
 
+### Gain and routing control timing
+
+The sixteen smoothed gain/routing controls advance on the common main/HR
+analysis grid: the smaller of their two hops, normally 256 source frames.
+Their 50 ms one-pole law is unchanged. A changed target first accounts for
+elapsed time under its previous target, including a partial analysis hop;
+same-value snapshots and empty callbacks do not change that timeline. HR
+analysis sees the appropriate control state before each completed HR frame.
+
+Reset commits pending elapsed time before clearing the grid. Successful
+reinitialization commits it using the old clock before preparing the new one.
+Raw bypass continues the control clock, and leaving bypass retains the
+existing reset/latency behavior. Native EOF continues gain trajectories with
+the established zero-input continuation policy.
+
+Automation tests cover all sixteen controls, interrupted off-grid targets,
+small/large FFTs, HR on/off, sample rates, no-op snapshots, complete tails and
+recorded speech/violin input. The recorded cases establish automation timing,
+not speech separation, localization or perceptual quality. Source attribution
+remains in the speech-denoiser and de-esser fixture manifests.
+
+`lfe_cutoff_hz`, `bandpass_hz`, `height_hf_cap_hz`, and `safety_cap_db` still
+use their existing callback-level table/update paths. Active final output
+capping also remains callback-dependent. The gain-clock guarantee does not
+cover those automation paths or imply host PDC synchronization on raw-bypass
+latency changes. Public setters retain the existing metadata-cache allocation.
+
 
 ### AutoGain reference and timing
 

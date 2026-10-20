@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Advance sixteen gain/routing smoothers on the common main/HR analysis grid
+  instead of advancing an entire callback before analysis. Correct interrupted
+  sub-hop targets, no-op snapshots, raw bypass and reset/reinitialization clocks
+  while retaining the 50 ms law, parameters and latency contracts.
+- Add all-control, rate/FFT/HR-route, recorded-input and cold partial-hop heap
+  regressions. Crossover/table controls and active final safety capping retain
+  their documented callback dependence and need separate remediation.
 - New `generate-upmixer-golden` binary (moved from the retired `sotf-tools`
   crate): regenerates the golden WAVs consumed by
   `tests/upmixer_audio_regression.rs` via `just generate-upmixer-golden`.
