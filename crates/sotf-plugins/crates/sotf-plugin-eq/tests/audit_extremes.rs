@@ -1,9 +1,9 @@
-//! Standard EQ extremes against prewarped analog prototypes and explicit state.
+//! EQ extremes against prewarped analog prototypes and explicit state.
 //!
 //! Fixed bounds: 4096-frame unit-impulse prefixes, absolute output error 2e-5.
 //! The reference uses tan-prewarping and polynomial bilinear substitution, not
-//! the production trigonometric design or its processing helpers. Shelf slope
-//! is the standard fixed-slope design; its Q metadata does not alter the slope.
+//! the production trigonometric design or its processing helpers. Standard
+//! biquad shelves have fixed slope; SVF shelves preserve the user Q.
 
 // Rust guideline compliant 2026-02-21
 use sotf_host::{AutoGainParams, ParameterId, ParameterValue, Plugin};
@@ -437,5 +437,248 @@ fn retained_eq_rate_changes_through_host_match_independent_state_and_reset_polic
     println!(
         "{}",
         serde_json::json!({"case":"host_retained_rate_change","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+fn svf_coefficients(d: Design, rate: u32) -> [f64; 5] {
+    let k = (PI * d.freq / f64::from(rate)).tan();
+    let a = 10.0_f64.powf(d.gain / 40.0);
+    // Canonical analog SVF families. Shelves preserve user Q; raw SVF
+    // bandpass has center gain Q, unlike the unity-peak standard biquad.
+    let (num, den) = match d.kind {
+        "lowpass" => ([1.0, 0.0, 0.0], [1.0, 1.0 / d.q, 1.0]),
+        "highpass" => ([0.0, 0.0, 1.0], [1.0, 1.0 / d.q, 1.0]),
+        "bandpass" => ([0.0, 1.0, 0.0], [1.0, 1.0 / d.q, 1.0]),
+        "notch" => ([1.0, 0.0, 1.0], [1.0, 1.0 / d.q, 1.0]),
+        "allpass" => ([1.0, -1.0 / d.q, 1.0], [1.0, 1.0 / d.q, 1.0]),
+        "peak" | "peak_matched" => ([1.0, a / d.q, 1.0], [1.0, 1.0 / (a * d.q), 1.0]),
+        "lowshelf" | "lowshelf_orf" => ([a * a, a * a.sqrt() / d.q, a], [1.0, a.sqrt() / d.q, a]),
+        "highshelf" | "highshelf_orf" => ([a, a * a.sqrt() / d.q, a * a], [a, a.sqrt() / d.q, 1.0]),
+        _ => unreachable!(),
+    };
+    let b = bilinear(num, k);
+    let c = bilinear(den, k);
+    let section = [
+        b[0] / c[0],
+        b[1] / c[0],
+        b[2] / c[0],
+        c[1] / c[0],
+        c[2] / c[0],
+    ];
+    assert!(
+        1.0 + section[3] + section[4] > 0.0
+            && 1.0 - section[3] + section[4] > 0.0
+            && 1.0 - section[4] > 0.0
+    );
+    section
+}
+
+#[test]
+fn svf_extremes_and_optimized_aliases_match_independent_analog_prototypes() {
+    let mut impulse = vec![0.0; 4096];
+    impulse[0] = 1.0;
+    let mut cases = 0;
+    let mut failures = 0;
+    let mut maximum = 0.0_f64;
+    for kind in [
+        "peak",
+        "lowshelf",
+        "highshelf",
+        "lowpass",
+        "highpass",
+        "notch",
+        "bandpass",
+        "allpass",
+        "peak_matched",
+        "lowshelf_orf",
+        "highshelf_orf",
+    ] {
+        let mut family_maximum = 0.0_f64;
+        let mut family_failures = 0;
+        for rate in [44_100, 48_000, 96_000, 192_000] {
+            for freq in [20.0, 1000.0, 20000.0] {
+                for q in [0.1, if kind == "notch" { 40.0 } else { 20.0 }] {
+                    for gain in [-24.0, 24.0] {
+                        let d = Design {
+                            kind,
+                            freq,
+                            q,
+                            gain,
+                            order: 2,
+                        };
+                        let coefficients = svf_coefficients(d, rate);
+                        let mut state = State::default();
+                        let expected: Vec<_> = impulse
+                            .iter()
+                            .map(|&sample| {
+                                state.process(f64::from(sample), coefficients, false) as f32
+                            })
+                            .collect();
+                        for ordered in [false, true] {
+                            for factor in [1, 2, 4] {
+                                let mut p = prepared(d, rate, false, ordered);
+                                p.set_parameter(
+                                    ParameterId::from("topology"),
+                                    ParameterValue::Int(1),
+                                )
+                                .unwrap();
+                                p.set_parameter(
+                                    ParameterId::from("oversampling"),
+                                    ParameterValue::Int(factor),
+                                )
+                                .unwrap();
+                                assert_eq!(p.latency_samples(), 0);
+                                assert_eq!(
+                                    p.get_parameter(&ParameterId::from("oversampling")),
+                                    Some(ParameterValue::Int(factor))
+                                );
+                                let actual = render(p.as_mut(), &impulse, rate);
+                                let difference = error(&actual, &expected);
+                                family_maximum = family_maximum.max(difference);
+                                maximum = maximum.max(difference);
+                                family_failures += usize::from(difference >= 2e-5);
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        failures += family_failures;
+        println!(
+            "{}",
+            serde_json::json!({"family":kind,"maximum_reference_error":family_maximum,"failures":family_failures})
+        );
+    }
+    println!(
+        "{}",
+        serde_json::json!({"case":"svf_extremes","cases":cases,"failures":failures,"maximum_reference_error":maximum})
+    );
+    assert_eq!(cases, 3168);
+    assert_eq!(
+        failures, 0,
+        "SVF impulses must match independent analog prototypes at all stated endpoints"
+    );
+}
+
+#[test]
+fn retained_svf_rate_changes_through_host_reset_integrators_and_preserve_selected_factor() {
+    use sotf_host::host::{DawHost, HostRenderPath};
+    let mut warm = vec![0.0; 512];
+    warm[0] = 0.25;
+    let duplicated: Vec<_> = warm.iter().flat_map(|&sample| [sample, sample]).collect();
+    let mut input = vec![0.0; 1024];
+    input[7] = 0.25;
+    let mut cases = 0;
+    let mut maximum = 0.0_f64;
+    for rate in [44_100, 48_000, 96_000] {
+        for kind in [
+            "peak",
+            "lowshelf",
+            "highshelf",
+            "lowpass",
+            "highpass",
+            "notch",
+            "bandpass",
+            "allpass",
+            "peak_matched",
+            "lowshelf_orf",
+            "highshelf_orf",
+        ] {
+            for freq in [20.0, 20000.0] {
+                for q in [0.1, if kind == "notch" { 40.0 } else { 20.0 }] {
+                    for gain in [-24.0, 24.0] {
+                        let d = Design {
+                            kind,
+                            freq,
+                            q,
+                            gain,
+                            order: 2,
+                        };
+                        for ordered in [false, true] {
+                            for factor in [1, 2, 4] {
+                                for compiled in [false, true] {
+                                    let mut p = prepared(d, rate * 2, false, ordered);
+                                    p.set_parameter(
+                                        ParameterId::from("topology"),
+                                        ParameterValue::Int(1),
+                                    )
+                                    .unwrap();
+                                    p.set_parameter(
+                                        ParameterId::from("oversampling"),
+                                        ParameterValue::Int(factor),
+                                    )
+                                    .unwrap();
+                                    let mut host = DawHost::new(1, rate);
+                                    host.set_parallel_enabled(false).unwrap();
+                                    host.set_compiled_linear_enabled(compiled).unwrap();
+                                    host.add_plugin(Box::new(RateDoubler)).unwrap();
+                                    host.add_plugin(p).unwrap();
+                                    host.build().unwrap();
+                                    let mut state = State::default();
+                                    let old_coefficients = svf_coefficients(d, rate * 2);
+                                    let expected_warm: Vec<_> = duplicated
+                                        .iter()
+                                        .map(|&x| {
+                                            state.process(f64::from(x), old_coefficients, false)
+                                                as f32
+                                        })
+                                        .collect();
+                                    maximum = maximum.max(error(
+                                        &host_render(&mut host, &warm, 2),
+                                        &expected_warm,
+                                    ));
+                                    drop(host.remove_plugin(0).unwrap());
+                                    host.build().unwrap();
+                                    assert_eq!(
+                                        host.output_sample_rate(rate).unwrap(),
+                                        f64::from(rate)
+                                    );
+                                    assert_eq!(
+                                        host.render_stats().path,
+                                        if compiled {
+                                            HostRenderPath::CompiledLinear
+                                        } else {
+                                            HostRenderPath::Graph
+                                        }
+                                    );
+                                    assert_eq!(host.total_latency_samples(), 0);
+                                    let eq = host.get_plugin(0).unwrap();
+                                    assert_eq!(
+                                        eq.get_parameter(&ParameterId::from("oversampling")),
+                                        Some(ParameterValue::Int(factor))
+                                    );
+                                    assert_eq!(eq.tail_length(), sotf_host::TailLength::Unknown);
+                                    // SVF banks rebuild their integrators at a rate change in both routes.
+                                    let mut state = State::default();
+                                    let new_coefficients = svf_coefficients(d, rate);
+                                    let expected: Vec<_> = input
+                                        .iter()
+                                        .map(|&x| {
+                                            state.process(f64::from(x), new_coefficients, false)
+                                                as f32
+                                        })
+                                        .collect();
+                                    let difference =
+                                        error(&host_render(&mut host, &input, 1), &expected);
+                                    maximum = maximum.max(difference);
+                                    assert!(
+                                        difference < 2e-5,
+                                        "SVF host-rate error {difference}: {rate}/{kind}/{freq}/{q}/{gain}/{ordered}/{factor}/{compiled}"
+                                    );
+                                    cases += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 3168);
+    assert!(maximum < 2e-5, "old/new SVF host-rate bound");
+    println!(
+        "{}",
+        serde_json::json!({"case":"svf_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
     );
 }

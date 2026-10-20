@@ -61,3 +61,11 @@ cargo test -p sotf-plugin-eq
   pole matrix checks actual section denominators, covering tails beyond the
   impulse prefix. Host rate tests assert compiled/graph paths and preserve the
   documented legacy-history versus ordered-reset distinction and Unknown tail.
+
+- Global SVF shelf/response correction requires shared math-audio commits
+  `434dadf` and `bceee04` (existing differentiable consumer alignment). Preserve
+  gain-aware shelf prewarp, correct bandpass mix and `input=HP+k*BP+LP` response
+  identity. `audit_extremes.rs` checks 3,168 SVF endpoint cases and 3,168 retained
+  host-rate cases with independent models; saved 2x/4x selections still process
+  SVF at base rate. SVF integrators reset on rate rebuild in both routes. Aliases
+  under global SVF do not validate their native optimized biquad designs.

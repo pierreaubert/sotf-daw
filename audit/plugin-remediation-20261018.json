@@ -789,11 +789,11 @@
           "result": "Exact target selection resolves a reproduced one-bit callback-partition difference without resetting history or moving storage retirement. All 144 combinations of four rates, three channel counts, three orders, two realizations and two routes match the independent reference (maximum measured error 0) and are bit-identical across partitions. Interrupted frequency/Q/gain ramps retain stable coefficients, finite output and zero measured setter/process heap activity. Full EQ suite: 159 passed, 11 existing ignored; release transition regression and strict all-targets QA Clippy pass."
         },
         {
-          "task": "Validate optimized/SVF/advanced filter extremes and advanced mixed realizations",
+          "task": "Validate native optimized/advanced filter extremes and advanced mixed realizations",
           "status": "pending"
         },
         {
-          "task": "Extend oversampled/SVF/advanced host rate changes and finish finite versus recursive tail review",
+          "task": "Extend actual oversampled biquad/advanced host rate changes and finish finite versus recursive tail review",
           "status": "pending"
         },
         {
@@ -829,13 +829,25 @@
             "audit/artifacts/plugin-audit-20261018/eq-standard-extremes.json"
           ],
           "result": "384 real host graph rebuild cases: synthetic frame-doubling upstream declares 2x input rate, then is removed while EQ is retained. Three rate-domain pairs use base 44.1/48/96 kHz (old twice base), eight standard families, orders 2/8, both forms/routes and explicitly asserted CompiledLinear/Graph paths. Independent state reference verifies legacy history preservation and ordered reset; max error 2.3283064365386963e-10 at fixed 2e-5 bound. Post-build callbacks have zero heap work; Unknown recursive tail and zero native latency retained. Fixture is metadata/frame duplication, not a physical resampler. Oversampled/SVF/advanced host transitions remain pending."
+        },
+        {
+          "task": "Correct current shared SVF shelves and analytic response; verify endpoint aliases, retained host rates and existing deterministic consumer compatibility",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-svf-extremes.json",
+            "math-audio commit 434dadfd398950e0284925a1f07fc60e45f5b44f",
+            "math-audio commit bceee0489fcee2940ca17660e54239fabc84d29f"
+          ],
+          "result": "Current source reproduced 1152/3168 shelf/alias failures (max error 36.85265755653381), despite earlier correction notes. Owning shared shelf prewarp/mix and response identity corrected; 3168 independent endpoint cases now max 3.725290298461914e-9 at unchanged 2e-5 bound. Another 3168 retained SVF host-rate cases verify both integrator-reset routes, selected 1/2/4 factors at base rate, zero latency, Unknown tail, asserted compiled/graph paths and zero callback heap activity; max error 9.313225746154785e-10. Math f64/f32/complex analog reference, full filter suite 383 passed/1 existing ignored, full deterministic consumer suite 131 passed/0 ignored, EQ 170 passed/11 existing ignored; release references and strict all-targets Clippy pass. Existing consumer shelf equations aligned after its compatibility test failed; gradient bounds retained and extended. Normal path dependency uses dedicated verified math branch; no manifest/lockfile override committed and pre-existing user work preserved. Native optimized/advanced and mixed/actual oversampled host work remain pending."
         }
       ],
       "evidence": [
         "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate.",
         "Oversampled automation has a reproduced required-gate failure, retained with an executable full-matrix QA harness and positive controls. EQ remains partial and overall completion remains 32/45.",
         "Oversampled scalar automation scheduling is now implemented and independently verified; original failure artifacts retained. EQ remains partial for remaining filter-family, mixed-realization and host-rate coverage. Overall stays 32/45.",
-        "Standard 1x endpoint accuracy/stability and retained DawHost rate handling are verified with a concrete Q-minimum loading fix. Other filter/realization and oversampled host-rate requirements remain open. EQ partial; overall 32/45 complete."
+        "Standard 1x endpoint accuracy/stability and retained DawHost rate handling are verified with a concrete Q-minimum loading fix. Other filter/realization and oversampled host-rate requirements remain open. EQ partial; overall 32/45 complete.",
+        "Current-state independent verification exposed and corrected shared SVF defects, with existing deterministic-consumer compatibility retained. SVF endpoint and retained-host coverage complete for the stated matrices. EQ remains partial; overall 32/45. Optional ML remains separate."
       ]
     },
     {

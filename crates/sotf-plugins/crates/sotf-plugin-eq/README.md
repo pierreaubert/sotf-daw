@@ -85,7 +85,7 @@ Exact coefficient payload storage is `385 * total channel-stage count * 40` byte
 plus timestamps, indices and active endpoints. For 20 stereo second-order bands
 this is 616,000 payload bytes; the tested 20-band/32-channel/eighth-order case uses
 39,424,000 bytes. Native 1x allocates no history. These are prepared owned payload
-sizes, not aggregate RSS or a CPU deadline claim. Optimized/SVF/advanced-family extremes, mixed realizations and oversampled
+sizes, not aggregate RSS or a CPU deadline claim. Optimized/advanced-family extremes, mixed realizations and oversampled
 host rate changes remain audit work.
 
 
@@ -114,5 +114,30 @@ finite-stream policy remains covered separately. The fixture validates rate
 metadata and history handling; it is not a physical resampler.
 
 These matrices cover standard 1x filters and stated endpoints. Optimized filter
-families, SVF/advanced extremes, mixed-realization trajectories, oversampled host
+families, advanced extremes, mixed-realization trajectories, oversampled host
 rate changes and broader tail-policy review remain separate audit requirements.
+
+
+Global SVF processing is verified against independent analog-polynomial models
+in 3,168 endpoint cases, including eight families and the three optimized-name
+aliases that map to SVF. The matrix covers 44.1/48/96/192 kHz, frequency/Q/gain
+endpoints, both routing modes and saved oversampling selections 1/2/4. SVF runs at
+the base rate with zero transport latency for every selection. Maximum impulse
+error is 3.73e-9 at the fixed 2e-5 bound. SVF shelves preserve user Q; raw SVF
+bandpass has center gain Q.
+
+The shared `math-audio` shelf correction is commit `434dadf`, and its existing
+deterministic differentiable wrapper is aligned in `bceee04`. Low shelf uses
+`g / sqrt(A)` with `m1 = k*(A-1)`; high shelf uses `g*sqrt(A)` with
+`m1 = k*A*(1-A)`. Analytic response now follows `input = HP + k*BP + LP`.
+This intentionally changes previously incorrect shelf audio and response plots;
+parameter updates still preserve integrator history. The dependency's own
+independent analog tests cover f64/f32 impulses and complex response.
+
+A further 3,168 retained-SVF `DawHost` cases verify rate rebuilds at base
+44.1/48/96 kHz after removing the synthetic doubled-rate upstream node. Both
+routes reset SVF integrators, retain the selected factor, keep zero latency and
+Unknown recursive tails, and use explicitly checked compiled-linear/graph paths.
+Maximum new/old-rate reference error is 9.32e-10. Tested processing callbacks stay
+heap-free. Native optimized biquad designs and advanced/mixed realizations retain
+their separate audit requirements.

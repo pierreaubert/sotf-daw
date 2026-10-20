@@ -36,9 +36,10 @@
   through the math-iir-fir dependency. This intentionally changes the previous
   incorrect Warped response; cover public EQ output with independent impulse
   and complex-response checks at 44.1, 48 and 96 kHz.
-- Correct SVF shelf prewarping and gain coefficients through math-iir-fir;
-  verify 48 public EQ impulse responses and 240 complex-response points against
-  independent references at 44.1, 48 and 96 kHz.
+- Correct shared SVF shelf prewarping/mix and analytic response through
+  math-iir-fir (`434dadf`); align its existing deterministic differentiable
+  wrapper (`bceee04`). Verify 3,168 independent SVF endpoint impulses and 3,168
+  retained-host rate cases, including saved factor, reset, latency and tail policy.
 - Retain the selected oversampling factor while global SVF processing runs at
   the base sample rate without resampler latency; reactivate the selected factor
   when returning to Biquad processing.
