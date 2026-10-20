@@ -1,5 +1,14 @@
 # Unreleased
 
+- Add an always-run 108-cell clean-reference benchmark with checked-in cymbal
+  and violin excerpts plus synthetic percussion. Measure boundary/clustered
+  clicks, crackle, strict frame precision/recall, repair error, clean damage and
+  linked-channel collateral damage across both modes and all band configurations.
+- Keep the validated production detector/interpolation baseline unchanged.
+  Record aggressive cymbal damage and conservative missed-click limitations,
+  rather than claiming universal percussion-safe repair. Preserve the separate
+  external piano/rock release gate and experimental-estimator deferrals.
+
 - Integrate the expanded detector controls through native adapters and retain validated multiband boundary handling. Restore the validated detector baseline for release; stronger corpus accuracy and experimental estimators remain deferred in `audit/RELEASE-DEFERRED.md`.
 
 - Preserve retained audio at finite-stream end through the host drain contract,

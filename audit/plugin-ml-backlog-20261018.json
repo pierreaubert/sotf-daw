@@ -107,7 +107,8 @@
       "proposal_and_constraints": [
         "ML is sensible as a transient/click discriminator or constrained inpainting experiment, with false-positive damage measured explicitly."
       ],
-      "production_requirement": false
+      "production_requirement": false,
+      "baseline_evidence": "audit/artifacts/plugin-audit-20261018/declick-corpus.json: 108 held-out reference cells. At sensitivity 2, clean cymbal peak damage reaches 0.22116089; sensitivity 10 preserves tested clean controls within 2.99e-8 but synthetic-percussion frame recall ranges 0-0.214. Start/EOF/callback-crossing misses are recorded separately. Future transient/click discrimination or constrained inpainting must report false-positive damage and preserve the validated classical baseline and finite-stream contract. Two short recorded excerpts are not sufficient training/generalization evidence; no model training/adoption is authorized."
     },
     {
       "plugin_id": 19,

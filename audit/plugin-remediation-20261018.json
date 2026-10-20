@@ -527,9 +527,45 @@
       "id": 18,
       "plugin": "Declick",
       "audit_text": "[`declick/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-declick/src/lib.rs):480\u2013644 validates parameter batches, resets detector/repair state, distinguishes processing modes and drains retained boundary audio. Detection accuracy and repair continuity are more important than merely removing a single synthetic spike.\n\n`modes.rs`, `finite_stream.rs` and `corpus_quality.rs` are relevant; the corpus test uses externally supplied piano/rock data and returns early when it is unavailable. This audit did not supply that corpus. Extend percussion-safe precision/recall, clustered clicks, crackle and clicks straddling callback/start/EOF boundaries, with held-out clean references. Classical robust detection plus autoregressive/interpolative repair should remain the baseline. ML is sensible as a transient/click discriminator or constrained inpainting experiment, with false-positive damage measured explicitly.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Add mandatory held-out reference quality coverage without external-corpus silent passes",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-declick/tests/audit_quality.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-declick/tests/fixtures/recorded/manifest.json",
+            "crates/sotf-plugins/crates/sotf-plugin-declick/tests/fixtures/recorded/README.md"
+          ],
+          "result": "Always-run benchmark uses two checked-in half-second recorded references (cymbal and violin, with attribution/licenses and source/derived hashes), plus controlled synthetic percussion. Original desired recordings are retained unchanged; deterministic corruption is added to separate copies. No quiet-slot selection, parameter tuning, network or decoder at test time. Current external corpus tests are already explicitly ignored/loud-failing when selected without data; no claim is made to have fixed their historical early-return behavior in this checkpoint."
+        },
+        {
+          "task": "Measure percussion-safe precision/recall, clusters, crackle and repair damage",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-declick/tests/audit_quality.rs",
+            "audit/artifacts/plugin-audit-20261018/declick-corpus.json"
+          ],
+          "result": "108 cells: Random/Periodic x full/2/3 bands x sensitivity 2/10 x three desired references x boundary/cluster/crackle plans, at 48 kHz. Strict frame detection is repaired output differing from corrupted L by >1e-4; report precision (undefined for no edits), recall, error reduction at injected samples, clean-control damage, off-guard L damage and clean-R linked collateral damage. Independent conservative clean peak bound 0.05 passes (worst 2.9802322388e-8). Isolated synthetic repair gate derives 0.25 error from <=0.1 HF component (<=0.2 endpoint error) plus 0.05 LF allowance, so an inert detector cannot pass preservation alone. This is a conditional preservation/repair benchmark, not universal percussion-safe accuracy."
+        },
+        {
+          "task": "Exercise callback/start/EOF corruption and retained delivery without hiding boundary misses",
+          "status": "implemented_and_verified",
+          "evidence": "audit_quality.rs injects frame-zero, widths 1-6 crossing regular callbacks, close clusters, irregular low-amplitude crackle and truncated final events. Every cell has exact input+latency length, bit-identical regular/irregular complete renders and allocation/deallocation guards. Separate start/EOF/callback-crossing event errors are recorded, alongside aggregate quality. Existing finite_stream and modes suites exercise broader rates, widths, phase sweeps, locks, reset, automation, residual identity and analytic endpoint controls. The 2.0 frame-zero click remains unrepaired in all new cells; EOF event peak error spans 0.00967177-1.5 and callback-crossing peak error reaches 2.00000024. These measured startup/cluster limitations are explicit, not treated as successful removal."
+        },
+        {
+          "task": "Preserve validated classical baseline and report false-positive/recall tradeoffs separately from optional ML",
+          "status": "implemented_and_verified",
+          "evidence": "No production detector/interpolator, parameter/default, latency or preset changes. Aggressive sensitivity 2 produces clean cymbal peak damage up to 0.22116089; default sensitivity 10 preserves all tested clean references but synthetic-percussion recall spans 0-0.214286. All per-cell metrics, controls and click plans recorded. README/AGENTS/CHANGELOG explain the limitation and correct the empty-stream drain-query wording to match existing lifecycle tests. Optional transient-discriminator/constrained-inpainting research has a separate measured baseline pointer in plugin-ml-backlog-20261018.json."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-declick --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast: 131 passed, 6 ignored across 8 suites. Final audit_quality target rerun after per-boundary report additions: 1 passed, all 108 cells.",
+        "cargo run -p sotf-plugin-declick --features qa --bin qa-declick --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: exit 0, standard QA plus active 1/2/8/40-channel callback matrix, periodic/multiband/widened-residual modes and tone/noise quality checks. Local dev timings are not a general callback deadline guarantee.",
+        "cargo clippy -p sotf-plugin-declick --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings: passed.",
+        "Six ignored checks remain unverified: external piano/rock damage and repair gates; external diagnostic_r44_corpus_slot_anatomy; deferred r48_tone_estimator_holds_corpus_bound, r48_ramp_estimator_is_linear_exact and r48_quadratic_estimator_is_curvature_exact. No external corpus is configured. Existing R48 estimator/stronger music accuracy deferrals in audit/RELEASE-DEFERRED.md remain explicit; ignored tests are not counted as passes.",
+        "Both checked-in PCM hashes verified against the manifest. Audio license notices remain separate from Rust source licensing; no sibling-crate runtime data dependency or new Cargo dependency was added."
+      ]
     },
     {
       "id": 19,

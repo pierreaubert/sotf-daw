@@ -1,0 +1,43 @@
+{
+  "sample_rate": 48000,
+  "format": "headerless mono signed PCM16 little-endian; sample/32768",
+  "processing": "First 24000 samples of the separately attributed, decoded/peak-normalized de-esser fixture: no additional normalization, equalization, denoising or processing. Independent checked-in copy; no sibling-crate runtime dependency.",
+  "fixtures": [
+    {
+      "id": "violin",
+      "file": "violin.pcm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Violin_open_string.ogg",
+      "source_title": "Violin_open_string.ogg",
+      "author": "Clngre~commonswiki",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_sha256": "5bcb2ae9db3e4652db13cfe5e13d4bddec51adcdbf03ee0f97b8dd53780489cf",
+      "normalization_gain": 0.664510241330359,
+      "parent_pcm_sha256": "7e752a7bfe578bc9980d981ca72c33dfa9c154f1542cbb4314054de7fef807fd",
+      "pcm_sha256": "b8fd4aa86ad47869f6a9efe775bb5bb56a833a464fefae05d52d34be213008f3",
+      "frames": 24000,
+      "source_crop_seconds": [
+        0.6,
+        1.1
+      ]
+    },
+    {
+      "id": "cymbal",
+      "file": "cymbal.pcm",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Cymbal_sounds.ogg",
+      "source_title": "Cymbal_sounds.ogg",
+      "author": "aradlaw",
+      "license": "Public domain",
+      "license_url": null,
+      "source_sha256": "8e10577e835c27b738932b13d82ec0b03e0644b6140847463e98546e82ae8efb",
+      "normalization_gain": 0.5032714873748234,
+      "parent_pcm_sha256": "3ca2ede4de3060e3a99ce4edcf010ebfa3f7618e0b6e916d6d9d61b89776c5df",
+      "pcm_sha256": "dbdc2e02f6fcf461981bc1794925d24ec5adc6d219209d26cf7fde9c863fad46",
+      "frames": 24000,
+      "source_crop_seconds": [
+        0,
+        0.5
+      ]
+    }
+  ]
+}
