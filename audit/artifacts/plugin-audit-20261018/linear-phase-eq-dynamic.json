@@ -1,0 +1,114 @@
+{
+  "scope": "Audit entry 30: linear-phase EQ dynamic response, superseded workers, reset and maximum-length EOF. Partial; no general realtime or arbitrary-band accuracy claim.",
+  "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture",
+  "exit_code": 0,
+  "passed_tests": 133,
+  "ignored_total": 2,
+  "ignored": [
+    "FIR-M1 multiband accuracy diagnostic (explicitly deferred)",
+    "dynamic_host illustrative ignored doctest"
+  ],
+  "final_test_measurement_lines": [
+    "audit reset target complex_abs=3.359504664019e-7 phase_rad=5.992672612498e-8 prototype_db=3.646381903608e-5 aligned_delay_samples=5.402098681133e-5",
+    "audit independent dynamic convolution worst_abs=7.963086473550e-8 max_commit_us=14038 (local test observation, not a deadline guarantee)"
+  ],
+  "dynamic_matrix": {
+    "rates_hz": [
+      44100,
+      96000
+    ],
+    "tap_counts": [
+      1024,
+      2048,
+      4096,
+      8192
+    ],
+    "phase_modes": [
+      "linear",
+      "minimum"
+    ],
+    "legacy_cases": 16,
+    "ordered_cases": 4,
+    "ordered_routing": [
+      "Left",
+      "Mid"
+    ],
+    "ordered_taps_per_stage": 8192,
+    "maximum_tested_support_frames": 16446,
+    "callback_patterns": [
+      [
+        32768
+      ],
+      [
+        1,
+        73,
+        257,
+        1024
+      ]
+    ],
+    "eof_frames_after_commit": 37,
+    "sample_error_bound": 1e-05,
+    "observed_sample_error_max": 7.96308647355e-08,
+    "reference": "Full zero-padded f64 FFT convolution with explicit 1/N scale and independently assembled Left/Mid matrix; exported production taps, no production NUPC, priming, overlap or block algorithm. Blend weights j/512, clamped at 1.",
+    "partition_output": "bit-identical",
+    "heap": "zero allocations AND frees for successful commit, processing, drain, idempotent drain and reset"
+  },
+  "reset_response": {
+    "cases": 16,
+    "reference": "Streamed impulse after reset during blend, independent f64 DTFT; independent bilinear-mapped analog peaking prototype at 3/6/9 kHz for broad 6 kHz Q0.8 +9 dB target",
+    "complex_abs_bound": 1e-05,
+    "complex_abs_max": 3.359504664019e-07,
+    "linear_aligned_phase_bound_rad": 0.0001,
+    "linear_aligned_phase_max_rad": 5.992672612498e-08,
+    "aligned_delay_bound_samples": 0.5,
+    "aligned_delay_error_max_samples": 5.402098681133e-05,
+    "prototype_magnitude_bound_db": 0.05,
+    "prototype_magnitude_error_max_db": 3.646381903608e-05
+  },
+  "detached_worker_checks": "Both phases at 8192 taps per stage / Left then Mid: earlier-base worker completes after newer acceptance, StaleBase retained, explicit cancel and worker-side disposal, fresh accepted result, reset during blend, exact fresh-twin output and off-audio reclamation. Accepted generation progresses only on commits.",
+  "production_fix": {
+    "before": "Both wrapper sample formats called commit_step before the inner DSP checked its prepared clock. The f32 regression reproduced output sentinel overwrite on an Err callback. Queued acceptance preceded clock validation.",
+    "after": "Both sample formats check prepared clock before mailbox consumption, acceptance publication, output writes or f64 scratch growth. Regression confirms unchanged accepted snapshot/generation, output and history; the same queued result subsequently commits at the valid rate and matches a twin exactly.",
+    "new_parameters_dependencies_or_fir_changes": false
+  },
+  "known_open_limits": [
+    {
+      "name": "FIR-M1",
+      "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --test analytic_response multiband_response_matches_on_every_tap_count_and_phase --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --ignored --nocapture",
+      "exit_code": 101,
+      "rate_hz": 96000,
+      "taps": 1024,
+      "phase": "linear",
+      "frequency_hz": 500,
+      "measured_error_db": -0.24574399592456375,
+      "unchanged_bound_db": 0.05,
+      "result": "still fails; deferred baseline diagnostic preserved"
+    },
+    {
+      "name": "Commit priming work",
+      "observed_local_test_profile_commit_max_ms": 14.927,
+      "result": "Bounded synchronous history replay is not a portable callback deadline guarantee. Release/max-load dynamic measurement and mitigation remain open."
+    },
+    {
+      "name": "Native/FFI integration",
+      "result": "Tests exercise real host Plugin wrapper, not loaded AU/CLAP/VST3/FFI integration. Ordinary setters remain structural."
+    },
+    {
+      "name": "Generation semantics",
+      "result": "Prepared DSP bases are checked for exact configuration equality; the detached accepted generation is observational, not an enforced per-request freshness token. Same-base worker ordering is caller-managed."
+    }
+  ],
+  "qa": {
+    "command": "rtk proxy cargo run -p sotf-plugin-linear-phase-eq --features qa --bin qa-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "exit_code": 0,
+    "latency_samples": 1056,
+    "actual_callback_deadline_misses": 25,
+    "negotiated_quantum_misses": 0,
+    "aggregate_max_ms": 3.775042,
+    "result": "Engine queued-work contract passes; direct callback compliance explicitly unresolved. This static matrix excludes dynamic priming cost."
+  },
+  "clippy": {
+    "command": "rtk cargo clippy -p sotf-plugin-linear-phase-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+    "exit_code": 0
+  }
+}

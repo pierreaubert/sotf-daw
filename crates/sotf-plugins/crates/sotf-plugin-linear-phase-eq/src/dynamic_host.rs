@@ -982,6 +982,18 @@ impl LinearPhaseEqDynamicPlugin {
             self.scratch_f64.resize(len, 0.0);
         }
     }
+
+    // Validate before mailbox consumption, acceptance publication, output
+    // writes or bridge growth. The DSP repeats this check for direct callers.
+    fn validate_process_clock(&self, context: &ProcessContext) -> PluginResult<()> {
+        if context.sample_rate != self.inner.sample_rate {
+            return Err(format!(
+                "sample-rate mismatch: initialized for {}, got {}",
+                self.inner.sample_rate, context.sample_rate
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl Plugin for LinearPhaseEqDynamicPlugin {
@@ -1047,6 +1059,7 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
     ) -> Result<usize, String> {
         let channels = self.inner.channels();
         validate_process_block_f32(input, output, context, channels, channels)?;
+        self.validate_process_clock(context)?;
         self.commit_step();
         output.copy_from_slice(input);
         self.inner.process_in_place(output, context)
@@ -1065,6 +1078,7 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
     ) -> Result<usize, String> {
         let channels = self.inner.channels();
         validate_process_block_f64(input, output, context, channels, channels)?;
+        self.validate_process_clock(context)?;
         self.commit_step();
         self.ensure_scratch_f64(input.len());
         let scratch = &mut self.scratch_f64[..input.len()];

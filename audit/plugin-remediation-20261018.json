@@ -859,9 +859,52 @@
       "id": 30,
       "plugin": "Linear-phase EQ",
       "audit_text": "[`linear_phase_eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs):865\u20131035 uses prepared FIR/NUPC state, rejects dirty FIR processing, accounts for filter/head latency and preserves finite support. Detached preparation and generation-ticket adoption reduce real-time risk. Reset must finish/clear pending transitions consistently; frequent updates can temporarily double work.\n\n`analytic_response.rs`, `dynamic_updates.rs`, `dynamic_detached_control.rs`, `channel_placement.rs` and property tests cover key contracts. Extend response/phase accuracy through mid-stream updates, superseded worker results and tail transitions at maximum IR length. Classical mixed/minimum-phase alternatives should expose their latency/pre-ringing tradeoff. ML filter fitting can run offline; runtime filtering should remain a validated FIR operation.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Reject wrong-clock rendering before detached worker adoption",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs"
+          ],
+          "result": "A regression reproduced f32 output overwrite on a wrong-clock Err callback; commit_step preceded DSP clock validation. Both sample formats now preflight the prepared clock before mailbox consumption, acceptance publication, output writes or f64 scratch growth. Rejected callbacks retain the accepted snapshot/generation and queued payload; valid retry matches a populated twin exactly."
+        },
+        {
+          "task": "Extend response/phase and maximum-length EOF validation through prepared updates",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json"
+          ],
+          "result": "20 distinct cases / 40 renders at 44.1/96 kHz: all four lengths and both phases on legacy routes; 8192-tap Left/Mid two-stage ordered routes. EOF 37 frames into blend, exact support up to 16446 frames, bit-identical callback partitions. Independent f64 full convolution max sample error 7.96309e-8 under 1e-5. Reset-during-blend impulse probes across 16 cases give complex error 3.35951e-7 under 1e-5, phase 5.99268e-8 rad under 1e-4, aligned delay error 5.40210e-5 samples under 0.5, and broad-band independent prototype error 3.64639e-5 dB under 0.05. Exported taps validate filtering, not arbitrary FIR design accuracy."
+        },
+        {
+          "task": "Exercise superseded workers, cancellation, retirement and reset at maximum ordered length",
+          "status": "implemented_and_verified",
+          "evidence": "tests/dynamic_detached_control.rs: both phase modes, stale earlier-base results retained under StaleBase, explicit cancellation and worker disposal, fresh accepted recovery, reset during blend, exact fresh-twin output. Successful commit/render/drain/reset paths assert zero allocations and frees."
+        },
+        {
+          "task": "Expose fixed-filter phase and time-varying blend tradeoffs truthfully",
+          "status": "implemented_and_verified",
+          "evidence": "README/AGENTS/CHANGELOG distinguish linear-phase pre-ringing and N/2+32 per-stage delay, minimum-phase 32-frame convolution delay plus frequency-dependent group delay, and nonstationary blends. Document current detached wrapper and structural ordinary setters; no mixed-phase or loaded native/FFI coverage claimed. No FIR, tap/latency, parameter, preset, dependency or tolerance change."
+        },
+        {
+          "task": "Resolve realtime deadline evidence for large synchronous priming and direct callbacks",
+          "status": "pending",
+          "evidence": "Local test profile observed 14.927 ms maximum commit replay. QA exits 0 for engine queued-work horizon but reports 25 actual callback deadline misses and zero negotiated-quantum misses; static QA excludes dynamic priming. A maximum-load release-profile dynamic deadline matrix and mitigation if required remain outstanding."
+        },
+        {
+          "task": "Resolve remaining response and freshness limitations without weakening contracts",
+          "status": "pending",
+          "evidence": "Explicit deferred FIR-M1 run still fails at 96 kHz /1024 taps/500 Hz linear phase: -0.24574399592456375 dB vs unchanged 0.05 dB. Preserve release deferral and numerical diagnostic. DSP stale validation compares exact bases; detached generation is observational, so same-base/ABA worker ordering is caller-managed, not enforced by request tickets."
+        }
+      ],
+      "evidence": [
+        "Final complete crate: 133 passed, 1 explicitly deferred accuracy test ignored plus 1 ignored illustrative doctest. No new ignored test or weakened bound.",
+        "QA exit 0 with explicit direct callback limitations; all-targets Clippy with qa and -D warnings passes.",
+        "Scoped host-wrapper fix and deterministic references only; unrelated engine/driver/Cargo.lock changes excluded. Entry remains partial; overall complete count stays 29/45."
+      ]
     },
     {
       "id": 31,

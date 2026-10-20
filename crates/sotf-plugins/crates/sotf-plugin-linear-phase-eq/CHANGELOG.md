@@ -1,5 +1,12 @@
 # Unreleased
 
+- Validate the prepared clock before detached worker adoption or output writes
+  on both host sample formats. A wrong-clock callback now preserves accepted
+  configuration, queued resources, output and audio history.
+- Add independent dynamic/EOF convolution checks across all lengths/phases,
+  maximum ordered worker supersession, and reset/complex-response measurements.
+  Document phase and priming tradeoffs and retain explicit FIR-M1/deadline limits.
+
 - Fixed validation-r5 test setups without weakening bounds: stronger Mid cut
   for the inactive-slot guard, 2 kHz opposite-gain peaks for the
   order-noncommutation guard, and twin retired-route reclamation in the

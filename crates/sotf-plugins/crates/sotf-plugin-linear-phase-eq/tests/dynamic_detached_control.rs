@@ -1386,3 +1386,125 @@ fn detached_seqlock_soak_never_tears() {
     eprintln!("seqlock soak: {read_count} consistent reads, {busy_count} busy retries");
     assert!(read_count > 0);
 }
+
+#[test]
+fn wrong_clock_render_does_not_accept_a_queued_worker_result() {
+    for use_f64 in [false, true] {
+        let bands = vec![band("Peak", 1000.0, 1.0, 0.0)];
+        let mut plugin = create(&bands);
+        let mut twin = create(&bands);
+        let handle = detached_handle(&plugin);
+        let input = pattern(2048);
+        let mut output = vec![0.0; input.len()];
+        let mut reference = output.clone();
+        process_into(&mut plugin, &input, &mut output, 73);
+        process_into(&mut twin, &input, &mut reference, 73);
+        let before = handle.try_accepted_snapshot().unwrap();
+        let prepared = prepare_on_worker(&before, 0, band("Peak", 1000.0, 1.0, 9.0));
+        handle.try_submit(prepared).unwrap();
+        let context = ProcessContext::new(96_000, 64);
+        if use_f64 {
+            let input64 = vec![0.2_f64; 64 * CHANNELS];
+            let mut output64 = vec![123.0; 64 * CHANNELS];
+            plugin
+                .process_f64(&input64, &mut output64, &context)
+                .unwrap_err();
+            assert!(output64.iter().all(|&v| v == 123.0));
+        } else {
+            let mut rejected = vec![123.0; 64 * CHANNELS];
+            plugin
+                .process(&input[..64 * CHANNELS], &mut rejected, &context)
+                .unwrap_err();
+            assert!(rejected.iter().all(|&v| v == 123.0));
+        }
+        assert_eq!(handle.try_accepted_snapshot().unwrap(), before);
+        assert_eq!(handle.accepted_generation(), 0);
+        assert!(!plugin.update_in_progress());
+        // The same queued result must remain available for the valid clock.
+        process_into(&mut plugin, &input, &mut output, 73);
+        twin.request_band_update(0, band("Peak", 1000.0, 1.0, 9.0))
+            .unwrap();
+        process_into(&mut twin, &input, &mut reference, 73);
+        assert_eq!(output, reference);
+        assert_eq!(handle.accepted_generation(), 1);
+    }
+}
+
+#[test]
+fn maximum_ordered_worker_results_refuse_superseded_base_and_reset_cleanly() {
+    use sotf_plugin_linear_phase_eq::LinearPhaseEqBandPlacement as Placement;
+    for phase in [0, 1] {
+        let mut left = band("Peak", 6000.0, 0.8, -6.0);
+        left.placement = Some(Placement::Left);
+        let mut mid = band("Peak", 6000.0, 0.8, -3.0);
+        mid.placement = Some(Placement::Mid);
+        let mut params = params_for(vec![left, mid.clone()]);
+        params.fir_length_index = 3;
+        params.phase_mode_index = phase;
+        let mut plugin =
+            LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params.clone()).unwrap();
+        let handle = detached_handle(&plugin);
+        let input = pattern(17_000);
+        let mut output = vec![0.0; input.len()];
+        process_into(&mut plugin, &input, &mut output, 257);
+        let base = handle.try_accepted_snapshot().unwrap();
+        let mut newest = mid.clone();
+        newest.gain_db = 9.0;
+        // These workers finish out of request order. Both captured generation 0;
+        // once the fast result commits, the slow result must not overwrite it.
+        let slow = prepare_on_worker(&base, 1, {
+            let mut b = mid.clone();
+            b.gain_db = -9.0;
+            b
+        });
+        let fast = prepare_on_worker(&base, 1, newest.clone());
+        handle.try_submit(fast).unwrap();
+        handle.try_submit(slow).unwrap();
+        let (counts, ()) = count_allocs(|| process_into(&mut plugin, &input, &mut output, 257));
+        assert_eq!(counts, (0, 0));
+        assert_eq!(handle.accepted_generation(), 1);
+        assert_eq!(
+            handle.control_status().last_refusal,
+            Some(CommitRefusal::StaleBase)
+        );
+        assert_eq!(get_gain(&plugin, 1), 9.0);
+        let current = handle.try_accepted_snapshot().unwrap();
+        let mut final_band = mid.clone();
+        final_band.gain_db = 3.0;
+        let fresh = prepare_on_worker(&current, 1, final_band.clone());
+        handle.request_cancel();
+        handle.try_submit(fresh).unwrap();
+        let (counts, ()) = count_allocs(|| {
+            process_into(
+                &mut plugin,
+                &input[..73 * CHANNELS],
+                &mut output[..73 * CHANNELS],
+                73,
+            )
+        });
+        assert_eq!(counts, (0, 0));
+        assert_eq!(handle.accepted_generation(), 2);
+        assert!(plugin.update_in_progress());
+        assert_eq!(get_gain(&plugin, 1), 3.0);
+        let cancelled = handle.take_cancelled();
+        assert_eq!(cancelled.len(), 1);
+        drop_on_worker(cancelled);
+        let (counts, ()) = count_allocs(|| Plugin::reset(&mut plugin));
+        assert_eq!(counts, (0, 0));
+        assert!(!plugin.update_in_progress());
+        assert_eq!(handle.accepted_generation(), 2);
+        params.filters[1] = final_band;
+        let mut reference =
+            LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params).unwrap();
+        let mut expected = vec![0.0; input.len()];
+        let (counts, ()) = count_allocs(|| {
+            process_into(&mut plugin, &input, &mut output, 73);
+            process_into(&mut reference, &input, &mut expected, 73);
+        });
+        assert_eq!(counts, (0, 0));
+        assert_eq!(output, expected);
+        let retired = plugin.take_reclaimable_retired();
+        assert!(!retired.is_empty());
+        drop_on_worker(retired);
+    }
+}

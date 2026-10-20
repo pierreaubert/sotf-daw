@@ -4,11 +4,11 @@ Parametric FIR EQ with selectable linear or minimum phase.
 
 ## What It Does
 
-A parametric equalizer that uses FIR (Finite Impulse Response) filters instead of traditional IIR biquads. This eliminates phase distortion entirely — all frequencies are delayed by the same amount. The tradeoff is higher latency compared to a minimum-phase EQ.
+A parametric equalizer using FIR convolution. Linear-phase mode applies the same delay to every frequency in a fixed filter. Its centered impulse can ring before a transient and adds `N/2 + 32` samples per stage. Minimum-phase mode concentrates energy near the impulse start and reports the 32-sample convolution delay per stage; its frequency-dependent group delay is not zero. Mixed-phase design is not offered.
 
 ## Features
 
-- **Zero phase distortion**: All frequencies delayed equally
+- **Linear-phase mode**: Constant group delay for a fixed filter
 - **Minimum-phase mode**: Low-latency, causal response without linear-phase pre-ringing
 - **FIR convolution**: Non-uniform partitioned convolution with a 32-sample head
 - **Parametric bands**: Standard frequency, Q, and gain controls
@@ -34,10 +34,10 @@ src/
 The implementation preallocates steady-state partitioned-convolution state.
 Band count/settings, FIR length, phase and Auto Gain are structural: rebuild
 the plugin to change them. FIR design and planning therefore stay outside the
-realtime callback and old/new filter tails cannot be spliced. Mix remains
+realtime callback. The prepared-update API below retains and blends both
+filter histories. Mix remains
 realtime-automatable and is smoothed per sample. Linear-phase latency is
 `N/2 + 32` samples; minimum phase reports the 32-sample partition latency.
-```
 
 ## Per-band channel routing
 
@@ -71,9 +71,63 @@ banks with `take_retired_route()` off the audio thread before the next
 commit. At commit, controls and the chart-facing response APIs report the
 target design immediately while audio morphs old-to-new over the blend.
 
-This is currently a DSP-level API: no engine/FFI/NIH automation path adopts
-it yet, so host band controls remain structural-rebuild with truthful refusal
-(see the R3 shared-patch notes in the audit directory).
+`dynamic_host::LinearPhaseEqDynamicPlugin` provides a host wrapper and a
+shared `LinearPhaseEqControlHandle` through `get_data()`. Workers prepare from
+`try_accepted_snapshot()` and submit via the bounded mailbox; audio accepts
+at most one result per callback, and control reclaims retired/cancelled banks.
+A result whose base differs from accepted state is retained with `StaleBase`
+until explicit cancellation. Bases are compared by exact configuration;
+the published accepted generation is observational. Same-base worker ordering
+and an older result arriving after a configuration returns to identical values
+require caller sequencing; there is no enforced request-generation ticket.
+Acceptance is published only on a successful commit. Both f32 and direct f64 rendering validate the prepared sample clock
+before consuming a mailbox result or writing output.
+
+Ordinary band parameter setters still require structural rebuilding; this
+prepared-update mechanism does not establish loaded native/FFI automation
+coverage. The f64 bridge can grow scratch on the calling thread and is not
+advertised as a native f64 realtime path.
+
+The blend is a time-varying weighted sum of two FIR outputs. Each fixed linear
+filter has constant group delay; a morph has no single stationary transfer
+function. Charts report the target immediately. Reset installs that target
+and clears history; EOF completes the blend while emitting finite support.
+Processing two banks bounds blend work to twice the convolution work, but
+commit also replays up to `stages * (N - 1 + 32)` frames to prime the target.
+Allocation-free and bounded work alone do not establish a callback deadline.
+
+## Audit validation and remaining limits
+
+`tests/audit_dynamic_response.rs` compares whole and irregular callbacks with
+an independent full-length, zero-padded f64 convolution, using exported FIR
+taps and explicit Left/Mid matrix routing. It covers all four tap counts,
+both phase modes, 44.1/96 kHz, and maximum-length two-stage ordered routes.
+EOF starts 37 frames into the blend. Output and tail are bit-identical across
+callback partitions; worst error against the offline reference is
+`7.96309e-8` under the unchanged `1e-5` sample bound. This validates filtering,
+priming and transition behavior; using the exported taps is not an independent
+proof of the FIR designer.
+
+Reset during a blend is separately measured with a streamed impulse. Maximum
+complex-response error is `3.35951e-7` (bound `1e-5`); linear aligned phase is
+`5.99268e-8` radians (bound `1e-4`); aligned group-delay error is
+`5.40210e-5` samples (bound `0.5`). An independent bilinear-mapped peaking
+prototype gives magnitude error `3.64639e-5` dB (bound `0.05`) for the tested
+broad 6 kHz band. These probes do not establish arbitrary narrow-band accuracy.
+The detached tests also cover out-of-order workers at maximum ordered length,
+stale refusal/cancellation, fresh recovery, and reset against a fresh twin.
+Successful commit/render/drain/reset legs assert zero allocations and frees.
+
+The existing explicitly deferred `FIR-M1` diagnostic remains failing when
+run: 96 kHz / 1024 taps / 500 Hz multiband error `-0.2457439959` dB versus the
+unchanged `0.05` dB bound. It remains ignored in the regular suite under
+`audit/RELEASE-DEFERRED.md`; no taps, phase, tolerances or case changed.
+The local QA run reported 25 physical callback deadline misses with zero
+negotiated-work-horizon misses. Local test-profile dynamic commit timing
+also reached 14.927 ms; this is an observation, not a portable worst-case
+bound. Direct callback compliance and maximum-load dynamic priming therefore
+remain open. Settings, commands and measurements are recorded in
+`audit/artifacts/plugin-audit-20261018/linear-phase-eq-dynamic.json`.
 
 ## Testing
 
