@@ -131,9 +131,12 @@ pub fn create_plugin(
             let mut params: sotf_plugin_multiband_expander::MultibandExpanderPluginParams =
                 parse_params(config_json)?;
             params.num_bands = 1;
-            let plugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin::from_params(
-                channels, params,
-            );
+            params.processing_mode = "time_domain".into();
+            let plugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin::try_from_params(
+                channels,
+                params,
+                sample_rate,
+            )?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 
@@ -182,9 +185,14 @@ pub fn create_plugin(
         "MultibandExpander" | "multiband_expander" => {
             let params: sotf_plugin_multiband_expander::MultibandExpanderPluginParams =
                 parse_params(config_json)?;
-            let plugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin::from_params(
-                channels, params,
-            );
+            if params.num_bands < 2 {
+                return Err("Multiband expander requires at least 2 bands".into());
+            }
+            let plugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin::try_from_params(
+                channels,
+                params,
+                sample_rate,
+            )?;
             Ok(Box::new(ParametricInPlacePluginAdapter::new(plugin)))
         }
 

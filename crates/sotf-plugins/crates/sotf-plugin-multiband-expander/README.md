@@ -9,6 +9,20 @@ one-band broadband path with no crossover controls. The multiband identity
 requires 2-5 bands. Band count and time-domain/spectral mode are structural and
 must be changed by rebuilding the plugin off the audio thread.
 
+Canonical and bridge factories apply the same identity policy: `expander`
+forces one time-domain band even when serialized band count/mode differs;
+`multiband_expander` requires 2–5 bands and honors the chosen mode. Both validate
+before publishing an instance. Older bridge presets that used `Expander` for
+spectral processing now select time-domain audio. Migrate them deliberately to
+an explicit multiband spectral configuration, or direct native one-band spectral
+construction when preserving that topology is necessary.
+
+The facade's Rust `ExpanderPlugin` and parameter types remain compatibility
+aliases, so their direct default constructors retain three bands. For direct
+broadband processing, select `num_bands = 1` and `processing_mode = "time_domain"`
+before `try_from_params`. Native fallible construction rejects invalid clocks
+before allocating DSP state; legacy infallible constructors remain available.
+
 Time-domain mode supports Peak/RMS detection, linked or independent channels,
 sidechain HPF, lookahead, and auto makeup. Spectral mode uses a 1024-point dual
 Hann STFT at 75% overlap (`hop=N/4`), `1/(1.5N)` normalization, and 1024 samples
@@ -49,6 +63,12 @@ material; both it and the full waveform have a fixed 0.0035 relative-peak bound.
 Mono and imbalanced stereo cases also check callback partition equivalence and
 zero heap activity. These deterministic synthetic signals are not a recorded
 music listening evaluation.
+
+The classical baseline already supplies hysteresis, bounded attenuation and
+explicit frequency grouping through user-selected crossover frequencies and
+per-band parameters. The nonlinear reference exercises these controls with
+distinct spectral thresholds. This audit retains that predictable grouping;
+it does not add an adaptive mask or a new fixed psychoacoustic band profile.
 
 ## Soft knee and state boundaries
 

@@ -1179,7 +1179,7 @@
       "id": 35,
       "plugin": "Multiband expander and single-band expander alias",
       "audit_text": "[`multiband_expander_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs):2040\u20132198 has time/spectral routes, lookahead/FFT latency and cached spectral drain output. Finite spectral support and recursive IIR support are different promises. Startup noise estimates/envelope state can over-suppress a quiet beginning.\n\n`soft_knee.rs`, `lookahead_latency.rs`, `spectral_finite_stream.rs`, `spectral_finite_allocations.rs` and realtime parameter tests are relevant. Extend low-level musical material, threshold chatter, band-edge transients and reconstruction at unity expansion. Classical hysteresis, bounded range and perceptual frequency grouping are useful. A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Extend independent unity reconstruction and band-edge transient coverage in time/spectral modes; correct measured numerical defects",
@@ -1204,12 +1204,20 @@
         },
         {
           "task": "Review classical hysteresis, bounded range, frequency grouping and single-band alias paths; preserve distinct spectral/IIR support promises",
-          "status": "pending",
-          "evidence": "Hysteresis, hold, bounded range and user-frequency spectral bin grouping with distinct thresholds are now independently exercised in nonlinear matrix. Single-band alias/factory source and lifecycle review remains pending; decide whether additional grouping behavior is warranted without obscuring predictable dynamics. Spectral finite support and time-domain recursive metadata remain distinct; optional learned mask separate."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/plugins-bridge/src/factory.rs",
+            "crates/sotf-plugins/crates/plugins-bridge/tests/expander_factories.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs",
+            "crates/sotf-plugins/src/lib.rs",
+            "crates/sotf-plugins/tests/expander_alias_defaults.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-expander-factories.json"
+          ],
+          "result": "Bridge now uses fallible native validation before publication; expander forces1band/time_domain and multiband_expander requires2..5bands/honors mode, matching canonical policy. Invalid bridge ratio,clock and spectral alias latency failures retained, fixed tests pass. Native invalid-clock rejection already existed during initialize and now occurs before cold state allocation. Direct Rust aliases/defaults retained and documented.63bridge audio/drain/support-metadata configs plus81facade explicit-broadband configs at44.1/96/192k and1/2/6channels pass;invalid dynamics/unsupported spectral controls and geometry refused.250affected tests passed,1preexisting ignored doctest;newfactory release3passed;strict affectedall-targetsQA/facade-testClippy passed. Existing hysteresis,hold,range and explicit user-frequency grouping with distinct spectral thresholds are independently verified in192-case nonlinear reference;no adaptive or fixed psychoacoustic grouping profile added. Spectral finite/IIRInfinite support distinctions unchanged. Old spectral bridge alias presets need explicit migration; exported binaries notvalidated."
         }
       ],
       "evidence": [
-        "Unity reconstruction plus192-case nonlinear startup/chatter validation verified. Crossover precision, accepted choice routing and linked spectral detection corrected. Entry35 partial pending remaining alias/factory and classical grouping adequacy review. Overall30/45 complete_production_scope."
+        "All production recommendations covered by210-case independent unity/transient reconstruction,192-case nonlinear startup/chatter/range/grouping references, corrected numerical precision/accepted detector choices/stereo linking, and factory alias/preset validation. Existing finite/drain/heap/latency suites rerun. Synthetic material only;optional learned masks remain separate.31/45complete_production_scope;fullgoalactive."
       ]
     },
     {
@@ -1637,6 +1645,15 @@
       ],
       "result": "Explicit native cutoff plus independent252-case signal matrix, localized f64 crossover precision fix,144 bridge/fallback and81 facade configurations. Crate173tests and affected287tests pass;5preexistingignored. Release signal/factory tests and strict Clippy pass. AB fallback migration and direct alias multiband defaults documented.",
       "limitations": "Cascaded multiway phase response retained; CPU cost of f64 bank not benchmarked. Exported CLAP/VST3/AU binaries not validated. Optional ML excluded from production scope."
+    },
+    {
+      "name": "Multiband expander reconstruction,dynamics and factory audit closure",
+      "state": "verified",
+      "plugin_ids": [
+        35
+      ],
+      "result": "Localized f64crossover correction,accepted choice normalization,linked spectral detector correction,fallible bridge identity/validation.210unity/transient cases,192nonlinear cases,63bridge and81facade configurations;250affected tests pass,1existing ignored doctest;release andstrictClippy pass.",
+      "limitations": "Synthetic material;no recorded listening evaluation. Retain user-selected frequency groups and distinct spectral finite/IIRrecursive metadata. Exported binaries notvalidated;optionalMLseparate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

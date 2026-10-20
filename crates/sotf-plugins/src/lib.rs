@@ -402,7 +402,17 @@ pub use plugin_eq::{
 };
 pub use plugin_linear_phase_eq::{LinearPhaseEqPlugin, LinearPhaseEqPluginParams};
 pub use sotf_plugin_dither::{DitherPlugin, DitherPluginParams};
+/// Compatibility alias retaining multiband constructors and defaults.
+///
+/// For direct broadband expansion, set [`ExpanderPluginParams::num_bands`] to 1
+/// and `processing_mode` to `"time_domain"` before `try_from_params`.
+/// Factory type `"expander"` selects that identity automatically. Direct
+/// `ExpanderPlugin::new` retains the multiband default.
 pub type ExpanderPlugin = sotf_plugin_multiband_expander::MultibandExpanderPlugin;
+/// Shared expander parameters; defaults retain multiband topology.
+///
+/// Direct broadband callers select one band and time-domain processing;
+/// factory type `"expander"` makes those choices automatically.
 pub type ExpanderPluginParams = sotf_plugin_multiband_expander::MultibandExpanderPluginParams;
 pub use plugin_analog_compressor::{AnalogCompressorPlugin, AnalogCompressorPluginParams};
 pub use plugin_analog_eq::{AnalogEqPlugin, AnalogEqPluginParams};

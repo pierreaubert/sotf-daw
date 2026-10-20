@@ -1,3 +1,14 @@
+## Unreleased factory validation and identity closure
+
+- Match bridge/canonical expander identities and reject invalid bridge presets
+  before publication. Preserve direct Rust aliases with documented multiband
+  defaults and explicit one-band construction.
+- Reject invalid native construction clocks before allocating state; those
+  clocks were already rejected later during initialization.
+- Verify bridge audio/drain/support metadata and facade alias audio against
+  explicit native construction across time/spectral, mono/stereo/six-channel,
+  44.1–192 kHz configurations. Document migration of old spectral bridge aliases.
+
 ## Unreleased nonlinear routing and spectral stereo linking
 
 - Normalize accepted constructor detector and mode labels. `RMS` previously

@@ -29,6 +29,10 @@ cargo test -p plugins-bridge
 
 - Plugin type strings are case-insensitive for Wave 1 plugins (e.g., both "EQ" and "eq" work)
 - "Compressor" and "Expander" route to their multiband counterparts in single-band mode (`num_bands=1`)
+- Expander also forces `time_domain`, matching the canonical factory;
+  MultibandExpander requires 2–5 bands and retains its selected mode. Both must
+  use `try_from_params` so invalid presets/unsupported spectral controls fail
+  before publication. `tests/expander_factories.rs` covers audio/drain parity.
 - "FletcherMunson" is a backward-compat alias that routes to LoudnessCompensation in Auto mode
 - Some plugins need `sample_rate` at construction time (EQ, XTC, Convolution, LinearPhaseEQ); most receive it later via `initialize()`
 - `parse_params()` accepts empty string, `"null"`, or `"{}"` for default parameters

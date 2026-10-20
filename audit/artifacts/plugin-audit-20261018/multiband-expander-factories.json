@@ -1,0 +1,193 @@
+{
+  "red": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-bridge",
+      "--test",
+      "expander_factories",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 101,
+    "output": "   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `test` profile [optimized + debuginfo] target(s) in 4.84s\n     Running tests/expander_factories.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/expander_factories-e9c5ff3065ad68d5)\n\nrunning 3 tests\ntest native_and_bridge_reject_invalid_expander_construction_geometry ... FAILED\ntest bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls ... FAILED\ntest bridge_expander_routes_match_explicit_native_audio_and_tail_contracts ... FAILED\n\nfailures:\n\n---- native_and_bridge_reject_invalid_expander_construction_geometry stdout ----\n\nthread 'native_and_bridge_reject_invalid_expander_construction_geometry' (324559768) panicked at crates/sotf-plugins/crates/plugins-bridge/tests/expander_factories.rs:169:9:\nbridge rate0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n---- bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls stdout ----\n\nthread 'bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls' (324559767) panicked at crates/sotf-plugins/crates/plugins-bridge/tests/expander_factories.rs:136:13:\nExpander/{\"ratio\":0.9}\n\n---- bridge_expander_routes_match_explicit_native_audio_and_tail_contracts stdout ----\n\nthread 'bridge_expander_routes_match_explicit_native_audio_and_tail_contracts' (324559766) panicked at crates/sotf-plugins/crates/plugins-bridge/tests/expander_factories.rs:63:17:\nassertion `left == right` failed\n  left: 1024\n right: 221\n\n\nfailures:\n    bridge_expander_routes_match_explicit_native_audio_and_tail_contracts\n    bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls\n    native_and_bridge_reject_invalid_expander_construction_geometry\n\ntest result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p plugins-bridge --test expander_factories`\n"
+  },
+  "fixed": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-bridge",
+      "--test",
+      "expander_factories",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `test` profile [optimized + debuginfo] target(s) in 4.48s\n     Running tests/expander_factories.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/expander_factories-e9c5ff3065ad68d5)\n\nrunning 3 tests\ntest native_and_bridge_reject_invalid_expander_construction_geometry ... ok\ntest bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls ... ok\ntest bridge_expander_routes_match_explicit_native_audio_and_tail_contracts ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\n\n"
+  },
+  "facade_alias": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugins",
+      "--test",
+      "expander_alias_defaults",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)\n   Compiling sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)\n    Finished `test` profile [optimized + debuginfo] target(s) in 7.78s\nwarning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6\nnote: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`\n     Running tests/expander_alias_defaults.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/expander_alias_defaults-99728a78880d5def)\n\nrunning 1 test\ntest direct_alias_retains_multiband_defaults_and_explicit_one_band_is_broadband ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n"
+  },
+  "affected_tests": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-bridge",
+      "-p",
+      "sotf-plugin-multiband-expander",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling sotf-plugin-ab-compare v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `test` profile [optimized + debuginfo] target(s) in 7.09s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/plugins_bridge-01b485e315ff21b8)\n\nrunning 52 tests\ntest buffers::tests::test_deinterleave_stereo ... ok\ntest buffers::tests::test_scratch_buffers ... ok\ntest buffers::tests::test_deinterleave_rejects_short_input ... ok\ntest buffers::tests::test_interleave_rejects_short_output ... ok\ntest buffers::tests::test_deinterleave_rejects_ragged_destinations ... ok\ntest buffers::tests::test_interleave_rejects_ragged_channels ... ok\ntest buffers::tests::test_deinterleave_rejects_channel_count_mismatch ... ok\ntest buffers::tests::test_interleave_stereo ... ok\ntest buffers::tests::test_roundtrip ... ok\ntest factory::tests::aae_bridge_rejects_invalid_restored_state_without_panicking ... ok\ntest factory::tests::matrix_factory_preserves_configured_nonsquare_routing ... ok\ntest factory::tests::dither_bridge_honors_explicit_config_and_defaults ... ok\ntest factory::tests::ambisonics_bridge_custom_geometry_decodes_stereo ... ok\ntest factory::tests::aec_bridge_enforces_canonical_bus_layout_and_ranges ... ok\ntest factory::tests::spectrum_analyzer_aliases_initialize_process_and_publish_data ... ok\ntest factory::tests::constructor_defaults_do_not_hide_invalid_explicit_settings ... ok\ntest factory::tests::ambisonics_bridge_enforces_every_order_width ... ok\ntest factory::tests::beamformer_bridge_returns_errors_for_malformed_state ... ok\ntest factory::tests::test_unknown_plugin ... ok\ntest factory::tests::test_process_silence ... ok\ntest param_bridge::tests::ambisonics_layout_choice_roundtrips_every_raw_and_normalized_value ... ok\ntest param_bridge::tests::parametric_eq_oversampling_choices_map_to_plugin_factors ... ok\ntest param_bridge::tests::test_bool_normalize ... ok\ntest factory::tests::test_eq_with_config ... ok\ntest param_bridge::tests::test_choice_normalize ... ok\ntest param_bridge::tests::test_choice_normalize_degenerate_labels ... ok\ntest param_bridge::tests::test_hz_case_insensitive_logarithmic_scaling ... ok\ntest factory::tests::test_create_newly_wired_plugins ... ok\ntest param_bridge::tests::test_info ... ok\ntest param_bridge::tests::test_linear_normalize_roundtrip ... ok\ntest param_bridge::tests::test_log_normalize_roundtrip ... ok\ntest state::hiss_state::tests::detects_actual_hiss_and_ignores_others ... ok\ntest state::hiss_state::tests::hiss_save_omits_momentary_without_profile ... ok\ntest state::hiss_state::tests::legacy_momentary_keys_never_replay_on_hiss_load ... ok\ntest state::hiss_state::tests::load_skip_names_hiss_keys_only ... ok\ntest param_bridge::tests::structural_string_choices_roundtrip_all_configured_labels ... ok\ntest factory::tests::convolution_true_stereo_json_reaches_audible_bridge_route_and_requires_bool ... ok\ntest state::hiss_state::tests::momentary_ids_are_named_exactly ... ok\ntest state::hiss_state::tests::non_hiss_save_has_no_carrier_and_matches_wrapper ... ok\ntest state::tests::test_load_unknown_params_ignored ... ok\ntest state::tests::test_load_invalid_json ... ok\ntest state::tests::test_load_reports_known_parameter_error ... ok\ntest factory::tests::test_create_wave1_plugins ... ok\ntest state::tests::test_load_unknown_param_does_not_call_setter ... ok\ntest state::tests::test_save_load_roundtrip ... ok\ntest factory::tests::constructor_defaults_preserve_explicit_settings ... ok\ntest factory::tests::test_create_wave1_lowercase ... ok\ntest factory::tests::wrapper_defaults_and_aliases_initialize_and_process ... ok\ntest state::hiss_state::tests::profiled_hiss_state_rejected_before_any_mutation ... ok\ntest factory::tests::ab_compare_bridge_builds_initial_path_with_authoritative_factory ... ok\ntest factory::tests::hiss_bridge_honors_transient_guard_and_renders ... ok\ntest factory::tests::ambisonics_bridge_processes_all_56_ordered_input_output_tuples ... ok\n\ntest result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/analog_limiter_integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/analog_limiter_integration-7addf650da2f3bef)\n\nrunning 9 tests\ntest bridge_param_order_kinds_and_realtime_flags_match_owned_schema ... ok\ntest bridge_normalized_roundtrips_cover_float_bool_and_model_choice ... ok\ntest bridge_factory_honors_legacy_db_ms_aliases ... ok\ntest bridge_structural_live_edit_fails_without_touching_saved_state ... ok\ntest bridge_rejected_state_preserves_audio_and_config ... ok\ntest bridge_factory_accepts_both_spellings_with_identical_audio ... ok\ntest bridge_realtime_detector_controls_automate_live ... ok\ntest bridge_cross_model_state_restore_requires_reconstruction ... ok\ntest bridge_state_roundtrip_and_standalone_render_bit_identical ... ok\n\ntest result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n     Running tests/compressor_factories.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/compressor_factories-42aa4d11fe1e9e7a)\n\nrunning 3 tests\ntest compressor_factories_reject_invalid_dynamics_before_path_publication ... ok\ntest injected_ab_factory_retains_control_over_compressor_identity ... ok\ntest compressor_factory_audio_and_identity_match_explicit_band_construction ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.34s\n\n     Running tests/cross_format_comparison.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/cross_format_comparison-2934ce7e4d288a89)\n\nrunning 7 tests\ntest test_param_normalize_denormalize_roundtrip ... ok\ntest spectral_compressor_bridge_factory_is_fallible_and_preserves_advanced_state ... ok\ntest test_bridge_set_get_roundtrip_on_plugin ... ok\ntest unchanged_limiter_restore_preserves_audio_already_in_flight ... ok\ntest nondefault_state_restore_preserves_parameters_and_audio ... ok\ntest nondefault_normalized_parameters_match_direct_typed_audio ... ok\ntest supported_default_factory_configurations_create_successfully ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\n\n     Running tests/denoiser_configuration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/denoiser_configuration-92465a684d21d648)\n\nrunning 2 tests\ntest bridge_rejects_invalid_denoiser_constructor_controls ... ok\ntest bridge_constructor_and_state_roundtrip_retain_denoiser_modes ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/expander_factories.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/expander_factories-e57e82c3a5a3d730)\n\nrunning 3 tests\ntest native_and_bridge_reject_invalid_expander_construction_geometry ... ok\ntest bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls ... ok\ntest bridge_expander_routes_match_explicit_native_audio_and_tail_contracts ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\n\n     Running tests/gate_modes.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/gate_modes-499aff6d8a2982c3)\n\nrunning 2 tests\ntest gate_external_key_drives_program_channels_through_bridge ... ok\ntest gate_choice_labels_indices_and_saved_state_preserve_audio_sign_and_cap ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/gate_sidechain_partitions.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/gate_sidechain_partitions-05b28787cf9b65c1)\n\nrunning 3 tests\ntest rejected_late_gate_key_and_wrong_rate_preserve_the_next_waveform ... ok\ntest real_gate_cold_f32_fallback_f64_and_reset_have_no_heap_traffic ... ok\ntest all_gate_modes_match_unsplit_kernel_across_structure_and_live_controls ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\n\n     Running tests/limiter_oversampling.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/limiter_oversampling-025cbf03c7db8e25)\n\nrunning 2 tests\ntest limiter_factor_keeps_legacy_indices_and_integer_normalization ... ok\ntest limiter_factory_state_roundtrip_and_standalone_have_one_oversampling_stage ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s\n\n     Running tests/linear_phase_eq_dynamic.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/linear_phase_eq_dynamic-65b15fe01b396310)\n\nrunning 5 tests\ntest factory_static_parity_and_generic_refusal_preserved ... ok\ntest saturated_queue_and_off_thread_reclamation_tracking ... ok\ntest reset_cancel_reprepare_stale_and_topology_retain_accepted ... ok\ntest two_edits_during_blend_eventually_applied_after_retirement ... ok\ntest worker_gain_automation_exact_zero_and_final_reference ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n     Running tests/resampler_quality_bridge.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/resampler_quality_bridge-5c6801013f92a637)\n\nrunning 1 test\ntest all_resampler_quality_choices_roundtrip_canonical_bridge_indices ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_multiband_expander-491aaeed491360a6)\n\nrunning 119 tests\ntest params::shared_key_contract_tests::shared_keys_agree_across_arrays ... ok\ntest params::tests::band_template_non_empty ... ok\ntest response::tests::soft_knee_matches_processor_and_invalid_values_do_not_render ... ok\ntest params::tests::band_template_has_unique_engine_keys ... ok\ntest params::tests::global_params_have_unique_engine_keys ... ok\ntest response::tests::expands_below_threshold_with_the_processor_range_cap ... ok\ntest params::tests::global_params_non_empty ... ok\ntest tests::conventional_ratio_matches_independent_transfer_curve ... ok\ntest params::tests::single_band_primary_preserves_envelope_and_attenuation_feedback ... ok\ntest tests::malformed_band_overrides_and_band_counts_are_rejected_fallibly ... ok\ntest tests::malformed_presets_are_rejected_fallibly ... ok\ntest tests::bypassed_band_obeys_common_lookahead_latency ... ok\ntest tests::rebuilt_band_range_and_hold_inheritance_follows_later_global_edits ... ok\ntest tests::single_band_identity_schema_and_broadband_path_are_real ... ok\ntest tests::non_finite_input_is_sanitized_without_poisoning_state ... ok\ntest tests::omitted_single_band_makeup_aliases_preserve_explicit_band_zero ... ok\ntest tests::automation_values_are_independent_of_host_block_partitioning ... ok\ntest tests::spectral_mode_rejects_controls_without_feature_parity ... ok\ntest tests::single_band_two_tone_matches_independent_non_unity_broadband_detector_oracle ... ok\ntest tests::spectral_window_product_is_constant_overlap_add ... ok\ntest tests::spectral_mode_missing_state_returns_error_not_panic ... ok\ntest tests::test_build_crossovers ... ok\ntest tests::spectral_mode_nan_input_yields_finite_output ... ok\ntest tests::test_calculate_expansion_attenuation ... ok\ntest tests::crossover_automation_is_callback_partition_invariant ... ok\ntest tests::test_calculate_expansion_attenuation_knee ... ok\ntest tests::test_compute_bin_to_band ... ok\ntest tests::test_from_params ... ok\ntest tests::test_get_data ... ok\ntest tests::test_get_parameter_band_fields ... ok\ntest tests::test_get_parameter_global ... ok\ntest tests::test_get_parameter_invalid_band ... ok\ntest tests::spectral_mode_variable_and_zero_blocks_return_num_frames ... ok\ntest tests::test_get_parameter_single_band_aliases ... ok\ntest tests::test_get_parameter_unknown ... ok\ntest tests::test_initialize_different_sample_rate ... ok\ntest tests::test_global_param_value_roundtrip ... ok\ntest tests::test_initialize_spectral_mode ... ok\ntest tests::test_initialize_with_lookahead ... ok\ntest tests::test_latency_samples_lookahead ... ok\ntest tests::test_latency_samples_zero ... ok\ntest tests::spectral_hops_reuse_preallocated_band_metadata ... ok\ntest tests::test_lookahead_ms_roundtrip_and_clamp ... ok\ntest tests::spectral_mode_publishes_live_analyzer_snapshots ... ok\ntest tests::test_mb_exp_basic ... ok\ntest tests::cache_cadence_depends_on_samples_not_callback_count ... ok\ntest tests::test_multiband_expander_data ... ok\ntest tests::sidechain_hpf_rejects_low_frequency_trigger ... ok\ntest tests::test_mb_expander_attack_release_not_swapped ... ok\ntest tests::test_mb_expander_unity_passthrough ... ok\ntest tests::test_parse_detection_mode ... ok\ntest tests::test_param_value_out_of_range ... ok\ntest tests::test_initialize_clears_state ... ok\ntest tests::test_plugin_interface ... ok\ntest tests::test_num_bands_is_structural_in_spectral_mode ... ok\ntest tests::test_process_empty_buffer ... ok\ntest tests::test_process_hysteresis_and_hold ... ok\ntest tests::test_process_bypassed_band ... ok\ntest tests::test_process_knee_expansion ... ok\ntest tests::test_process_auto_makeup ... ok\ntest tests::test_process_inactive_band ... ok\ntest tests::test_process_mix_dry_only ... ok\ntest tests::broadband_and_multiband_detectors_make_distinct_two_tone_decisions ... ok\ntest tests::test_process_mix_wet_only ... ok\ntest tests::test_process_rejects_wrong_buffer_lengths_without_advancing_cache_counter ... ok\ntest tests::test_process_silence_finite ... ok\ntest tests::spectral_streamed_impulse_delay_is_block_size_independent ... ok\ntest tests::test_measured_auto_makeup_stereo_no_jitter ... ok\ntest tests::test_process_solo_band ... ok\ntest tests::test_process_link_channels_rms ... ok\ntest tests::test_process_stereo_separate_channels ... ok\ntest tests::test_processing_mode_is_structural ... ok\ntest tests::test_rebuild_cached_parameters ... ok\ntest tests::test_lookahead_dry_path_is_latency_compensated ... ok\ntest tests::test_cache_snapshot_updates_after_processing ... ok\ntest tests::test_set_param_value_out_of_range ... ok\ntest tests::test_reset_clears_expander_gate_state ... ok\ntest tests::test_set_parameter_all_crossover_freqs ... ok\ntest tests::test_reset_clears_complete_observable_state ... ok\ntest tests::test_set_parameter_attack_release_updates_coefficients ... ok\ntest tests::test_process_spectral_solo_band ... ok\ntest tests::test_process_time_domain_lookahead ... ok\ntest tests::test_set_parameter_band_bools ... ok\ntest tests::test_set_parameter_band_threshold ... ok\ntest tests::test_process_spectral_inactive_band ... ok\ntest tests::test_set_parameter_auto_makeup_alias ... ok\ntest tests::test_set_parameter_band_invalid_type ... ok\ntest tests::test_set_parameter_crossover_freq ... ok\ntest tests::test_process_spectral_bypassed_band ... ok\ntest tests::test_set_parameter_detection_mode ... ok\ntest tests::test_set_parameter_invalid_type ... ok\ntest tests::test_set_parameter_link_channels ... ok\ntest tests::test_set_parameter_num_bands_rejected_as_structural ... ok\ntest tests::test_process_unlink_channels_rms ... ok\ntest tests::test_set_parameter_global_misc ... ok\ntest tests::test_set_parameter_processing_mode_boundary ... ok\ntest tests::test_set_parameter_invalid_band_index_error ... ok\ntest tests::test_process_unlink_channels_peak ... ok\ntest tests::test_set_parameter_mix ... ok\ntest tests::test_set_parameter_measured_auto_makeup_alias ... ok\ntest tests::test_set_parameter_processing_mode_time_domain_is_structural ... ok\ntest tests::test_set_parameter_sidechain_hpf_alias ... ok\ntest tests::test_set_parameter_unknown_returns_error ... ok\ntest tests::test_set_parameter_threshold ... ok\ntest tests::test_low_frequency_triggers_expansion ... ok\ntest tests::test_update_coefficients ... ok\ntest tests::test_spectral_mode_latency_correct ... ok\ntest tests::test_update_lookahead_delay ... ok\ntest types::tests::deserialize_empty_json_uses_param_specs_defaults ... ok\ntest tests::test_spectral_state_reset ... ok\ntest tests::test_time_domain_unity_ratio_passthrough ... ok\ntest tests::test_time_domain_chunks_oversized_blocks_without_resizing ... ok\ntest tests::test_spectral_mode_more_than_5_bands_no_panic ... ok\ntest tests::test_spectral_mode_basic ... ok\ntest tests::spectral_expander_consumes_every_input_sample_across_callback_partitions ... ok\ntest tests::test_multiband_expander_processes_audio ... ok\ntest tests::test_spectral_vs_time_domain_attenuation ... ok\ntest tests::conventional_ratio_matches_spectral_coherent_tone_oracle ... ok\ntest tests::conventional_ratio_matches_single_and_multiband_settled_audio ... ok\n\ntest result: ok. 119 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s\n\n     Running unittests bin/qa_multiband_expander.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/qa_multiband_expander-85f4ab855b9f93c2)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/audit_dynamics.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_dynamics-387832b6a1eae84e)\n\nrunning 2 tests\ntest constructor_choice_case_preserves_the_requested_route_and_detector ... ok\ntest nonlinear_quiet_onsets_chatter_and_range_match_independent_references ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s\n\n     Running tests/audit_reconstruction.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_reconstruction-9410af41b5884780)\n\nrunning 2 tests\ntest crossover_adjacent_bursts_and_quiet_onsets_reconstruct_in_both_modes ... ok\ntest time_domain_unity_impulses_match_independent_cascade_and_band_timing ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s\n\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-342b0abac23dc141)\n\nrunning 8 tests\ntest supported_bulk_snapshots_and_zero_delay_keep_the_eos_contract ... ok\ntest errors_are_retryable_and_supported_eos_requires_reset ... ok\ntest recursive_wet_keeps_legacy_eos_until_mix_is_actually_dry ... ok\ntest one_band_wet_tail_equals_zero_continuation_and_then_stays_silent ... ok\ntest settled_dry_spectral_output_keeps_its_shorter_exact_response ... ok\ntest drain_call_bound_tracks_full_capacity_partial_empty_and_reset ... ok\ntest dry_output_preserves_first_and_final_samples_through_eos ... ok\ntest cold_finite_process_drain_query_and_reset_allocate_and_free_nothing ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-4a2fc06187c0112e)\n\nrunning 10 tests\ntest unknown_parameter_is_rejected ... ok\ntest parameter_roundtrip ... ok\ntest plugin_info_and_channels ... ok\ntest invalid_parameter_value_is_rejected ... ok\ntest dry_mix_passthrough ... ok\ntest reset_then_process_is_stable ... ok\ntest changing_num_bands_requires_rebuild ... ok\ntest plugin_processes_stereo_sine ... ok\ntest spectral_mode_processes_audio ... ok\ntest expansion_attenuates_quiet_signal ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/lookahead_latency.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/lookahead_latency-41b912e6332edbc9)\n\nrunning 2 tests\ntest spectral_dry_path_keeps_its_window_latency ... ok\ntest reported_lookahead_matches_dry_audio_at_every_supported_test_rate ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n     Running tests/realtime_parameters.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/realtime_parameters-de4caa09e0029b5c)\n\nrunning 1 test\ntest realtime_parameter_updates_do_not_allocate ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/soft_knee.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/soft_knee-b0ef81fc834d505a)\n\nrunning 6 tests\ntest hold_keeps_its_existing_sample_and_hop_duration ... ok\ntest neutral_controls_and_sub_point_one_knees_preserve_their_waveforms ... ok\ntest spectral_coherent_tone_matches_independent_hann_knee_without_center_jump ... ok\ntest band_overrides_and_live_threshold_knee_changes_keep_the_input_clock ... ok\ntest hysteresis_keeps_distinct_histories_between_the_knee_edge_and_close_boundary ... ok\ntest time_domain_dc_matches_independent_full_curve_and_hard_knee_boundary ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.32s\n\n     Running tests/spectral_finite_allocations.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/spectral_finite_allocations-fff83d608226e66e)\n\nrunning 1 test\ntest cold_native_and_oversampled_spectral_drain_has_zero_allocations_and_deallocations ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s\n\n     Running tests/spectral_finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/spectral_finite_stream-bbdf833028522f83)\n\nrunning 7 tests\ntest wet_spectral_drain_has_derived_support_and_preserves_the_final_marker ... ok\ntest unity_startup_checkpoints_retain_full_amplitude_at_the_declared_delay ... ok\ntest full_spectral_tail_metadata_survives_a_nearly_settled_fade_and_cached_output ... ok\ntest dense_unity_ring_wrap_and_reset_match_independent_source_delay ... ok\ntest nonlinear_spectral_tail_matches_independent_zero_continuation_for_all_hop_boundaries ... ok\ntest validation_controls_completion_and_partial_cache_bounds_preserve_history ... ok\ntest every_initial_phase_retains_first_and_final_impulses_through_eos ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s\n\n     Running tests/test_multiband.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/test_multiband-aadf08bfa68373e3)\n\nrunning 2 tests\ntest test_multiband_expander_instantiation ... ok\ntest test_multiband_expander_processes_audio ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests plugins_bridge\n\nrunning 1 test\ntest crates/sotf-plugins/crates/plugins-bridge/src/hiss_state.rs - state::hiss_state::hiss_snapshot (line 30) ... ignored\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nall doctests ran in 0.14s; merged doctests compilation took 0.13s\n   Doc-tests sotf_plugin_multiband_expander\n\nrunning 1 test\ntest crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/response.rs - response::target_attenuation_db (line 13) ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nall doctests ran in 0.20s; merged doctests compilation took 0.20s\n"
+  },
+  "release_factory": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-bridge",
+      "--release",
+      "--test",
+      "expander_factories",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `release` profile [optimized] target(s) in 14.29s\n     Running tests/expander_factories.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/expander_factories-e0d4c74577cd8f24)\n\nrunning 3 tests\ntest native_and_bridge_reject_invalid_expander_construction_geometry ... ok\ntest bridge_refuses_invalid_expander_presets_and_unsupported_spectral_controls ... ok\ntest bridge_expander_routes_match_explicit_native_audio_and_tail_contracts ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s\n\n"
+  },
+  "clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "plugins-bridge",
+      "-p",
+      "sotf-plugin-multiband-expander",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "output": "    Checking sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n    Checking sotf-plugin-ab-compare v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare)\n    Checking plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 1.20s\n"
+  },
+  "facade_clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugins",
+      "--test",
+      "expander_alias_defaults",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "output": "    Checking sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n    Checking sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)\n    Checking sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 2.56s\nwarning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6\nnote: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`\n"
+  },
+  "metadata": {
+    "audit_entry": 35,
+    "base_commit": "92ca5fd",
+    "source_sha256": {
+      "crates/sotf-plugins/crates/plugins-bridge/src/factory.rs": "3382ebf97669fd358d6112bcf7dbc194c683b2fe7c857f580ccbcd1398f19c16",
+      "crates/sotf-plugins/crates/plugins-bridge/tests/expander_factories.rs": "abbaca760a0cac2426fcf1f7a0e51cd1e187299e825c8b5bde3641e2604da2fb",
+      "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs": "f33c151352ebf0d3b3aba3f88ddf6daddac4b21de0b28fdfa429cd448e33a33d",
+      "crates/sotf-plugins/src/lib.rs": "877831cc827ada04b793cd97e8c00c52f0810e5a9eae7eb4986c8223bc7aee2c",
+      "crates/sotf-plugins/tests/expander_alias_defaults.rs": "e7f93589fd022f5994acd7ad25264f96548b0e02649e44706c400e273062dfb7"
+    },
+    "bridge_audio_drain_configurations": 63,
+    "facade_alias_configurations": 81,
+    "fixes": [
+      "Bridge expander routes now validate via native try_from_params before publication.",
+      "Bridge Expander forces one time-domain band; MultibandExpander requires2..5bands and honors configured mode, matching canonical policy.",
+      "Native bad-clock rejection moved before DSP-state allocation; native already rejected those clocks during initialize.",
+      "Public Rust aliases and their multiband defaults retained; direct broadband construction explicitly selects1band/time_domain."
+    ],
+    "verification": "250 affected tests passed,1preexisting ignored doctest. New facade test passed with81configs;3newbridge tests pass debug/release. Strict affected all-targetsQAClippy and facade-test Clippy pass.",
+    "migration": "Old bridge Expander spectral presets now select time_domain; use explicit multiband spectral configuration or direct native one-band spectral construction to preserve that processing deliberately.",
+    "limitations": [
+      "Exported AU/CLAP/VST3 binaries not rebuilt or validated.",
+      "Legacy native infallible constructors remain; fallible factories recommended for untrusted presets.",
+      "Synthetic waveform validation is not a recorded music listening evaluation.",
+      "No new adaptive or fixed psychoacoustic grouping profile introduced; existing user-defined frequency groups and distinct thresholds validated."
+    ]
+  },
+  "completion_review": [
+    {
+      "requirement": "Unity expansion reconstruction and band-edge transients",
+      "evidence": "audit_reconstruction.rs and multiband-expander-reconstruction.json:120independentf64LR4impulse/solo/timingcases plus90time/spectral edge-burst/quiet-onset cases. Rerun in current affected tests. Local precision fix retains topology."
+    },
+    {
+      "requirement": "Low-level musical material and threshold chatter",
+      "evidence": "audit_dynamics.rs and multiband-expander-dynamics.json:192nonlinear synthetic harmonic/DCmodulated onset/chatter configs;separate onset bound and independent f64time/fullcomplexFFTreferences;current affected tests rerun."
+    },
+    {
+      "requirement": "Classical hysteresis,bounded range,frequency grouping",
+      "evidence": "Existing state/curve controls independently varied across knee0/6,hysteresis0/3,hold0/10ms,range12/48dB;3spectral frequency groups with distinct thresholds independently reconstructed. Retain explicit user-selected baseline;noadaptive mask/new fixed psychoacoustic profile required."
+    },
+    {
+      "requirement": "Distinct finite spectral and recursive IIR support promises,lookahead/FFTlatency,cacheddrain,realtime controls",
+      "evidence": "Current affected selection reruns soft_knee,lookahead_latency,spectral_finite_stream,spectral_finite_allocations,realtime_parameters,finite_stream. Bridge audio/drain metadata compare to explicit native construction;README preserves Infinite IIR and finite spectral distinction."
+    },
+    {
+      "requirement": "Single-band alias construction/factory defaults",
+      "evidence": "Corrected bridge validation/mode identity;63bridge configs and81facade alias configs verify schema,latency,audio anddrain parity. Defaults and invalidpreset/geometry rejection tested."
+    },
+    {
+      "requirement": "Optional learned denoising mask",
+      "evidence": "Excluded per explicit user scope; audit/plugin-ml-backlog-20261018.json retains optional ML work."
+    }
+  ]
+}

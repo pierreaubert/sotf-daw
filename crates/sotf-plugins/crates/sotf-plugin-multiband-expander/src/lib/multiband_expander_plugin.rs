@@ -527,6 +527,9 @@ impl MultibandExpanderPlugin {
         sample_rate: S,
     ) -> Result<Self, String> {
         let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("expander requires a positive finite sample rate".into());
+        }
         if channels == 0 {
             return Err("expander requires at least one channel".into());
         }

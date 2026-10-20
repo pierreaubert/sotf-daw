@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Validate Expander and MultibandExpander presets with the native fallible
+  constructor before publication. Match canonical identity: Expander forces
+  one time-domain band; MultibandExpander requires 2–5 bands and honors mode.
+  Invalid dynamics and unsupported spectral controls now fail construction.
+  Previously accepted single-band spectral bridge presets need migration to
+  an explicit multiband spectral configuration or direct native construction.
+
 - Map EQ oversampling selector indices to DSP factors 1/2/4 in both directions, preserving raw saved-state factors and other plugins’ parameter semantics.
 
 - Carry explicit Crossover band counts through factory construction, preserving dormant settings during topology changes.
