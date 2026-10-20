@@ -177,8 +177,9 @@ impl MultibandExpanderPlugin {
             "peak"
         } else {
             &params.detection_mode
-        };
-        let det_mode = parse_detection_mode(det_mode_str).unwrap_or(DetectionMode::Peak);
+        }
+        .to_ascii_lowercase();
+        let det_mode = parse_detection_mode(&det_mode_str).unwrap_or(DetectionMode::Peak);
         let level_detectors = (0..nb)
             .map(|_| {
                 (0..channels)
@@ -191,7 +192,8 @@ impl MultibandExpanderPlugin {
             "time_domain"
         } else {
             params.processing_mode.as_str()
-        };
+        }
+        .to_ascii_lowercase();
 
         let spectral = if mode_str == "spectral" {
             let fft_size = 1024;
@@ -221,7 +223,7 @@ impl MultibandExpanderPlugin {
             hold_ms: params.hold_ms,
             link_channels: params.link_channels,
             mix: params.mix,
-            detection_mode: det_mode_str.to_string(),
+            detection_mode: det_mode_str,
             lookahead_ms: params.lookahead_ms.clamp(0.0, MAX_LOOKAHEAD_MS),
             sidechain_hpf_hz: params.sidechain_hpf_hz.unwrap_or(80.0),
             sidechain_hpf_x1: vec![0.0; nb * channels],
@@ -237,7 +239,7 @@ impl MultibandExpanderPlugin {
             dry_lookahead_buffers: (0..channels)
                 .map(|_| LookaheadBuffer::from_ms(MAX_LOOKAHEAD_MS, sr, 1))
                 .collect(),
-            processing_mode: mode_str.to_string(),
+            processing_mode: mode_str,
             band_params,
             crossover_points: Vec::new(),
             band_expanders: bexps,
@@ -753,6 +755,9 @@ impl MultibandExpanderPlugin {
             };
         }
 
+        // Spectral mode requires linked detection. Collect every channel's
+        // spectrum before applying gain so channel order cannot change the link.
+        ss.linked_bin_norms.fill(0.0);
         for ch in 0..channels {
             // --- Forward FFT ---
             // Apply Hann window to the linear input buffer
@@ -764,6 +769,13 @@ impl MultibandExpanderPlugin {
                 .time_buffer
                 .copy_from_slice(&ss.windowed_buf);
             ss.fft_processors[ch].forward();
+            for k in 0..num_bins {
+                ss.linked_bin_norms[k] =
+                    ss.linked_bin_norms[k].max(ss.fft_processors[ch].freq_buffer[k].norm());
+            }
+        }
+
+        for ch in 0..channels {
             ss.freq_scratch
                 .copy_from_slice(&ss.fft_processors[ch].freq_buffer);
 
@@ -791,7 +803,7 @@ impl MultibandExpanderPlugin {
                 // Multiplying by 2/W recovers amplitude A, making the threshold
                 // (in dBFS) numerically consistent with the time-domain mode.
                 // For a standard Hann window, W = fft_size / 2.
-                let mag = ss.freq_scratch[k].norm() * (2.0 / window_sum);
+                let mag = ss.linked_bin_norms[k] * (2.0 / window_sum);
                 let mag_db = 20.0 * fast_log10(mag.max(1e-10));
 
                 // Update gate state and envelope (at hop rate)

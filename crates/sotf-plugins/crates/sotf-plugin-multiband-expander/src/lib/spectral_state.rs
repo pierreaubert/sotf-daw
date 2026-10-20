@@ -95,6 +95,8 @@ pub(super) struct SpectralState {
     pub(super) windowed_buf: Vec<f32>,
     /// Frequency-domain scratch [num_bins]
     pub(super) freq_scratch: Vec<Complex<f32>>,
+    /// Maximum unnormalized bin magnitude across channels for linked detection.
+    pub(super) linked_bin_norms: Vec<f32>,
     /// IFFT output [fft_size]
     pub(super) ifft_buf: Vec<f32>,
 }
@@ -180,6 +182,7 @@ impl SpectralState {
             dry_delay_len,
             windowed_buf: vec![0.0f32; fft_size],
             freq_scratch: vec![Complex::new(0.0, 0.0); num_bins],
+            linked_bin_norms: vec![0.0; num_bins],
             ifft_buf: vec![0.0f32; fft_size],
         }
     }
@@ -288,6 +291,7 @@ impl SpectralState {
         self.dry_delay_pos = 0;
         self.windowed_buf.fill(0.0);
         self.freq_scratch.fill(Complex::new(0.0, 0.0));
+        self.linked_bin_norms.fill(0.0);
         self.ifft_buf.fill(0.0);
     }
 }

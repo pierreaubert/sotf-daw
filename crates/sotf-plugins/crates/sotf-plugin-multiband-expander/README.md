@@ -15,6 +15,14 @@ Hann STFT at 75% overlap (`hop=N/4`), `1/(1.5N)` normalization, and 1024 samples
 of latency; it accepts only linked Peak detection with zero lookahead/HPF and no
 auto makeup, so unsupported behavior is never silently ignored.
 
+Constructor detection and processing-mode labels are case-insensitive, matching
+validation. Spectral mode links each bin to the largest magnitude across all
+channels before computing gain. Every channel keeps its original spectrum and
+receives the shared detector trajectory; quieter channels no longer receive
+extra expansion. This corrects earlier independent-channel spectral behavior
+and can audibly change stereo presets. The 1024-frame latency and spectral
+finite-support declaration are unchanged.
+
 Time-domain crossover coefficients, recursive state and serial split
 intermediates use f64, with f32 band buffers for dynamics. This corrects
 low-cutoff rounding error at high sample rates and changes multiband numerical
@@ -31,6 +39,16 @@ including reset and callback partitioning. Its measured process callbacks must
 be finite and have zero heap allocations/deallocations; release heap checks
 require `--features qa`. Quiet onsets in this matrix use unity expansion;
 nonlinear quiet-material and threshold-chatter validation is a separate check.
+
+`tests/audit_dynamics.rs` checks 192 nonlinear configurations against f64
+detector/envelope references and a full-complex FFT/offline overlap-add
+reference. Synthetic quiet harmonic onsets, repeated threshold excursions,
+per-band spectral thresholds, Peak/RMS, knee, hysteresis, hold and bounded range
+are covered. The quiet-onset error is normalized separately from later loud
+material; both it and the full waveform have a fixed 0.0035 relative-peak bound.
+Mono and imbalanced stereo cases also check callback partition equivalence and
+zero heap activity. These deterministic synthetic signals are not a recorded
+music listening evaluation.
 
 ## Soft knee and state boundaries
 

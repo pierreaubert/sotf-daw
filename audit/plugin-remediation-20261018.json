@@ -1193,17 +1193,23 @@
         },
         {
           "task": "Validate nonlinear low-level musical startup, threshold chatter and band-edge transient gain behavior against independent references",
-          "status": "pending",
-          "evidence": "New quiet-onset and burst cases use ratio1 and cannot prove nonlinear startup or chatter behavior. Existing soft-knee/hold/hysteresis tests remain relevant but audit extensions are pending."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/spectral_state.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/audit_dynamics.rs",
+            "audit/artifacts/plugin-audit-20261018/multiband-expander-dynamics.json"
+          ],
+          "result": "Independent f64 time detector/state/gain and full-complex FFT/offlineOLA spectral references validate192 nonlinear quiet harmonic onset/chatter configurations, with independently varied knee,hysteresis,hold,range;Peak/RMS,44.1/96k,mono/stereo18dB imbalance and distinct per-band spectral thresholds. Exposed accepted RMS label running Peak(relativeerror0.033848) and spectral linked contract using independent gains(relativeerror0.068946); corrected cold choice normalization and preallocated per-bin channel-max detection. Max full-wave relative peak0.00139394 and separately normalized quiet onset0.000675861 pass fixed0.0035 bounds;137/1024-frame partitions bitexact;all new callbacks finite0alloc/free.27 constructor label equivalence checks pass. Full crate161passed0ignored including1doctest;release2passed;strict all-targetsQAClippy and facade consumer test pass. Existing210-case unity/band-edge matrix and finite spectral support/heap suites rerun in full crate. Synthetic material only; no recorded corpus/listening claim. Stereo/RMS/mixed-case audio can change intentionally; no parameter/latency changes."
         },
         {
           "task": "Review classical hysteresis, bounded range, frequency grouping and single-band alias paths; preserve distinct spectral/IIR support promises",
           "status": "pending",
-          "evidence": "Source has hysteresis/range and spectral bin-to-band grouping; broader adequacy review remains. Existing finite spectral support and recursive IIR behavior unchanged. Optional learned-mask mode remains separate."
+          "evidence": "Hysteresis, hold, bounded range and user-frequency spectral bin grouping with distinct thresholds are now independently exercised in nonlinear matrix. Single-band alias/factory source and lifecycle review remains pending; decide whether additional grouping behavior is warranted without obscuring predictable dynamics. Spectral finite support and time-domain recursive metadata remain distinct; optional learned mask separate."
         }
       ],
       "evidence": [
-        "Unity reconstruction and band-edge precision correction verified. Entry35 partial; nonlinear signal and classical behavior review remain. Overall30/45 complete_production_scope."
+        "Unity reconstruction plus192-case nonlinear startup/chatter validation verified. Crossover precision, accepted choice routing and linked spectral detection corrected. Entry35 partial pending remaining alias/factory and classical grouping adequacy review. Overall30/45 complete_production_scope."
       ]
     },
     {

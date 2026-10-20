@@ -1,3 +1,15 @@
+## Unreleased nonlinear routing and spectral stereo linking
+
+- Normalize accepted constructor detector and mode labels. `RMS` previously
+  passed validation but ran the Peak branch; mixed-case spectral labels could
+  select the time-domain route. Parameters and accepted choice names are unchanged.
+- Honor spectral mode's linked-channel contract using preallocated per-bin
+  channel maxima before gain processing. Quieter stereo channels no longer
+  receive extra expansion. Existing stereo audio can change; mono processing,
+  FFT/window conventions, latency and finite support are retained.
+- Validate 192 independent nonlinear startup/chatter/hysteresis/hold/range
+  configurations plus constructor label equivalence and callback heap checks.
+
 ## Unreleased crossover precision and reconstruction validation
 
 - Use f64 crossover coefficients, state and split intermediates, casting final

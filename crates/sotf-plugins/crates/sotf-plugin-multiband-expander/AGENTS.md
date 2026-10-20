@@ -30,7 +30,14 @@ cargo test -p sotf-plugin-multiband-expander
 - `expander` is a true one-band factory path; `multiband_expander` requires 2-5 bands.
 - `num_bands` and `processing_mode` are structural and must never allocate in a live setter.
 - Spectral mode is dual-Hann, 75% overlap, `N/4` hop, and `N` samples latency.
+- Spectral detection is linked: FFT all channels, collect per-bin maxima into
+  preallocated `linked_bin_norms`, then apply shared detection to every channel.
+  Do not synthesize one channel before collecting the others' spectra.
+- Normalize constructor detector/mode strings to lowercase; validators accept
+  case-insensitive labels, so processing comparisons must use the same form.
 - Sidechain HPF affects detector samples only; lookahead applies uniformly to bypassed bands.
 - `tests/audit_reconstruction.rs` uses independent f64 Tustin/DF-I references
   for time mode and a pure delayed-input reference for spectral unity. Keep
   fixed bounds and callback heap guards; release heap checks require QA.
+- `tests/audit_dynamics.rs` uses f64 detector/state and full-complex FFT/linear
+  OLA references for nonlinear quiet startup, chatter and per-band thresholds.
