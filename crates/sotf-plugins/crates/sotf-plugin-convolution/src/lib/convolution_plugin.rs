@@ -424,12 +424,13 @@ impl ConvolutionPlugin {
                     head_taps,
                 )
             } else {
-                let target_samples = target_lengths
-                    .into_iter()
-                    .try_fold(0_usize, |total, length| total.checked_add(length));
-                target_samples.map_or(usize::MAX, |target_samples| {
-                    Self::estimated_ir_backend_bytes(target_samples, use_nupc, output_channels)
-                })
+                Self::estimated_ordinary_backend_bytes(
+                    &target_lengths,
+                    use_nupc,
+                    output_channels,
+                    zero_latency_head,
+                    head_taps,
+                )
             }
         });
         if estimated_bytes > MAX_IR_MEMORY_BYTES {
@@ -458,15 +459,46 @@ impl ConvolutionPlugin {
         Some(frames as usize)
     }
 
-    pub(super) fn estimated_ir_backend_bytes(
-        target_samples: usize,
+    /// Estimate retained ordinary-route storage before constructing FFT backends.
+    ///
+    /// Count shared kernels once and each mapped channel's working state.
+    /// Unsupported dimensions or checked-arithmetic overflow return `usize::MAX`.
+    pub(super) fn estimated_ordinary_backend_bytes(
+        path_lengths: &[usize],
         use_nupc: bool,
         output_channels: usize,
+        zero_latency_head: bool,
+        head_taps: usize,
     ) -> usize {
-        let backend_multiplier = if use_nupc { output_channels } else { 4 };
-        target_samples
-            .checked_mul(std::mem::size_of::<f32>())
-            .and_then(|bytes| bytes.checked_mul(backend_multiplier))
+        if path_lengths.is_empty() || path_lengths.contains(&0) || output_channels == 0 {
+            return usize::MAX;
+        }
+        if !use_nupc {
+            return Self::estimated_upc_backend_bytes(path_lengths, output_channels)
+                .unwrap_or(usize::MAX);
+        }
+        let bytes =
+            path_lengths
+                .iter()
+                .enumerate()
+                .try_fold(0_usize, |total, (ir_channel, &length)| {
+                    if ir_channel >= output_channels {
+                        // Unused kernels are dropped after construction; they are
+                        // temporary preparation storage, not retained DSP payload.
+                        return Some(total);
+                    }
+                    let engines = (output_channels - 1 - ir_channel) / path_lengths.len() + 1;
+                    let (kernel, engine) =
+                        Self::estimated_nupc_storage_bytes(length, zero_latency_head, head_taps)?;
+                    total
+                        .checked_add(kernel)?
+                        .checked_add(engine.checked_mul(engines)?)
+                });
+        bytes
+            .and_then(|bytes| {
+                bytes.checked_add(Self::estimated_plugin_fixed_bytes(output_channels)?)
+            })
+            .and_then(Self::with_backend_estimate_margin)
             .unwrap_or(usize::MAX)
     }
 
@@ -505,13 +537,11 @@ impl ConvolutionPlugin {
                 )?)
             });
             path_bytes
-                .and_then(|bytes| {
-                    bytes.checked_add(Self::estimated_true_stereo_nupc_fixed_bytes()?)
-                })
-                .and_then(Self::with_true_stereo_estimate_margin)
+                .and_then(|bytes| bytes.checked_add(Self::estimated_plugin_fixed_bytes(2)?))
+                .and_then(Self::with_backend_estimate_margin)
                 .unwrap_or(usize::MAX)
         } else {
-            Self::estimated_true_stereo_upc_bytes(path_lengths).unwrap_or(usize::MAX)
+            Self::estimated_upc_backend_bytes(path_lengths, 2).unwrap_or(usize::MAX)
         }
     }
 
@@ -520,6 +550,16 @@ impl ConvolutionPlugin {
         zero_latency_head: bool,
         head_taps: usize,
     ) -> Option<usize> {
+        let (kernel, engine) =
+            Self::estimated_nupc_storage_bytes(ir_length, zero_latency_head, head_taps)?;
+        kernel.checked_add(engine)
+    }
+
+    fn estimated_nupc_storage_bytes(
+        ir_length: usize,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Option<(usize, usize)> {
         let max_resampled_length = MAX_IR_SECONDS.checked_mul(u32::MAX as usize)?;
         if ir_length > max_resampled_length {
             return None;
@@ -536,9 +576,8 @@ impl ConvolutionPlugin {
             PARTITION_SIZE
         };
         let specs = nupc::plan_partitions(tail_len, min_block);
-        let mut bytes = head_len
-            .checked_mul(std::mem::size_of::<f32>())?
-            .checked_mul(2)?; // immutable head taps plus per-engine history
+        let mut kernel_bytes = head_len.checked_mul(std::mem::size_of::<f32>())?;
+        let mut engine_bytes = kernel_bytes; // immutable taps and per-engine history
 
         for spec in specs {
             // Estimate without constructing a plan before accepting the
@@ -560,7 +599,10 @@ impl ConvolutionPlugin {
                 .count
                 .checked_mul(spec.fft_size)?
                 .checked_mul(std::mem::size_of::<Complex<f32>>())?;
-            bytes = bytes.checked_add(spectra.checked_mul(2)?)?;
+            kernel_bytes = kernel_bytes
+                .checked_add(spectra)?
+                .checked_add(fft_plan_bytes)?;
+            engine_bytes = engine_bytes.checked_add(spectra)?;
 
             let output_delay = if head_len > 0 {
                 head_len
@@ -582,16 +624,18 @@ impl ConvolutionPlugin {
                 .checked_mul(2)? // FFT spectrum and convolution sum
                 .checked_add(scratch_complex)?
                 .checked_mul(std::mem::size_of::<Complex<f32>>())?;
-            bytes = bytes
+            engine_bytes = engine_bytes
                 .checked_add(real_buffers)?
-                .checked_add(complex_buffers)?
-                .checked_add(fft_plan_bytes)?;
+                .checked_add(complex_buffers)?;
         }
-        Some(bytes)
+        Some((kernel_bytes, engine_bytes))
     }
 
-    fn estimated_true_stereo_upc_bytes(path_lengths: &[usize]) -> Option<usize> {
-        // The UPC keeps every four-path IR partition plus a two-input FDL.
+    fn estimated_upc_backend_bytes(
+        path_lengths: &[usize],
+        output_channels: usize,
+    ) -> Option<usize> {
+        // UPC retains every IR spectrum plus one FDL per input channel.
         // Buffer payload for per-channel accumulators and FFT scratch is added
         // as fixed prepared state below.
         let max_parts = path_lengths.iter().copied().max()?.div_ceil(PARTITION_SIZE);
@@ -606,7 +650,7 @@ impl ConvolutionPlugin {
         }
         bytes = bytes.checked_add(
             max_parts
-                .checked_mul(2)?
+                .checked_mul(output_channels)?
                 .checked_mul(FFT_SIZE)?
                 .checked_mul(std::mem::size_of::<Complex<f32>>())?,
         )?;
@@ -615,46 +659,40 @@ impl ConvolutionPlugin {
             .checked_mul(26)?
             .checked_mul(std::mem::size_of::<Complex<f32>>())?
             .checked_add(FFT_PLAN_METADATA_BYTES)?;
-        // Plugin-fixed vectors: input, overlap, output ring, envelopes, two
-        // output delays, last/transition samples, plus FFT workspace and the
-        // bounded Rayon accumulation pool retained with the prepared IR.
-        let fixed_real_samples = 2_usize
-            .checked_mul(PARTITION_SIZE)? // input buffers
-            .checked_add(2_usize.checked_mul(FFT_SIZE)?)? // output accumulators
-            .checked_add(2_usize.checked_mul(PARTITION_SIZE)?)? // output ring
-            .checked_add(2_usize.checked_mul(PARTITION_SIZE)?)? // mix/gain envelopes
-            .checked_add(4_usize.checked_mul(PARTITION_SIZE)?)? // active/inactive dry delays
-            .checked_add(4)?; // last-output and transition samples
         let fixed_complex_samples = FFT_SIZE
-            .checked_mul(2)? // FFT spectrum and sum
-            .checked_add(FFT_SIZE.checked_mul(8)?)? // conservative rustfft scratch
+            .checked_mul(8)? // conservative rustfft scratch
             .checked_add(
                 rayon::current_num_threads()
                     .min(max_parts)
                     .checked_mul(FFT_SIZE)?,
             )?;
         bytes = bytes
-            .checked_add(fixed_real_samples.checked_mul(std::mem::size_of::<f32>())?)?
+            .checked_add(Self::estimated_plugin_fixed_bytes(output_channels)?)?
             .checked_add(fixed_complex_samples.checked_mul(std::mem::size_of::<Complex<f32>>())?)?
             .checked_add(fft_plan_bytes)?;
-        Self::with_true_stereo_estimate_margin(bytes)
+        Self::with_backend_estimate_margin(bytes)
     }
 
-    fn estimated_true_stereo_nupc_fixed_bytes() -> Option<usize> {
-        let fixed_real_samples = 2_usize
-            .checked_mul(PARTITION_SIZE)? // input buffers
-            .checked_add(2_usize.checked_mul(FFT_SIZE)?)? // output accumulators
-            .checked_add(2_usize.checked_mul(PARTITION_SIZE)?)? // output ring
-            .checked_add(2_usize.checked_mul(PARTITION_SIZE)?)? // mix/gain envelopes
-            .checked_add(4_usize.checked_mul(PARTITION_SIZE)?)? // active/inactive dry delays
-            .checked_add(4)?; // last-output and transition samples
-        let fixed_complex_samples = FFT_SIZE.checked_mul(2)?; // plugin FFT spectrum and sum
-        fixed_real_samples
+    fn estimated_plugin_fixed_bytes(output_channels: usize) -> Option<usize> {
+        // Per channel: input/ring, two dry delays, overlap accumulator and
+        // last/transition samples. Envelopes and FFT spectrum/sum are shared.
+        let per_channel = PARTITION_SIZE
+            .checked_mul(4)?
+            .checked_add(FFT_SIZE)?
+            .checked_add(2)?;
+        let real_samples = output_channels
+            .checked_mul(per_channel)?
+            .checked_add(PARTITION_SIZE.checked_mul(2)?)?;
+        real_samples
             .checked_mul(std::mem::size_of::<f32>())?
-            .checked_add(fixed_complex_samples.checked_mul(std::mem::size_of::<Complex<f32>>())?)
+            .checked_add(
+                FFT_SIZE
+                    .checked_mul(2)?
+                    .checked_mul(std::mem::size_of::<Complex<f32>>())?,
+            )
     }
 
-    fn with_true_stereo_estimate_margin(bytes: usize) -> Option<usize> {
+    fn with_backend_estimate_margin(bytes: usize) -> Option<usize> {
         bytes.checked_add(bytes.div_ceil(8))
     }
 
@@ -2122,3 +2160,7 @@ impl ConvolutionPlugin {
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod loader_tests;
+
+#[cfg(test)]
+#[path = "resource_tests.rs"]
+mod resource_tests;

@@ -420,11 +420,28 @@
           "task": "Validate maximum-size multichannel performance and sustained mixed-instance loading",
           "status": "pending",
           "evidence": "Worker request-count bounds/cancellation and deterministic saturation/refusal tests are implemented; original maximum-size CPU/memory measurements and sustained mixed-instance validation remain open."
+        },
+        {
+          "task": "Correct ordinary convolution resource admission using shared partition geometry",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/finite_stream.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-resource-admission.json"
+          ],
+          "result": "Red-to-green: former UPC admission accepts 30 s/48 kHz mono on 32 outputs although its FDL alone is 737673216 bytes, above unchanged 512 MiB budget; ordinary NUPC coarse estimate also undercounts geometry. Count UPC IR spectra and per-input FDL, NUPC shared kernels/plans and each cyclically mapped engine workspace, fixed plugin storage and existing planner/scratch/12.5% metadata reserves. Same shared accounting preserves matrix estimate behavior. Validate 36 8x-resampled boundary rows, shared kernel accounting/overflow and 24 measured retained-allocation rows including 32 outputs/mono and 32-channel AIFF. Extend FFT reserve measurement to largest ordinary admission levels for every head 32..512 and no-head. Affected tests 106 passed/4 existing ignored; final release lib 67 passed/1 existing ignored; strict all-targets QA Clippy passes. Previously underestimated configurations can now be refused; DSP/preset/latency unchanged. No deadline compliance or peak RSS claim."
+        },
+        {
+          "task": "Bound decoded input allocation before resource admission",
+          "status": "pending",
+          "evidence": "File decoding currently precedes duration/channel/backend admission. Persistent backend estimate now corrected, but temporary decode/resample/preparation allocations remain a separate resource limit."
         }
       ],
       "evidence": [
         "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45.",
-        "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45."
+        "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45.",
+        "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete."
       ]
     },
     {

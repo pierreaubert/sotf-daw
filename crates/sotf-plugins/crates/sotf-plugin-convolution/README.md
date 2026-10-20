@@ -62,6 +62,21 @@ never drops worker tokens or completion storage in process/drain/reset.
 WAV, FLAC, and AIFF IRs are supported. The loader requires valid sample-rate metadata and enforces
 32 channels, 30 seconds, and a 512 MiB estimated realtime-backend budget.
 
+Resource admission follows the partition layout for both ordinary and true-stereo
+routes. UPC counts every retained IR spectrum and each input channel's FDL. NUPC
+counts shared IR spectra/plans once per used IR channel, then the history, delay,
+head and FFT workspace for every mapped output. Fixed plugin buffers and the
+existing planner/metadata allowances are included. Some large multichannel IRs
+that passed the former sample-count estimate are now correctly refused before
+FFT backend construction. The 512 MiB limit is unchanged.
+
+This estimates persistent backend payload; it is not a peak RSS or aggregate
+process-memory limit. Decoded/resampled copies, temporary preparation storage,
+active/retired replacement overlap and other plugin instances require additional
+memory. In particular, decoding currently precedes resource admission; bounding
+that temporary decode allocation remains separate work. Admission also does not
+prove that a configuration can meet the audio callback deadline.
+
 ## End of stream
 
 Native `drain` emits zero-input continuation for the active UPC, NUPC, direct-head,

@@ -96,7 +96,41 @@ fn heap_retained_bytes<T>(operation: impl FnOnce() -> T) -> (T, usize) {
 }
 
 fn write_true_stereo_ir(path: &std::path::Path, frames: usize, sample_rate: u32) {
-    let channels = 4_u16;
+    write_ir(path, frames, sample_rate, 4);
+}
+
+fn write_ir(path: &std::path::Path, frames: usize, sample_rate: u32, channels: u16) {
+    if channels == 32 {
+        // Plain WAVE maps channels to speaker positions and cannot represent
+        // this discrete layout. AIFF supports the full 32-channel fixture.
+        assert_eq!(sample_rate, 48_000);
+        let data_size = (frames * usize::from(channels) * 2) as u32;
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"FORM");
+        bytes.extend_from_slice(&(46 + data_size).to_be_bytes());
+        bytes.extend_from_slice(b"AIFFCOMM");
+        bytes.extend_from_slice(&18_u32.to_be_bytes());
+        bytes.extend_from_slice(&channels.to_be_bytes());
+        bytes.extend_from_slice(&(frames as u32).to_be_bytes());
+        bytes.extend_from_slice(&16_u16.to_be_bytes());
+        bytes.extend_from_slice(&[0x40, 0x0e, 0xbb, 0x80, 0, 0, 0, 0, 0, 0]);
+        bytes.extend_from_slice(b"SSND");
+        bytes.extend_from_slice(&(8 + data_size).to_be_bytes());
+        bytes.extend_from_slice(&0_u32.to_be_bytes());
+        bytes.extend_from_slice(&0_u32.to_be_bytes());
+        for frame in 0..frames {
+            for channel in 0..usize::from(channels) {
+                let sample = if frame % 997 == channel * 13 {
+                    2048_i16
+                } else {
+                    0
+                };
+                bytes.extend_from_slice(&sample.to_be_bytes());
+            }
+        }
+        std::fs::write(path, bytes).unwrap();
+        return;
+    }
     let data_size = (frames * channels as usize * 2) as u32;
     let mut bytes = Vec::with_capacity(44 + data_size as usize);
     bytes.extend_from_slice(b"RIFF");
@@ -112,7 +146,7 @@ fn write_true_stereo_ir(path: &std::path::Path, frames: usize, sample_rate: u32)
     bytes.extend_from_slice(b"data");
     bytes.extend_from_slice(&data_size.to_le_bytes());
     for frame in 0..frames {
-        for path in 0..4 {
+        for path in 0..usize::from(channels) {
             let sample = if frame % 997 == path * 13 {
                 2_048_i16
             } else {
@@ -262,6 +296,42 @@ fn true_stereo_fft_reserve_covers_budget_admissible_non_power_head_levels() {
     );
     for spec in nupc::plan_partitions(low, PARTITION_SIZE) {
         checked_fft_sizes.insert(spec.fft_size);
+    }
+
+    // A single ordinary input with one shared IR has the least retained work
+    // for each path length, and can therefore admit larger FFT levels than the
+    // four-path matrix. Include its boundary for every public head setting.
+    for head_taps in std::iter::once(0).chain(32..=512) {
+        let estimate = |frames| {
+            ConvolutionPlugin::estimated_ordinary_backend_bytes(
+                &[frames],
+                true,
+                1,
+                head_taps != 0,
+                head_taps,
+            )
+        };
+        let mut low = 1_usize;
+        let mut high = MAX_IR_MEMORY_BYTES;
+        assert!(estimate(high) > MAX_IR_MEMORY_BYTES);
+        while low < high {
+            let middle = low + (high - low).div_ceil(2);
+            if estimate(middle) <= MAX_IR_MEMORY_BYTES {
+                low = middle;
+            } else {
+                high = middle - 1;
+            }
+        }
+        assert!(estimate(low + 1) > MAX_IR_MEMORY_BYTES);
+        let head_length = head_taps.min(low);
+        let minimum_block = if head_length == 0 {
+            PARTITION_SIZE
+        } else {
+            PARTITION_SIZE.min(head_length)
+        };
+        for spec in nupc::plan_partitions(low - head_length, minimum_block) {
+            checked_fft_sizes.insert(spec.fft_size);
+        }
     }
 
     assert!(checked_fft_sizes.contains(&514));
@@ -509,5 +579,77 @@ fn held_output_replacement_and_clear_fades_finish_without_extending_old_ir_histo
         assert_eq!(&actual[..expected_frames], &expected);
         assert!(actual[0] > 0.5);
         assert_eq!(actual[127], 0.0);
+    }
+}
+
+#[test]
+fn ordinary_estimate_bounds_retained_multichannel_prepared_storage() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+    // Include a shared mono kernel, cyclic mapping, unused IR paths, a full
+    // 32-channel IR, partition edges and a non-power-of-two direct head.
+    for (outputs, ir_channels, length) in [
+        (1, 1, 1),
+        (12, 1, 8197),
+        (32, 1, 65537),
+        (12, 3, 8197),
+        (2, 4, 4097),
+        (32, 32, 8197),
+    ] {
+        let path = std::env::temp_dir().join(format!(
+            "sotf-convolution-ordinary-storage-{}-{}.wav",
+            std::process::id(),
+            NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        let path = if ir_channels == 32 {
+            path.with_extension("aiff")
+        } else {
+            path
+        };
+        write_ir(&path, length, 48_000, ir_channels as u16);
+        for (use_nupc, zero_latency_head, head_taps) in [
+            (false, false, 128),
+            (true, false, 128),
+            (true, true, 257),
+            (true, true, 512),
+        ] {
+            let estimate = ConvolutionPlugin::estimated_ordinary_backend_bytes(
+                &vec![length; ir_channels],
+                use_nupc,
+                outputs,
+                zero_latency_head,
+                head_taps,
+            );
+            let (plugin, retained_bytes) = heap_retained_bytes(|| {
+                ConvolutionPlugin::from_params(
+                    outputs,
+                    48_000,
+                    ConvolutionPluginParams {
+                        ir_file: path.to_string_lossy().into_owned(),
+                        use_nupc,
+                        zero_latency_head,
+                        head_taps,
+                        ..Default::default()
+                    },
+                )
+                .unwrap()
+            });
+            assert!(
+                retained_bytes <= estimate,
+                "{outputs} outputs/{ir_channels} IR channels/{length} frames/{use_nupc}/{zero_latency_head}/{head_taps}: retained {retained_bytes} > estimate {estimate}"
+            );
+            assert_eq!(
+                plugin.nupc_engines.len(),
+                if use_nupc { outputs } else { 0 }
+            );
+            println!(
+                "{}",
+                serde_json::json!({"case":"ordinary_retained_storage",
+                "output_channels":outputs,"ir_channels":ir_channels,"ir_frames":length,
+                "nupc":use_nupc,"head":zero_latency_head,"head_taps":head_taps,
+                "retained_requested_bytes":retained_bytes,"estimated_bytes":estimate})
+            );
+        }
+        std::fs::remove_file(path).unwrap();
     }
 }

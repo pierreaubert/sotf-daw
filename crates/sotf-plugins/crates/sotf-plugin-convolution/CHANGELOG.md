@@ -2,6 +2,13 @@
 
 ## Changes
 
+- Correct ordinary-route resource admission to include UPC per-channel FDL and
+  NUPC partition spectra, shared plans and each mapped engine's workspace.
+  Reuse geometry and fixed-buffer accounting with matrix routing. Preserve the
+  512 MiB budget; previously underestimated large configurations can be refused.
+- Validate resampled boundaries, shared kernels, overflow, live retained storage
+  and FFT planner reserves. Signal processing, latency and serialized fields are unchanged.
+
 - Bound asynchronous IR loading to sixteen queued requests and at most four
   workers. Skip superseded queued preparation and discard cancelled results on
   workers. Queue refusal preserves the prior request/status/live IR; callers retry.

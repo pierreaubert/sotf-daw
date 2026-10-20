@@ -1,0 +1,461 @@
+{
+  "pre_fix": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "long_mono_ir_rejects_channel_expanded_storage_over_budget",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 101,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 2.66s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-a7c803f84f036201)\n\nrunning 1 test\ntest convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget ... FAILED\n\nfailures:\n\n---- convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget stdout ----\n\nthread 'convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget' (324007711) panicked at crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs:17:9:\nadmitted false backend whose FDL alone exceeds budget\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nfailures:\n    convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 64 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p sotf-plugin-convolution --lib`\n"
+  },
+  "initial_test_compile": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "ordinary_",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\nerror[E0689]: can't call method `div_ceil` on ambiguous numeric type `{integer}`\n  --> crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs:54:53\n   |\n54 |                     let middle = low + (high - low).div_ceil(2);\n   |                                                     ^^^^^^^^\n\nFor more information about this error, try `rustc --explain E0689`.\nerror: could not compile `sotf-plugin-convolution` (lib test) due to 1 previous error\n"
+  },
+  "invalid_plain_wave_32_channel_fixture": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "ordinary_",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1.72s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-a7c803f84f036201)\n\nrunning 3 tests\ntest convolution_plugin::resource_tests::ordinary_shared_kernel_is_counted_once_and_overflow_refuses ... ok\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":760329,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":false,\"output_channels\":1,\"retained_requested_bytes\":177869}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":797193,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":200499}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":73746,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":68375}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":73746,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":68375}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3331692,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":false,\"output_channels\":12,\"retained_requested_bytes\":2454403}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":20929644,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7892643}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":19489001,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7506843}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":17489772,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":6652963}\ntest convolution_plugin::resource_tests::ordinary_admission_boundaries_follow_resampled_geometry ... ok\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":41357088,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":false,\"output_channels\":32,\"retained_requested_bytes\":36258619}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":388486944,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":157975379}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":405822677,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":166543771}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":398894112,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":163156547}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3663468,\"head\":false,\"head_taps\":128,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":false,\"output_channels\":12,\"retained_requested_bytes\":2749795}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":27085932,\"head\":false,\"head_taps\":128,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":8420147}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":25181042,\"head\":true,\"head_taps\":257,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":8073947}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":22627692,\"head\":true,\"head_taps\":512,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7151987}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":1377810,\"head\":false,\"head_taps\":128,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":false,\"output_channels\":2,\"retained_requested_bytes\":716659}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":6073362,\"head\":false,\"head_taps\":128,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":1252683}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3919977,\"head\":true,\"head_taps\":257,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":871595}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3184146,\"head\":true,\"head_taps\":512,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":749003}\n\nthread 'tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage' (324019478) panicked at crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/finite_stream.rs:563:18:\ncalled `Result::unwrap()` on an `Err` value: \"Probe: malformed stream: riff: invalid channel count\"\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage ... FAILED\n\nfailures:\n\nfailures:\n    tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage\n\ntest result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.05s\n\nerror: test failed, to rerun pass `-p sotf-plugin-convolution --lib`\n",
+    "note": "Plain WAVE maps positioned channels and cannot represent this 32-channel discrete fixture; corrected fixture uses supported AIFF, retaining the 32-channel matrix."
+  },
+  "geometry_and_storage": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "ordinary_",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1.58s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-a7c803f84f036201)\n\nrunning 3 tests\ntest convolution_plugin::resource_tests::ordinary_shared_kernel_is_counted_once_and_overflow_refuses ... ok\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":760329,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":false,\"output_channels\":1,\"retained_requested_bytes\":177869}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":797193,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":200499}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":73746,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":68375}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":73746,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":1,\"nupc\":true,\"output_channels\":1,\"retained_requested_bytes\":68375}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3331692,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":false,\"output_channels\":12,\"retained_requested_bytes\":2454403}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":20929644,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7892643}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":19489001,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7506843}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":17489772,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":6652963}\ntest convolution_plugin::resource_tests::ordinary_admission_boundaries_follow_resampled_geometry ... ok\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":41357088,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":false,\"output_channels\":32,\"retained_requested_bytes\":36258619}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":388486944,\"head\":false,\"head_taps\":128,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":157975379}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":405822677,\"head\":true,\"head_taps\":257,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":166543771}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":398894112,\"head\":true,\"head_taps\":512,\"ir_channels\":1,\"ir_frames\":65537,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":163156547}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3663468,\"head\":false,\"head_taps\":128,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":false,\"output_channels\":12,\"retained_requested_bytes\":2749795}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":27085932,\"head\":false,\"head_taps\":128,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":8420147}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":25181042,\"head\":true,\"head_taps\":257,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":8073947}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":22627692,\"head\":true,\"head_taps\":512,\"ir_channels\":3,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":12,\"retained_requested_bytes\":7151987}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":1377810,\"head\":false,\"head_taps\":128,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":false,\"output_channels\":2,\"retained_requested_bytes\":716659}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":6073362,\"head\":false,\"head_taps\":128,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":1252683}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3919977,\"head\":true,\"head_taps\":257,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":871595}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":3184146,\"head\":true,\"head_taps\":512,\"ir_channels\":4,\"ir_frames\":4097,\"nupc\":true,\"output_channels\":2,\"retained_requested_bytes\":749003}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":12345120,\"head\":false,\"head_taps\":128,\"ir_channels\":32,\"ir_frames\":8197,\"nupc\":false,\"output_channels\":32,\"retained_requested_bytes\":10476181}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":146027808,\"head\":false,\"head_taps\":128,\"ir_channels\":32,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":28710653}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":135377136,\"head\":true,\"head_taps\":257,\"ir_channels\":32,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":28262653}\n{\"case\":\"ordinary_retained_storage\",\"estimated_bytes\":121918752,\"head\":true,\"head_taps\":512,\"ir_channels\":32,\"ir_frames\":8197,\"nupc\":true,\"output_channels\":32,\"retained_requested_bytes\":24987133}\ntest tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.08s\n\n"
+  },
+  "affected_tests": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "-p",
+      "plugins-spatial",
+      "--no-fail-fast",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "passed": 106,
+    "failed": 0,
+    "ignored": 4,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1.90s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/plugins_spatial-bdcb04213adbe858)\n\nrunning 10 tests\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-a7c803f84f036201)\n\nrunning 68 tests\ntest params::tests::head_taps_setter_clamps_to_spec_range ... ok\ntest params::tests::mix_displays_as_percent_of_full_wet ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest convolution_plugin::resource_tests::ordinary_shared_kernel_is_counted_once_and_overflow_refuses ... ok\ntest params::tests::param_index_coverage ... ok\ntest convolution_plugin::loader_tests::cancellation_during_preparation_discards_result_before_publication ... ok\ntest tests::audit_transition_timing ... ignored, release IR publication measurement; run with sotf-host/qa --ignored --nocapture\ntest convolution_plugin::loader_tests::full_and_disconnected_submission_preserve_a_ready_prior_completion ... ok\ntest convolution_plugin::loader_tests::clear_and_plugin_destruction_cancel_queued_preparation ... ok\ntest params::tests::resource_row_is_pinned_visible_at_minimum_width ... ok\ntest params::tests::roundtrip_serde ... ok\ntest tests::clearing_ir_cancels_pending_async_result ... ok\ntest params::tests::true_stereo_is_persisted_and_exposed_in_advanced_controls ... ok\ntest tests::clear_transition_has_a_bounded_sample_discontinuity ... ok\ntest tests::configured_zero_latency_head_is_stable_before_runtime_ir_load ... ok\ntest convolution_plugin::loader_tests::selection_storm_is_bounded_and_only_latest_queued_request_prepares ... ok\ntest tests::construction_rejects_every_out_of_contract_value ... ok\ntest convolution_plugin::loader_tests::busy_worker_skips_superseded_backlog_after_releasing_inflight_build ... ok\ntest tests::disconnected_primary_uses_the_prestarted_fallback_reclaimer ... ok\ntest tests::fractional_ir_resampling_rejects_unbounded_temporary_output_before_allocation ... ok\ntest convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget ... ok\ntest tests::convolution_delta_positions_match_reported_latency ... ok\ntest tests::finite_stream::held_output_replacement_and_clear_fades_finish_without_extending_old_ir_history ... ok\ntest tests::from_params_rebuilds_host_visible_values ... ok\ntest tests::finite_stream::pending_failure_and_stale_state_are_not_consumed_during_drain ... ok\ntest tests::ir_loader_does_not_hold_receiver_lock_while_building_ir_state ... ok\ntest tests::ir_metadata_and_memory_limits_are_enforced_before_planning ... ok\ntest convolution_plugin::loader_tests::synchronous_load_cancels_older_worker_only_after_success ... ok\ntest tests::misc::test_dirac_impulse_response ... ok\ntest tests::finite_stream::ready_and_late_completions_remain_owned_until_reset_publication ... ok\ntest tests::misc::test_gain_db_increases_output ... ok\ntest tests::adoption_reset_is_bounded_by_stream_buffers_not_ir_length ... ok\ntest tests::misc::test_from_params_loads_nupc_engine_from_ir_file ... ok\ntest tests::misc::test_long_ir_stability ... ok\ntest tests::misc::test_mix_zero_is_dry_passthrough ... ok\ntest tests::misc::test_partial_block_energy_preserved ... ok\ntest tests::misc::test_process_rejects_short_buffer ... ok\ntest tests::misc::test_partial_block_no_output_drop ... ok\ntest tests::misc::test_reset_clears_all_state ... ok\ntest tests::misc::test_parallel_path_bit_exact_vs_sequential ... ok\ntest tests::misc::test_tiny_but_normal_output_is_not_threshold_flushed ... ok\ntest tests::new_uses_the_declared_nupc_default ... ok\ntest tests::misc::test_unity_ir_passthrough ... ok\ntest tests::nupc_partial_mix_delays_dry_to_the_wet_path ... ok\ntest tests::misc::test_upc_ir_channel_mapping_cycles_stereo_ir ... ok\ntest tests::reclamation_queue_failure_never_drops_on_the_caller ... ok\ntest tests::process_adoption_backpressures_and_recovers_without_realtime_ownership_work ... ok\ntest tests::runtime_structural_change_cannot_desynchronize_latency_from_loaded_engine ... ok\ntest tests::stale_and_failed_async_generations_never_replace_last_known_good ... ok\ntest tests::fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin ... ok\ntest tests::tail_length::inactive_tail_covers_the_declared_dry_delay ... ok\ntest tests::resampled_ir_delta_at_start_has_no_rubato_startup_delay ... ok\ntest tests::resampled_ir_delta_at_tail_preserves_the_last_response ... ok\ntest tests::test_from_params_propagates_ir_load_errors ... ok\ntest tests::test_ir_file_parameter_reports_load_errors ... ok\ntest tests::true_stereo_validation_checks_matrix_shape_and_four_engine_budget ... ok\ntest tests::upc_automation_envelope_is_captured_at_input_time ... ok\ntest tests::uniform_partitioned_convolution_reports_partition_latency ... ok\ntest tests::tail_length::rate_change_is_unknown_until_resampled_state_is_accepted_and_reset ... ok\ntest tests::tail_length::pending_completion_at_old_final_tap_keeps_the_fade_and_history_bound ... ok\ntest tests::finite_stream::true_stereo_estimate_bounds_retained_prepared_storage ... ok\ntest convolution_plugin::resource_tests::ordinary_admission_boundaries_follow_resampled_geometry ... ok\ntest tests::misc::test_ir_file_parameter_loads_and_reports_path ... ok\ntest tests::tail_length::resampled_ir_tail_uses_prepared_length_and_matches_direct_sum ... ok\ntest tests::test_set_parameter_long_ir_loads_without_process_allocations ... ok\ntest tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage ... ok\ntest tests::finite_stream::true_stereo_fft_reserve_covers_budget_admissible_non_power_head_levels ... ok\ntest tests::host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_calls ... ok\n\ntest result: ok. 67 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.22s\n\n     Running tests/direct_convolution.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/direct_convolution-11136934ef683647)\n\nrunning 15 tests\ntest aud134_preedit_full_audio_arrays_match_legacy_and_diagonal_routes ... ignored, AUD-134 replay needs the preserved pre-edit rendered arrays under target/audit-artifacts\ntest capture_aud134_preedit_diagonal_stereo_outputs ... ignored, AUD-134 pre-edit audio baseline capture from clean 9302797\ntest capture_aud134_preedit_four_channel_legacy_outputs ... ignored, AUD-134 pre-edit four-channel legacy mapping capture from clean 9302797\ntest scalar_parameter_access_and_automation_do_not_allocate_on_a_fresh_thread ... ok\ntest parallel_fixture_writer_never_reuses_a_path_even_with_same_nonce ... ok\ntest tail_getter_does_not_allocate_on_a_fresh_thread ... ok\ntest true_stereo_rustfft_plan_allocations_fit_reserve_for_accepted_head_sizes_and_levels ... ok\ntest legacy_four_channel_ir_still_uses_only_the_first_two_output_paths ... ok\ntest true_stereo_async_replacement_uses_new_ir_and_reset_matches_fresh_instance ... ok\ntest rejected_true_stereo_ir_replacement_preserves_live_processing_history ... ok\ntest each_true_stereo_path_isolated_against_the_f64_oracle_through_eos ... ok\ntest true_stereo_process_and_full_eos_drain_do_not_allocate_or_deallocate ... ok\ntest true_stereo_four_path_matrix_matches_f64_oracle_through_partitioned_eos ... ok\ntest every_backend_matches_direct_convolution_with_full_tail_and_partial_callbacks ... ok\ntest tail_bound_retains_the_last_direct_convolution_tap_for_every_backend ... ok\n\ntest result: ok. 12 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.25s\n\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-792c65ad1e6c0e3d)\n\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-9ad610bf5cde84e1)\n\nrunning 10 tests\ntest convolution_ir_file_not_found_error ... ok\ntest convolution_unknown_parameter_error ... ok\ntest convolution_plugin_info_and_channels ... ok\ntest convolution_gain_db_state_change ... ok\ntest convolution_instantiate_from_params ... ok\ntest convolution_process_without_ir_preserves_reported_latency ... ok\ntest convolution_parameter_roundtrip ... ok\ntest convolution_mix_zero_without_ir_is_latency_matched_dry ... ok\ntest convolution_reset_clears_processing_state ... ok\ntest convolution_process_with_ir ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests plugins_spatial\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests sotf_plugin_convolution\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+  },
+  "clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-convolution",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "passed": 0,
+    "failed": 0,
+    "ignored": 0,
+    "output": "    Checking sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 0.91s\n"
+  },
+  "final_release_lib": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--release",
+      "--features",
+      "qa",
+      "--lib",
+      "--no-fail-fast",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "passed": 67,
+    "failed": 0,
+    "ignored": 1,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 6.76s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9e3ced12b24ac53b)\n\nrunning 68 tests\ntest params::tests::head_taps_setter_clamps_to_spec_range ... ok\ntest params::tests::param_index_coverage ... ok\ntest params::tests::mix_displays_as_percent_of_full_wet ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest convolution_plugin::resource_tests::ordinary_shared_kernel_is_counted_once_and_overflow_refuses ... ok\ntest tests::audit_transition_timing ... ignored, release IR publication measurement; run with sotf-host/qa --ignored --nocapture\ntest params::tests::true_stereo_is_persisted_and_exposed_in_advanced_controls ... ok\ntest convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget ... ok\ntest params::tests::roundtrip_serde ... ok\ntest tests::construction_rejects_every_out_of_contract_value ... ok\ntest convolution_plugin::loader_tests::clear_and_plugin_destruction_cancel_queued_preparation ... ok\ntest tests::clearing_ir_cancels_pending_async_result ... ok\ntest convolution_plugin::loader_tests::cancellation_during_preparation_discards_result_before_publication ... ok\ntest convolution_plugin::loader_tests::full_and_disconnected_submission_preserve_a_ready_prior_completion ... ok\ntest tests::disconnected_primary_uses_the_prestarted_fallback_reclaimer ... ok\ntest convolution_plugin::loader_tests::busy_worker_skips_superseded_backlog_after_releasing_inflight_build ... ok\ntest params::tests::resource_row_is_pinned_visible_at_minimum_width ... ok\ntest tests::clear_transition_has_a_bounded_sample_discontinuity ... ok\ntest tests::configured_zero_latency_head_is_stable_before_runtime_ir_load ... ok\ntest convolution_plugin::loader_tests::selection_storm_is_bounded_and_only_latest_queued_request_prepares ... ok\ntest tests::fractional_ir_resampling_rejects_unbounded_temporary_output_before_allocation ... ok\ntest tests::finite_stream::pending_failure_and_stale_state_are_not_consumed_during_drain ... ok\ntest tests::finite_stream::held_output_replacement_and_clear_fades_finish_without_extending_old_ir_history ... ok\ntest tests::from_params_rebuilds_host_visible_values ... ok\ntest tests::convolution_delta_positions_match_reported_latency ... ok\ntest tests::ir_loader_does_not_hold_receiver_lock_while_building_ir_state ... ok\ntest tests::misc::test_gain_db_increases_output ... ok\ntest tests::finite_stream::ready_and_late_completions_remain_owned_until_reset_publication ... ok\ntest tests::misc::test_dirac_impulse_response ... ok\ntest tests::fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin ... ok\ntest convolution_plugin::loader_tests::synchronous_load_cancels_older_worker_only_after_success ... ok\ntest tests::misc::test_from_params_loads_nupc_engine_from_ir_file ... ok\ntest tests::ir_metadata_and_memory_limits_are_enforced_before_planning ... ok\ntest tests::misc::test_mix_zero_is_dry_passthrough ... ok\ntest tests::misc::test_partial_block_energy_preserved ... ok\ntest tests::misc::test_process_rejects_short_buffer ... ok\ntest tests::misc::test_partial_block_no_output_drop ... ok\ntest tests::misc::test_tiny_but_normal_output_is_not_threshold_flushed ... ok\ntest tests::misc::test_unity_ir_passthrough ... ok\ntest tests::new_uses_the_declared_nupc_default ... ok\ntest tests::misc::test_upc_ir_channel_mapping_cycles_stereo_ir ... ok\ntest tests::nupc_partial_mix_delays_dry_to_the_wet_path ... ok\ntest tests::misc::test_reset_clears_all_state ... ok\ntest tests::misc::test_long_ir_stability ... ok\ntest tests::adoption_reset_is_bounded_by_stream_buffers_not_ir_length ... ok\ntest tests::process_adoption_backpressures_and_recovers_without_realtime_ownership_work ... ok\ntest tests::reclamation_queue_failure_never_drops_on_the_caller ... ok\ntest tests::stale_and_failed_async_generations_never_replace_last_known_good ... ok\ntest tests::tail_length::inactive_tail_covers_the_declared_dry_delay ... ok\ntest tests::runtime_structural_change_cannot_desynchronize_latency_from_loaded_engine ... ok\ntest tests::resampled_ir_delta_at_start_has_no_rubato_startup_delay ... ok\ntest tests::resampled_ir_delta_at_tail_preserves_the_last_response ... ok\ntest tests::test_from_params_propagates_ir_load_errors ... ok\ntest tests::test_ir_file_parameter_reports_load_errors ... ok\ntest tests::misc::test_parallel_path_bit_exact_vs_sequential ... ok\ntest tests::uniform_partitioned_convolution_reports_partition_latency ... ok\ntest tests::upc_automation_envelope_is_captured_at_input_time ... ok\ntest tests::true_stereo_validation_checks_matrix_shape_and_four_engine_budget ... ok\ntest tests::tail_length::rate_change_is_unknown_until_resampled_state_is_accepted_and_reset ... ok\ntest tests::tail_length::pending_completion_at_old_final_tap_keeps_the_fade_and_history_bound ... ok\ntest tests::finite_stream::true_stereo_estimate_bounds_retained_prepared_storage ... ok\ntest tests::tail_length::resampled_ir_tail_uses_prepared_length_and_matches_direct_sum ... ok\ntest convolution_plugin::resource_tests::ordinary_admission_boundaries_follow_resampled_geometry ... ok\ntest tests::misc::test_ir_file_parameter_loads_and_reports_path ... ok\ntest tests::test_set_parameter_long_ir_loads_without_process_allocations ... ok\ntest tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage ... ok\ntest tests::finite_stream::true_stereo_fft_reserve_covers_budget_admissible_non_power_head_levels ... ok\ntest tests::host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_calls ... ok\n\ntest result: ok. 67 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.52s\n\n"
+  },
+  "final_clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-convolution",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "output": "    Checking sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 0.44s\n"
+  },
+  "base_commit": "dd82d67e3c051d32d79bcb43a8e3581acc28eee7",
+  "summary": {
+    "regression": "Former ordinary estimate admitted a 30-second 48 kHz mono IR on 32 outputs although FDL alone exceeds unchanged 512 MiB budget. Pre-fix test fails; corrected UPC and NUPC both refuse.",
+    "upc_fdl_lower_bound_bytes": 737673216,
+    "former_upc_estimate_bytes": 23040000,
+    "retained_storage_rows": [
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 760329,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 1,
+        "nupc": false,
+        "output_channels": 1,
+        "retained_requested_bytes": 177869
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 797193,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 1,
+        "nupc": true,
+        "output_channels": 1,
+        "retained_requested_bytes": 200499
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 73746,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "ir_frames": 1,
+        "nupc": true,
+        "output_channels": 1,
+        "retained_requested_bytes": 68375
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 73746,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 1,
+        "ir_frames": 1,
+        "nupc": true,
+        "output_channels": 1,
+        "retained_requested_bytes": 68375
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 3331692,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 8197,
+        "nupc": false,
+        "output_channels": 12,
+        "retained_requested_bytes": 2454403
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 20929644,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 7892643
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 19489001,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 7506843
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 17489772,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 1,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 6652963
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 41357088,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 65537,
+        "nupc": false,
+        "output_channels": 32,
+        "retained_requested_bytes": 36258619
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 388486944,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 1,
+        "ir_frames": 65537,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 157975379
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 405822677,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "ir_frames": 65537,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 166543771
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 398894112,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 1,
+        "ir_frames": 65537,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 163156547
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 3663468,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 3,
+        "ir_frames": 8197,
+        "nupc": false,
+        "output_channels": 12,
+        "retained_requested_bytes": 2749795
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 27085932,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 3,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 8420147
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 25181042,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 3,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 8073947
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 22627692,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 3,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 12,
+        "retained_requested_bytes": 7151987
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 1377810,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 4,
+        "ir_frames": 4097,
+        "nupc": false,
+        "output_channels": 2,
+        "retained_requested_bytes": 716659
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 6073362,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 4,
+        "ir_frames": 4097,
+        "nupc": true,
+        "output_channels": 2,
+        "retained_requested_bytes": 1252683
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 3919977,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "ir_frames": 4097,
+        "nupc": true,
+        "output_channels": 2,
+        "retained_requested_bytes": 871595
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 3184146,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 4,
+        "ir_frames": 4097,
+        "nupc": true,
+        "output_channels": 2,
+        "retained_requested_bytes": 749003
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 12345120,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 32,
+        "ir_frames": 8197,
+        "nupc": false,
+        "output_channels": 32,
+        "retained_requested_bytes": 10476181
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 146027808,
+        "head": false,
+        "head_taps": 128,
+        "ir_channels": 32,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 28710653
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 135377136,
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 28262653
+      },
+      {
+        "case": "ordinary_retained_storage",
+        "estimated_bytes": 121918752,
+        "head": true,
+        "head_taps": 512,
+        "ir_channels": 32,
+        "ir_frames": 8197,
+        "nupc": true,
+        "output_channels": 32,
+        "retained_requested_bytes": 24987133
+      }
+    ],
+    "resampled_admission_boundary_rows": 36,
+    "planner_validation": "Extend existing all-head 32..=512 plus no-head matrix FFT reserve measurement with ordinary mono admission boundary levels. Final release lib 67 passed/1 existing ignored; no tolerance or ignored-test changes.",
+    "remaining": [
+      "Maximum-size multichannel callback timing and sustained mixed-instance load validation",
+      "Bound decoded input allocation before resource admission",
+      "Loaded native/FFI device validation where required"
+    ],
+    "limits": "Retained requested bytes are net constructor allocation deltas, not peak RSS. Estimates retain existing planner/scratch reserves and metadata margin; they can conservatively refuse large configurations. Temporary decode/resample/preparation and active-retired overlap remain outside persistent backend budget."
+  },
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "87941f1a5500e2be60936a2268216ae658f20a1f653630ddb115280960bb84ae",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs": "a296cdbc476206e046642ed18be5bba61172455e93bf1a8292f6c946f70b888b",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/finite_stream.rs": "5d3cbfbb6c1e5950e757caa3454cbfac960aaa7b244a414380ecb18d26cc0c52"
+  }
+}

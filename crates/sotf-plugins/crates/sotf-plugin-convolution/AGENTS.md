@@ -64,3 +64,18 @@ cargo test -p sotf-plugin-convolution
 - Successful synchronous IR loads cancel pending async work; failed loads preserve it.
 - `src/lib/loader_tests.rs` covers bounded storms, busy-worker cancellation,
   full/disconnected refusal, clear/drop, and synchronous replacement ownership.
+
+## Resource admission geometry
+
+- Ordinary and matrix admission share UPC/FIR fixed-buffer accounting and the
+  NUPC kernel/engine storage model. Count a shared kernel/FFT plan once, then
+  every mapped engine's FDL, history, delays and scratch. Never use a fixed
+  f32-per-source-sample multiplier for channel-expanded admission.
+- Preserve the 512 MiB persistent backend estimate and 30-second duration limit.
+  The estimate excludes temporary decoded/resampled copies and overlap between
+  active, retired and prepared instances; it is not a process RSS bound.
+- `resource_tests.rs` verifies channel expansion, resampled admission boundaries,
+  sharing and checked overflow. `tests/finite_stream.rs` measures retained bytes
+  and planner reserves at both ordinary and matrix admission boundaries.
+- Maximum-load callback timing and pre-admission decoder allocation bounds remain
+  open audit work; successful admission is not deadline compliance evidence.
