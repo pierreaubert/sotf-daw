@@ -1,0 +1,162 @@
+{
+  "initial": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-eq",
+      "--test",
+      "audit_transitions",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "output": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Finished `test` profile [optimized + debuginfo] target(s) in 6.43s\n     Running tests/audit_transitions.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_transitions-e4c12e0464240dc4)\n\nrunning 1 test\n\nthread 'native_peak_transitions_match_independent_realizations_at_absolute_sample_events' (324804127) panicked at crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_transitions.rs:339:29:\npartition difference frame3380: 3.075254e-6/3.0752542e-6: 192000/6/2/false/false\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest native_peak_transitions_match_independent_realizations_at_absolute_sample_events ... FAILED\n\nfailures:\n\nfailures:\n    native_peak_transitions_match_independent_realizations_at_absolute_sample_events\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s\n\nerror: test failed, to rerun pass `-p sotf-plugin-eq --test audit_transitions`\n"
+  },
+  "exact_endpoint": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-eq",
+      "--test",
+      "audit_transitions",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1.59s\n     Running tests/audit_transitions.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_transitions-e4c12e0464240dc4)\n\nrunning 1 test\n{\"case\":\"native_peak_transitions\",\"cases\":144,\"max_reference_error\":0.0}\ntest native_peak_transitions_match_independent_realizations_at_absolute_sample_events ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s\n\n"
+  },
+  "crate_tests": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-eq",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Finished `test` profile [optimized + debuginfo] target(s) in 3.01s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_eq-ed69f7f3aa3dfa60)\n\nrunning 93 tests\ntest params::tests::band_template_has_unique_engine_keys ... ok\ntest params::tests::band_template_non_empty ... ok\ntest params::tests::global_params_have_unique_engine_keys ... ok\ntest params::tests::global_params_non_empty ... ok\ntest kautz_runtime::tests::constructor_rejects_poles_at_and_above_nyquist ... ok\ntest params::tests::global_params_include_runtime_and_structural_controls ... ok\ntest tests::high_order_bandwidth_and_phase_types_preserve_user_q ... ok\ntest kautz_runtime::tests::invalid_rate_change_preserves_the_live_kautz_state ... ok\ntest eq_plugin::fractional_rate_tests::fractional_sample_rate_reaches_eq_filter_and_autogain_clock ... ok\ntest tests::changing_direct_form_resets_incompatible_filter_state ... ok\ntest tests::high_order_q_and_order_roundtrip_keep_the_host_value ... ok\ntest tests::process_contract_checks_active_region_and_preserves_output_tail ... ok\ntest tests::test_advanced_filter_reconfiguration_is_detached ... ok\ntest tests::changing_filter_topology_resets_dormant_biquad_state ... ok\ntest tests::svf_topology_rejects_high_order_bands ... ok\ntest tests::test_allpass_in_band_template ... ok\ntest tests::structural_filter_replacement_is_transactional_and_runtime_coherent ... ok\ntest tests::test_eq_allpass_filter_type_parses ... ok\ntest tests::test_eq_boost ... ok\ntest tests::test_automatic_warped_lambda_tracks_sample_rate ... ok\ntest tests::test_eq_kautz_filter_processes_as_dry_plus_correction ... ok\ntest tests::legacy_warped_reinitialize_matches_state_preserving_update_contract ... ok\ntest tests::test_eq_passthrough ... ok\ntest tests::test_from_params_rejects_odd_filter_order ... ok\ntest tests::test_eq_warped_biquad_filter_processes ... ok\ntest tests::test_from_params_rejects_invalid_standard_filter_values ... ok\ntest tests::test_from_params_rejects_q_outside_filter_type_range ... ok\ntest tests::test_get_data_returns_auto_gain ... ok\ntest tests::svf_retains_selected_oversampling_but_bypasses_resampler_latency ... ok\ntest tests::test_get_parameter_band_order ... ok\ntest tests::test_eq_oversampling_12ch_does_not_panic ... ok\ntest tests::test_eq_rt_safety ... ok\ntest tests::test_initialize_preserves_state_on_sample_rate_change ... ok\ntest tests::test_multi_stage_transition_covers_all_stages ... ok\ntest tests::test_new_per_channel ... ok\ntest tests::test_multi_stage_transition_output_is_finite ... ok\ntest tests::test_new_per_channel_count_mismatch ... ok\ntest tests::audio_transitions_for_q_gain_and_type_last_five_ms_at_all_oversampling_factors ... ok\ntest tests::test_oversampling_invalid_factor ... ok\ntest tests::audio_transition_duration_is_callback_partition_invariant ... ok\ntest tests::test_oversampling_biquad_freq_scaled ... ok\ntest tests::test_oversampling_latency_reported ... ok\ntest tests::test_oversampling_parameter_set_get ... ok\ntest tests::test_parameter_smoothing_completes ... ok\ntest tests::test_parameter_smoothing_starts_transition ... ok\ntest tests::test_parameter_schema_matches_eq_specs ... ok\ntest tests::test_parameter_transition_keeps_per_channel_start_coefficients ... ok\ntest tests::test_parametric_adapter_filter_update_changes_output ... ok\ntest tests::test_parametric_plugin_apply_values_updates_filters ... ok\ntest tests::test_parametric_adapter_parameter_roundtrip ... ok\ntest tests::test_parametric_plugin_current_values_roundtrip ... ok\ntest tests::test_parametric_plugin_schema_matches_in_place_params ... ok\ntest tests::test_process_in_place_single_frame_does_not_panic ... ok\ntest tests::test_process_in_place_zero_frames_returns_zero ... ok\ntest tests::test_regular_process_uses_only_active_region ... ok\ntest tests::test_reset_preserves_biquad_coefficients ... ok\ntest tests::test_set_channel_filters ... ok\ntest tests::test_set_channel_filters_mismatch ... ok\ntest tests::test_set_filters ... ok\ntest tests::test_set_parameter_auto_gain_roundtrip ... ok\ntest tests::test_set_parameter_auto_gain_validation_fails ... ok\ntest tests::test_set_parameter_band_freq_out_of_bounds_rejected ... ok\ntest tests::test_set_parameter_band_freq_roundtrip ... ok\ntest tests::test_set_parameter_band_gain_out_of_bounds_rejected ... ok\ntest tests::test_set_parameter_band_q_notch_allows_up_to_40 ... ok\ntest tests::test_set_parameter_band_q_peak_rejects_above_20 ... ok\ntest tests::test_oversampling_2x_processes_audio ... ok\ntest tests::test_set_parameter_band_q_roundtrip ... ok\ntest tests::test_set_parameter_filter_type_switch_clamps_q ... ok\ntest tests::test_set_parameter_infinite_freq_rejected ... ok\ntest tests::test_set_parameter_invalid_band_field_returns_error ... ok\ntest tests::test_set_parameter_nan_freq_rejected ... ok\ntest tests::test_set_parameter_nan_gain_rejected ... ok\ntest tests::test_set_parameter_nan_q_rejected ... ok\ntest tests::test_set_parameter_rejects_odd_filter_order ... ok\ntest tests::test_set_parameter_out_of_range_band_index_does_not_panic ... ok\ntest tests::test_set_parameter_tdf2_roundtrip ... ok\ntest tests::test_set_parameter_oversampling_float_fallback ... ok\ntest tests::test_set_parameter_topology_noop ... ok\ntest tests::test_set_parameter_topology_svf_roundtrip ... ok\ntest tests::test_set_parameter_topology_float ... ok\ntest tests::test_oversampling_4x_processes_audio ... ok\ntest tests::test_set_parameter_unknown_parameter_returns_error ... ok\ntest tests::test_transition_samples_scales_with_sample_rate ... ok\ntest tests::test_svf_topology_processes_finite_output ... ok\ntest tests::test_svf_rebuild_preserves_per_channel_filters ... ok\ntest tests::test_smoothed_output_bounded_between_old_and_new ... ok\ntest tests::test_validate_freq_q_gain_returns_static_error ... ok\ntest tests::test_validate_sample_rate_returns_static_error ... ok\ntest tests::test_oversampling_reset_clears_state ... ok\ntest tests::test_eq_oversampling_max_block_is_allocation_free_and_larger_blocks_fail ... ok\ntest tests::test_eq_processing_varied_buffers ... ok\ntest tests::per_channel_audio_transitions_match_independent_mono_references ... ok\n\ntest result: ok. 93 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running unittests bin/qa_eq.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/qa_eq-6812fbcf5e447e15)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/aud145_advanced_public_accuracy.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_advanced_public_accuracy-acc771c6907e92ad)\n\nrunning 3 tests\ntest capture_public_kautz_matrix ... ignored, explicit AUD145 Kautz accuracy capture\ntest capture_public_warped_family_matrix ... ignored, explicit AUD145 non-Peak Warped accuracy capture\ntest omitted_kautz_sections_preserve_legacy_linear_weight_across_json_restore ... ok\n\ntest result: ok. 1 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/aud145_advanced_route_oracle.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_advanced_route_oracle-5ee410545c8bd316)\n\nrunning 1 test\ntest advanced_and_svf_placements_match_independent_pair_composition ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/aud145_legacy_baseline.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_legacy_baseline-cdd7a7c60bccaf30)\n\nrunning 1 test\ntest capture_pre_edit_legacy_audio_and_public_placement_gap ... ignored, explicit pre-edit artifact capture; set AUD145_BASELINE_DIR\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/aud145_mixed_realization_public.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_mixed_realization_public-9cdbfe9e4265165a)\n\nrunning 2 tests\ntest capture_mixed_realization_multirate_matrix ... ignored, explicit AUD145 mixed-realization public capture\ntest selected_oversampling_is_bypassed_for_global_svf_and_reactivated_on_return ... ok\n\ntest result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/aud145_ordered_route.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_ordered_route-6c0ac0f516aa0011)\n\nrunning 9 tests\ntest capture_base_rate_placement_matrix ... ignored, explicit independent-reference capture; set AUD145_PLACEMENT_CAPTURE_DIR\ntest capture_multirate_prefix_placement_matrix ... ignored, explicit multirate-reference capture; set AUD145_MULTIRATE_CAPTURE_DIR\ntest frozen_legacy_channel_filter_warped_case_matches_reference_and_preserves_right_channel ... ignored, needs audit/artifacts/aud145-preedit-baseline-r1 (sealed Sep-30, not in this repo)\ntest frozen_legacy_unaffected_cases_remain_bit_exact ... ignored, needs audit/artifacts/aud145-preedit-baseline-r1 (sealed Sep-30, not in this repo)\ntest frozen_legacy_warped_mixed_case_matches_independent_corrected_reference ... ignored, needs audit/artifacts/aud145-preedit-baseline-r1 (sealed Sep-30, not in this repo)\ntest explicit_placements_reject_legacy_per_channel_filter_banks ... ok\ntest stereo_pairs_validate_even_when_no_band_uses_a_pair ... ok\ntest rejected_low_sample_rate_preserves_populated_biquad_and_autogain_epoch ... ok\ntest rejected_legacy_mixed_advanced_reinitialize_preserves_populated_epoch ... ok\n\ntest result: ok. 4 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/aud145_svf_public.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_svf_public-7a6912c5c66ba92d)\n\nrunning 1 test\ntest capture_public_svf_accuracy_matrix ... ignored, explicit 48-case SVF accuracy capture; set AUD145_SVF_CAPTURE_DIR\n\ntest result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/aud145_warped_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/aud145_warped_contract-974142c173508ab9)\n\nrunning 3 tests\ntest capture_public_warped_impulse_matrix ... ignored, explicit independent Warped response capture; set AUD145_WARPED_CAPTURE_DIR\ntest bark_lambda_uses_kilohertz_sample_rate_units ... ok\ntest public_audio_peak_reaches_requested_frequency_and_gain ... ok\n\ntest result: ok. 2 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/audit_transitions.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/audit_transitions-e4c12e0464240dc4)\n\nrunning 1 test\ntest native_peak_transitions_match_independent_realizations_at_absolute_sample_events ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\n\n     Running tests/auto_gain_reset.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/auto_gain_reset-27815719563d9c74)\n\nrunning 1 test\ntest warmed_reset_matches_fresh_audio_at_nonzero_measurement_callback_phases ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s\n\n     Running tests/auto_gain_smoothing.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/auto_gain_smoothing-f65a8abbf9a7f16e)\n\nrunning 1 test\ntest json_smoothing_changes_eq_audio_and_compiled_route_matches_ordinary ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s\n\n     Running tests/autogain_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/autogain_clock-ae2acd38dc0731ca)\n\nrunning 10 tests\ntest oversampled_reference_delay_equals_the_independent_neutral_impulse_peak ... ok\ntest host_prepared_drain_matches_the_same_native_clock_and_finite_suffix ... ok\ntest published_peaks_cover_the_entire_aligned_measurement_interval ... ok\ntest actual_compiled_host_and_fallback_share_the_same_clock ... ok\ntest disabled_diagnostics_and_rejected_or_empty_calls_preserve_the_frame_clock ... ok\ntest later_suffix_cannot_change_the_identical_output_prefix ... ok\ntest structural_measurement_epochs_clear_diagnostics_without_resetting_gain ... ok\ntest native_autogain_is_exact_across_callback_partitions ... ok\ntest warm_finite_eos_advances_clock_only_when_canonical_audio_is_generated ... ok\ntest aligned_base_rate_meter_matches_independent_scalar_clock ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.31s\n\n     Running tests/autogain_realtime.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/autogain_realtime-e6fd3550c86c3a84)\n\nrunning 2 tests\ntest first_thread_tail_crosses_measurement_publication_without_heap_operations ... ok\ntest cold_process_publication_live_control_and_reset_reuse_prepared_storage ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s\n\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-fa162ad05843416b)\n\nrunning 8 tests\ntest one_x_empty_bank_freezes_nonempty_eos_in_ordinary_and_compiled_paths ... ok\ntest every_recursive_bank_retains_unknown_and_legacy_completion ... ok\ntest removing_recursive_banks_retains_only_finite_oversampler_history ... ok\ntest final_marker_survives_empty_bank_oversampling ... ok\ntest invalid_drain_and_frozen_controls_are_transactional_and_reset_replays ... ok\ntest empty_bank_audio_is_invariant_across_process_partitions ... ok\ntest cold_maximum_processing_drain_and_reset_have_no_heap_operations ... ok\ntest canonical_tail_preserves_autogain_and_is_independent_of_destination_capacity ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-d92edf78a09b8f53)\n\nrunning 17 tests\ntest new_per_channel_rejects_mismatched_channel_count ... ok\ntest plugin_adapter_exposes_plugin_trait ... ok\ntest empty_chain_is_exact_passthrough ... ok\ntest invalid_oversampling_factor_errors ... ok\ntest info_returns_expected_metadata ... ok\ntest odd_band_order_errors ... ok\ntest reset_returns_detinistic_state ... ok\ntest parameter_roundtrip_band_params ... ok\ntest channels_matches_constructor ... ok\ntest from_params_builds_processable_plugin ... ok\ntest parameters_include_global_and_band_params ... ok\ntest topology_switch_to_svf_produces_finite_output ... ok\ntest compiled_biquad_bank_matches_regular_process ... ok\ntest unknown_parameter_errors ... ok\ntest oversampling_switch_updates_internal_state ... ok\ntest parameter_roundtrip_global_params ... ok\ntest orfanidis_shelves_match_passband_and_stopband_targets ... ok\n\ntest result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/property_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/property_tests-944dfb23cea8750a)\n\nrunning 8 tests\ntest roundtrip_tdf2 ... ok\ntest empty_chain_passthrough ... ok\ntest process_finite_output_mono ... ok\ntest roundtrip_band_gain ... ok\ntest roundtrip_topology ... ok\ntest zero_gain_peak_approximately_passthrough ... ok\ntest process_finite_output_stereo ... ok\ntest roundtrip_oversampling_factor ... ok\n\ntest result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n     Running tests/realtime_automation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/realtime_automation-f310f8754df5f156)\n\nrunning 2 tests\ntest svf_automation_preserves_integrator_history ... ok\ntest band_automation_reuses_storage_through_completion_and_reset ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/test_eq_plugin.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/test_eq_plugin-7617ef1d3a53dc5c)\n\nrunning 4 tests\ntest test_eq_plugin_basic ... ok\ntest test_eq_plugin_filter_update ... ok\ntest test_eq_plugin_multi_channel ... ok\ntest test_eq_plugin_parametric ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/ui_render_cache_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/ui_render_cache_tests-8df96109e54617cf)\n\nrunning 3 tests\ntest plugins_gpui_owns_eq_curve_cache_and_static_grid ... ok\ntest eq_ui_uses_shared_plugins_gpui_curve_cache ... ok\ntest eq_ui_uses_the_five_field_dsp_band_mapping ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests sotf_plugin_eq\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+  },
+  "release_transitions": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-eq",
+      "--release",
+      "--test",
+      "audit_transitions",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "output": "   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Finished `release` profile [optimized] target(s) in 4.29s\n     Running tests/audit_transitions.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_transitions-6cb24021a39a36f0)\n\nrunning 1 test\n{\"case\":\"native_peak_transitions\",\"cases\":144,\"max_reference_error\":0.0}\ntest native_peak_transitions_match_independent_realizations_at_absolute_sample_events ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s\n\n"
+  },
+  "clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-eq",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "output": "    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Finished `dev` profile [optimized + debuginfo] target(s) in 2.86s\n"
+  },
+  "review": {
+    "base_commit": "2ff6506",
+    "scope": "Native 1x peaking-band interrupted coefficient transitions; EQ entry remains partial.",
+    "cause": "Completed but not yet retired transitions evaluated lerp(old,new,1), which can round differently from the stored target selected after callback-end retirement.",
+    "fix": "Shared exact endpoint selection in ordered, planar and interleaved biquad processing, plus exact completed-ramp retarget snapshots. State and storage retirement are preserved.",
+    "cases": 144,
+    "rates_hz": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "channels": [
+      1,
+      2,
+      6
+    ],
+    "orders": [
+      2,
+      4,
+      8
+    ],
+    "realizations": [
+      "DF-I",
+      "TDF-II"
+    ],
+    "routes": [
+      "legacy",
+      "ordered Stereo"
+    ],
+    "reference": "Independent f64 RBJ peak design and DF-I/TDF-II state recursion; f32 API values converted to f64. No production design or processing helper.",
+    "reference_absolute_error_bound": 2e-05,
+    "observed_max_reference_error": 0.0,
+    "partition_requirement": "Bit-identical at absolute sample events for single-frame and irregular 17/257/1024-frame partitions.",
+    "invariants": [
+      "Finite output",
+      "Jury stability at each interpolation step",
+      "Zero measured allocation/deallocation in valid scalar setters and process calls"
+    ],
+    "crate_passed": 159,
+    "crate_existing_ignored": 11,
+    "limits": [
+      "Peak filters only; no blanket extreme-parameter guarantee for other families.",
+      "Oversampled wall-clock reconciliation is unchanged and remains pending.",
+      "SVF, advanced mixed realizations, host rate changes and recursive/finite tail policy review remain pending.",
+      "No CPU deadline claim."
+    ],
+    "source_sha256": {
+      "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/types.rs": "593d3202b593819ab67c02c503761b63cb82b40de4ff087b12953747954eae9c",
+      "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs": "114ef56516e439717273010130563ef317bbf99c2bd0fcfb3eee747f90ff597b",
+      "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_transitions.rs": "55a5a1e067f5556e20b918ced2a91b0dffde4834b17cacd96854f4f313a57bd7"
+    }
+  }
+}

@@ -2,6 +2,11 @@
 
 ## Changes
 
+- Select exact target biquad coefficients when a ramp completes, independently
+  of callback-end transition storage retirement. Preserve filter history and
+  interrupted-ramp continuity; verify native legacy/ordered DF-I/TDF-II output
+  against an independent 144-case reference and callback partition regression.
+
 - Prepare sample-rate changes before committing live state; preserve populated legacy
   Warped-filter history and leave audio unchanged when reinitialization is rejected.
 - Add per-filter Stereo, Left, Right, Mid and Side placement with validated stereo

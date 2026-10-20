@@ -1044,30 +1044,11 @@ impl EqPlugin {
                     return sample;
                 };
                 let transition = transitions.get(index).and_then(Option::as_ref);
-                let progress = transition.map(|transition| {
-                    if transition.total_samples == 0 {
-                        1.0
-                    } else {
-                        1.0 - transition.samples_remaining as f64 / transition.total_samples as f64
-                    }
-                });
                 let mut output = sample;
                 for (stage_index, stage) in stages.iter_mut().enumerate() {
-                    if let (Some(transition), Some(progress)) = (transition, progress) {
-                        let coefficients = transition
-                            .old_coeffs_per_channel
-                            .get(channel)
-                            .and_then(|coefficients| coefficients.get(stage_index))
-                            .zip(
-                                transition
-                                    .new_coeffs_per_channel
-                                    .get(channel)
-                                    .and_then(|coefficients| coefficients.get(stage_index)),
-                            )
-                            .map_or_else(
-                                || stage.coefficients(),
-                                |(old, new)| old.lerp(new, progress),
-                            );
+                    if let Some(coefficients) =
+                        transition.and_then(|t| t.coefficients(channel, stage_index))
+                    {
                         output = stage.process_with_coefficients(output, &coefficients);
                     } else {
                         output = stage.process(output);
@@ -1218,19 +1199,11 @@ impl EqPlugin {
                     for (band_idx, stages) in self.filters[ch].iter_mut().enumerate() {
                         if let Some(trans) = self.transitions.get(band_idx).and_then(|t| t.as_ref())
                         {
-                            let t =
-                                1.0 - (trans.samples_remaining as f64 / trans.total_samples as f64);
-                            // Interpolate all stages so multi-order bands don't glitch
                             for (i, stage) in stages.iter_mut().enumerate() {
-                                let interpolated = if let (Some(old), Some(new)) = (
-                                    trans.old_coeffs_per_channel.get(ch).and_then(|v| v.get(i)),
-                                    trans.new_coeffs_per_channel.get(ch).and_then(|v| v.get(i)),
-                                ) {
-                                    old.lerp(new, t)
-                                } else {
-                                    stage.coefficients()
-                                };
-                                s = stage.process_with_coefficients(s, &interpolated);
+                                let coefficients = trans
+                                    .coefficients(ch, i)
+                                    .unwrap_or_else(|| stage.coefficients());
+                                s = stage.process_with_coefficients(s, &coefficients);
                             }
                         } else {
                             for stage in stages {
@@ -1968,7 +1941,11 @@ impl EqPlugin {
                             .zip(&active.new_coeffs_per_channel)
                         {
                             for (old, new) in old_channel.iter_mut().zip(new_channel) {
-                                *old = old.lerp(new, t);
+                                *old = if active.samples_remaining == 0 {
+                                    *new
+                                } else {
+                                    old.lerp(new, t)
+                                };
                             }
                         }
                         active
@@ -2305,8 +2282,8 @@ impl EqPlugin {
                     nc,
                 );
             }
-            // Retire only after the complete public callback. At zero remaining
-            // frames, lerp(old,new,1) can still round differently from stored new.
+            // Retire storage after the complete public callback. The transition
+            // accessor already selects exact target coefficients at completion.
             if self.topology != 1 {
                 self.recycle_transitions(true);
             }
@@ -2396,19 +2373,11 @@ impl EqPlugin {
                             if let Some(trans) =
                                 self.transitions.get(band_idx).and_then(|t| t.as_ref())
                             {
-                                // Interpolate all stages so multi-order bands don't glitch
-                                let t = 1.0
-                                    - (trans.samples_remaining as f64 / trans.total_samples as f64);
                                 for (i, stage) in stages.iter_mut().enumerate() {
-                                    let interpolated = if let (Some(old), Some(new)) = (
-                                        trans.old_coeffs_per_channel.get(ch).and_then(|v| v.get(i)),
-                                        trans.new_coeffs_per_channel.get(ch).and_then(|v| v.get(i)),
-                                    ) {
-                                        old.lerp(new, t)
-                                    } else {
-                                        stage.coefficients()
-                                    };
-                                    s = stage.process_with_coefficients(s, &interpolated);
+                                    let coefficients = trans
+                                        .coefficients(ch, i)
+                                        .unwrap_or_else(|| stage.coefficients());
+                                    s = stage.process_with_coefficients(s, &coefficients);
                                 }
                             } else {
                                 for stage in stages {

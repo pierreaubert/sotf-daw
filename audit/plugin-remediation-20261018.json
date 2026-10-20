@@ -775,9 +775,31 @@
       "id": 23,
       "plugin": "EQ",
       "audit_text": "[`eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs):1400\u20131520 is one entry into a broad implementation with ordered/advanced realizations, autogain and differing finite/recursive responses. The complexity calls for route-specific guarantees rather than one \u201cEQ passed\u201d label. Recursive tails and explicit finite responses have different EOF policies.\n\nThe `aud145_*` accuracy/oracle tests, property tests, realtime automation, autogain reset/clock and finite-stream tests are a strength. Extend coefficient transitions, extreme stable parameters, mixed realizations and rate changes through the host. Preserve independent frequency/impulse references rather than only replaying old output. Classical stable parameter interpolation, topology-preserving structures and explicit phase choices are appropriate. ML can fit target responses or propose bands offline; it should not replace exact filter realization.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "task": "Validate native peaking-band coefficient transitions against independent realizations and callback partitions",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/types.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_transitions.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-transitions.json"
+          ],
+          "result": "Exact target selection resolves a reproduced one-bit callback-partition difference without resetting history or moving storage retirement. All 144 combinations of four rates, three channel counts, three orders, two realizations and two routes match the independent reference (maximum measured error 0) and are bit-identical across partitions. Interrupted frequency/Q/gain ramps retain stable coefficients, finite output and zero measured setter/process heap activity. Full EQ suite: 159 passed, 11 existing ignored; release transition regression and strict all-targets QA Clippy pass."
+        },
+        {
+          "task": "Validate oversampled transition clocks, remaining extreme filter families and mixed realizations",
+          "status": "pending"
+        },
+        {
+          "task": "Extend host sample-rate change coverage and review finite versus recursive tail guarantees",
+          "status": "pending"
+        }
+      ],
+      "evidence": [
+        "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate."
+      ]
     },
     {
       "id": 24,

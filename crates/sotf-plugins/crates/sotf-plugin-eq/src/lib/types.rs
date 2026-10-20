@@ -97,3 +97,18 @@ pub(super) struct BandTransition {
     pub(super) samples_remaining: usize,
     pub(super) total_samples: usize,
 }
+
+impl BandTransition {
+    /// Selects exact settled coefficients independently of storage retirement.
+    #[inline]
+    pub(super) fn coefficients(&self, channel: usize, stage: usize) -> Option<BiquadCoefficients> {
+        let old = self.old_coeffs_per_channel.get(channel)?.get(stage)?;
+        let new = self.new_coeffs_per_channel.get(channel)?.get(stage)?;
+        if self.samples_remaining == 0 {
+            Some(*new)
+        } else {
+            let progress = 1.0 - self.samples_remaining as f64 / self.total_samples as f64;
+            Some(old.lerp(new, progress))
+        }
+    }
+}

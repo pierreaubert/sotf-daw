@@ -46,7 +46,7 @@ cargo test -p sotf-plugin-eq
 
 ## Important Notes
 
-- Filter parameter changes use ~5ms coefficient interpolation (`BandTransition`) to avoid clicks. During transition, old and new coefficients are linearly blended sample-by-sample.
+- Filter parameter changes use ~5ms coefficient interpolation (`BandTransition`) to avoid clicks. During transition, old and new coefficients are linearly blended sample-by-sample. At zero remaining samples, select the exact stored target rather than `lerp(..., 1)`; callback-end storage retirement must not change the coefficient value. Preserve this policy when snapshotting interrupted ramps. Native 1x coverage lives in `tests/audit_transitions.rs`; oversampled transition-clock reconciliation remains a separate concern.
 - High-order filters (order > 2) use Butterworth Q staggering: `Q_k = 1 / (2 * cos(pi * (2k+1) / 2N))`. For peak filters, user Q is multiplied by Butterworth Q; for LP/HP/shelf, Butterworth Q is used directly.
 - Per-channel filters (`channel_filters`) override the global `filters` list for specific channels. If `channel_filters` is set, each channel uses its own filter bank.
 - SVF topology does not support cascading (always single stage per band regardless of order setting).
