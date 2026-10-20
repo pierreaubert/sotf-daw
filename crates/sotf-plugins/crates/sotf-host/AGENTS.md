@@ -69,3 +69,13 @@ cargo check -p sotf-host && cargo clippy -p sotf-host
 - Channel count can change between plugins (e.g., upmixer: 2ch → 5ch)
 - Audio buffers are flat interleaved: `[ch0_frame0, ch1_frame0, ch0_frame1, ch1_frame1, ...]`
 - Analyzers pass audio through unmodified while extracting measurements via `get_data()`
+
+- Integrated loudness retention belongs to `LoudnessMonitor`: prepared rolling
+  or whole-program history is shared across channel-layout routes. Keep backend
+  programme meters in M/S mode so their I history cannot grow in callbacks.
+  Rolling history advances on every programme observation, including below-gate
+  audio; pause freezes that clock. Preserve the absolute floor in both gating
+  passes, visible NaN contamination, explicit whole-program capacity failure,
+  and allocation-free reset. `loudness_history_heap` includes long nonzero
+  callbacks and retention policy checks; silence alone cannot prove a backend's
+  above-gate history stays bounded.

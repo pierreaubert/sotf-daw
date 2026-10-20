@@ -1583,20 +1583,36 @@
   ],
   "host_analyzers_and_adapters": {
     "audit_text": "**Spectrum analyzer.** [`analyzer_spectrum.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_spectrum.rs):425\u2013545 enforces initialization/rate, retains a recent-sample ring and computes channel power without cancellation from summing opposite-phase channels. It analyzes the most recent window after a block; a block spanning multiple FFT windows can omit intermediate windows. That is acceptable for a display only if specified, but unsuitable for guaranteed transient/peak capture. Extend calibrated bin-centered/off-bin tones, DC/Nyquist, impulses, channel anti-phase and arbitrary callback sizes. Offer explicit amplitude/PSD normalization and max-hold semantics. No ML is needed for a calibrated spectrum.\n\n**Loudness monitor.** [`analyzer_loudness_monitor.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_loudness_monitor.rs):2029\u20132089 preserves transparent audio, validates shape/rate and finalizes true-peak state at drain. This is a stronger EOF contract than simply stopping the meter. Extend independent conformance vectors, short clips, gating discontinuities, surround channel weights, disabled/re-enabled state and final publication under cache contention. Distinguish LUFS from psychoacoustic loudness/SPL. ML quality scores may be supplementary, never a substitute for calibrated measurement.\n\n**AutoGain.** [`auto_gain.rs`](crates/sotf-plugins/crates/sotf-host/src/auto_gain.rs):281\u2013395 uses sample-clocked gain trajectories and a settled fast path. Its integration into each effect must measure the intended pre/post stages and handle silence without runaway gain or level jumps. Existing per-plugin clock/heap tests are a major strength. Extend sparse transients, prolonged silence then signal, AB switching and peak-constrained gain recovery. Classical loudness/peak-constrained matching suffices; no learned gain controller is needed by default.\n\n**External plugin factory route.** The `external`/`external_plugin` entry delegates to native formats and may use isolated workers. It inherits the scheduling, latency, parameter, state and sandbox boundaries discussed above, rather than one fixed DSP algorithm. Test process death, stale sequence, missed deadline, malformed state, latency change, instrument MIDI and output-channel changes against real AU/VST3/CLAP fixtures. Compare native and isolated audio after declared pipeline latency; fallback audio must remain distinguishable from successfully processed output. ML is not a substitute for process containment or ABI validation.\n\n**Adapters/support crates.** `plugins-bridge`, `plugins-ffi`, `plugins-nih`, `plugins-gpui`, `plugins-spatial`, `plugins-denoiser` and `plugins-inference` are not seven more standalone DSP effects. They carry ABI, native-host, UI, spatial-data and inference contracts. A plugin passing its own crate tests does not prove its AU/VST3/CLAP/FFI form has correct parameter units, sample offsets, channel negotiation, latency change notification or tail handling. Add cross-wrapper audio equivalence and lifecycle suites, and run native-feature builds on their supported platforms. Inference already uses generation-tagged bounded handoff; retain that architecture and explicitly constrain allocation/destruction and model shutdown.",
-    "status": "not_reviewed",
+    "status": "partial",
     "tasks": [
       {
         "task": "Resolve baseline loudness-range cold/full publication heap activity",
-        "status": "pending",
+        "status": "implemented_and_verified",
         "evidence": [
           "crates/sotf-plugins/crates/sotf-host/tests/loudness_history_heap.rs",
-          "audit/artifacts/plugin-audit-20261018/eq-oversampled-scheduling.json"
+          "audit/artifacts/plugin-audit-20261018/eq-oversampled-scheduling.json",
+          "crates/sotf-plugins/crates/sotf-host/src/analyzer_loudness_monitor.rs",
+          "audit/artifacts/plugin-audit-20261018/loudness-history-callback-heap.json"
         ],
-        "result": "Full affected-host run fails line 168 with allocation/deallocation counts (1,1), expected (0,0). Exact isolated test reproduces after restoring the host oversampler to unchanged b867d9f source; EQ was not built for that baseline. Retain evidence and resolve in analyzer audit; this is not accepted as a passing RT result."
+        "result": "Allocation trace identifies backend whole-program VecDeque growth, violating the host Rolling policy and duplicating WholeProgram history. Programme backends now supply M/S only; one prepared host history owns retention across layouts. Original unmodified 8 kHz long nonzero cold/full/reader/reset regression passes with (0,0) heap operations. New public hour-long policy checks verify rolling quiet-audio expiry and above-gate WholeProgram exhaustion, also heap-free in debug and release. Payload is 288000 bytes per integrated history plus bookkeeping; LRA storage separate. No sibling dependency changes or weakened accounting. Full host suite 931 passed/9 existing ignored, EQ consumer 164 passed/11 existing ignored, release policy/reference four passed, strict all-targets QA Clippy passes."
+      },
+      {
+        "task": "Correct the integrated second-pass absolute floor and validate bounded history against independent level-domain references",
+        "status": "implemented_and_verified",
+        "evidence": [
+          "crates/sotf-plugins/crates/sotf-host/src/analyzer_loudness_monitor.rs",
+          "audit/artifacts/plugin-audit-20261018/loudness-history-callback-heap.json"
+        ],
+        "result": "Dedicated [-75,-69] LUFS reference fails before the fix and now returns -69. Shared two-pass threshold uses max(relative threshold, absolute floor); NaN contamination stays visible through retained energy until reset. 3009 rolling checkpoints across capacities 1/7/37 match an independent level-domain calculation at unchanged 1e-10 finite tolerance, including wrap, silence aging and reset. Existing LRA, layouts, pause/continue, true-peak and cache-contention suites pass. This does not establish every remaining analyzer conformance requirement."
+      },
+      {
+        "task": "Complete remaining spectrum, loudness conformance, AutoGain, native fixture and cross-wrapper audit recommendations",
+        "status": "pending"
       }
     ],
     "evidence": [
-      "Loudness-history heap failure observed and reproduced on unchanged host source during EQ scheduling work; analyzer audit remains incomplete."
+      "Loudness-history heap failure observed and reproduced on unchanged host source during EQ scheduling work; analyzer audit remains incomplete.",
+      "Observed baseline integrated-history callback growth and absolute-floor gating defects are resolved with production changes and retained red-to-green evidence. Host/analyzers remain partial; standalone plugin completion stays 32/45. Optional ML remains separate."
     ]
   },
   "remaining_scope": "All original recommendations remain in audit_text. Completing a listed concrete task does not complete its plugin entry; further classical features, numerical/audio coverage, corpus/platform work and optional research remain to be reviewed.",

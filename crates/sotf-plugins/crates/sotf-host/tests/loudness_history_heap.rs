@@ -3,8 +3,8 @@
 use math_audio_dsp::ebur128::{EbuR128, Mode};
 use sotf_host::analyzer_loudness_monitor::LoudnessMonitor;
 use sotf_host::{
-    LoudnessData, LoudnessMonitorPlugin, LoudnessRangeConfig, LoudnessRangeMode,
-    LoudnessRangeStatus, Plugin, ProcessContext,
+    IntegratedLoudnessMode, LoudnessData, LoudnessMonitorPlugin, LoudnessQueryError,
+    LoudnessRangeConfig, LoudnessRangeMode, LoudnessRangeStatus, Plugin, ProcessContext,
 };
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -236,5 +236,70 @@ fn loudness_range_cold_full_dirty_queries_and_reset_reuse_prepared_storage() {
             .unwrap();
             drop((plugin, input, output));
         }
+    }
+}
+
+#[test]
+fn public_integrated_history_expires_quiet_audio_or_reports_whole_program_exhaustion() {
+    // An exact 100 ms grid near 8 kHz uses the sample-peak fallback, keeping
+    // this hour-long retention test inexpensive. True-peak conformance has
+    // separate vectors. Quiet nonzero audio keeps recursive states normal.
+    let rate = 7_990;
+    let loud: Vec<_> = (0..rate as usize * 2)
+        .map(|i| if i % 4 < 2 { 0.1 } else { -0.1 })
+        .collect();
+    let quiet: Vec<_> = (0..36_010 * (rate as usize / 10) * 2)
+        .map(|i| if i % 4 < 2 { 1e-6 } else { -1e-6 })
+        .collect();
+    for mode in [
+        IntegratedLoudnessMode::Rolling,
+        IntegratedLoudnessMode::WholeProgram,
+    ] {
+        let mut monitor = LoudnessMonitor::new_with_integrated_mode(2, rate, mode).unwrap();
+        let mut snapshot = LoudnessData::new(2);
+        let loud = loud.clone();
+        let mut quiet = quiet.clone();
+        if mode == IntegratedLoudnessMode::WholeProgram {
+            // Exercise exhaustion with above-gate audio as well as a full host history.
+            for sample in &mut quiet {
+                *sample *= 10_000.0;
+            }
+        }
+        let (monitor, snapshot) = std::thread::spawn(move || {
+            assert_eq!(
+                measured(|| {
+                    monitor.add_frames(&loud).unwrap();
+                    monitor.update_loudness_data(&mut snapshot);
+                }),
+                (0, 0)
+            );
+            assert!(snapshot.integrated_lufs.is_finite());
+            assert_eq!(
+                measured(|| {
+                    monitor.add_frames(&quiet).unwrap();
+                    monitor.update_loudness_data(&mut snapshot);
+                }),
+                (0, 0)
+            );
+            assert_eq!(snapshot.integrated_lufs, f64::NEG_INFINITY);
+            match mode {
+                IntegratedLoudnessMode::Rolling => {
+                    assert!(snapshot.integrated_valid);
+                    assert_eq!(snapshot.query_error, None);
+                }
+                IntegratedLoudnessMode::WholeProgram => {
+                    assert!(!snapshot.integrated_valid);
+                    assert_eq!(
+                        snapshot.query_error,
+                        Some(LoudnessQueryError::IntegratedProgramCapacityExceeded)
+                    );
+                }
+            }
+            assert_eq!(measured(|| monitor.reset().unwrap()), (0, 0));
+            (monitor, snapshot)
+        })
+        .join()
+        .unwrap();
+        drop((monitor, snapshot));
     }
 }

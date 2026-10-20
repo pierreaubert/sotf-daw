@@ -2,6 +2,14 @@
 
 ## Changes
 
+- Own bounded rolling integrated-loudness history across built-in and explicit
+  layouts, and disable unused backend integrated history. Quiet audio ages out
+  earlier observations; whole-program exhaustion remains explicit, and long
+  callbacks/reset reuse prepared storage.
+- Keep the absolute -70 LUFS floor in the second integrated gating pass and
+  preserve NaN contamination through the retained history until reset. Add
+  independent level-domain and public hour-long retention/heap regressions.
+
 - Bound variable-rate drain work with quota refresh and validate output-frame contracts before consuming state. Keep unproven AB mask tail support conservative; remaining variable-producer probe limitations are tracked in `audit/RELEASE-DEFERRED.md`.
 
 - Reprepare retained native plugins transactionally when their input sample rate changes, preserving queued scalar controls and retaining the existing backend if preparation fails.

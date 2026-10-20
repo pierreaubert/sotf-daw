@@ -184,17 +184,23 @@ where
     I: Iterator<Item = f64> + Clone,
 {
     let absolute_gate = loudness_to_energy(ABSOLUTE_GATE_LUFS);
-    let (absolute_sum, absolute_count) = blocks
-        .clone()
-        .filter(|&energy| energy > absolute_gate)
-        .fold((0.0, 0_u64), |(sum, count), energy| {
-            (sum + energy, count + 1)
-        });
+    let mut absolute_sum = 0.0;
+    let mut absolute_count = 0_u64;
+    for energy in blocks.clone() {
+        if energy.is_nan() {
+            return f64::NAN;
+        }
+        if energy > absolute_gate {
+            absolute_sum += energy;
+            absolute_count += 1;
+        }
+    }
     if absolute_count == 0 {
         return f64::NEG_INFINITY;
     }
-    let relative_gate =
-        absolute_sum / absolute_count as f64 * 10.0_f64.powf(RELATIVE_GATE_DB / 10.0);
+    let relative_gate = (absolute_sum / absolute_count as f64
+        * 10.0_f64.powf(RELATIVE_GATE_DB / 10.0))
+    .max(absolute_gate);
     let (relative_sum, relative_count) = blocks
         .filter(|&energy| energy > relative_gate)
         .fold((0.0, 0_u64), |(sum, count), energy| {
@@ -207,11 +213,10 @@ where
     }
 }
 
-/// Rolling integrated loudness for an explicit layout.
+/// Prepared rolling integrated loudness, independent of backend retention policy.
 ///
-/// `math-dsp::EbuR128` owns this history for its built-in channel map. An
-/// explicit layout uses one mono meter per non-LFE channel instead, so the
-/// aggregate 400 ms energies need an equivalent bounded history here.
+/// Every completed 400 ms observation advances the bounded window, including
+/// below-gate audio and silence. Built-in and explicit layouts share this policy.
 struct RollingIntegrated {
     gating_blocks: VecDeque<f64>,
     cached_loudness: f64,
@@ -262,16 +267,10 @@ struct ExplicitLoudnessMeters {
     source_indices: Vec<usize>,
     gains: Vec<f32>,
     scratch: Vec<f32>,
-    rolling_integrated: Option<RollingIntegrated>,
 }
 
 impl ExplicitLoudnessMeters {
-    fn new(
-        layout: &ChannelLayout,
-        sample_rate: f64,
-        integrated_mode: IntegratedLoudnessMode,
-        accumulate_integrated: bool,
-    ) -> Result<Self, String> {
+    fn new(layout: &ChannelLayout, sample_rate: f64) -> Result<Self, String> {
         let mut meters = Vec::new();
         let mut source_indices = Vec::new();
         let mut gains = Vec::new();
@@ -297,9 +296,6 @@ impl ExplicitLoudnessMeters {
             // Explicit-layout chunks are bounded to 256 frames by the
             // separate sample-peak meter in LoudnessMonitor::add_frames.
             scratch: vec![0.0; 256],
-            rolling_integrated: (accumulate_integrated
-                && integrated_mode == IntegratedLoudnessMode::Rolling)
-                .then(|| RollingIntegrated::new(EXACT_GATING_BLOCK_CAPACITY)),
         })
     }
 
@@ -358,30 +354,9 @@ impl ExplicitLoudnessMeters {
         self.aggregate_loudness(EbuR128::loudness_shortterm)
     }
 
-    fn push_integrated_block(&mut self, energy: f64) {
-        if let Some(integrated) = &mut self.rolling_integrated {
-            integrated.push(energy);
-        }
-    }
-
-    fn refresh_integrated(&mut self) {
-        if let Some(integrated) = &mut self.rolling_integrated {
-            integrated.refresh();
-        }
-    }
-
-    fn integrated(&self) -> Option<f64> {
-        self.rolling_integrated
-            .as_ref()
-            .map(|integrated| integrated.cached_loudness)
-    }
-
     fn reset(&mut self) {
         for meter in &mut self.meters {
             meter.reset();
-        }
-        if let Some(integrated) = &mut self.rolling_integrated {
-            integrated.reset();
         }
     }
 }
@@ -756,6 +731,7 @@ pub struct LoudnessMonitor {
     integrated_completed_sub_blocks: u64,
     integrated_mode: IntegratedLoudnessMode,
     whole_program_integrated: Option<WholeProgramIntegrated>,
+    rolling_integrated: Option<RollingIntegrated>,
     loudness_range: Option<LoudnessRangeHistory>,
 }
 
@@ -831,21 +807,23 @@ impl LoudnessMonitor {
         };
         let ebur = EbuR128::new(loudness_channels as u32, sr, live_loudness_mode)
             .map_err(|e| format!("{:?}", e))?;
+        // Programme retention is owned by the prepared host histories below.
+        // Backend I mode retains the whole programme and can grow in callbacks.
         let integrated_ebur128 = (!explicit_wide_layout)
             .then(|| {
-                EbuR128::new(loudness_channels as u32, sr, Mode::M | Mode::S | Mode::I)
+                EbuR128::new(loudness_channels as u32, sr, Mode::M | Mode::S)
                     .map_err(|error| format!("{error:?}"))
             })
             .transpose()?;
         let explicit_loudness = channel_layout
             .as_ref()
             .filter(|_| explicit_wide_layout)
-            .map(|layout| ExplicitLoudnessMeters::new(layout, sr, integrated_mode, false))
+            .map(|layout| ExplicitLoudnessMeters::new(layout, sr))
             .transpose()?;
         let integrated_explicit_loudness = channel_layout
             .as_ref()
             .filter(|_| explicit_wide_layout)
-            .map(|layout| ExplicitLoudnessMeters::new(layout, sr, integrated_mode, true))
+            .map(|layout| ExplicitLoudnessMeters::new(layout, sr))
             .transpose()?;
         let peak_meter = channel_layout
             .as_ref()
@@ -924,6 +902,8 @@ impl LoudnessMonitor {
             integrated_frames_into_sub_block: 0,
             integrated_completed_sub_blocks: 0,
             integrated_mode,
+            rolling_integrated: (integrated_mode == IntegratedLoudnessMode::Rolling)
+                .then(|| RollingIntegrated::new(EXACT_GATING_BLOCK_CAPACITY)),
             whole_program_integrated: (integrated_mode == IntegratedLoudnessMode::WholeProgram)
                 .then(|| WholeProgramIntegrated::new(EXACT_GATING_BLOCK_CAPACITY)),
             loudness_range: None,
@@ -1128,16 +1108,16 @@ impl LoudnessMonitor {
                     let momentary = self.query_integrated_momentary().map_err(|error| {
                         format!("EBU R128 integrated block query failed: {error:?}")
                     })?;
-                    let energy = if momentary.is_finite() {
-                        loudness_to_energy(momentary)
-                    } else {
+                    let energy = if momentary == f64::NEG_INFINITY {
                         0.0
+                    } else {
+                        loudness_to_energy(momentary)
                     };
                     if let Some(exact) = &mut self.whole_program_integrated {
                         exact.push(energy);
                     }
-                    if let Some(explicit) = &mut self.integrated_explicit_loudness {
-                        explicit.push_integrated_block(energy);
+                    if let Some(rolling) = &mut self.rolling_integrated {
+                        rolling.push(energy);
                     }
                 }
             }
@@ -1147,10 +1127,8 @@ impl LoudnessMonitor {
             // how many 100 ms boundaries an offline block crossed.
             exact.refresh();
         }
-        if integrated_lane_received_audio
-            && let Some(explicit) = &mut self.integrated_explicit_loudness
-        {
-            explicit.refresh_integrated();
+        if integrated_lane_received_audio && let Some(rolling) = &mut self.rolling_integrated {
+            rolling.refresh();
         }
         Ok(())
     }
@@ -1263,17 +1241,14 @@ impl LoudnessMonitor {
         });
         let momentary = self.query_momentary();
         let shortterm = self.query_shortterm();
-        let integrated = match &self.whole_program_integrated {
+        let integrated: Result<f64, String> = match &self.whole_program_integrated {
             Some(exact) if exact.capacity_exceeded => Ok(f64::NEG_INFINITY),
             Some(exact) => Ok(exact.cached_loudness),
-            None => match &self.integrated_explicit_loudness {
-                Some(explicit) => Ok(explicit.integrated().unwrap_or(f64::NEG_INFINITY)),
-                None => self
-                    .integrated_ebur128
-                    .as_ref()
-                    .expect("prepared integrated EBU R128 meter")
-                    .loudness_global(),
-            },
+            None => Ok(self
+                .rolling_integrated
+                .as_ref()
+                .expect("prepared rolling integrated history")
+                .cached_loudness),
         };
         let momentary_ok = momentary.is_ok();
         let shortterm_ok = shortterm.is_ok();
@@ -1423,6 +1398,9 @@ impl LoudnessMonitor {
         }
         if let Some(exact) = &mut self.whole_program_integrated {
             exact.reset();
+        }
+        if let Some(rolling) = &mut self.rolling_integrated {
+            rolling.reset();
         }
         Ok(())
     }
@@ -2929,5 +2907,96 @@ mod true_peak_tests {
         monitor.update_loudness_data(&mut data);
         assert!(data.query_error.is_none());
         assert_eq!(data.query_error_generation, 0);
+    }
+}
+
+#[cfg(test)]
+mod integrated_history_audit_tests {
+    use super::*;
+
+    fn reference(levels: &[f64]) -> f64 {
+        // Direct level-domain two-pass calculation, independent of host helpers.
+        let absolute: Vec<_> = levels
+            .iter()
+            .copied()
+            .filter(|&level| level > -70.0)
+            .collect();
+        if absolute.is_empty() {
+            return f64::NEG_INFINITY;
+        }
+        let mean = absolute
+            .iter()
+            .map(|&level| 10.0_f64.powf(level / 10.0))
+            .sum::<f64>()
+            / absolute.len() as f64;
+        let threshold = (10.0 * mean.log10() - 10.0).max(-70.0);
+        let selected: Vec<_> = levels
+            .iter()
+            .copied()
+            .filter(|&level| level > threshold)
+            .collect();
+        10.0 * (selected
+            .iter()
+            .map(|&level| 10.0_f64.powf(level / 10.0))
+            .sum::<f64>()
+            / selected.len() as f64)
+            .log10()
+    }
+
+    #[test]
+    fn absolute_gate_is_a_floor_for_the_second_pass() {
+        let levels = [-75.0, -69.0];
+        let energies: Vec<_> = levels
+            .iter()
+            .map(|&level| 10.0_f64.powf((level + 0.691) / 10.0))
+            .collect();
+        assert!((gated_loudness(&energies) - reference(&levels)).abs() < 1e-10);
+    }
+
+    #[test]
+    fn rolling_eviction_silence_aging_and_reset_match_level_domain_reference() {
+        for capacity in [1, 7, 37] {
+            let mut history = RollingIntegrated::new(capacity);
+            let mut levels = Vec::new();
+            for n in 0..1003 {
+                let level = if n % 71 < 40 {
+                    f64::NEG_INFINITY
+                } else {
+                    -80.0 + ((n * 197) % 131) as f64 * 0.5
+                };
+                levels.push(level);
+                history.push(if level == f64::NEG_INFINITY {
+                    0.0
+                } else {
+                    10.0_f64.powf((level + 0.691) / 10.0)
+                });
+                history.refresh();
+                let expected = reference(&levels[levels.len().saturating_sub(capacity)..]);
+                assert!(
+                    history.cached_loudness == expected
+                        || (history.cached_loudness - expected).abs() < 1e-10,
+                    "capacity={capacity}, frame={n}: {}/{expected}",
+                    history.cached_loudness
+                );
+            }
+            for _ in 0..capacity {
+                history.push(0.0);
+            }
+            history.refresh();
+            assert_eq!(history.cached_loudness, f64::NEG_INFINITY);
+            history.reset();
+            assert_eq!(history.cached_loudness, f64::NEG_INFINITY);
+            assert!(history.gating_blocks.is_empty());
+        }
+    }
+
+    #[test]
+    fn rolling_integrated_nan_contamination_is_visible_until_reset() {
+        let mut monitor = LoudnessMonitor::new(1, 48_000).unwrap();
+        monitor.add_frames(&[f32::NAN; 19_200]).unwrap();
+        assert!(monitor.get_loudness().integrated_lufs.is_nan());
+        monitor.reset().unwrap();
+        monitor.add_frames(&[0.0; 19_200]).unwrap();
+        assert_eq!(monitor.get_loudness().integrated_lufs, f64::NEG_INFINITY);
     }
 }
