@@ -4,8 +4,13 @@
 
 - Add independent Kautz endpoint and retained-host rate references (576 and 864
   cases), including signed/zero weights, coincident/close modes and legacy
-  omitted sections. Add an explicit required Warped endpoint audit gate: 104 of
-  4,608 cases currently fail at accepted lambda -0.9999; defect remains open.
+  omitted sections. Preserve the original Warped endpoint audit failure evidence.
+- Correct Warped extreme-lambda accuracy through equivalent physical-coordinate
+  processing in math-iir-fir (through `d515d16`), preserving allpass histories,
+  old serialized-state restoration and fallback domain. Use stable transformed
+  matched poles and dry-plus-residual unity endpoints. Verify 4,608 standard and
+  1,728 optimized Warped endpoint cases plus 2,304 retained-host rate cases.
+  Restore the previous explicit failing gate to the ordinary test suite.
 
 - Correct native optimized cut gain and phase through math-iir-fir (`63e8495`).
   Matched cuts invert minimum-phase boosts; optimized shelves solve their existing

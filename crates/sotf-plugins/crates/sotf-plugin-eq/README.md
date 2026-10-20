@@ -171,17 +171,32 @@ Both routes rebuild modal history on rate changes; latency remains zero, tail
 Unknown, and measured post-build callbacks heap-free. The host rate fixture
 changes declared rate with frame duplication; it is not a physical resampler.
 
-The required Warped endpoint gate is currently failing: 104/4,608 independent
-standard-family cases exceed 2e-5 at accepted lambda -0.9999, with maximum error
-0.00078653. Debug and release agree. Other tested lambdas (-0.37, 0, 0.37, 0.9999
-and automatic) pass this matrix. The analog reference follows exact cancellation
-of the prototype prewarp and allpass frequency scale for bilinear families.
-Run the explicit red gate with:
+The Warped endpoint defect recorded in `eq-advanced-extremes.json` is corrected
+by shared math-audio through commit `d515d16` (core `2e5c105`, fallback
+compatibility `45438d7`, identical-retune guard `d515d16`). Processing uses an equivalent
+normalized physical-coordinate realization instead of a nearly cancelling
+prototype/implicit solve. All four input/output allpass histories remain populated
+and map to the new coordinates during retunes; older serialized states restore
+from those histories. Matched peaks transform boost poles before minimum-phase
+spectral factoring, invert for cuts, and retain unity endpoints with a separate
+dry-plus-residual form. The existing Biquad corner/rate/gain fallback domain is
+preserved. Preset names and the accepted lambda range remain unchanged.
 
-```sh
-cargo test -p sotf-plugin-eq --release --features qa --test audit_extremes warped_standard_extremes -- --ignored --nocapture
-```
+All 4,608 standard Warped endpoint cases now pass (maximum 9.32e-10), and the gate
+runs in the ordinary suite. Another 1,728 optimized-name Warped cases match
+independent analog or complex-pole/spectral-factor references (maximum 4.77e-7).
+The fixed bound remains 2e-5. Both matrices include lambda -0.9999/-0.37/0/0.37/
+0.9999/automatic and both routes. Matched transfer tests also compare 288 shared
+f64 configurations with independent factored-prototype complex responses.
 
-This is a required unresolved audit regression, separately ignored from historical
-capture tests. A green ordinary test run excludes it and does not complete the
-EQ audit. See `audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json`.
+A further 2,304 retained `DawHost` rate changes cover the eight standard Warped
+families at Q/gain/frequency endpoints and lambda -0.37/0.37/automatic. Independent
+implicit state references verify populated legacy histories and ordered reset,
+including recomputed automatic lambda, compiled/graph paths, zero latency,
+Unknown tail and heap-free measured post-build callbacks. Maximum error is
+9.32e-10. The rate fixture duplicates frames rather than physically resampling.
+
+The original failing artifacts are retained. Current evidence and exact commands
+are in `audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json`. These
+f64 matrices do not prove arbitrary mixed/automated or actual oversampled-host
+trajectories, broad f32 accuracy, or CPU deadlines; those remain separate work.

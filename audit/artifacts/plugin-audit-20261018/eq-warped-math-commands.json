@@ -1,0 +1,44 @@
+[
+  {
+    "scope": "before fallback guard",
+    "command": "rtk proxy cargo +1.92.0 test -p math-iir-fir matched_physical_design_preserves --lib --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "exit_code": 101,
+    "output": "   Compiling math-iir-fir v0.5.27 (/Volumes/home_worktrees/math-audio-issue-9-warped/crates/math-iir-fir)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s\n     Running unittests src/mod.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/math_audio_iir_fir-ed06778fd8b71486)\n\nrunning 1 test\n\nthread 'iir::warped_biquad::canonical::tests::matched_physical_design_preserves_the_existing_biquad_corner_fallback_policy' (325540560) panicked at crates/math-iir-fir/src/iir/warped_biquad/canonical/tests.rs:193:21:\nassertion `left == right` failed\n  left: 8.215650382226158e-15\n right: 6.304343135310475e-7\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\ntest iir::warped_biquad::canonical::tests::matched_physical_design_preserves_the_existing_biquad_corner_fallback_policy ... FAILED\n\nfailures:\n\nfailures:\n    iir::warped_biquad::canonical::tests::matched_physical_design_preserves_the_existing_biquad_corner_fallback_policy\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 351 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `-p math-iir-fir --lib`\n"
+  },
+  {
+    "scope": "final shared validation",
+    "command": "rtk proxy cargo +1.92.0 test -p math-iir-fir --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "exit_code": 0,
+    "summary": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.01s\ntest error::tests::test_is_q_error ... ok\ntest error::tests::test_is_frequency_error ... ok\ntest error::tests::test_error_display ... ok\ntest error::tests::test_frequency_error_display ... ok\ntest error::tests::test_fir_error_display ... ok\ntest result: ok. 352 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s\ntest result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s\ntest result: ok. 12 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+  },
+  {
+    "scope": "final shared validation",
+    "command": "rtk proxy cargo +1.92.0 test -p math-iir-fir --release canonical --lib --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "exit_code": 0,
+    "summary": "    Finished `release` profile [optimized] target(s) in 18.37s\nold serialized history restore maximum error=0.0000000000000005898059818321144\nmatched warped cases=288, max normalized complex error=0.000000008761784017730507, min Jury=0.00000000009214207175034517\nstateful warped retunes=132, maximum implicit-reference error=0.000000030964416808387796\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 348 filtered out; finished in 0.01s"
+  },
+  {
+    "scope": "final shared validation",
+    "command": "rtk proxy cargo +1.92.0 clippy -p math-iir-fir --all-targets --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+    "exit_code": 0,
+    "summary": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.84s"
+  },
+  {
+    "scope": "final after no-op history guard",
+    "command": "rtk proxy cargo +1.92.0 test -p math-iir-fir --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "exit_code": 0,
+    "summary": "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.95s\ntest error::tests::test_is_frequency_error ... ok\ntest error::tests::test_is_q_error ... ok\ntest error::tests::test_frequency_error_display ... ok\ntest error::tests::test_error_display ... ok\ntest error::tests::test_fir_error_display ... ok\ntest result: ok. 353 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s\ntest result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s\ntest result: ok. 12 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+  },
+  {
+    "scope": "final after no-op history guard",
+    "command": "rtk proxy cargo +1.92.0 test -p math-iir-fir --release canonical --lib --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "exit_code": 0,
+    "summary": "    Finished `release` profile [optimized] target(s) in 18.43s\nold serialized history restore maximum error=0.0000000000000005898059818321144\nmatched warped cases=288, max normalized complex error=0.000000008761784017730507, min Jury=0.00000000009214207175034517\nstateful warped retunes=132, maximum implicit-reference error=0.000000030964416808387796\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 348 filtered out; finished in 0.01s"
+  },
+  {
+    "scope": "final after no-op history guard",
+    "command": "rtk proxy cargo +1.92.0 clippy -p math-iir-fir --all-targets --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+    "exit_code": 0,
+    "summary": "    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.85s"
+  }
+]

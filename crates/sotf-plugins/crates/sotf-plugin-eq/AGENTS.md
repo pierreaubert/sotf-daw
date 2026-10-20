@@ -79,9 +79,13 @@ cargo test -p sotf-plugin-eq
   native matrices do not cover advanced/mixed or oversampled host trajectories.
 
 - Advanced independent checks are in `audit_extremes.rs`: 576 Kautz endpoint and
-  864 retained-host cases pass. The explicit `warped_standard_extremes` required
-  audit gate currently fails at accepted lambda -0.9999 (104/4,608 cases). Run
-  it with `-- --ignored --nocapture` (release also needs `--features qa`). Its
-  ignore is a known unresolved production defect, distinct from capture tests;
-  EQ completion requires passing it at the unchanged 2e-5 bound. Preserve valid
-  lambda range, mathematical transfer, history and transactional rate rebuilds.
+  864 retained-host cases pass. Shared math through commit `d515d16` conditions
+  the Warped realization with exact physical coordinates, retained allpass
+  histories and old serialized-state restoration; matched peaks preserve unity
+  endpoints using dry-plus-residual processing. The prior required Warped gate
+  now runs in the ordinary suite (4,608 standard cases); preserve the unchanged
+  2e-5 bound and archived red evidence. Another 1,728 optimized Warped cases and
+  2,304 retained-host standard-family cases cover independent transfer/state
+  references. Keep accepted lambda range, Biquad fallback domain, legacy history
+  versus ordered reset, transactional rebuilds and zero callback heap work.
+  Advanced mixed/automated and actual oversampled-host work remains pending.

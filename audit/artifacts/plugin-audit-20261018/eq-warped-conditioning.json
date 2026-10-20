@@ -1,0 +1,286 @@
+{
+  "scope": "Correct production f64 Warped realization conditioning, preserve allpass histories and validate standard/optimized public endpoints and retained standard-family host rates. Optional ML separate; EQ remains partial.",
+  "tracking_issue": 9,
+  "math_final_commit": "d515d16910f4807dd2be429cad5c6c9c7305b906",
+  "math_core_commit": "2e5c1052457bb06e3c470bac50cd02092dca788f",
+  "math_fallback_guard_commit": "45438d7592e4b70aa7bfbab3b31afdd7905ac5b8",
+  "math_branch": "feat/sotf-daw-issue-9-warped-audit",
+  "math_source_sha256": {
+    "crates/math-iir-fir/src/iir/warped_biquad.rs": "5bb6cd5ae189184554d895cae38d3db85bc6de0c641880338a8b7f07aa64fa1e",
+    "crates/math-iir-fir/src/iir/warped_biquad/canonical.rs": "107042a15a258b34991ebb7b93d034add201d81b02b33a400b05fb7c12b57ef7",
+    "crates/math-iir-fir/src/iir/warped_biquad/canonical/tests.rs": "acaee048e7e774c893e062f5bc594bc70851439a0a1f1f7419914536620dbb80"
+  },
+  "test_source_sha256": "4ae214d2b677a680f86e822a73b4ba35c2ce1047646bfc9bc00bc0df4ab3b2d7",
+  "before": {
+    "artifact": "audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json",
+    "standard_cases": 4608,
+    "failures": 104,
+    "maximum_reference_error": 0.0007865293882787228,
+    "fixed_bound": 2e-05,
+    "failed_lambda": -0.9999,
+    "debug_and_release_agreed": true
+  },
+  "diagnosis": {
+    "worst_case": "192000 Hz/highshelf/20 Hz/Q .1/+24 dB/lambda -.9999",
+    "standalone_probe_error_current_trig": 0.0007865295521637351,
+    "standalone_probe_error_high_precision_coefficients_rounded_to_f64": 0.00024395945069908762,
+    "conclusion": "Rounding the near-unit prototype coefficients before the nearly cancelling implicit denominator loses too much precision. Summation changes alone cannot meet the fixed bound."
+  },
+  "design": {
+    "transfer": "Normalize the exact allpass-substituted rational transfer in physical coordinates. For bilinear families, corner prewarp and allpass frequency scales cancel exactly; their physical transfer is the original analog prototype. Optimized shelves share the same fixed-slope minimum-phase transfer. Matched boost poles transform through (p+lambda)/(1+lambda*p), evaluated using exp_m1/half-angle differences; endpoint/center spectral factoring selects the minimum-phase numerator, and cuts invert the boost.",
+    "matched_conditioning": "H=1+k*(1-z^-2)/D, with k=B0-1, keeps dry and residual separate in processing and response evaluation. Avoids large numerator cancellation at unity endpoints. Initial rounded full-numerator complex check measured 6.161734061871371e-7 normalized error at DC; the residual form passes the unchanged 2e-7 bound with 8.761784017730507e-9 maximum.",
+    "history": "Retain all four input/output allpass histories while processing physical-coordinate TDF-II states. Retunes remap the observable coordinates from those histories; no history is zeroed. Identical parameter tuples retain the existing physical coordinates bit-for-bit.",
+    "state_map": "For physical B0,B1,B2,A1,A2 and l=lambda: c2=(l*l*B0+l*B1+B2)/(1-l*l), d2=(l*l+l*A1+A2)/(1-l*l), c1=B1+2*l*B0+l*c2, d1=A1+2*l+l*d2. z1=c1*sx1+c2*sx2-d1*sy1-d2*sy2; z2=-l*z1+(1-l*l)*(c2*sx1-d2*sy1).",
+    "serialization": "Optional physical-state field allows older serialized objects without it to restore from their four stored allpass histories. Parameter preset names/fields unchanged.",
+    "fallback": "Reuse Biquad::new sanitized physical frequency/rate/Q/gain domain before matched pole transformation. Above-Nyquist corners at 8/16 kHz and nonfinite gains retain existing fallback semantics. A regression failed before this guard and passes after it.",
+    "realtime": "Fixed-size scalar state and coefficient caches. Allpass histories remain advanced each sample. No allocation, locking or logging introduced in normal plugin callbacks. No CPU deadline measurement claimed."
+  },
+  "standard_public_endpoints": {
+    "cases": 4608,
+    "failures": 0,
+    "maximum_reference_error": 9.313225746154785e-10,
+    "fixed_bound": 2e-05,
+    "families": [
+      "peak",
+      "lowshelf",
+      "highshelf",
+      "lowpass",
+      "highpass",
+      "notch",
+      "bandpass",
+      "allpass"
+    ],
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "frequencies_hz": [
+      20,
+      1000,
+      20000
+    ],
+    "q": [
+      0.1,
+      20
+    ],
+    "gain_db": [
+      -24,
+      24
+    ],
+    "lambda": [
+      null,
+      -0.9999,
+      -0.37,
+      0,
+      0.37,
+      0.9999
+    ],
+    "order": 2,
+    "routes": [
+      "legacy",
+      "ordered Stereo"
+    ],
+    "reference": "Independent analog polynomials, bilinear transform and DF-I recurrence; frequency-scale cancellation derived algebraically. No production design/processing helpers.",
+    "impulse_prefix_frames": 4096,
+    "callback_frames": [
+      17,
+      257,
+      1024
+    ],
+    "measured_heap_activity_per_callback": [
+      0,
+      0
+    ],
+    "test_policy": "Former explicit failing gate is now unignored and runs in the ordinary suite."
+  },
+  "optimized_public_endpoints": {
+    "cases": 1728,
+    "maximum_reference_error": 4.76837158203125e-07,
+    "fixed_bound": 2e-05,
+    "types": [
+      "peak_matched",
+      "lowshelf_orf",
+      "highshelf_orf"
+    ],
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "frequencies_hz": [
+      20,
+      1000,
+      20000
+    ],
+    "q": [
+      0.1,
+      20
+    ],
+    "gain_db": [
+      -24,
+      24
+    ],
+    "lambda": [
+      null,
+      -0.9999,
+      -0.37,
+      0,
+      0.37,
+      0.9999
+    ],
+    "order": 2,
+    "routes": [
+      "legacy",
+      "ordered Stereo"
+    ],
+    "reference": "Optimized shelves: independent analog polynomials. Matched peak: independent complex pole division, endpoint/center complex-power spectral factor and DF-I recurrence; no production helpers or state code.",
+    "impulse_prefix_frames": 4096,
+    "measured_heap_activity_per_callback": [
+      0,
+      0
+    ]
+  },
+  "retained_host_rates": {
+    "cases": 2304,
+    "maximum_reference_error": 9.313225746154785e-10,
+    "fixed_bound": 2e-05,
+    "new_rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "old_rates": [
+      88200,
+      96000,
+      192000
+    ],
+    "families": "Eight standard families",
+    "frequencies_hz": [
+      20,
+      20000
+    ],
+    "q": [
+      0.1,
+      20
+    ],
+    "gain_db": [
+      -24,
+      24
+    ],
+    "lambda": [
+      null,
+      -0.37,
+      0.37
+    ],
+    "routes": [
+      "legacy preserves allpass histories",
+      "ordered rebuild resets histories"
+    ],
+    "render_paths_asserted": [
+      "CompiledLinear",
+      "Graph"
+    ],
+    "warm_frames": 512,
+    "warm_doubled_frames": 1024,
+    "post_rebuild_frames": 1024,
+    "reference": "Independent analog prototype coefficients at tan-prewarped mapped corner and original implicit allpass recurrence. Four warm histories retained for legacy and reset for ordered after upstream RateDoubler removal/rebuild. Automatic lambda independently recomputed at new rate.",
+    "latency_samples": 0,
+    "tail": "Unknown",
+    "measured_heap_activity_per_callback": [
+      0,
+      0
+    ],
+    "fixture_limit": "Frame duplication plus declared doubled sample rate; not a physical sample-rate converter."
+  },
+  "shared_reference_tests": {
+    "nonzero_state_retunes": {
+      "cases": 132,
+      "types": 11,
+      "maximum_error_vs_original_implicit_state_recurrence": 3.0964416808387796e-08,
+      "fixed_bound": 2e-07,
+      "four_histories_unchanged_on_retune": true,
+      "scope": "48->96 kHz, corner 1 kHz ->20/1000/20000 Hz, gain +6 ->-6 dB, lambda .37 ->-.37/0/.37/.766. State-equivalence test uses prototype coefficient getter; it is not the independent coefficient oracle."
+    },
+    "old_serialized_history": {
+      "kind": "peak",
+      "maximum_error": 5.898059818321144e-16,
+      "fixed_bound": 2e-10,
+      "warm_frames": 257,
+      "comparison_frames": 2048
+    },
+    "matched_transfer": {
+      "cases": 288,
+      "probes_per_case": 5,
+      "maximum_normalized_complex_error": 8.761784017730507e-09,
+      "fixed_bound": 2e-07,
+      "minimum_actual_pole_zero_jury_margin": 9.214207175034517e-11,
+      "reference": "Independent rotated factored prototype response, retaining small quantities with exp_m1 and half-angle terms rather than production physical pole mapping or processing."
+    },
+    "fallback_domain": {
+      "cases": 18,
+      "rates": [
+        8000,
+        16000
+      ],
+      "corner_hz": 20000,
+      "lambda": [
+        -0.37,
+        0,
+        0.37
+      ],
+      "gains_db": [
+        -6,
+        6,
+        "NaN"
+      ],
+      "frames_per_case": 4096,
+      "result": "finite and bit-identical to the corresponding Biquad-sanitized physical parameters"
+    },
+    "identical_retunes": {
+      "cases": 10,
+      "types": [
+        "peak",
+        "peak_matched"
+      ],
+      "lambda": [
+        -0.9999,
+        -0.37,
+        0,
+        0.37,
+        0.9999
+      ],
+      "warm_frames": 1024,
+      "comparison_frames": 2048,
+      "before_guard_first_difference": [
+        0.0910513143312528,
+        0.09105131432949765
+      ],
+      "result": "bit-identical after no-op guard"
+    }
+  },
+  "validation": {
+    "math_full_passed": 390,
+    "math_existing_ignored": 1,
+    "math_release_reference_tests_passed": 5,
+    "math_strict_all_targets_clippy": "passed",
+    "math_autodiff_core_candidate_suite_passed": 131,
+    "math_autodiff_scope": "Existing deterministic consumer regression suite run on core candidate before the two fallback/no-op guards; no Warped type found in consumer search.",
+    "eq_full_passed": 177,
+    "eq_historical_ignored": 11,
+    "eq_release_audit_passed": 11,
+    "eq_release_audit_ignored": 0,
+    "eq_strict_all_targets_qa_clippy": "passed",
+    "math_commands_artifact": "audit/artifacts/plugin-audit-20261018/eq-warped-math-commands.json",
+    "normal_dependency_commands_artifact": "audit/artifacts/plugin-audit-20261018/eq-warped-conditioning-commands.json"
+  },
+  "preservation": "Math fix developed/verified in isolated worktree. Dedicated math branch selected/fast-forwarded only after asserting expected HEAD and no tracked/staged user edits; existing untracked audit documents hashed and preserved. All final DAW commands use normal sibling dependency path, without CLI/manifest/lock overrides. Unrelated root Cargo.lock/driver/engine edits excluded from commit. Original red artifacts retained.",
+  "limits": [
+    "Production endpoint matrices use f64 sections and stated 4096-frame impulse prefixes. Generic f32 smoke tests pass, but no broad f32 endpoint guarantee or CPU deadline established.",
+    "Retained-host matrix covers standard-family native 1x processing and moderate/automatic lambda selections. Synthetic rate fixture does not certify physical resampling.",
+    "Advanced mixed/automated realizations, optimized trajectories, actual oversampled biquad/advanced host rate changes and broader finite-versus-recursive tail review remain open.",
+    "EQ remains partial; overall production completion remains 32/45. Optional ML separately tracked."
+  ]
+}

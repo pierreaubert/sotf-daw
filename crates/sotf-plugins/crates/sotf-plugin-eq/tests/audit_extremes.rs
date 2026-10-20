@@ -802,7 +802,6 @@ fn native_optimized_extreme_impulses_match_independent_spectral_factors() {
 }
 
 #[test]
-#[ignore = "required audit gate: accepted extreme lambda exceeds fixed accuracy bound; see eq-advanced-extremes.json"]
 fn warped_standard_extremes_match_independent_physical_analog_reference() {
     // For a bilinear prototype s=(1-z^-1)/(k*(1+z^-1)), allpass substitution
     // A=(z^-1-lambda)/(1-lambda*z^-1) multiplies s by (1+lambda)/(1-lambda).
@@ -1169,5 +1168,275 @@ fn retained_kautz_host_rate_changes_rebuild_modal_history_against_independent_re
     println!(
         "{}",
         serde_json::json!({"case":"kautz_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+fn warped_matched_coefficients(d: Design, rate: u32, lambda: f64) -> [f64; 5] {
+    // Independent complex pole mapping and endpoint/center spectral factor.
+    // Production uses exp_m1/half-angle pole differences and a residual form.
+    let w = 2.0 * PI * d.freq / f64::from(rate);
+    let mapped = 2.0 * ((w / 2.0).tan() * (1.0 + lambda) / (1.0 - lambda)).atan();
+    let radius = (-mapped / (2.0 * d.q)).exp();
+    let re = radius * mapped.cos();
+    let im = radius * mapped.sin();
+    let nr = re + lambda;
+    let ni = im;
+    let dr = 1.0 + lambda * re;
+    let di = lambda * im;
+    let power = dr * dr + di * di;
+    let pole_re = (nr * dr + ni * di) / power;
+    let pole_im = (ni * dr - nr * di) / power;
+    let a = [1.0, -2.0 * pole_re, pole_re * pole_re + pole_im * pole_im];
+    let dc = a[0] + a[1] + a[2];
+    let nyquist = a[0] - a[1] + a[2];
+    let p = (dc + nyquist) / 2.0;
+    let b1 = (dc - nyquist) / 2.0;
+    let gain = 10.0_f64.powf(d.gain.abs() / 20.0);
+    let ar = a[0] + a[1] * w.cos() + a[2] * (2.0 * w).cos();
+    let ai = -a[1] * w.sin() - a[2] * (2.0 * w).sin();
+    let br = p * w.cos() + b1;
+    let split = (gain * gain * (ar * ar + ai * ai) - br * br).sqrt() / w.sin().abs();
+    let b = [(p + split) / 2.0, b1, (p - split) / 2.0];
+    let (num, den) = if d.gain < 0.0 { (a, b) } else { (b, a) };
+    assert!(num.iter().chain(den.iter()).all(|x| x.is_finite()));
+    [
+        num[0] / den[0],
+        num[1] / den[0],
+        num[2] / den[0],
+        den[1] / den[0],
+        den[2] / den[0],
+    ]
+}
+
+#[test]
+fn warped_optimized_extremes_match_independent_physical_references() {
+    let mut input = vec![0.0; 4096];
+    input[0] = 1.0;
+    let mut maximum = 0.0_f64;
+    let mut cases = 0;
+    for rate in [44100, 48000, 96000, 192000] {
+        for kind in ["peak_matched", "lowshelf_orf", "highshelf_orf"] {
+            for freq in [20.0, 1000.0, 20000.0] {
+                for q in [0.1, 20.0] {
+                    for gain in [-24.0, 24.0] {
+                        let d = Design {
+                            kind,
+                            freq,
+                            q,
+                            gain,
+                            order: 2,
+                        };
+                        for lambda in [
+                            Some(-0.9999),
+                            Some(-0.37),
+                            Some(0.0),
+                            Some(0.37),
+                            Some(0.9999),
+                            None,
+                        ] {
+                            let l = lambda.unwrap_or_else(|| {
+                                1.0674
+                                    * ((2.0 / PI) * (0.06583 * f64::from(rate) / 1000.0).atan())
+                                        .sqrt()
+                                    - 0.1916
+                            });
+                            let c = if kind == "peak_matched" {
+                                warped_matched_coefficients(d, rate, l)
+                            } else {
+                                optimized_coefficients(d, rate)[0]
+                            };
+                            let mut state = State::default();
+                            let expected: Vec<_> = input
+                                .iter()
+                                .map(|&x| state.process(f64::from(x), c, false) as f32)
+                                .collect();
+                            assert!(expected.iter().all(|x| x.is_finite()));
+                            for ordered in [false, true] {
+                                let mut parameters = params(d, ordered);
+                                parameters.filters[0].topology = EqFilterTopology::WarpedBiquad;
+                                parameters.filters[0].lambda = lambda;
+                                let mut plugin = EqPlugin::from_params(1, rate, parameters)
+                                    .unwrap()
+                                    .into_boxed_plugin();
+                                plugin
+                                    .set_parameter(
+                                        ParameterId::from("auto_gain_enabled"),
+                                        ParameterValue::Bool(false),
+                                    )
+                                    .unwrap();
+                                plugin.initialize(f64::from(rate)).unwrap();
+                                let actual = render(plugin.as_mut(), &input, rate);
+                                let difference = error(&actual, &expected);
+                                maximum = maximum.max(difference);
+                                assert!(
+                                    difference < 2e-5,
+                                    "warped optimized {difference}: {rate}/{kind}/{freq}/{q}/{gain}/{lambda:?}/{ordered}"
+                                );
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 1728);
+    println!(
+        "{}",
+        serde_json::json!({"case":"warped_optimized_extremes","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+struct ImplicitWarpedReference {
+    c: [f64; 5],
+    lambda: f64,
+    history: [f64; 4],
+}
+impl ImplicitWarpedReference {
+    fn retune(&mut self, d: Design, rate: u32, lambda: Option<f64>) {
+        self.lambda = lambda.unwrap_or_else(|| {
+            1.0674 * ((2.0 / PI) * (0.06583 * f64::from(rate) / 1000.0).atan()).sqrt() - 0.1916
+        });
+        let k = (PI * d.freq / f64::from(rate)).tan() * (1.0 + self.lambda) / (1.0 - self.lambda);
+        let mapped = Design {
+            freq: k.atan() * f64::from(rate) / PI,
+            ..d
+        };
+        self.c = coefficients(mapped, rate)[0];
+    }
+    fn process(&mut self, x: f64) -> f64 {
+        fn ap(x: f64, s: &mut f64, l: f64) -> f64 {
+            let z = x + l * *s;
+            let y = *s - l * z;
+            *s = z;
+            y
+        }
+        let l = self.lambda;
+        let [b0, b1, b2, a1, a2] = self.c;
+        let xd1 = ap(x, &mut self.history[0], l);
+        let xd2 = ap(xd1, &mut self.history[1], l);
+        let y = (b0 * x + b1 * xd1 + b2 * xd2
+            - (1.0 - l * l) * ((a1 - a2 * l) * self.history[2] + a2 * self.history[3]))
+            / (1.0 - a1 * l + a2 * l * l);
+        let yd1 = ap(y, &mut self.history[2], l);
+        ap(yd1, &mut self.history[3], l);
+        y
+    }
+}
+
+#[test]
+fn retained_warped_host_rates_preserve_legacy_history_and_reset_ordered_history() {
+    use sotf_host::host::{DawHost, HostRenderPath};
+    let mut warm = vec![0.0; 512];
+    warm[0] = 0.25;
+    let duplicated: Vec<_> = warm.iter().flat_map(|&x| [x, x]).collect();
+    let mut input = vec![0.0; 1024];
+    input[7] = -0.125;
+    let mut maximum = 0.0_f64;
+    let mut cases = 0;
+    for rate in [44100, 48000, 96000] {
+        for kind in [
+            "peak",
+            "lowshelf",
+            "highshelf",
+            "lowpass",
+            "highpass",
+            "notch",
+            "bandpass",
+            "allpass",
+        ] {
+            for freq in [20.0, 20000.0] {
+                for q in [0.1, 20.0] {
+                    for gain in [-24.0, 24.0] {
+                        let d = Design {
+                            kind,
+                            freq,
+                            q,
+                            gain,
+                            order: 2,
+                        };
+                        for lambda in [None, Some(-0.37), Some(0.37)] {
+                            for ordered in [false, true] {
+                                for compiled in [false, true] {
+                                    let mut parameters = params(d, ordered);
+                                    parameters.filters[0].topology = EqFilterTopology::WarpedBiquad;
+                                    parameters.filters[0].lambda = lambda;
+                                    let mut plugin = EqPlugin::from_params(1, rate * 2, parameters)
+                                        .unwrap()
+                                        .into_boxed_plugin();
+                                    plugin
+                                        .set_parameter(
+                                            ParameterId::from("auto_gain_enabled"),
+                                            ParameterValue::Bool(false),
+                                        )
+                                        .unwrap();
+                                    let mut host = DawHost::new(1, rate);
+                                    host.set_parallel_enabled(false).unwrap();
+                                    host.set_compiled_linear_enabled(compiled).unwrap();
+                                    host.add_plugin(Box::new(RateDoubler)).unwrap();
+                                    host.add_plugin(plugin).unwrap();
+                                    host.build().unwrap();
+                                    let mut reference = ImplicitWarpedReference {
+                                        c: [0.0; 5],
+                                        lambda: 0.0,
+                                        history: [0.0; 4],
+                                    };
+                                    reference.retune(d, rate * 2, lambda);
+                                    let expected_warm: Vec<_> = duplicated
+                                        .iter()
+                                        .map(|&x| reference.process(f64::from(x)) as f32)
+                                        .collect();
+                                    maximum = maximum.max(error(
+                                        &host_render(&mut host, &warm, 2),
+                                        &expected_warm,
+                                    ));
+                                    drop(host.remove_plugin(0).unwrap());
+                                    host.build().unwrap();
+                                    assert_eq!(
+                                        host.output_sample_rate(rate).unwrap(),
+                                        f64::from(rate)
+                                    );
+                                    assert_eq!(
+                                        host.render_stats().path,
+                                        if compiled {
+                                            HostRenderPath::CompiledLinear
+                                        } else {
+                                            HostRenderPath::Graph
+                                        }
+                                    );
+                                    assert_eq!(host.total_latency_samples(), 0);
+                                    assert_eq!(
+                                        host.get_plugin(0).unwrap().tail_length(),
+                                        sotf_host::TailLength::Unknown
+                                    );
+                                    reference.retune(d, rate, lambda);
+                                    if ordered {
+                                        reference.history = [0.0; 4];
+                                    }
+                                    let expected: Vec<_> = input
+                                        .iter()
+                                        .map(|&x| reference.process(f64::from(x)) as f32)
+                                        .collect();
+                                    let difference =
+                                        error(&host_render(&mut host, &input, 1), &expected);
+                                    maximum = maximum.max(difference);
+                                    assert!(
+                                        difference < 2e-5,
+                                        "retained Warped {difference}: {rate}/{kind}/{freq}/{q}/{gain}/{lambda:?}/{ordered}/{compiled}"
+                                    );
+                                    cases += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 2304);
+    assert!(maximum < 2e-5);
+    println!(
+        "{}",
+        serde_json::json!({"case":"warped_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
     );
 }

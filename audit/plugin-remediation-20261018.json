@@ -789,7 +789,7 @@
           "result": "Exact target selection resolves a reproduced one-bit callback-partition difference without resetting history or moving storage retirement. All 144 combinations of four rates, three channel counts, three orders, two realizations and two routes match the independent reference (maximum measured error 0) and are bit-identical across partitions. Interrupted frequency/Q/gain ramps retain stable coefficients, finite output and zero measured setter/process heap activity. Full EQ suite: 159 passed, 11 existing ignored; release transition regression and strict all-targets QA Clippy pass."
         },
         {
-          "task": "Validate advanced filter extremes and advanced mixed realizations (native optimized extremes now verified separately)",
+          "task": "Validate advanced mixed realizations and parameter trajectories (single-realization extremes now independently verified)",
           "status": "pending"
         },
         {
@@ -863,12 +863,24 @@
         },
         {
           "task": "Correct accepted Warped lambda endpoint accuracy failure without weakening response/range/history contracts",
-          "status": "required_gate_failing",
+          "status": "implemented_and_verified",
           "evidence": [
             "audit/artifacts/plugin-audit-20261018/eq-advanced-extremes.json",
-            "audit/artifacts/plugin-audit-20261018/eq-advanced-validation-commands.json"
+            "audit/artifacts/plugin-audit-20261018/eq-advanced-validation-commands.json",
+            "audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json",
+            "math-audio commits 2e5c1052457bb06e3c470bac50cd02092dca788f, 45438d7592e4b70aa7bfbab3b31afdd7905ac5b8, d515d16910f4807dd2be429cad5c6c9c7305b906"
           ],
-          "result": "Independent physical analog reference reproduces 104 failures among 4608 Warped cases, all lambda=-0.9999. Worst max error 0.0007865293882787228 at 192 kHz/highshelf/20 Hz/Q 0.1/+24 dB. Same red result in debug and release at fixed 2e-5 bound. Other five lambda selections pass; all measured output finite and callbacks heap-free. Explicit required ignored audit regression retained with runnable command; EQ completion requires it passing. Numerical design/implicit feedback cancellation investigation is next."
+          "result": "Equivalent physical-coordinate realization resolves all 104/4608 failures without changing bound or lambda range. Standard Warped max error 9.313225746154785e-10; 1728 optimized Warped cases max 4.76837158203125e-7, both <2e-5. All four allpass histories retained/mapped; 132 independent implicit-retune cases max 3.0964416808387796e-8 <2e-7, older serialized state restored, identical retunes bit-preserving. Matched poles transformed stably and unity endpoints realized as dry plus residual; 288 independent factored complex cases max 8.761784017730507e-9 <2e-7, positive actual pole/zero Jury margins. Existing Biquad fallback domain preserved in 18 low-rate/nonfinite-gain cases. Former required ignored red gate now runs normally. Math 390 passed/1 existing ignored, release 5 and strict Clippy; EQ 177 passed/11 historical ignored, release 11/0 ignored and strict QA Clippy, normal dependency path. Original red artifacts retained. EQ remains partial.",
+          "initial_result": "Independent physical analog reference reproduces 104 failures among 4608 Warped cases, all lambda=-0.9999. Worst max error 0.0007865293882787228 at 192 kHz/highshelf/20 Hz/Q 0.1/+24 dB. Same red result in debug and release at fixed 2e-5 bound. Other five lambda selections pass; all measured output finite and callbacks heap-free. Explicit required ignored audit regression retained with runnable command; EQ completion requires it passing. Numerical design/implicit feedback cancellation investigation is next."
+        },
+        {
+          "task": "Verify retained standard-family Warped host rate changes against independent implicit histories",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json"
+          ],
+          "result": "2304 retained DawHost cases: three rate pairs, eight families, frequency/Q/gain endpoints, explicit -.37/.37 or automatic lambda, both routes, compiled/graph paths. Legacy retains populated allpass histories and ordered resets; auto lambda recomputes. Independent analog-coefficient/implicit-state reference max 9.313225746154785e-10 at fixed 2e-5. Latency 0, Unknown tail and zero measured post-build callback heap work. Frame-duplication fixture is not physical resampling; optimized, extreme-lambda hot retunes and oversampled host combinations are not claimed."
         }
       ],
       "evidence": [
@@ -878,7 +890,8 @@
         "Standard 1x endpoint accuracy/stability and retained DawHost rate handling are verified with a concrete Q-minimum loading fix. Other filter/realization and oversampled host-rate requirements remain open. EQ partial; overall 32/45 complete.",
         "Current-state independent verification exposed and corrected shared SVF defects, with existing deterministic-consumer compatibility retained. SVF endpoint and retained-host coverage complete for the stated matrices. EQ remains partial; overall 32/45. Optional ML remains separate.",
         "Native optimized f64 endpoint/phase validation complete with shared production DSP correction. EQ remains partial and overall stays 32/45. Optional ML separate.",
-        "Advanced Kautz independent endpoint and retained-host scope verified. New required Warped endpoint gate fails 104/4608 at accepted lambda=-0.9999; EQ remains partial and overall stays 32/45. Normal EQ suite 174 passed, 11 historical ignored plus one explicit required red gate; release 8 passed with that gate excluded; explicit release gate fails; strict all-targets QA Clippy passes."
+        "Advanced Kautz independent endpoint and retained-host scope verified. New required Warped endpoint gate fails 104/4608 at accepted lambda=-0.9999; EQ remains partial and overall stays 32/45. Normal EQ suite 174 passed, 11 historical ignored plus one explicit required red gate; release 8 passed with that gate excluded; explicit release gate fails; strict all-targets QA Clippy passes.",
+        "Warped endpoint red gate resolved through shared physical-coordinate production fix through math commit d515d16; unignored with 6336 static endpoint cases and 2304 retained standard-family host cases passing. Full EQ 177 passed/11 historical ignored; release 11 passed/0 ignored; strict lint pass. Historical failures retained. EQ partial; overall 32/45; optional ML separate."
       ]
     },
     {
@@ -1860,6 +1873,15 @@
       ],
       "result": "Kautz 576 endpoints and 864 retained-host cases verified. Warped 4608-case independent matrix exposes 104 failures; explicit gate and evidence retained.",
       "limitations": "Warped defect unresolved; mixed/oversampled advanced work remains. EQ partial, 32/45 overall, optional ML separate."
+    },
+    {
+      "name": "Condition Warped realization and preserve allpass histories",
+      "state": "verified",
+      "plugin_ids": [
+        23
+      ],
+      "result": "104/4608 standard failures resolved; 4608 standard +1728 optimized endpoint and 2304 retained-host cases pass fixed bounds. State mapping, old serialization, fallback domain and identical retunes verified; normal dependency path full/release/strict checks pass.",
+      "limitations": "EQ still partial for mixed/automated and actual oversampled-host/tail requirements. Overall 32/45. Optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
