@@ -20,6 +20,11 @@ name = "qa-convolution"
 path = "bin/qa_convolution.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-convolution-load"
+path = "bin/qa_convolution_load.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 plugins-spatial = { workspace = true }

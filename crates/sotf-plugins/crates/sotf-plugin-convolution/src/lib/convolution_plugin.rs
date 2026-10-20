@@ -463,6 +463,41 @@ impl ConvolutionPlugin {
         Some(frames as usize)
     }
 
+    /// Estimate backend payload for explicit QA geometry sweeps.
+    ///
+    /// This diagnostic does not check source duration or decoded sample storage.
+    /// Confirm admission using the file-based preflight before constructing DSP.
+    #[cfg(feature = "qa")]
+    #[doc(hidden)]
+    pub fn qa_backend_estimate(
+        lengths: &[usize],
+        output_channels: usize,
+        use_nupc: bool,
+        true_stereo: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> usize {
+        if true_stereo {
+            if output_channels != 2 {
+                return usize::MAX;
+            }
+            Self::estimated_true_stereo_backend_bytes(
+                lengths,
+                use_nupc,
+                zero_latency_head,
+                head_taps,
+            )
+        } else {
+            Self::estimated_ordinary_backend_bytes(
+                lengths,
+                use_nupc,
+                output_channels,
+                zero_latency_head,
+                head_taps,
+            )
+        }
+    }
+
     /// Estimate retained ordinary-route storage before constructing FFT backends.
     ///
     /// Count shared kernels once and each mapped channel's working state.

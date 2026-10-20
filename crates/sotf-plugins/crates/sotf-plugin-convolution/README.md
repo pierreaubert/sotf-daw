@@ -112,3 +112,42 @@ callback. A subsequent control-thread load/clear or teardown releases them.
 The engine's separate 4096-call drain limit can still reject long high-rate IRs
 or multiple serial tails. This plugin makes bounded finite progress and does
 not truncate its response to fit that policy.
+
+## Admission-boundary load diagnostic
+
+Run the explicit local release measurement with:
+
+```bash
+cargo run -p sotf-plugin-convolution --release --features qa --bin qa-convolution-load
+```
+
+The 63 geometry cases cover 48/96/192 kHz, 2/12/32 output channels with mono
+and full-channel IRs, plus two-output/four-path true stereo. Each runs UPC,
+NUPC, and a 257-tap direct head. It finds the longest equal-channel source IR
+allowed by duration, decoded-buffer and backend admission, confirms the last
+accepted and next refused length using real file preflight, then constructs
+one candidate at a time. Discrete 32-channel fixtures use AIFF.
+
+Complete host-adapter callbacks first populate the full IR history at 128
+frames. Steady measurements use 128 and 512 frames for at least four largest
+partition periods and 256 callbacks. Every phase reports raw physical and
+reported-horizon misses, p50/p95/p99/max, finite output, allocations and frees.
+There is no timing multiplier. Any miss, boundary mismatch or functional
+failure makes the diagnostic exit nonzero after retaining all case results.
+
+Construction reports net and peak requested-allocation deltas during
+`from_params_with_routing`, including temporary decoding/preparation. These
+process-wide allocator deltas include background bookkeeping and are not RSS
+or allocator usable-size bounds. Adapter preparation is outside that measured
+construction interval. No device/native scheduling compliance is inferred.
+The older `qa-convolution` target keeps its timing measurements diagnostic
+and now labels its functional success separately from physical deadline misses.
+
+The recorded local run in
+[the load artifact](../../../../audit/artifacts/plugin-audit-20261018/convolution-maximum-load.json)
+exits 1: 61/63 cases miss deadlines, with 51,122 misses across 532,086 callbacks.
+All finite-output, callback heap and retained-estimate checks pass. The highest
+construction requested-allocation delta is about 551 MiB, including temporary
+preparation beyond the persistent payload estimate. These results establish a
+measured capacity limitation; they do not justify enlarging deadlines or claiming
+native compliance. Scheduling mitigation and worker-overlap validation remain open.

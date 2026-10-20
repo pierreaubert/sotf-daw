@@ -2,6 +2,12 @@
 
 ## Changes
 
+- Add an opt-in strict admission-boundary load diagnostic across 63 geometries,
+  including full-history callbacks, raw deadline misses and requested-memory
+  construction deltas. Keep all failed cases visible and return nonzero on misses.
+- Correct legacy QA reporting to separate functional checks from diagnostic
+  callback timings. Expose a `qa`-only estimate helper for geometry sweeps.
+
 - Bound decoded IR sample-vector capacities to 512 MiB and source duration to
   30 seconds before backend admission. Reject oversized known lengths before
   decoder construction and check every packet for unknown/understated lengths.

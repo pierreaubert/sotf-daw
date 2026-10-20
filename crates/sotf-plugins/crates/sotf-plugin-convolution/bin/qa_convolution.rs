@@ -60,6 +60,7 @@ fn main() {
     }
     drop(file);
 
+    let mut actual_callback_misses = 0_usize;
     for channels in [1_usize, 2, 8] {
         for (use_nupc, zero_latency_head) in [(false, false), (true, false), (true, true)] {
             for block_frames in [64_usize, 257, 1024] {
@@ -85,7 +86,11 @@ fn main() {
                 for _ in 0..32 {
                     let started = Instant::now();
                     candidate.process_in_place(&mut block, &context).unwrap();
-                    timings.push(started.elapsed());
+                    let elapsed = started.elapsed();
+                    actual_callback_misses += usize::from(
+                        elapsed.as_secs_f64() >= block_frames as f64 / f64::from(sample_rate),
+                    );
+                    timings.push(elapsed);
                 }
                 timings.sort_unstable();
                 let deadline = block_frames as f64 * 1000.0 / sample_rate as f64;
@@ -101,5 +106,7 @@ fn main() {
     }
     std::fs::remove_file(path).ok();
 
-    println!("\n[ALL PASS] Convolution QA Complete.");
+    println!(
+        "\n[FUNCTIONAL CHECKS PASS; TIMING IS DIAGNOSTIC] Convolution QA Complete. Physical callback misses: {actual_callback_misses}. Use qa-convolution-load for strict admission-boundary timing."
+    );
 }

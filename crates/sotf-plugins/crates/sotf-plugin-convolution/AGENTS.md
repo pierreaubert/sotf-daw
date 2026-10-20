@@ -85,3 +85,15 @@ cargo test -p sotf-plugin-convolution
   packet storage; it is not a process RSS bound.
 - Maximum-load callback timing and aggregate peak-memory measurements remain
   open audit work; successful admission is not deadline compliance evidence.
+
+## Explicit load diagnostics
+
+- `qa-convolution-load` is opt-in and requires `qa`; run in release mode.
+  Preserve all 63 geometries, raw margin 1.0, real boundary preflight, full-history
+  warm-up and both 128/512-frame steady callback sizes. Never hide misses by
+  changing horizons, tolerances, matrix rows or functional assertions.
+- `qa_backend_estimate` is compiled only with `qa`; it is not file admission.
+  Keep boundary checks against the public file-based preflight in the harness.
+- Peak/net construction counters report process-wide requested allocation deltas,
+  not RSS or an aggregate memory bound. Record environment, source hashes and
+  actual command exit status; do not infer device compliance from local timing.

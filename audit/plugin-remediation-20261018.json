@@ -417,9 +417,9 @@
           "result": "Global unbounded request queue replaced by sixteen pending slots with at most four existing workers. Nonblocking full/disconnected refusal preserves prior mailbox/generation/status/live IR; refused rate initialization restores prior clock before smoother changes. Weak lifetime cancels queued stale work before decoding/planning and suppresses publication after cancellation during an in-flight build. Clear/drop/successful synchronous replacement cancel older workers; synchronous failure preserves them. Six deterministic tests include 1024 overflow refusals, paused concurrent worker/backlog, current failure adoption with zero heap work, and synchronous replacement ownership. Full shared/Convolution regression 102 passed/4 existing ignored; six release loader tests pass with qa instrumentation; all-targets QA Clippy -D warnings passes. Initial release-without-qa compile failure preserved as instrumentation setup evidence; no production DSP/preset/latency changes."
         },
         {
-          "task": "Validate maximum-size multichannel performance and sustained mixed-instance loading",
+          "task": "Address measured full-load callback deadline failures and validate sustained mixed-instance loading",
           "status": "pending",
-          "evidence": "Worker request-count bounds/cancellation and deterministic saturation/refusal tests are implemented; original maximum-size CPU/memory measurements and sustained mixed-instance validation remain open."
+          "evidence": "Admission-boundary load measurement is complete: strict release gate fails 61/63 cases with 51122 physical/reported misses across 532086 callbacks; finite/heap/retained-estimate checks pass. Do not infer capacity from the legacy short-IR QA, which has zero local misses. Production scheduling mitigation and sustained mixed-instance preparation/retirement overlap validation remain pending."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -442,13 +442,26 @@
             "audit/artifacts/plugin-audit-20261018/convolution-decode-bounds.json"
           ],
           "result": "New DecodedIr accumulator rejects invalid rate/channel metadata and known over-limit frame counts before decoder construction. Bound source to unchanged 30 s/32 channels and owned decoded-f32 vector capacities to 512 MiB; check each decoded packet for rate/channel/length changes before growth, using checked geometric reservations capped at the exact limit. Unknown/understated metadata cannot bypass capacity. Red-to-green complete 31 s WAV; 30 s boundary accepted; resource preflight/synchronous refusal preserve state and bit-exact live twin continuation. Mock packet tests cover unknown lengths, byte cap, packet geometry, unsupported format and unchanged four PCM conversions. Affected tests 112 passed/4 existing ignored; release lib 73 passed/1 existing ignored; strict all-targets QA Clippy passes. Codec/probe scratch/packets and aggregate RSS remain outside this owned-buffer cap; callback DSP and preset schema unchanged."
+        },
+        {
+          "task": "Measure maximum-admitted multichannel convolution load with truthful raw timing and memory reports",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-maximum-load.json",
+            "audit/artifacts/plugin-audit-20261018/convolution-maximum-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/convolution-maximum-load-checks.json"
+          ],
+          "result": "New opt-in release QA covers all 63 requested geometries: 48/96/192 kHz; 2/12/32 outputs, mono/full IRs and true stereo; UPC/NUPC/257-tap head. Binary search shares QA-only estimator and verifies actual file admission at longest accepted/next refused frames. Dense fixtures populate full history; complete adapter callbacks measure warm128 and steady128/512, >=4 largest partition periods and >=256 steady calls. Raw physical and reported horizons, margin1.0; 189 phase rows/532086 callbacks. Exit1: 61 cases fail, 51122 misses in both horizons. Zero alloc/free callbacks, all finite, all retained deltas within estimates, no boundary errors. Construction peak requested delta577422949 bytes (~551 MiB), explicitly not RSS/aggregate bound. QA-feature shared/Convolution112 passed/4 existing ignored; corrected legacyQA exit0/zero local short-IR misses; strictClippy passes. Legacy QA labels functional success separately; no historical assertion weakened. No production DSP/scheduling change or reduced matrix accepted. Capacity remains failing; entry partial."
         }
       ],
       "evidence": [
         "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45.",
         "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45.",
         "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete.",
-        "Owned pre-admission decoded sample buffers are now bounded with per-packet enforcement and metadata refusal. Maximum-load callback timing and sustained mixed-instance/aggregate peak-memory validation remain open. Entry 14 partial; overall 29/45 complete."
+        "Owned pre-admission decoded sample buffers are now bounded with per-packet enforcement and metadata refusal. Maximum-load callback timing and sustained mixed-instance/aggregate peak-memory validation remain open. Entry 14 partial; overall 29/45 complete.",
+        "Full maximum-admission load data retained including failures; constructor memory and callback invariants pass but strict deadline gate fails 61/63. Legacy short-IR zero-miss result does not prove full-size capacity. Pending scheduling and mixed-instance overlap work remains; overall 29/45 complete."
       ]
     },
     {

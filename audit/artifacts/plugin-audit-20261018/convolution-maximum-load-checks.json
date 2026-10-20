@@ -1,0 +1,193 @@
+{
+  "base_commit": "e79eb10050db67047b9609dc15efbe1824ab011f",
+  "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)",
+  "cpu_query": {
+    "exit_code": 1,
+    "output": "sysctl: sysctl fmt -1 1024 1: Operation not permitted\n"
+  },
+  "scope": "QA only; diagnostic estimate is feature-gated qa; no callback DSP modification. Actual preflight validates accepted geometry and next rejected frame. Timing includes complete Plugin adapter callback and thread-local guard overhead. Global requested-memory deltas include background bookkeeping; not RSS or allocator usable-size bounds.",
+  "source_sha256_during_run": {
+    "Cargo.lock": "4d54151024fc4b6a346a3d3f859037a547fdd8cbe1b2aa876765ff7d1e3e10e4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "6aeee769158c56ea43c4d28c9321e7d9675d2a83de83b4f93bee6a0fd0831cf8",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/decode_buffer.rs": "4dc2bc1e3f73e0e00630ef040a5a2e1d2fcbd92b9e80347e319b6b41e721b0b1",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution.rs": "382d1e322f93fe441d9741aa692997b2c08cb0fab30432adcb8e6f728706bbaa",
+    "crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs": "c06bb56421b29d56bdda5fa6c1c51fbeadf6af79a035a5e2a43496965e18d5d9",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "bb15585a30bc1d4640f13feab843a120b6399c5ef3ccc2e6e505ca0f2636bbfd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/tests.rs": "176647d4d01b0cf75e4b3b5cf5229762d8f6e33b3055e59393254c6bb30d68c6",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "a5f45c9ef2db5a4129609907118017d1df5db2876777e4047cc267af6326b17b"
+  },
+  "source_sha256_after_run": {
+    "Cargo.lock": "4d54151024fc4b6a346a3d3f859037a547fdd8cbe1b2aa876765ff7d1e3e10e4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "6aeee769158c56ea43c4d28c9321e7d9675d2a83de83b4f93bee6a0fd0831cf8",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/decode_buffer.rs": "4dc2bc1e3f73e0e00630ef040a5a2e1d2fcbd92b9e80347e319b6b41e721b0b1",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution.rs": "382d1e322f93fe441d9741aa692997b2c08cb0fab30432adcb8e6f728706bbaa",
+    "crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs": "c06bb56421b29d56bdda5fa6c1c51fbeadf6af79a035a5e2a43496965e18d5d9",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "bb15585a30bc1d4640f13feab843a120b6399c5ef3ccc2e6e505ca0f2636bbfd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/tests.rs": "176647d4d01b0cf75e4b3b5cf5229762d8f6e33b3055e59393254c6bb30d68c6",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "a5f45c9ef2db5a4129609907118017d1df5db2876777e4047cc267af6326b17b"
+  },
+  "source_and_lock_unchanged_during_observation": true,
+  "matrix_checks": {
+    "complete_cartesian_coverage": true,
+    "geometry_cases": 63,
+    "phase_rows": 189,
+    "callbacks": 532086,
+    "physical_misses": 51122,
+    "reported_misses": 51122,
+    "allocations": 0,
+    "frees": 0,
+    "all_finite": true,
+    "all_retained_deltas_within_estimate": true,
+    "peak_requested_construction_delta_bytes": 577422949,
+    "failed_cases": 61,
+    "strict_gate_exit_code": 1
+  },
+  "qa_feature_tests": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "-p",
+      "plugins-spatial",
+      "--features",
+      "qa",
+      "--no-fail-fast",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "passed": 112,
+    "failed": 0,
+    "ignored": 4,
+    "output": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `test` profile [optimized + debuginfo] target(s) in 2.98s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/plugins_spatial-b606b50ffecde354)\n\nrunning 10 tests\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_convolution-433e121aeeae3b7b)\n\nrunning 74 tests\ntest convolution_plugin::decode_buffer::tests::metadata_refuses_bad_geometry_and_oversized_lengths_before_samples ... ok\ntest convolution_plugin::decode_buffer::tests::packet_geometry_and_unsupported_format_refuse_before_growth ... ok\ntest convolution_plugin::decode_buffer::tests::unknown_duration_keeps_last_allowed_frame_and_rejects_next_packet ... ok\ntest convolution_plugin::decode_buffer::tests::supported_pcm_formats_preserve_scaling_channels_and_packet_order ... ok\ntest convolution_plugin::decode_buffer::tests::unknown_and_understated_lengths_obey_capacity_and_sample_boundaries ... ok\ntest convolution_plugin::resource_tests::ordinary_shared_kernel_is_counted_once_and_overflow_refuses ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::head_taps_setter_clamps_to_spec_range ... ok\ntest params::tests::mix_displays_as_percent_of_full_wet ... ok\ntest convolution_plugin::loader_tests::cancellation_during_preparation_discards_result_before_publication ... ok\ntest params::tests::param_index_coverage ... ok\ntest params::tests::true_stereo_is_persisted_and_exposed_in_advanced_controls ... ok\ntest convolution_plugin::loader_tests::clear_and_plugin_destruction_cancel_queued_preparation ... ok\ntest params::tests::roundtrip_serde ... ok\ntest convolution_plugin::loader_tests::full_and_disconnected_submission_preserve_a_ready_prior_completion ... ok\ntest tests::audit_transition_timing ... ignored, release IR publication measurement; run with sotf-host/qa --ignored --nocapture\ntest tests::clearing_ir_cancels_pending_async_result ... ok\ntest params::tests::resource_row_is_pinned_visible_at_minimum_width ... ok\ntest convolution_plugin::loader_tests::selection_storm_is_bounded_and_only_latest_queued_request_prepares ... ok\ntest convolution_plugin::resource_tests::long_mono_ir_rejects_channel_expanded_storage_over_budget ... ok\ntest tests::configured_zero_latency_head_is_stable_before_runtime_ir_load ... ok\ntest tests::construction_rejects_every_out_of_contract_value ... ok\ntest convolution_plugin::loader_tests::synchronous_load_cancels_older_worker_only_after_success ... ok\ntest tests::clear_transition_has_a_bounded_sample_discontinuity ... ok\ntest convolution_plugin::loader_tests::busy_worker_skips_superseded_backlog_after_releasing_inflight_build ... ok\ntest tests::disconnected_primary_uses_the_prestarted_fallback_reclaimer ... ok\ntest convolution_plugin::resource_tests::decoding_rejects_duration_before_returning_oversized_samples ... ok\ntest tests::finite_stream::pending_failure_and_stale_state_are_not_consumed_during_drain ... ok\ntest tests::fractional_ir_resampling_rejects_unbounded_temporary_output_before_allocation ... ok\ntest tests::from_params_rebuilds_host_visible_values ... ok\ntest tests::ir_loader_does_not_hold_receiver_lock_while_building_ir_state ... ok\ntest tests::finite_stream::ready_and_late_completions_remain_owned_until_reset_publication ... ok\ntest tests::convolution_delta_positions_match_reported_latency ... ok\ntest tests::finite_stream::held_output_replacement_and_clear_fades_finish_without_extending_old_ir_history ... ok\ntest tests::misc::test_dirac_impulse_response ... ok\ntest tests::misc::test_gain_db_increases_output ... ok\ntest tests::misc::test_from_params_loads_nupc_engine_from_ir_file ... ok\ntest tests::adoption_reset_is_bounded_by_stream_buffers_not_ir_length ... ok\ntest tests::misc::test_mix_zero_is_dry_passthrough ... ok\ntest tests::fractional_host_rate_ir_keeps_duration_channels_and_impulse_origin ... ok\ntest tests::ir_metadata_and_memory_limits_are_enforced_before_planning ... ok\ntest tests::misc::test_partial_block_energy_preserved ... ok\ntest tests::misc::test_process_rejects_short_buffer ... ok\ntest tests::misc::test_parallel_path_bit_exact_vs_sequential ... ok\ntest tests::misc::test_reset_clears_all_state ... ok\ntest tests::misc::test_partial_block_no_output_drop ... ok\ntest tests::misc::test_long_ir_stability ... ok\ntest tests::misc::test_tiny_but_normal_output_is_not_threshold_flushed ... ok\ntest tests::new_uses_the_declared_nupc_default ... ok\ntest tests::misc::test_unity_ir_passthrough ... ok\ntest tests::nupc_partial_mix_delays_dry_to_the_wet_path ... ok\ntest tests::resampled_ir_delta_at_start_has_no_rubato_startup_delay ... ok\ntest tests::misc::test_upc_ir_channel_mapping_cycles_stereo_ir ... ok\ntest tests::resampled_ir_delta_at_tail_preserves_the_last_response ... ok\ntest tests::stale_and_failed_async_generations_never_replace_last_known_good ... ok\ntest tests::reclamation_queue_failure_never_drops_on_the_caller ... ok\ntest tests::process_adoption_backpressures_and_recovers_without_realtime_ownership_work ... ok\ntest tests::tail_length::inactive_tail_covers_the_declared_dry_delay ... ok\ntest tests::test_from_params_propagates_ir_load_errors ... ok\ntest tests::test_ir_file_parameter_reports_load_errors ... ok\ntest tests::runtime_structural_change_cannot_desynchronize_latency_from_loaded_engine ... ok\ntest tests::true_stereo_validation_checks_matrix_shape_and_four_engine_budget ... ok\ntest tests::uniform_partitioned_convolution_reports_partition_latency ... ok\ntest tests::upc_automation_envelope_is_captured_at_input_time ... ok\ntest tests::tail_length::rate_change_is_unknown_until_resampled_state_is_accepted_and_reset ... ok\ntest tests::tail_length::pending_completion_at_old_final_tap_keeps_the_fade_and_history_bound ... ok\ntest tests::finite_stream::true_stereo_estimate_bounds_retained_prepared_storage ... ok\ntest convolution_plugin::resource_tests::ordinary_admission_boundaries_follow_resampled_geometry ... ok\ntest tests::tail_length::resampled_ir_tail_uses_prepared_length_and_matches_direct_sum ... ok\ntest tests::misc::test_ir_file_parameter_loads_and_reports_path ... ok\ntest tests::test_set_parameter_long_ir_loads_without_process_allocations ... ok\ntest tests::finite_stream::ordinary_estimate_bounds_retained_multichannel_prepared_storage ... ok\ntest tests::finite_stream::true_stereo_fft_reserve_covers_budget_admissible_non_power_head_levels ... ok\ntest tests::host_delivers_thirty_second_192khz_ir_with_pending_replacement_beyond_4096_calls ... ok\n\ntest result: ok. 73 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.22s\n\n     Running unittests bin/qa_convolution.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/qa_convolution-67151b241db61083)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running unittests bin/qa_convolution_load.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/qa_convolution_load-9159267c0ac47c5b)\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n     Running tests/direct_convolution.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/direct_convolution-51c345d99499430c)\n\nrunning 15 tests\ntest aud134_preedit_full_audio_arrays_match_legacy_and_diagonal_routes ... ignored, AUD-134 replay needs the preserved pre-edit rendered arrays under target/audit-artifacts\ntest capture_aud134_preedit_diagonal_stereo_outputs ... ignored, AUD-134 pre-edit audio baseline capture from clean 9302797\ntest capture_aud134_preedit_four_channel_legacy_outputs ... ignored, AUD-134 pre-edit four-channel legacy mapping capture from clean 9302797\ntest scalar_parameter_access_and_automation_do_not_allocate_on_a_fresh_thread ... ok\ntest parallel_fixture_writer_never_reuses_a_path_even_with_same_nonce ... ok\ntest tail_getter_does_not_allocate_on_a_fresh_thread ... ok\ntest true_stereo_rustfft_plan_allocations_fit_reserve_for_accepted_head_sizes_and_levels ... ok\ntest legacy_four_channel_ir_still_uses_only_the_first_two_output_paths ... ok\ntest true_stereo_async_replacement_uses_new_ir_and_reset_matches_fresh_instance ... ok\ntest rejected_true_stereo_ir_replacement_preserves_live_processing_history ... ok\ntest each_true_stereo_path_isolated_against_the_f64_oracle_through_eos ... ok\ntest true_stereo_process_and_full_eos_drain_do_not_allocate_or_deallocate ... ok\ntest true_stereo_four_path_matrix_matches_f64_oracle_through_partitioned_eos ... ok\ntest every_backend_matches_direct_convolution_with_full_tail_and_partial_callbacks ... ok\ntest tail_bound_retains_the_last_direct_convolution_tap_for_every_backend ... ok\n\ntest result: ok. 12 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.25s\n\n     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/finite_stream-69d89322638b0f2d)\n\nrunning 7 tests\ntest inactive_dry_delay_is_emitted_at_end_of_stream ... ok\ntest cold_process_and_continuation_do_not_allocate_or_free ... ok\ntest preflight_and_control_rejections_preserve_the_remaining_response ... ok\ntest finite_response_keeps_the_prepared_clock_at_other_sample_rates ... ok\ntest active_backends_drain_and_reset_without_cold_heap_operations ... ok\ntest capacity_partitions_and_midstream_controls_match_zero_padded_reference ... ok\ntest native_drain_matches_direct_convolution_including_final_tap ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/integration-d35c5f216be755ba)\n\nrunning 10 tests\ntest convolution_instantiate_from_params ... ok\ntest convolution_gain_db_state_change ... ok\ntest convolution_plugin_info_and_channels ... ok\ntest convolution_ir_file_not_found_error ... ok\ntest convolution_unknown_parameter_error ... ok\ntest convolution_mix_zero_without_ir_is_latency_matched_dry ... ok\ntest convolution_process_without_ir_preserves_reported_latency ... ok\ntest convolution_reset_clears_processing_state ... ok\ntest convolution_parameter_roundtrip ... ok\ntest convolution_process_with_ir ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests plugins_spatial\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n   Doc-tests sotf_plugin_convolution\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n"
+  },
+  "legacy_qa": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "run",
+      "-p",
+      "sotf-plugin-convolution",
+      "--release",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-convolution",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "exit_code": 0,
+    "passed": 0,
+    "failed": 0,
+    "ignored": 0,
+    "output": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 2.69s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-convolution`\n=== QA: Convolution Plugin ===\n\n[Test 1] Passthrough without IR\n  Input: 0.50, Output: 0.5000\n\n[Test 2] Latency Reporting\n  Reported Latency: 1024 samples\n  Latency: PASS\n\n[Test 3] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 4] Performance Benchmark\n  Processed 5.0s of audio in 1.39ms\n  Estimated CPU Usage: 0.03%\n  Performance: PASS\n\n[Test 5] Active-backend callback matrix\n  1ch nupc=false head=false block=64: p50/p99/max 0.000/0.015/0.015 ms, deadline 1.333 ms\n  1ch nupc=false head=false block=257: p50/p99/max 0.001/0.015/0.015 ms, deadline 5.354 ms\n  1ch nupc=false head=false block=1024: p50/p99/max 0.018/0.020/0.020 ms, deadline 21.333 ms\n  1ch nupc=true head=false block=64: p50/p99/max 0.001/0.034/0.034 ms, deadline 1.333 ms\n  1ch nupc=true head=false block=257: p50/p99/max 0.003/0.036/0.036 ms, deadline 5.354 ms\n  1ch nupc=true head=false block=1024: p50/p99/max 0.042/0.046/0.046 ms, deadline 21.333 ms\n  1ch nupc=true head=true block=64: p50/p99/max 0.009/0.051/0.051 ms, deadline 1.333 ms\n  1ch nupc=true head=true block=257: p50/p99/max 0.043/0.075/0.075 ms, deadline 5.354 ms\n  1ch nupc=true head=true block=1024: p50/p99/max 0.187/0.192/0.192 ms, deadline 21.333 ms\n  2ch nupc=false head=false block=64: p50/p99/max 0.000/0.027/0.027 ms, deadline 1.333 ms\n  2ch nupc=false head=false block=257: p50/p99/max 0.002/0.028/0.028 ms, deadline 5.354 ms\n  2ch nupc=false head=false block=1024: p50/p99/max 0.033/0.036/0.036 ms, deadline 21.333 ms\n  2ch nupc=true head=false block=64: p50/p99/max 0.001/0.067/0.067 ms, deadline 1.333 ms\n  2ch nupc=true head=false block=257: p50/p99/max 0.005/0.075/0.075 ms, deadline 5.354 ms\n  2ch nupc=true head=false block=1024: p50/p99/max 0.087/0.089/0.089 ms, deadline 21.333 ms\n  2ch nupc=true head=true block=64: p50/p99/max 0.019/0.106/0.106 ms, deadline 1.333 ms\n  2ch nupc=true head=true block=257: p50/p99/max 0.085/0.151/0.151 ms, deadline 5.354 ms\n  2ch nupc=true head=true block=1024: p50/p99/max 0.372/0.418/0.418 ms, deadline 21.333 ms\n  8ch nupc=false head=false block=64: p50/p99/max 0.001/0.106/0.106 ms, deadline 1.333 ms\n  8ch nupc=false head=false block=257: p50/p99/max 0.003/0.118/0.118 ms, deadline 5.354 ms\n  8ch nupc=false head=false block=1024: p50/p99/max 0.114/0.119/0.119 ms, deadline 21.333 ms\n  8ch nupc=true head=false block=64: p50/p99/max 0.010/0.266/0.266 ms, deadline 1.333 ms\n  8ch nupc=true head=false block=257: p50/p99/max 0.043/0.298/0.298 ms, deadline 5.354 ms\n  8ch nupc=true head=false block=1024: p50/p99/max 0.425/0.439/0.439 ms, deadline 21.333 ms\n  8ch nupc=true head=true block=64: p50/p99/max 0.070/0.405/0.405 ms, deadline 1.333 ms\n  8ch nupc=true head=true block=257: p50/p99/max 0.341/0.633/0.633 ms, deadline 5.354 ms\n  8ch nupc=true head=true block=1024: p50/p99/max 1.493/1.574/1.574 ms, deadline 21.333 ms\n\n[FUNCTIONAL CHECKS PASS; TIMING IS DIAGNOSTIC] Convolution QA Complete. Physical callback misses: 0. Use qa-convolution-load for strict admission-boundary timing.\n"
+  },
+  "clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-convolution",
+      "--all-targets",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "passed": 0,
+    "failed": 0,
+    "ignored": 0,
+    "output": "    Finished `dev` profile [optimized + debuginfo] target(s) in 0.27s\n"
+  },
+  "phase_totals": {
+    "warm_128": {
+      "callbacks": 447474,
+      "physical_misses": 43446,
+      "reported_misses": 43446,
+      "max_us": 71428.0
+    },
+    "steady_128": {
+      "callbacks": 62316,
+      "physical_misses": 3846,
+      "reported_misses": 3846,
+      "max_us": 70284.45899999999
+    },
+    "steady_512": {
+      "callbacks": 22296,
+      "physical_misses": 3830,
+      "reported_misses": 3830,
+      "max_us": 74493.75
+    }
+  },
+  "peak_cases": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "ir_frames": 1239040,
+      "peak_requested_delta_bytes": 577422949,
+      "retained_requested_delta_bytes": 476759365,
+      "estimate_bytes": 536532588
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "ir_frames": 1239040,
+      "peak_requested_delta_bytes": 577422947,
+      "retained_requested_delta_bytes": 476759363,
+      "estimate_bytes": 536532588
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "ir_frames": 4961280,
+      "peak_requested_delta_bytes": 569280389,
+      "retained_requested_delta_bytes": 477120205,
+      "estimate_bytes": 536808978
+    }
+  ],
+  "conclusion": "Strict load gate fails: 61/63 cases, 51122 physical and reported misses across 532086 complete callbacks. All finite/heap/retained-estimate checks pass, with no boundary/preflight errors. No production scheduling or workload restriction accepted from this measurement. Full-size direct callback compliance and sustained mixed-instance worker overlap remain open."
+}
