@@ -1036,9 +1036,37 @@
       "id": 19,
       "plugin": "Denoiser",
       "audit_text": "[`denoiser_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs):1480\u20131635 resets substantial spectral, tonal, transient, coherence and optional multiresolution state; startup padding and frozen-learning finite drains are deliberate. Noise estimation during initial speech/music and adaptation after a noise change need separate evaluation. Multiple spectral analyses can dominate CPU.\n\n`denoiser_quality.rs` uses deterministic tones/transients/noise; `residual_audition.rs`, `reduction_curve.rs` and finite-stream tests add useful checks. Extend real held-out music/noise mixtures, stereo phase preservation and speech already present at sample zero. Classical minimum-statistics/MCRA-style estimation and Wiener/log-spectral baselines help quantify improvements. A learned music mask is plausible, but speech-trained models should not be assumed safe for arbitrary music; evaluate removal artifacts and latency against the existing path.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Separate per-channel noise-adaptation history from shared display telemetry.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_channel_learning.rs",
+            "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json"
+          ],
+          "result": "Shared UI learning_active previously drove the next channel fast-adaptation branch. Per-channel prepared history now drives its own recurrence; UI is the any-channel aggregate. Public baseline differences were tiny (4.37e-11 stationary/5.82e-11 drift) and do not establish audible impact. Eight rate/FFT/recorded/synthetic channel-swap cases and 16 mono references now match exactly through EOF. Display-state isolation, aggregate telemetry, reset and explicit-profile history restart tests pass. Existing mono recurrence, parameters/presets, FFT latency and native drain unchanged; no callback allocations added."
+        },
+        {
+          "requirement": "Measure recorded speech present at source frame zero and changing-noise behavior independently of callback partitions.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_channel_learning.rs",
+            "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json"
+          ],
+          "result": "Reuses hash-verified attributed CC BY-SA single-speaker /s/ PCM, cropped at frame 12000/48k with nonzero first source sample, gain 0.2, deterministic noise step and independent slow-drift noise channel. Complete EOF renders match after reset at 1/257/4096 frames. Latency-aligned full-clip SDR input -11.3306 dB -> quality 0.8279 dB / low-latency -0.5311 dB; first-100ms clean projection 0.85246 / 0.45946. Independent noise channel settles near -20 dB gain. These are recorded diagnostics, not speech-quality acceptance or held-out population evidence."
+        }
+      ],
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json"
+      ],
+      "remaining": [
+        "Investigate onset attenuation with speech already present during the fixed five-analysis-frame bootstrap, especially low-latency mode (first-100ms clean projection 0.45946 in the recorded probe); assess across sources before tuning.",
+        "Extend held-out multi-speaker/music/noise mixtures with provenance, stereo phase/image metrics and nonstationary noise adaptation rather than infer quality from one isolated phoneme recording.",
+        "Measure optional multi-resolution/analysis workload and validate spatial/other optional modes under the target deadline; retain deterministic Wiener/MCRA baselines and separate optional learned music-mask research."
+      ]
     },
     {
       "id": 20,
@@ -2487,6 +2515,15 @@
       ],
       "result": "Removes a reproduced frequency-region magnitude discontinuity; 42 join checks, 324 independent inverse cases and 360 raw signed mismatch rows. 222 release QA tests and strict all-target Clippy pass. Overall stays 35/45.",
       "limitations": "Fixed nominal inverse is not robust across the tested mismatches, and existing 8 kHz physical ILD calibration and measured/native head/room validation remain open."
+    },
+    {
+      "name": "Denoiser per-channel adaptation and recorded onset/noise diagnostics",
+      "state": "verified_partial",
+      "plugin_ids": [
+        19
+      ],
+      "result": "Removes shared display-to-DSP channel traversal coupling. Eight exact swap cases, 16 independent mono references, reset/profile/EOF/partition checks and recorded onset/noise metrics. 116 release tests and strict all-target QA Clippy pass. Overall stays 35/45.",
+      "limitations": "Tiny reproduced public baseline difference is not an audible-improvement claim. Recorded low-latency onset suppression remains a limitation; single-speaker diagnostics do not establish held-out corpus or music quality."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

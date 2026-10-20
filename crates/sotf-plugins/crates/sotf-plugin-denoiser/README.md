@@ -13,6 +13,20 @@ Spatial mode processes coherent channel pairs. Stereo and 3.0 use the front L/R 
 5.1 adds side L/R, and standard 7.1 adds side and rear L/R. Centre, LFE, and any unmatched channel
 remain on the ordinary per-channel denoising path.
 
+Each channel owns its IMCRA quiet-frame/fast-adaptation history. The shared
+`learning_active` display is true when any channel is learning; it does not
+feed another channel's estimator. With spatial and other cross-channel modes
+disabled, changing channel order preserves the corresponding audio exactly.
+Reset and explicit noise-profile learning restart each channel's history.
+
+The channel-learning audit reuses the attributed 48 kHz `/s/` recording in
+`../sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json` (Peter Isotalo,
+CC BY-SA 3.0), starting 0.25 seconds into the source PCM and applying gain 0.2.
+It adds seeded noise with an abrupt change on one channel and slow drift on
+the other. Latency-aligned error, first-100-ms clean projection and noise-only
+channel attenuation are measurements of this one speaker, not population,
+held-out-training, intelligibility or listening-quality acceptance.
+
 Serialized percentage-like values are normalized fractions (`0.70` means 70%); UI scaling is
 presentation only. Noise-profile learning lasts approximately one second at every sample rate and
 in both FFT modes.

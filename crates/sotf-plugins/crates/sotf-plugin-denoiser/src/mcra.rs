@@ -49,6 +49,8 @@ impl DenoiserPlugin {
             }
         }
 
+        // UI telemetry is an aggregate; it must not feed the next channel's DSP.
+        self.ui.learning_active = self.mcra.learning_active.iter().any(|active| *active);
         any_bootstrapping
     }
 
@@ -89,9 +91,9 @@ impl DenoiserPlugin {
         let reset_window_a = frame.is_multiple_of(l);
         let reset_window_b = frame % l == half_l;
 
-        // Use previous frame's learning_active as fast-adapt trigger
+        // Use this channel's previous-frame learning state as fast-adapt trigger
         // (avoids chicken-and-egg: we need quiet_ratio before the loop)
-        let use_fast_adapt = self.ui.learning_active;
+        let use_fast_adapt = self.mcra.learning_active[channel];
         // Track whether we're learning (quiet moment detected)
         let mut quiet_bins = 0;
 
@@ -149,7 +151,7 @@ impl DenoiserPlugin {
         }
 
         // Update learning indicator (more than half the bins are quiet)
-        self.ui.learning_active = quiet_bins > self.config.spectrum_size / 2;
+        self.mcra.learning_active[channel] = quiet_bins > self.config.spectrum_size / 2;
 
         // Increment frame counter
         self.mcra.frame_counter[channel] += 1;
@@ -169,5 +171,57 @@ impl DenoiserPlugin {
         self.mcra.min_psd_b[channel].fill(0.0);
         self.mcra.speech_presence[channel].fill(0.0);
         self.mcra.frame_counter[channel] = 0;
+        self.mcra.learning_active[channel] = true;
+    }
+}
+
+#[cfg(test)]
+mod channel_learning_tests {
+    use super::*;
+    use rustfft::num_complex::Complex;
+    use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
+
+    fn prepared(channels: usize) -> DenoiserPlugin {
+        let mut plugin = DenoiserPlugin::new(channels, true);
+        for channel in 0..channels {
+            plugin.mcra.frame_counter[channel] = BOOTSTRAP_FRAMES;
+            plugin.mcra.noise_psd[channel].fill(1.0);
+            plugin.mcra.smoothed_psd[channel].fill(1.0);
+            plugin.mcra.min_psd[channel].fill(1.0);
+            plugin.mcra.min_psd_b[channel].fill(1.0);
+            plugin.fft.freq_domain[channel].fill(Complex::new(2.0_f32.sqrt(), 0.0));
+        }
+        plugin
+    }
+
+    #[test]
+    fn ui_learning_indicator_cannot_change_noise_estimation() {
+        let mut a = prepared(1);
+        let mut b = prepared(1);
+        a.ui.learning_active = true;
+        b.ui.learning_active = false;
+        a.update_noise_estimation();
+        b.update_noise_estimation();
+        assert_eq!(a.mcra.noise_psd, b.mcra.noise_psd);
+        assert!(a.mcra.noise_psd[0][0] > 1.0 && a.mcra.noise_psd[0][0] < 2.0);
+    }
+
+    #[test]
+    fn telemetry_aggregates_channels_and_reset_and_profile_learning_restart_history() {
+        let mut p = prepared(2);
+        p.mcra.speech_presence[0].fill(0.9);
+        p.mcra.smoothed_psd[0].fill(20.0);
+        p.mcra.learning_active[0] = false;
+        p.update_noise_estimation();
+        assert_eq!(p.mcra.learning_active, [false, true]);
+        assert!(p.ui.learning_active);
+        p.mcra.learning_active.fill(false);
+        p.reset();
+        assert_eq!(p.mcra.learning_active, [true, true]);
+        assert_eq!(p.mcra.frame_counter, [0, 0]);
+        p.mcra.learning_active.fill(false);
+        p.start_learning();
+        assert_eq!(p.mcra.learning_active, [true, true]);
+        assert_eq!(p.mcra.frame_counter, [0, 0]);
     }
 }

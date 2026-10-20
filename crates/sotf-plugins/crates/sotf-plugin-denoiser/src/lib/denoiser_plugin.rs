@@ -76,6 +76,7 @@ pub(super) struct DenoiserMcra {
     pub min_psd_b: Vec<Vec<f32>>,       // Minimum PSD tracker — window B (IMCRA)
     pub speech_presence: Vec<Vec<f32>>, // Speech presence probability (p)
     pub frame_counter: Vec<usize>,      // Per-channel frame count
+    pub learning_active: Vec<bool>,     // Per-channel fast-adaptation history
     pub mcra_alpha_s: f32,
     pub mcra_alpha_p: f32,
     pub mcra_l: usize,
@@ -414,6 +415,7 @@ impl DenoiserPlugin {
                 min_psd_b,
                 speech_presence,
                 frame_counter,
+                learning_active: vec![true; channels],
                 mcra_alpha_s: pk(DN, "mcra_alpha_s").default_f32(),
                 mcra_alpha_p: pk(DN, "mcra_alpha_p").default_f32(),
                 mcra_l: pk(DN, "mcra_l").default_usize(),

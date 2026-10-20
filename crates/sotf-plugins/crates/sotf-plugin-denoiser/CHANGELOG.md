@@ -1,3 +1,13 @@
+## Unreleased channel-learning correction (2026-10-20)
+
+- Separate per-channel IMCRA fast-adaptation history from shared UI telemetry.
+  Channel traversal order no longer alters another channel's noise estimate.
+- Define the learning display as any channel learning, and restart each
+  channel's history on reset or explicit profile learning. Keep parameter,
+  preset, latency and finite-stream contracts; mono recurrence is unchanged.
+- Add channel-swap/independent-mono, reset/EOF/partition and recorded-onset
+  measurements without claiming population or perceptual quality acceptance.
+
 ## Unreleased audit corrections (2026-09-28)
 
 - Add a three-band reduction curve and latency-aligned residual audition, with a 5 ms fade that converges to exact endpoints through 192 kHz. Keep legacy flat-curve processing unchanged.
