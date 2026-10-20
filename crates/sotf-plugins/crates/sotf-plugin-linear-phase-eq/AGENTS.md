@@ -68,3 +68,14 @@ cargo test -p sotf-plugin-linear-phase-eq
   acceptance clock from support-2 incoming frames. Preserve exact-zero blend,
   partition invariance, 1e-5 error and zero alloc/free bounds. Full load/native
   deadline compliance is still open; a frame budget is not a time guarantee.
+
+- Live control snapshots include an opaque owner/generation `FilterRevision`.
+  Validate it before any target priming in both commit APIs. Accepting any
+  update, including a no-op, and every real rate change advances the revision.
+  Reset alone preserves it. Keep detached snapshot revision and published
+  accepted generation aligned with the DSP; pending work never advances either.
+- Preserve the 63-bit revision ceiling and typed `RevisionExhausted` refusal;
+  never wrap the seqlock generation or mutate rate/state on exhaustion. Tokens
+  come from live snapshots, not settings, serde or hand-assembled literals.
+- Accepted-revision fencing does not implement newest-intent request ordering:
+  same-base jobs follow the existing queue policy. Keep that distinction explicit.

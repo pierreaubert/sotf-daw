@@ -1,5 +1,12 @@
 # Unreleased
 
+- Bind worker snapshots to an opaque plugin identity and accepted revision.
+  Refuse stale A→B→A/no-op results and foreign-graph payloads before priming,
+  retaining ownership and audio state. Detached snapshots use the same token.
+- Guard revision/seqlock exhaustion with `RevisionExhausted` and transactional
+  rate refusal. The in-memory `LiveFilterSnapshot` gains `revision`; capture
+  genuine live snapshots for workers. Serialized parameters/presets are unchanged.
+
 - Adopt sample-clock budgeted priming in the default dynamic host: two history
   frames per input sample, with at most one acceptance per callback. Expose
   pending progress separately from accepted state and refresh status after

@@ -1524,3 +1524,45 @@ fn retry_after_inflight_refusal_uses_same_retained_update() {
         );
     }
 }
+
+#[test]
+fn exhausted_filter_revision_preserves_audio_and_retained_targets() {
+    use crate::types::MAX_FILTER_REVISION;
+    let bands = vec![band("Peak", 1000.0, 1.0, 0.0, None)];
+    let mut plugin =
+        LinearPhaseEqPlugin::from_params(CHANNELS, RATE, params_for(bands.clone(), 1.0)).unwrap();
+    let mut twin =
+        LinearPhaseEqPlugin::from_params(CHANNELS, RATE, params_for(bands, 1.0)).unwrap();
+    let input = pattern(2500);
+    stream_partitioned(&mut plugin, &input, RATE, 73);
+    stream_partitioned(&mut twin, &input, RATE, 73);
+    // Inject the terminal generation rather than perform 2^63 accepted edits.
+    plugin.filter_revision = MAX_FILTER_REVISION;
+    let before = plugin.snapshot_config();
+    let mut pending = Some(
+        LinearPhaseEqPlugin::prepare_band_update(&before, 0, band("Peak", 1000.0, 1.0, 6.0, None))
+            .unwrap(),
+    );
+    let pointer = pending.as_ref().unwrap() as *const _;
+    let (counts, result) =
+        count_allocs(|| plugin.try_commit_prepared_update_with_budget(&mut pending, 17));
+    assert_eq!(counts, (0, 0));
+    assert_eq!(result, Err(CommitRefusal::RevisionExhausted));
+    assert!(pending.as_ref().unwrap().priming.is_none());
+    let (counts, result) = count_allocs(|| plugin.try_commit_prepared_update(&mut pending));
+    assert_eq!(counts, (0, 0));
+    assert_eq!(result, Err(CommitRefusal::RevisionExhausted));
+    assert_eq!(pointer, pending.as_ref().unwrap() as *const _);
+    assert_eq!(plugin.snapshot_config(), before);
+    plugin
+        .initialize(96_000.0)
+        .expect_err("rate change must not wrap its revision");
+    assert_eq!(plugin.snapshot_config(), before);
+    let output = stream_partitioned(&mut plugin, &input, RATE, 73);
+    let expected = stream_partitioned(&mut twin, &input, RATE, 73);
+    assert_eq!(output, expected);
+    assert_eq!(
+        plugin.snapshot_config().revision.generation(),
+        MAX_FILTER_REVISION
+    );
+}

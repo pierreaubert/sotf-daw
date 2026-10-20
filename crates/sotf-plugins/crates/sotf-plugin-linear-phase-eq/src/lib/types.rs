@@ -94,17 +94,68 @@ pub struct BandConfig {
     pub placement: Option<LinearPhaseEqBandPlacement>,
 }
 
+// The detached seqlock reserves its low bit for publication. Refuse further
+// accepted changes at this limit rather than wrap a previously issued ticket.
+pub(crate) const MAX_FILTER_REVISION: u64 = u64::MAX >> 1;
+
+/// Opaque owner and accepted-generation identity for a live FIR configuration.
+///
+/// Obtain this token through a live snapshot, then preserve it when cloning
+/// that snapshot for a worker. Equality includes plugin identity and generation;
+/// returning to identical controls does not revive an older token. This is an
+/// in-memory control token, never serialized in parameters or presets.
+#[derive(Clone, Eq)]
+pub struct FilterRevision {
+    origin: std::sync::Arc<()>,
+    generation: u64,
+}
+
+impl FilterRevision {
+    /// Accepted configuration generation within this plugin instance.
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    pub(crate) fn new(origin: std::sync::Arc<()>, generation: u64) -> Self {
+        Self { origin, generation }
+    }
+
+    pub(crate) fn at_generation(&self, generation: u64) -> Self {
+        Self::new(std::sync::Arc::clone(&self.origin), generation)
+    }
+
+    pub(crate) fn matches(&self, origin: &std::sync::Arc<()>, generation: u64) -> bool {
+        std::sync::Arc::ptr_eq(&self.origin, origin) && self.generation == generation
+    }
+}
+
+impl PartialEq for FilterRevision {
+    fn eq(&self, other: &Self) -> bool {
+        self.matches(&other.origin, other.generation)
+    }
+}
+
+impl std::fmt::Debug for FilterRevision {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FilterRevision")
+            .field("generation", &self.generation)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Immutable snapshot of the live filter configuration.
 ///
 /// Returned by
 /// [`LinearPhaseEqPlugin::snapshot_config`](crate::LinearPhaseEqPlugin::snapshot_config)
 /// and consumed by
 /// [`LinearPhaseEqPlugin::prepare_band_update`](crate::LinearPhaseEqPlugin::prepare_band_update).
-/// The commit step compares the prepared base against the live configuration
-/// with exact equality, so a snapshot prepared from stale state is rejected
-/// transactionally instead of applying to the wrong base.
+/// The commit step checks the opaque owner/generation token and exact base
+/// configuration before priming. Older accepted generations and snapshots
+/// from other plugins are refused even if their controls are identical.
 #[derive(Debug, Clone, PartialEq)]
 pub struct LiveFilterSnapshot {
+    /// Opaque revision captured from the originating live plugin.
+    pub revision: FilterRevision,
     pub channels: usize,
     pub sample_rate: f64,
     pub num_filters: usize,
@@ -230,6 +281,8 @@ pub enum CommitRefusal {
     TargetNotFresh,
     /// The prepared band parameters are invalid or non-finite.
     InvalidBand,
+    /// No further accepted revisions can be represented; rebuild the plugin.
+    RevisionExhausted,
 }
 
 impl CommitRefusal {
@@ -255,6 +308,7 @@ impl CommitRefusal {
             Self::NoStage => "prepared update carries no convolution stage",
             Self::TargetNotFresh => "prepared update target is not fresh; prepare again",
             Self::InvalidBand => "prepared update band parameters are invalid",
+            Self::RevisionExhausted => "filter revision exhausted; rebuild the plugin",
         }
     }
 }

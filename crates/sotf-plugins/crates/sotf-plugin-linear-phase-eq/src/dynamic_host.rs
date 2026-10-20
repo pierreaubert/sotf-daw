@@ -38,7 +38,8 @@
 //! (each field current as of its own load, not an atomic snapshot). A queued
 //! submission is never presented as accepted: the
 //! generation and snapshot advance only inside the real audio commit, and the
-//! original exact-base stale validation is unchanged. Audio publication is a
+//! opaque plugin/revision token plus exact base configuration reject stale
+//! workers even after controls return to identical values. Audio publication is a
 //! fixed handful of atomic stores per quantum: no allocation, free, lock,
 //! formatting or logging. Catch-up replays at most two target-route history
 //! frames per incoming sample; accepted controls and output stay unchanged
@@ -69,9 +70,9 @@
 
 use crate::params::MAX_FILTERS;
 use crate::{
-    BandConfig, BandSnapshot, CommitRefusal, LinearPhaseEqBandPlacement, LinearPhaseEqPlugin,
-    LinearPhaseEqPluginParams, LiveFilterSnapshot, PreparedBandUpdate, PreparedUpdateProgress,
-    RouteBanks,
+    BandConfig, BandSnapshot, CommitRefusal, FilterRevision, LinearPhaseEqBandPlacement,
+    LinearPhaseEqPlugin, LinearPhaseEqPluginParams, LiveFilterSnapshot, PreparedBandUpdate,
+    PreparedUpdateProgress, RouteBanks,
 };
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -281,6 +282,7 @@ fn refusal_code(refusal: CommitRefusal) -> (u8, u8, u8) {
         CommitRefusal::NoStage => (9, 0, 0),
         CommitRefusal::TargetNotFresh => (10, 0, 0),
         CommitRefusal::InvalidBand => (11, 0, 0),
+        CommitRefusal::RevisionExhausted => (12, 0, 0),
     }
 }
 
@@ -320,6 +322,7 @@ fn decode_refusal(word: u32) -> Option<CommitRefusal> {
         9 => Some(CommitRefusal::NoStage),
         10 => Some(CommitRefusal::TargetNotFresh),
         11 => Some(CommitRefusal::InvalidBand),
+        12 => Some(CommitRefusal::RevisionExhausted),
         _ => None,
     }
 }
@@ -358,6 +361,8 @@ pub struct LinearPhaseEqControlHandle {
     accepted_sample_rate: AtomicU64,
     /// Seqlock accepted generation (even when stable, odd mid-publication).
     accepted_gen: AtomicU64,
+    /// Immutable plugin identity shared with the live DSP snapshot token.
+    accepted_revision: FilterRevision,
     /// Accepted per-band shapes for the configured prefix.
     accepted_bands: [AcceptedBandCells; MAX_FILTERS],
     /// Last audio commit refusal mirror (`REFUSAL_NONE` when clear).
@@ -522,6 +527,7 @@ impl LinearPhaseEqControlHandle {
                 return Ok(LinearPhaseEqAcceptedSnapshot {
                     generation: before >> 1,
                     snapshot: LiveFilterSnapshot {
+                        revision: self.accepted_revision.at_generation(before >> 1),
                         channels: self.accepted_channels,
                         sample_rate,
                         num_filters: self.accepted_num_filters,
@@ -702,6 +708,7 @@ impl LinearPhaseEqDynamicPlugin {
             accepted_pairs: initial.stereo_pairs.clone(),
             accepted_sample_rate: AtomicU64::new(initial.sample_rate.to_bits()),
             accepted_gen: AtomicU64::new(0),
+            accepted_revision: initial.revision.clone(),
             accepted_bands: std::array::from_fn(|index| {
                 AcceptedBandCells::new(initial.bands.get(index).unwrap_or(&NEUTRAL_BAND))
             }),
@@ -1261,5 +1268,79 @@ impl Plugin for LinearPhaseEqDynamicPlugin {
 
     fn supports_f64(&self) -> bool {
         self.inner.supports_f64()
+    }
+}
+
+#[cfg(test)]
+mod revision_tests {
+    use super::*;
+    use crate::drain_tests::count_allocs;
+    use crate::types::MAX_FILTER_REVISION;
+
+    #[test]
+    fn final_revision_publication_never_wraps_the_detached_generation() {
+        for advance_with_rate in [false, true] {
+            let mut plugin = LinearPhaseEqDynamicPlugin::from_params(
+                2,
+                48_000,
+                serde_json::from_str::<LinearPhaseEqPluginParams>(
+                    r#"{"num_filters":1,"auto_gain":false}"#,
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            // Seed the last available accepted revision on both sides of the
+            // actual host boundary; the identity still comes from construction.
+            plugin.inner.filter_revision = MAX_FILTER_REVISION - 1;
+            plugin
+                .handle
+                .accepted_gen
+                .store((MAX_FILTER_REVISION - 1) << 1, Ordering::Relaxed);
+            let handle = plugin.control_handle();
+            let before = handle.try_accepted_snapshot().unwrap();
+            assert_eq!(before.snapshot, plugin.inner.snapshot_config());
+            let band = BandConfig {
+                filter_type: "Peak".into(),
+                frequency: 1000.0,
+                q: 1.0,
+                gain_db: 3.0,
+                active: true,
+                placement: None,
+            };
+            let rate = if advance_with_rate { 96_000 } else { 48_000 };
+            if advance_with_rate {
+                Plugin::initialize(&mut plugin, f64::from(rate)).unwrap();
+            } else {
+                plugin.request_band_update(0, band.clone()).unwrap();
+                let (counts, result) = count_allocs(|| {
+                    plugin.process(&[0.2; 2], &mut [0.0; 2], &ProcessContext::new(rate, 1))
+                });
+                assert_eq!(counts, (0, 0));
+                result.unwrap();
+            }
+            assert_eq!(handle.accepted_generation(), MAX_FILTER_REVISION);
+            let accepted = handle.try_accepted_snapshot().unwrap();
+            assert_eq!(accepted.snapshot.revision.generation(), MAX_FILTER_REVISION);
+            assert_eq!(accepted.snapshot, plugin.inner.snapshot_config());
+            let (counts, ()) = count_allocs(|| Plugin::reset(&mut plugin));
+            assert_eq!(counts, (0, 0));
+            plugin.reclaim_retired();
+            plugin.request_band_update(0, band).unwrap();
+            let (counts, result) = count_allocs(|| {
+                plugin.process(&[0.2; 2], &mut [0.0; 2], &ProcessContext::new(rate, 1))
+            });
+            assert_eq!(counts, (0, 0));
+            result.unwrap();
+            assert_eq!(
+                handle.control_status().last_refusal,
+                Some(CommitRefusal::RevisionExhausted)
+            );
+            assert_eq!(handle.control_status().priming_frames_replayed, 0);
+            assert_eq!(handle.try_accepted_snapshot().unwrap(), accepted);
+            let other_rate = if rate == 48_000 { 96_000.0 } else { 48_000.0 };
+            Plugin::initialize(&mut plugin, other_rate)
+                .expect_err("rate publication must never wrap");
+            assert_eq!(handle.try_accepted_snapshot().unwrap(), accepted);
+        }
     }
 }

@@ -24,7 +24,7 @@ use super::types::LiveFilterSnapshot;
 use super::types::PreparedBandUpdate;
 use super::types::RouteBanks;
 use super::types::StageBanks;
-use super::types::{PreparedPriming, PreparedUpdateProgress};
+use super::types::{FilterRevision, MAX_FILTER_REVISION, PreparedPriming, PreparedUpdateProgress};
 use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
 
 /// The streaming latency contract shared by the DSP and its editor summary.
@@ -150,8 +150,10 @@ pub struct LinearPhaseEqPlugin {
     // at the ring capacity. Used to prime committed update targets.
     pub(super) history_len: usize,
     // Distinguish stream resets and owners while a caller retains a partly
-    // primed target. The Arc also survives moves and replacement of the plugin.
+    // primed target. The same identity binds accepted worker revisions; the
+    // Arc survives moves and old snapshots keep replaced identities alive.
     history_token: Arc<()>,
+    pub(super) filter_revision: u64,
     history_epoch: u64,
     stream_clock: u64,
     // Preallocated channel-wide scratch: priming input and ordered-route /
@@ -390,6 +392,7 @@ impl LinearPhaseEqPlugin {
             route_retired: None,
             history_len: 0,
             history_token: Arc::new(()),
+            filter_revision: 0,
             history_epoch: 0,
             stream_clock: 0,
             prime_frame: vec![0.0; channels],
@@ -877,6 +880,10 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         }
         let reset_stream = self.drain_remaining.is_some() || sample_rate != self.sample_rate;
         if sample_rate != self.sample_rate {
+            if self.filter_revision >= MAX_FILTER_REVISION {
+                return Err("filter revision exhausted; rebuild the plugin".into());
+            }
+            self.filter_revision += 1;
             self.sample_rate = sample_rate;
             self.mix_smoother = Smoother::new(self.mix_value, 20.0, sample_rate);
             // A rate change invalidates every prepared convolver, including
@@ -1465,6 +1472,7 @@ impl LinearPhaseEqPlugin {
     /// [`Self::prepare_band_update`].
     pub fn snapshot_config(&self) -> LiveFilterSnapshot {
         LiveFilterSnapshot {
+            revision: FilterRevision::new(Arc::clone(&self.history_token), self.filter_revision),
             channels: self.channels,
             sample_rate: self.sample_rate,
             num_filters: self.num_filters,
@@ -1490,7 +1498,9 @@ impl LinearPhaseEqPlugin {
 
     /// Exact allocation-free comparison of a prepared base against live state.
     fn snapshot_matches(&self, base: &LiveFilterSnapshot) -> bool {
-        base.channels == self.channels
+        base.revision
+            .matches(&self.history_token, self.filter_revision)
+            && base.channels == self.channels
             && base.sample_rate == self.sample_rate
             && base.num_filters == self.num_filters
             && base.fir_length_index == self.fir_length_index
@@ -1769,6 +1779,9 @@ impl LinearPhaseEqPlugin {
             if !self.snapshot_matches(&candidate.base) {
                 return Err(CommitRefusal::StaleBase);
             }
+            if self.filter_revision >= MAX_FILTER_REVISION {
+                return Err(CommitRefusal::RevisionExhausted);
+            }
             if candidate.band_index >= self.bands.len() {
                 return Err(CommitRefusal::BandIndexOutOfRange {
                     index: candidate.band_index,
@@ -1825,6 +1838,9 @@ impl LinearPhaseEqPlugin {
         let Some(owned) = prepared.take() else {
             return Err(CommitRefusal::NoPreparedUpdate);
         };
+        // Validation above prevents wrap; even an accepted no-op consumes its
+        // revision so an older worker cannot revive after equal controls.
+        self.filter_revision += 1;
         // Install the new design data. Lengths and placements already match;
         // copies keep every allocation on the preparation side.
         if self.is_ordered_route() {

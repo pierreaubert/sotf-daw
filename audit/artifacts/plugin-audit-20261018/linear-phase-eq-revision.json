@@ -1,0 +1,112 @@
+{
+  "base_commit": "94be59f",
+  "scope": "Linear-phase EQ accepted-revision and owner fencing; entry 30 remains partial",
+  "reproduced_before_fix": {
+    "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --test dynamic_detached_control worker --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "exit_code": 101,
+    "failed_tests": 2,
+    "aba": "After A -> B -> A, a delayed revision-0 worker was accepted as generation 3 instead of preserving generation 2.",
+    "foreign": "A fresh payload from another identical graph was accepted, advancing destination generation 0 -> 1 and gain 0 -> 9 dB."
+  },
+  "implementation": {
+    "token": "LiveFilterSnapshot.revision: opaque FilterRevision, stable plugin Arc identity + accepted generation",
+    "validation": "Owner, accepted revision and exact base configuration checked before any synchronous/budgeted priming or installation. Refusal StaleBase retains payload and live audio/history; default host exposes refusal with zero replay.",
+    "advance": "Every accepted edit including an equal-value no-op, and every actual rate change, consumes a revision. Pending replay and reset alone do not.",
+    "detached": "Control snapshot token and observable generation agree with the live DSP, including final representable revision.",
+    "limit": 9223372036854775807,
+    "exhaustion": "RevisionExhausted refusal before priming/consumption, zero allocations/frees. Rate change returns an error before mutation. The final revision is published without seqlock wrap.",
+    "compatibility": "In-memory Rust snapshot gains a revision field and CommitRefusal gains RevisionExhausted. Capture genuine live snapshots and clone them; parameter IDs/defaults/serde presets, FIR designs, phase/latency and bounds unchanged. No new dependency.",
+    "request_policy": "Fences accepted configurations, not latest-intent request ordering. Concurrent jobs from the same current accepted base still follow existing queue/cancel policy; siblings become stale once one accepts."
+  },
+  "regressions": {
+    "aba_and_noop": "Both phase modes: A->B->A and accepted no-op do not revive old workers; controls/snapshot/generation/audio stay retained, zero replay, zero heap, cancellation disposes off audio. Output matches frozen zero-gain twin under unchanged 1e-5 bound.",
+    "foreign_owner": "Unprimed result from dropped original graph refuses at a different identical destination before replay/acceptance.",
+    "exhaustion": "Direct synchronous/budgeted calls retain candidates and audio; real host last accepted edit/rate reaches limit, then refusal mirror and rate transactionality preserve snapshot/generation without wrapping.",
+    "existing_contracts": "Existing callback partition, exact-zero blend, finite EOF, dry alignment, reset/rate/cancel/refusal and independent convolution/prototype tests remain unchanged in bounds."
+  },
+  "release_validation": {
+    "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --release --lib --test dynamic_detached_control --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "exit_code": 0,
+    "passed_tests": 102,
+    "ignored": 0,
+    "observed_max_128_host_callback_us": 448,
+    "observed_physical_deadline_misses_128": 0,
+    "measurement_scope": "Two-channel/two-stage 8192-tap Left/Mid, both phases, 48 kHz; local observation, not a portable maximum-load or native callback bound."
+  },
+  "checks": [
+    {
+      "command": "rtk proxy cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast -- --nocapture",
+      "exit_code": 0,
+      "passed_tests": 143,
+      "ignored": 2,
+      "measurement_lines": [
+        "audit reset target complex_abs=3.359504664019e-7 phase_rad=5.992672612498e-8 prototype_db=3.646381903608e-5 aligned_delay_samples=5.402098681133e-5",
+        "audit budgeted priming worst_abs=3.055640450667e-7 total_replayed=188044 max_step_us=1880 (local test observation)",
+        "audit independent dynamic convolution worst_abs=7.963086473550e-8 max_commit_us=14457 (local test observation, not a deadline guarantee)",
+        "audit default host worst_abs=2.980232238770e-7 max_128_callback_us=780 physical_misses_128=0 (local observation)"
+      ]
+    },
+    {
+      "command": "rtk proxy cargo test -p plugins-bridge --test linear_phase_eq_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "exit_code": 0,
+      "passed_tests": 5,
+      "ignored": 0,
+      "measurement_lines": []
+    },
+    {
+      "command": "rtk proxy cargo test -p sotf-plugins -p sotf-engine --test linear_phase_eq_engine_dynamic --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
+      "exit_code": 0,
+      "passed_tests": 8,
+      "ignored": 0,
+      "measurement_lines": []
+    },
+    {
+      "command": "rtk proxy cargo test -p sotf-engine --test linear_phase_eq_manager_dynamic --no-run --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "exit_code": 0,
+      "passed_tests": 0,
+      "ignored": 0,
+      "scope": "compile only; ALSA-null manager device test NOT executed on this macOS host",
+      "measurement_lines": []
+    },
+    {
+      "command": "rtk proxy cargo clippy -p sotf-plugin-linear-phase-eq --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "exit_code": 0,
+      "passed_tests": 0,
+      "ignored": 0,
+      "measurement_lines": []
+    },
+    {
+      "command": "rtk proxy cargo clippy -p plugins-bridge --test linear_phase_eq_dynamic --no-deps --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "exit_code": 0,
+      "passed_tests": 0,
+      "ignored": 0,
+      "measurement_lines": []
+    },
+    {
+      "command": "rtk proxy cargo clippy -p sotf-plugins -p sotf-engine --test linear_phase_eq_engine_dynamic --no-deps --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings",
+      "exit_code": 0,
+      "passed_tests": 0,
+      "ignored": 0,
+      "measurement_lines": []
+    }
+  ],
+  "known_limits": [
+    "FIR-M1 explicitly deferred accuracy diagnostic and illustrative doctest remain ignored in normal suite. No new ignore or tolerance change.",
+    "Full maximum channel/stage/rate release matrix and loaded native/FFI direct-callback gates remain open.",
+    "Real-manager ALSA-null playback not executed; compile-only gate explicitly separated.",
+    "Broader integration Clippy from prior checkpoint fails in untouched streaming dependency client_message.rs:18 (too_many_arguments); scoped --no-deps checks do not close that broader failure."
+  ],
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs": "aef44a751d1708827fed2330705a53d02f8748170abb45ccff14543ff658d1d4",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs": "56681cdbcb2a51430d3a416e2e73becddd486b286499580807f975713751de51",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs": "5489f308909dc9e8f4b4b691d0749dcaf1ee7ff1643c8bf61ce087379b790c15",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs": "15ac5b39088d35b3ea5e4e1d4e6e132ba3817ca884aeea8b767376c1e78a4818",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs": "74471c60bfb52f3b6bd5ae8a94469653e84883af1672783def7115ecbd3c4fb3"
+  },
+  "normal_suite_summary": {
+    "passed": 143,
+    "ignored_existing_accuracy_test": 1,
+    "ignored_illustrative_doctest": 1,
+    "factory_facade_embedded_integration_passed": 13
+  }
+}

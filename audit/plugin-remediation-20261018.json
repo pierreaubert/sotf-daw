@@ -913,20 +913,33 @@
           "result": "Two target replay frames per incoming sample keeps acceptance clock invariant across callback sizes; <=2*callback frame replay and zero allocations/frees are asserted. Queued controls remain unaccepted until ready, then original 513-frame blend starts. Reset/rate/EOF/cancellation preserve ownership and prevent stale partial target installation. Both sample formats produce identical warmed output/status. Both phases at two 8192-tap Left/Mid stages are bit-identical across 1/73/128/257/1024-frame blocks; independently weighted twin max error 2.98023e-7 under unchanged 1e-5. Release complete 128-frame host callbacks peaked at 423 us with 0 observed physical misses. Five factory, two facade/DawHost and six embedded-engine tests pass with exact-zero blend, dry/EOF and heap/error bounds unchanged; manager consumer compiles only (ALSA-null playback unexecuted). Control reaction time H-2 frames is documented; signal latency unchanged."
         },
         {
+          "task": "Fence stale/foreign worker results with opaque accepted revisions and prevent counter wrap",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs",
+            "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json"
+          ],
+          "result": "Before fix, delayed A->B->A worker accepted as generation 3 instead of retaining 2; a fresh foreign-graph payload changed destination generation 0->1/gain 0->9 dB. Live snapshots now carry opaque per-plugin identity plus accepted generation. Exact token and configuration validation precede synchronous/budgeted priming; accepted no-op edits and real rate changes consume revisions. Both phases cover ABA/no-op stale refusal, retained controls/audio and off-audio cancel. Foreign payload refuses before replay, even after origin drop. Terminal 63-bit revision and seqlock publication tested: no wrap, zero-heap retained RevisionExhausted refusal, transactional rate refusal, DSP/detached snapshot alignment. Existing same-current-base queue/cancel policy remains; no latest-request-wins claim. In-memory Rust snapshot gains revision and refusal enum adds one variant; serialized presets/params/FIR/latency unchanged."
+        },
+        {
           "task": "Resolve realtime deadline evidence for large synchronous priming and direct callbacks",
           "status": "pending",
           "evidence": "Default host budgeted adoption/progress publication is complete. The two-channel/two-stage 8192-tap release callback matrix measured 423 us max at 128 frames/48 kHz with zero physical misses. Full channel/stage/rate-load release validation and loaded native/FFI direct-callback adaptation remain open. Existing plain-DSP static QA recorded 30 physical misses and zero negotiated-quantum misses. Synchronous direct callers retain an explicit API; no portable deadline bound claimed."
         },
         {
-          "task": "Resolve remaining response and freshness limitations without weakening contracts",
+          "task": "Resolve deferred FIR-M1 response limitation without weakening contracts",
           "status": "pending",
-          "evidence": "Explicit deferred FIR-M1 run still fails at 96 kHz /1024 taps/500 Hz linear phase: -0.24574399592456375 dB vs unchanged 0.05 dB. Preserve release deferral and numerical diagnostic. DSP stale validation compares exact bases; detached generation is observational, so same-base/ABA worker ordering is caller-managed, not enforced by request tickets."
+          "evidence": "Explicit deferred FIR-M1 run still fails at 96 kHz /1024 taps/500 Hz linear phase: -0.24574399592456375 dB vs unchanged 0.05 dB. Preserve release deferral and numerical diagnostic. Accepted-revision/owner freshness is now enforced and separately verified; same-current-base jobs intentionally retain existing queue/cancel semantics, not newest-intent ordering."
         }
       ],
       "evidence": [
-        "Current complete FIR crate: 139 passed, 1 explicitly deferred accuracy diagnostic ignored plus 1 illustrative ignored doctest. No new ignore or weakened tolerance. Default host maximum-length partition/continuity matrix also passes in release.",
-        "Affected integration: 5 factory + 2 facade/DawHost + 6 embedded-engine tests pass. Real-manager consumer compiled only; unavailable ALSA-null device gate not counted as executed. FIR all-targets and factory-target Clippy pass. Broader integration Clippy fails in untouched streaming dependency at src/server/client_message.rs:18 (too_many_arguments); edited-target --no-deps Clippy passes with -D warnings, without overrides or dependency changes.",
-        "Default host now adopts bounded priming with genuine pending-state reporting, documented control reaction time, stable signal latency and deterministic acceptance. Full-load/native deadlines, request-generation freshness and FIR-M1 remain pending. Only scoped integration tests touched in engine/facade; unrelated engine/driver/Cargo.lock work excluded. Entry remains partial, overall 29/45 complete."
+        "Current full FIR crate: 143 passed; existing FIR-M1 accuracy diagnostic and illustrative doctest remain ignored, with no new ignore or weakened tolerance. Release lib + detached host suites: 102 passed, no ignored tests.",
+        "Current affected integration: 5 factory + 2 facade/DawHost + 6 embedded-engine tests pass. Real-manager consumer compiles only; unavailable ALSA-null playback gate not counted. Core all-targets and scoped factory/facade/engine --no-deps Clippy checks pass with -D warnings; prior broader streaming-dependency lint failure remains recorded, not suppressed.",
+        "Opaque accepted revision/owner fencing closes ABA/no-op and foreign-graph acceptance, preserving zero-heap refusals, retained ownership and live audio. In-memory snapshot API extension and RevisionExhausted are documented; serialized settings, FIR behavior/latency and bounds unchanged. Same-current-base request ordering follows existing queue/cancel semantics. Full-load/native deadlines and deferred FIR-M1 remain pending. Entry stays partial; overall complete count is 29/45."
       ]
     },
     {

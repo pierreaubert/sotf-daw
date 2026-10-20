@@ -2,7 +2,7 @@
   "scope": "Audit entry 30: linear-phase EQ dynamic response, superseded workers, reset and maximum-length EOF. Partial; no general realtime or arbitrary-band accuracy claim.",
   "command": "rtk cargo test -p sotf-plugin-linear-phase-eq --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
   "exit_code": 0,
-  "passed_tests": 139,
+  "passed_tests": 143,
   "ignored_total": 2,
   "ignored": [
     "FIR-M1 multiband accuracy diagnostic (explicitly deferred)",
@@ -95,7 +95,7 @@
     },
     {
       "name": "Generation semantics",
-      "result": "Prepared DSP bases are checked for exact configuration equality; the detached accepted generation is observational, not an enforced per-request freshness token. Same-base worker ordering is caller-managed."
+      "result": "Superseded by linear-phase-eq-revision.json: opaque plugin/accepted-revision fencing now rejects ABA/no-op and foreign-graph results before priming. Same-current-base jobs retain existing queue/cancel policy; not latest-intent sequencing."
     }
   ],
   "qa": {
@@ -267,7 +267,7 @@
         "result": "Edited integration targets pass with dependency linting excluded. The broader streaming dependency lint failure above remains recorded; no lint override or dependency edit."
       }
     ],
-    "limits": "The local two-channel/two-stage matrix does not establish full maximum channel/stage/rate-load or loaded native/FFI device compliance. Same-base/ABA per-request generation fencing remains open. Deferred FIR-M1 bound and diagnosis unchanged.",
+    "limits": "Local two-channel/two-stage matrix does not establish full channel/stage/rate-load or loaded native/FFI compliance. The old accepted-revision freshness limitation is superseded by linear-phase-eq-revision.json. Deferred FIR-M1 remains unchanged.",
     "source_sha256": {
       "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs": "c085add6d049bcc981fb358238044487e2ca6862286737069ce5ef651a4c4011",
       "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs": "e7891c03160df0167869b7f8ea08c0df8b4ab06564d04d842260b9972d2cf5e0",
@@ -275,5 +275,8 @@
       "crates/sotf-plugins/tests/linear_phase_eq_engine_dynamic.rs": "0275284b4beb48552eb52f8cada0a29d0dcf032ab61647a29aaaed86800293ec",
       "crates/sotf-engine/tests/linear_phase_eq_engine_dynamic.rs": "15eecc23a29f3c913ba864cbdc2dd8f5bf499d16e9031b788b8a2ff0e37422de"
     }
-  }
+  },
+  "revision_followup_artifact": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json",
+  "checkpoint_94be59f_passed_tests": 139,
+  "latest_validation_artifact": "audit/artifacts/plugin-audit-20261018/linear-phase-eq-revision.json"
 }

@@ -1810,3 +1810,101 @@ fn maximum_ordered_host_priming_and_blend_are_sample_clock_partition_invariant()
         max_128.as_micros()
     );
 }
+
+#[test]
+fn returning_to_the_same_controls_does_not_revive_an_old_worker_result() {
+    for phase in [0, 1] {
+        for round_trip in [true, false] {
+            let bands = vec![band("Peak", 1000.0, 1.0, 0.0)];
+            let mut params = params_for(bands.clone());
+            params.phase_mode_index = phase;
+            let mut plugin =
+                LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params.clone()).unwrap();
+            let handle = detached_handle(&plugin);
+            let input = pattern(2048);
+            let mut output = vec![0.0; input.len()];
+            process_into(&mut plugin, &input, &mut output, 73);
+            let original = handle.try_accepted_snapshot().unwrap();
+            let delayed = prepare_on_worker(&original, 0, band("Peak", 1000.0, 1.0, 9.0));
+            let gains: &[f64] = if round_trip { &[6.0, 0.0] } else { &[0.0] };
+            for (i, &gain) in gains.iter().enumerate() {
+                let current = handle.try_accepted_snapshot().unwrap();
+                handle
+                    .try_submit(prepare_on_worker(
+                        &current,
+                        0,
+                        band("Peak", 1000.0, 1.0, gain),
+                    ))
+                    .unwrap();
+                advance_until_accepted(&mut plugin, &handle, (i + 1) as u64, RATE);
+                let (counts, ()) =
+                    count_allocs(|| process_into(&mut plugin, &input, &mut output, 73));
+                assert_eq!(counts, (0, 0));
+                plugin.reclaim_retired();
+            }
+            let before = handle.try_accepted_snapshot().unwrap();
+            assert_eq!(before.snapshot.bands, original.snapshot.bands);
+            assert_eq!(get_gain(&plugin, 0), 0.0);
+            let mut twin = LinearPhaseEqDynamicPlugin::from_params(CHANNELS, RATE, params).unwrap();
+            let mut expected = vec![0.0; input.len()];
+            process_into(&mut twin, &input, &mut expected, 73);
+            handle.try_submit(delayed).unwrap();
+            let (counts, ()) = count_allocs(|| {
+                process_into(&mut plugin, &input, &mut output, 73);
+                process_into(&mut twin, &input, &mut expected, 73);
+            });
+            assert_eq!(counts, (0, 0));
+            assert_eq!(
+                handle.accepted_generation(),
+                before.generation,
+                "old worker revived after round_trip={round_trip}"
+            );
+            assert_eq!(handle.try_accepted_snapshot().unwrap(), before);
+            assert_eq!(
+                handle.control_status().last_refusal,
+                Some(CommitRefusal::StaleBase)
+            );
+            assert_eq!(handle.control_status().priming_frames_replayed, 0);
+            assert_eq!(get_gain(&plugin, 0), 0.0);
+            for (&a, &b) in output.iter().zip(&expected) {
+                assert!((a - b).abs() < 1e-5);
+            }
+            handle.request_cancel();
+            let (counts, ()) = count_allocs(|| process_into(&mut plugin, &input, &mut output, 73));
+            assert_eq!(counts, (0, 0));
+            let rejected = handle.take_cancelled();
+            assert_eq!(rejected.len(), 1);
+            drop_on_worker(rejected);
+        }
+    }
+}
+
+#[test]
+fn fresh_worker_from_an_identical_other_graph_is_refused_before_priming() {
+    let bands = vec![band("Peak", 1000.0, 1.0, 0.0)];
+    let origin = create(&bands);
+    let origin_handle = detached_handle(&origin);
+    let payload = prepare_on_worker(
+        &origin_handle.try_accepted_snapshot().unwrap(),
+        0,
+        band("Peak", 1000.0, 1.0, 9.0),
+    );
+    let mut destination = create(&bands);
+    let handle = detached_handle(&destination);
+    let input = pattern(2048);
+    let mut output = vec![0.0; input.len()];
+    process_into(&mut destination, &input, &mut output, 73);
+    let before = handle.try_accepted_snapshot().unwrap();
+    drop(origin);
+    drop(origin_handle);
+    handle.try_submit(payload).unwrap();
+    let (counts, ()) = count_allocs(|| process_into(&mut destination, &input, &mut output, 73));
+    assert_eq!(counts, (0, 0));
+    assert_eq!(handle.try_accepted_snapshot().unwrap(), before);
+    assert_eq!(
+        handle.control_status().last_refusal,
+        Some(CommitRefusal::StaleBase)
+    );
+    assert_eq!(handle.control_status().priming_frames_replayed, 0);
+    assert_eq!(get_gain(&destination, 0), 0.0);
+}

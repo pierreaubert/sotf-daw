@@ -108,11 +108,30 @@ state, retains the old accepted band controls and requires cancellation/reprepar
 shared `LinearPhaseEqControlHandle` through `get_data()`. Workers prepare from
 `try_accepted_snapshot()` and submit via the bounded mailbox; audio accepts
 at most one result per callback, and control reclaims retired/cancelled banks.
-A result whose base differs from accepted state is retained with `StaleBase`
-until explicit cancellation. Bases are compared by exact configuration;
-the published accepted generation is observational. Same-base worker ordering
-and an older result arriving after a configuration returns to identical values
-require caller sequencing; there is no enforced request-generation ticket.
+Every `LiveFilterSnapshot` carries an opaque `FilterRevision`, binding it to
+one live plugin and its accepted generation. Priming/commit require that token
+and an exact base-configuration match. An old result cannot revive after an
+accepted no-op or A→B→A control changes; a snapshot from an identical other
+graph is also refused. Rejected results remain retained with `StaleBase` until
+explicit cancellation and off-audio reprepare. Detached snapshot tokens and
+`accepted_generation()` agree with the DSP revision.
+
+Jobs captured from the same current accepted revision still follow the queue
+policy: the first eligible result accepts, then siblings become stale. This is
+not a latest-request-wins sequencer. Callers must cancel or serialize intents
+when that policy is required. Reset alone preserves the accepted revision;
+partly primed history is separately invalidated. A real rate change consumes a
+revision even if the rate later returns to its original value.
+
+The in-memory Rust snapshot API gains the `revision` field. Obtain snapshots
+from `snapshot_config()` or `try_accepted_snapshot()` and clone them for worker
+preparation; do not assemble a new snapshot from copied parameter values or
+transfer a token between graphs. The token is never serialized, and parameter
+IDs, presets and FIR profile/design formats are unchanged. The 63-bit accepted
+revision limit reserves the seqlock publication bit; further commits return
+`RevisionExhausted` without consuming the payload or priming, and rate changes
+refuse before mutation. Rebuild the plugin to obtain a new identity at that
+limit instead of wrapping an old token into eligibility.
 Acceptance is published only on a successful commit. Both f32 and direct f64
 rendering validate the prepared sample clock
 before consuming a mailbox result or writing output.
