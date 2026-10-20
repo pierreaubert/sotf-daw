@@ -789,7 +789,7 @@
           "result": "Exact target selection resolves a reproduced one-bit callback-partition difference without resetting history or moving storage retirement. All 144 combinations of four rates, three channel counts, three orders, two realizations and two routes match the independent reference (maximum measured error 0) and are bit-identical across partitions. Interrupted frequency/Q/gain ramps retain stable coefficients, finite output and zero measured setter/process heap activity. Full EQ suite: 159 passed, 11 existing ignored; release transition regression and strict all-targets QA Clippy pass."
         },
         {
-          "task": "Validate oversampled transition clocks, remaining extreme filter families and mixed realizations",
+          "task": "Validate remaining extreme filter families and advanced mixed realizations",
           "status": "pending"
         },
         {
@@ -798,17 +798,22 @@
         },
         {
           "task": "Resolve measured oversampled automation callback dependence with buffered source-time controls",
-          "status": "pending",
+          "status": "implemented_and_verified",
           "evidence": [
             "crates/sotf-plugins/crates/sotf-plugin-eq/examples/qa_eq_transitions.rs",
-            "audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json"
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/oversampled_automation.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_transitions.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-scheduling.json"
           ],
-          "result": "Explicit release gate fails all 576 cold/warm 2x/4x cases; maximum absolute waveform difference 1.12667965143919. All 288 static controls are bit-identical, outputs finite and measured scalar setters/process calls have zero heap operations. Existing duration tests only inspect transition retirement. Correct scheduling must preserve controls for buffered source audio, rather than adjusting the clock after callback processing. Full ordinary EQ suite remains 159 passed/11 existing ignored and strict all-targets QA Clippy passes. No production fix or weakened assertion accepted."
+          "result": "Source-timestamped exact targets and separate delayed DSP transitions resolve all 576 cold/warm 2x/4x partition failures (now bit-identical). All 288 static controls pass; 288 independent RBJ/DF-I/TDF-II/delayed-timing cases have maximum error 1.862645149230957e-9 against unchanged 2e-5 bound. Dense wrap/coalescing reference: 32 cases x 6147 edits, error 0; all-band stress: 20 bands/6 channels/order 8, 40 edits per frame. Tested setters/process/reset remain heap-free. History 385 source instants per band; payload 616000 bytes for 20 stereo second-order bands, 39424000 for tested 32-channel/order-8 geometry. Initial over-reservation fixed without relaxing budget. EQ 164 passed/11 existing ignored; release five tests, strict host/EQ all-targets QA Clippy and 36 host oversampling tests pass. Full-host run has a separately reproduced unchanged-source loudness heap failure; no full-host green claim. CPU deadlines and other realization/rate work remain open."
         }
       ],
       "evidence": [
         "Native transition batch complete; EQ remains partial. Overall 32/45 complete_production_scope. Optional offline ML remains separate.",
-        "Oversampled automation has a reproduced required-gate failure, retained with an executable full-matrix QA harness and positive controls. EQ remains partial and overall completion remains 32/45."
+        "Oversampled automation has a reproduced required-gate failure, retained with an executable full-matrix QA harness and positive controls. EQ remains partial and overall completion remains 32/45.",
+        "Oversampled scalar automation scheduling is now implemented and independently verified; original failure artifacts retained. EQ remains partial for remaining filter-family, mixed-realization and host-rate coverage. Overall stays 32/45."
       ]
     },
     {
@@ -1579,8 +1584,20 @@
   "host_analyzers_and_adapters": {
     "audit_text": "**Spectrum analyzer.** [`analyzer_spectrum.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_spectrum.rs):425\u2013545 enforces initialization/rate, retains a recent-sample ring and computes channel power without cancellation from summing opposite-phase channels. It analyzes the most recent window after a block; a block spanning multiple FFT windows can omit intermediate windows. That is acceptable for a display only if specified, but unsuitable for guaranteed transient/peak capture. Extend calibrated bin-centered/off-bin tones, DC/Nyquist, impulses, channel anti-phase and arbitrary callback sizes. Offer explicit amplitude/PSD normalization and max-hold semantics. No ML is needed for a calibrated spectrum.\n\n**Loudness monitor.** [`analyzer_loudness_monitor.rs`](crates/sotf-plugins/crates/sotf-host/src/analyzer_loudness_monitor.rs):2029\u20132089 preserves transparent audio, validates shape/rate and finalizes true-peak state at drain. This is a stronger EOF contract than simply stopping the meter. Extend independent conformance vectors, short clips, gating discontinuities, surround channel weights, disabled/re-enabled state and final publication under cache contention. Distinguish LUFS from psychoacoustic loudness/SPL. ML quality scores may be supplementary, never a substitute for calibrated measurement.\n\n**AutoGain.** [`auto_gain.rs`](crates/sotf-plugins/crates/sotf-host/src/auto_gain.rs):281\u2013395 uses sample-clocked gain trajectories and a settled fast path. Its integration into each effect must measure the intended pre/post stages and handle silence without runaway gain or level jumps. Existing per-plugin clock/heap tests are a major strength. Extend sparse transients, prolonged silence then signal, AB switching and peak-constrained gain recovery. Classical loudness/peak-constrained matching suffices; no learned gain controller is needed by default.\n\n**External plugin factory route.** The `external`/`external_plugin` entry delegates to native formats and may use isolated workers. It inherits the scheduling, latency, parameter, state and sandbox boundaries discussed above, rather than one fixed DSP algorithm. Test process death, stale sequence, missed deadline, malformed state, latency change, instrument MIDI and output-channel changes against real AU/VST3/CLAP fixtures. Compare native and isolated audio after declared pipeline latency; fallback audio must remain distinguishable from successfully processed output. ML is not a substitute for process containment or ABI validation.\n\n**Adapters/support crates.** `plugins-bridge`, `plugins-ffi`, `plugins-nih`, `plugins-gpui`, `plugins-spatial`, `plugins-denoiser` and `plugins-inference` are not seven more standalone DSP effects. They carry ABI, native-host, UI, spatial-data and inference contracts. A plugin passing its own crate tests does not prove its AU/VST3/CLAP/FFI form has correct parameter units, sample offsets, channel negotiation, latency change notification or tail handling. Add cross-wrapper audio equivalence and lifecycle suites, and run native-feature builds on their supported platforms. Inference already uses generation-tagged bounded handoff; retain that architecture and explicitly constrain allocation/destruction and model shutdown.",
     "status": "not_reviewed",
-    "tasks": [],
-    "evidence": []
+    "tasks": [
+      {
+        "task": "Resolve baseline loudness-range cold/full publication heap activity",
+        "status": "pending",
+        "evidence": [
+          "crates/sotf-plugins/crates/sotf-host/tests/loudness_history_heap.rs",
+          "audit/artifacts/plugin-audit-20261018/eq-oversampled-scheduling.json"
+        ],
+        "result": "Full affected-host run fails line 168 with allocation/deallocation counts (1,1), expected (0,0). Exact isolated test reproduces after restoring the host oversampler to unchanged b867d9f source; EQ was not built for that baseline. Retain evidence and resolve in analyzer audit; this is not accepted as a passing RT result."
+      }
+    ],
+    "evidence": [
+      "Loudness-history heap failure observed and reproduced on unchanged host source during EQ scheduling work; analyzer audit remains incomplete."
+    ]
   },
   "remaining_scope": "All original recommendations remain in audit_text. Completing a listed concrete task does not complete its plugin entry; further classical features, numerical/audio coverage, corpus/platform work and optional research remain to be reviewed.",
   "work_batches": [

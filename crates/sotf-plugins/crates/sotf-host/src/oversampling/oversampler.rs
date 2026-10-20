@@ -229,6 +229,24 @@ impl Oversampler {
         self.latency
     }
 
+    /// Return the upsampler delay in oversampled output frames.
+    ///
+    /// Source-timed controls applied inside `process` must be delayed by this
+    /// amount to follow their audio through the interpolation filter.
+    pub fn upsampling_delay_frames(&self) -> usize {
+        self.resampler_up.output_delay()
+    }
+
+    /// Return the fixed number of source frames in one input chunk.
+    pub fn input_chunk_frames(&self) -> usize {
+        OS_CHUNK_SIZE
+    }
+
+    /// Return source frames needed before the next internal processing callback.
+    pub fn input_frames_until_process(&self) -> usize {
+        OS_CHUNK_SIZE - self.residual_frames
+    }
+
     /// Bound zero-input continuation for a memoryless inner processing operation.
     ///
     /// Frames are at the original sample rate. The bound includes the fixed

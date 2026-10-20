@@ -355,3 +355,328 @@ fn native_peak_transitions_match_independent_realizations_at_absolute_sample_eve
         serde_json::json!({"case":"native_peak_transitions","cases":cases,"max_reference_error":maximum})
     );
 }
+
+// The reference shares only the transport FIRs. Control timing, RBJ design and
+// recursive histories are calculated independently on the upsampled timeline.
+fn oversampled_reference(
+    input: &[f32],
+    rate: u32,
+    channels: usize,
+    order: usize,
+    tdf2: bool,
+    factor: u32,
+    events: &[Event],
+) -> Vec<f32> {
+    let mut os = sotf_host::oversampling::Oversampler::new(factor, channels).unwrap();
+    os.reserve_for_max_frames(input.len() / channels).unwrap();
+    let delay = os.upsampling_delay_frames();
+    let length = ((f64::from(rate) * 0.005) as usize) * factor as usize;
+    let mut config = Config {
+        freq: 800.0,
+        q: 0.7,
+        gain: 6.0,
+    };
+    let mut target = coefficients(config, rate * factor, order);
+    let mut old = target.clone();
+    let mut states = vec![vec![State::default(); order / 2]; channels];
+    let (mut next, mut elapsed, mut position) = (0, length, 0);
+    let mut output = input.to_vec();
+    os.process(&mut output, input.len() / channels, |planar, frames| {
+        for frame in 0..frames {
+            while next < events.len() && position == events[next].frame * factor as usize + delay {
+                let t = elapsed.min(length) as f64 / length as f64;
+                for stage in 0..order / 2 {
+                    old[stage] = blend(old[stage], target[stage], t);
+                }
+                let event = &events[next];
+                match event.field {
+                    "freq" => config.freq = f64::from(event.value),
+                    "q" => config.q = f64::from(event.value),
+                    "gain" => config.gain = f64::from(event.value),
+                    _ => unreachable!(),
+                }
+                target = coefficients(config, rate * factor, order);
+                elapsed = 0;
+                next += 1;
+            }
+            let t = elapsed.min(length) as f64 / length as f64;
+            for (channel, samples) in planar.iter_mut().enumerate() {
+                let mut x = f64::from(samples[frame]);
+                for stage in 0..order / 2 {
+                    x = states[channel][stage].process(
+                        x,
+                        blend(old[stage], target[stage], t),
+                        tdf2,
+                    );
+                }
+                samples[frame] = x as f32;
+            }
+            elapsed += 1;
+            position += 1;
+        }
+    })
+    .unwrap();
+    assert_eq!(next, events.len());
+    output
+}
+
+#[test]
+fn oversampled_automation_matches_independent_delayed_control_trajectory() {
+    let mut maximum = 0.0_f64;
+    let mut cases = 0;
+    for rate in [44_100_u32, 48_000, 96_000, 192_000] {
+        for channels in [1, 2, 6] {
+            let input = input(channels, rate);
+            let mut events = events(rate);
+            events.splice(
+                0..0,
+                [
+                    Event {
+                        frame: 0,
+                        field: "gain",
+                        value: -6.0,
+                    },
+                    Event {
+                        frame: 1,
+                        field: "freq",
+                        value: 120.0,
+                    },
+                    Event {
+                        frame: 7,
+                        field: "q",
+                        value: 20.0,
+                    },
+                    Event {
+                        frame: 19,
+                        field: "gain",
+                        value: 12.0,
+                    },
+                ],
+            );
+            for order in [2, 4, 8] {
+                for tdf2 in [false, true] {
+                    for factor in [2, 4] {
+                        let expected = oversampled_reference(
+                            &input, rate, channels, order, tdf2, factor, &events,
+                        );
+                        for ordered in [false, true] {
+                            let mut p = prepared(rate, channels, order, tdf2, ordered);
+                            p.set_parameter(
+                                ParameterId::from("oversampling"),
+                                ParameterValue::Int(factor as i32),
+                            )
+                            .unwrap();
+                            let actual = render(
+                                p.as_mut(),
+                                &input,
+                                rate,
+                                channels,
+                                &events,
+                                &[17, 257, 1024],
+                            );
+                            let error = actual
+                                .iter()
+                                .zip(&expected)
+                                .map(|(&a, &b)| (f64::from(a) - f64::from(b)).abs())
+                                .fold(0.0_f64, f64::max);
+                            maximum = maximum.max(error);
+                            assert!(
+                                error < 2e-5,
+                                "oversampled reference error {error}: {rate}/{channels}/{order}/{tdf2}/{ordered}/{factor}"
+                            );
+                            cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 288);
+    println!(
+        "{}",
+        serde_json::json!({"case":"oversampled_independent_trajectory","cases":cases,"maximum_reference_error":maximum})
+    );
+}
+
+#[test]
+fn dense_oversampled_edits_wrap_history_and_coalesce_same_frame_targets() {
+    let rate = 48_000;
+    let mut events = Vec::new();
+    for frame in 0..2049 {
+        events.push(Event {
+            frame,
+            field: "freq",
+            value: 400.0 + (frame % 37) as f32 * 17.0,
+        });
+        events.push(Event {
+            frame,
+            field: "gain",
+            value: (frame % 19) as f32 - 9.0,
+        });
+        events.push(Event {
+            frame,
+            field: "q",
+            value: 0.5 + (frame % 11) as f32 * 0.1,
+        });
+    }
+    let mut maximum = 0.0_f64;
+    let mut cases = 0;
+    for channels in [1, 6] {
+        for order in [2, 8] {
+            for tdf2 in [false, true] {
+                for factor in [2, 4] {
+                    let input = input(channels, rate);
+                    let expected =
+                        oversampled_reference(&input, rate, channels, order, tdf2, factor, &events);
+                    for ordered in [false, true] {
+                        let mut p = prepared(rate, channels, order, tdf2, ordered);
+                        p.set_parameter(
+                            ParameterId::from("oversampling"),
+                            ParameterValue::Int(factor as i32),
+                        )
+                        .unwrap();
+                        let actual = render(
+                            p.as_mut(),
+                            &input,
+                            rate,
+                            channels,
+                            &events,
+                            &[257, 17, 1024],
+                        );
+                        let error = actual
+                            .iter()
+                            .zip(&expected)
+                            .map(|(&a, &b)| (f64::from(a) - f64::from(b)).abs())
+                            .fold(0.0_f64, f64::max);
+                        maximum = maximum.max(error);
+                        assert!(
+                            error < 2e-5,
+                            "dense edit reference error {error}: {channels}/{order}/{tdf2}/{ordered}/{factor}"
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 32);
+    println!(
+        "{}",
+        serde_json::json!({"case":"oversampled_dense_edits","cases":cases,"edits_per_case":events.len(),"maximum_reference_error":maximum})
+    );
+}
+
+#[test]
+fn reset_discards_buffered_oversampled_controls_without_heap_activity() {
+    for factor in [2, 4] {
+        for ordered in [false, true] {
+            let mut dirty = prepared(48_000, 2, 8, true, ordered);
+            let mut fresh = prepared(48_000, 2, 8, true, ordered);
+            for p in [&mut dirty, &mut fresh] {
+                p.set_parameter(
+                    ParameterId::from("oversampling"),
+                    ParameterValue::Int(factor),
+                )
+                .unwrap();
+                p.set_parameter(
+                    ParameterId::from("band_0_freq"),
+                    ParameterValue::Float(1234.0),
+                )
+                .unwrap();
+                p.set_parameter(
+                    ParameterId::from("band_0_gain"),
+                    ParameterValue::Float(-9.0),
+                )
+                .unwrap();
+            }
+            let input = input(2, 48_000);
+            render(dirty.as_mut(), &input[..137 * 2], 48_000, 2, &[], &[17]);
+            for p in [&mut dirty, &mut fresh] {
+                let heap = sotf_host::test_utils::measure_heap_activity(|| p.reset());
+                assert_eq!(heap, (0, 0));
+            }
+            let a = render(dirty.as_mut(), &input, 48_000, 2, &[], &[17, 257, 1024]);
+            let b = render(fresh.as_mut(), &input, 48_000, 2, &[], &[1]);
+            assert_eq!(
+                a, b,
+                "reset retained old transport/control state: {factor}/{ordered}"
+            );
+        }
+    }
+}
+
+#[test]
+fn every_band_can_automate_on_every_source_frame_without_history_overflow_or_heap_work() {
+    let mut cases = 0;
+    for factor in [2, 4] {
+        for ordered in [false, true] {
+            let mut p = EqPlugin::from_params(
+                6,
+                48_000,
+                EqPluginParams {
+                    filters: (0..20)
+                        .map(|band| BiquadFilterConfig {
+                            filter_type: "peak".into(),
+                            freq: 300.0 + band as f64 * 100.0,
+                            q: 0.7,
+                            db_gain: 0.0,
+                            order: 8,
+                            topology: EqFilterTopology::Biquad,
+                            placement: ordered.then_some(EqBandPlacement::Stereo),
+                            lambda: None,
+                            kautz_sections: vec![],
+                        })
+                        .collect(),
+                    channel_filters: None,
+                    stereo_pairs: None,
+                    auto_gain: AutoGainParams::default(),
+                },
+            )
+            .unwrap()
+            .into_boxed_plugin();
+            p.set_parameter(
+                ParameterId::from("auto_gain_enabled"),
+                ParameterValue::Bool(false),
+            )
+            .unwrap();
+            p.set_parameter(
+                ParameterId::from("oversampling"),
+                ParameterValue::Int(factor),
+            )
+            .unwrap();
+            p.initialize(48_000.0).unwrap();
+            let ids: Vec<_> = (0..20)
+                .map(|band| ParameterId::from(format!("band_{band}_gain")))
+                .collect();
+            let source = input(6, 48_000);
+            let mut output = [0.0; 6];
+            for frame in 0..1025 {
+                let heap = sotf_host::test_utils::measure_heap_activity(|| {
+                    for (band, id) in ids.iter().enumerate() {
+                        let gain = ((frame + band) % 7) as f32 - 3.0;
+                        p.set_parameter(id.clone(), ParameterValue::Float(-gain))
+                            .unwrap();
+                        p.set_parameter(id.clone(), ParameterValue::Float(gain))
+                            .unwrap();
+                    }
+                    assert_eq!(
+                        p.process(
+                            &source[frame * 6..(frame + 1) * 6],
+                            &mut output,
+                            &sotf_host::ProcessContext::new(48_000, 1)
+                        )
+                        .unwrap(),
+                        1
+                    );
+                });
+                assert_eq!(heap, (0, 0));
+                assert!(output.iter().all(|x| x.is_finite()));
+            }
+            cases += 1;
+        }
+    }
+    println!(
+        "{}",
+        serde_json::json!({"case":"all_band_dense_automation","cases":cases,"bands":20,"channels":6,"order":8,"source_frames":1025,"edits_per_source_frame":40})
+    );
+}

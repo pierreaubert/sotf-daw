@@ -2,11 +2,13 @@
 
 ## Changes
 
-- Add an opt-in oversampled automation QA gate and retain its failure: all 576
-  cold/warm 2x/4x cases differ across callback partitions, while 288 static
-  controls are bit-identical. The earlier source-time retirement tests do not
-  establish rendered-audio partition equality; oversampled scheduling remains
-  unresolved.
+- Retain source-timestamped exact biquad targets across 2x/4x transport buffering
+  and apply them after the upsampler delay. Preserve interrupted ramps and
+  filter history independently of public-callback transition retirement.
+- Prepare bounded per-band history off-thread; coalesce same-frame edits and
+  clear queued controls during reset without allocation. Verify 576 cold/warm
+  partition comparisons, 288 independent timing/realization cases, dense all-band
+  edits and reset. Preserve the original failing gate evidence and memory budget.
 
 - Select exact target biquad coefficients when a ramp completes, independently
   of callback-end transition storage retirement. Preserve filter history and

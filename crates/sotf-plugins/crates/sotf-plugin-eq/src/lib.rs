@@ -14,6 +14,8 @@ mod eq_plugin;
 mod kautz_runtime;
 #[path = "lib/misc.rs"]
 mod misc;
+#[path = "lib/oversampled_automation.rs"]
+mod oversampled_automation;
 #[cfg(test)]
 #[path = "lib/tests.rs"]
 mod tests;

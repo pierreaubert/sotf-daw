@@ -35,12 +35,12 @@ the audio clock and gain processing continue.
 
 At 2x/4x, a prepared reference-only ring delays input measurements by the actual
 oversampler latency. The output and declared audio latency are unchanged. Raw
-oversampling still receives the original callback; native callbacks use prepared
+oversampling uses bounded input-chunk spans; native callbacks use prepared
 4096-frame scratch spans. Transition storage retires at the original callback
 boundary, while completed ramps select the exact target coefficients immediately.
 Native 1x peaking-band automation is bit-identical across tested callback partitions
-for legacy and ordered DF-I/TDF-II routes. Oversampled transition-clock
-reconciliation remains separate validation work.
+for legacy and ordered DF-I/TDF-II routes. Oversampled biquad targets are retained
+on the source timeline and delayed by the upsampler group delay before use.
 
 Successful initialization and oversampler reconstruction start a fresh paired
 meter/reference epoch and clear meter diagnostics while retaining the current
@@ -56,16 +56,34 @@ reference across 144 combinations of 44.1/48/96/192 kHz, 1/2/6 channels, orders
 2/4/8, DF-I/TDF-II and legacy/ordered routing. Interrupted frequency, Q and gain
 ramps cover Q 0.1–20 and gain -18 to +18 dB, with stable interpolated poles, finite
 output and zero measured setter/callback heap operations. This does not establish
-all advanced realizations, oversampled automation or host sample-rate changes.
+all advanced realizations or host sample-rate changes.
 
-Oversampled automation is a known open audit failure. Run the explicit gate with
+At 2x/4x, each band retains exact coefficient targets with source-frame timestamps.
+Repeated edits at the same source instant coalesce to the final target. A separate
+internal transition consumes targets after the upsampler delay, preserving earlier
+controls for buffered audio. Source-facing five-millisecond transition retirement
+is independent of this delayed processing state. Scalar frequency, Q, gain and
+filter-type edits reuse prepared storage. Reset clears queued controls and clocks
+in place; structural reconstruction discards pending controls with its existing
+filter transition boundary. Declared latency, presets and the native 1x path are
+unchanged. Automated oversampled audio intentionally changes to follow source time.
+
+Run the explicit gate with
 `cargo run -p sotf-plugin-eq --example qa_eq_transitions --release --features qa`.
-The retained 576-case result fails callback-partition equality at both 2x and 4x,
-in cold and warmed streams; 288 static-filter controls are bit-identical.
-Public-callback transition retirement at five milliseconds does not prove that
-the buffered audio receives the same coefficient trajectory. The gate exits
-nonzero, retains its original equality requirement, and checks finite audio plus
-zero measured scalar-setter/process heap activity. See
-`audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json` at the
-workspace root. This gate is separate from ordinary crate tests and is not an
-ignored passing regression.
+All 576 cold/warm 2x/4x cases now have bit-identical output across callback
+partitions; 288 static controls remain identical. An independent control-timing,
+RBJ and recursive-state reference checks another 288 cases, sharing only the
+transport FIRs (maximum waveform error 1.87e-9). Dense edits exercise ring wrap,
+same-frame coalescing and all 20 bands. Tested scalar setters, process calls and
+reset have zero measured heap activity. Historical failures remain in
+`audit/artifacts/plugin-audit-20261018/eq-oversampled-transitions.json`; final
+checks are in `eq-oversampled-scheduling.json` in that directory.
+
+History capacity is one transport input chunk plus the upsampler delay in source
+frames, plus one boundary instant: currently 385 instants per band at 2x and 4x.
+Exact coefficient payload storage is `385 * total channel-stage count * 40` bytes,
+plus timestamps, indices and active endpoints. For 20 stereo second-order bands
+this is 616,000 payload bytes; the tested 20-band/32-channel/eighth-order case uses
+39,424,000 bytes. Native 1x allocates no history. These are prepared owned payload
+sizes, not aggregate RSS or a CPU deadline claim. Broader filter-family extremes,
+advanced mixed realizations and host rate changes remain audit work.

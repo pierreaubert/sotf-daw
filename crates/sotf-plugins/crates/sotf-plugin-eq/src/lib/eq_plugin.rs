@@ -13,6 +13,7 @@ use super::misc::band_user_q;
 use super::misc::butterworth_q;
 use super::misc::create_band_stages;
 use super::misc::scales_prototype_q;
+use super::oversampled_automation::OversampledAutomation;
 use super::types::BandTransition;
 use super::types::BiquadFilterConfig;
 use super::types::EqBandPlacement;
@@ -209,6 +210,7 @@ pub struct EqPlugin {
     pub(super) transitions: Vec<Option<BandTransition>>,
     /// Inactive transition storage, recycled without allocation on the audio thread.
     transition_spares: Vec<Option<BandTransition>>,
+    oversampled_automation: Option<OversampledAutomation>,
     /// Requested factor: 1 (off), 2, or 4. Global SVF retains this choice but bypasses transport.
     pub(super) oversampling_factor: u32,
     /// Oversampling state (absent at 1x and while global SVF runs at base rate).
@@ -286,6 +288,73 @@ impl EqPlugin {
         Ok(oversampler)
     }
 
+    fn rebuild_oversampled_automation(&mut self) {
+        let timeline = self
+            .oversampled_automation
+            .as_ref()
+            .map_or((0, 0), OversampledAutomation::timeline);
+        self.oversampled_automation = self.oversampler.as_ref().map(|os| {
+            let delay = os.upsampling_delay_frames();
+            let capacity =
+                os.input_chunk_frames() + delay.div_ceil(self.oversampling_factor as usize) + 1;
+            OversampledAutomation::new(
+                &self.filters,
+                self.band_orders.len(),
+                capacity,
+                delay,
+                self.transition_samples(),
+                timeline,
+            )
+        });
+    }
+
+    /// Process bounded input spans while retaining source-timed coefficient targets.
+    fn process_oversampled(
+        &mut self,
+        buffer: &mut [f32],
+        num_frames: usize,
+        ordered: bool,
+    ) -> PluginResult<()> {
+        let mut os = self
+            .oversampler
+            .take()
+            .ok_or_else(|| "oversampling enabled but oversampler is unavailable".to_string())?;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut offset = 0;
+            while offset < num_frames {
+                let frames = (num_frames - offset).min(os.input_frames_until_process());
+                os.process(
+                    &mut buffer[offset * self.num_channels..(offset + frames) * self.num_channels],
+                    frames,
+                    |planar, count| {
+                        if ordered {
+                            self.process_ordered_planar(planar, count);
+                        } else {
+                            self.process_biquads_planar(planar, count);
+                        }
+                    },
+                )?;
+                let elapsed = frames * self.oversampling_factor as usize;
+                self.oversampled_automation
+                    .as_mut()
+                    .expect("prepared EQ control history")
+                    .advance_source(elapsed);
+                for transition in self.transitions.iter_mut().flatten() {
+                    transition.samples_remaining =
+                        transition.samples_remaining.saturating_sub(elapsed);
+                }
+                offset += frames;
+            }
+            self.recycle_transitions(true);
+            Ok(())
+        }));
+        self.oversampler = Some(os);
+        match result {
+            Ok(result) => result,
+            Err(payload) => std::panic::resume_unwind(payload),
+        }
+    }
+
     fn reset_endpoint(&mut self) {
         self.received_input = false;
         self.drain_remaining = None;
@@ -352,6 +421,7 @@ impl EqPlugin {
             cached_parameters: Vec::new(),
             transitions,
             transition_spares: Vec::new(),
+            oversampled_automation: None,
             oversampling_factor: 1,
             use_tdf2: false,
             oversampler: None,
@@ -553,6 +623,7 @@ impl EqPlugin {
                 })
             })
             .collect();
+        self.rebuild_oversampled_automation();
     }
 
     pub fn new_per_channel(
@@ -583,6 +654,7 @@ impl EqPlugin {
             cached_parameters: Vec::new(),
             transitions,
             transition_spares: Vec::new(),
+            oversampled_automation: None,
             oversampling_factor: 1,
             use_tdf2: false,
             oversampler: None,
@@ -724,6 +796,7 @@ impl EqPlugin {
                 cached_parameters: Vec::new(),
                 transitions: (0..num_bands).map(|_| None).collect(),
                 transition_spares: Vec::new(),
+                oversampled_automation: None,
                 oversampling_factor: 1,
                 use_tdf2: false,
                 oversampler: None,
@@ -795,6 +868,7 @@ impl EqPlugin {
                 cached_parameters: Vec::new(),
                 transitions: (0..num_bands).map(|_| None).collect(),
                 transition_spares: Vec::new(),
+                oversampled_automation: None,
                 oversampling_factor: 1,
                 use_tdf2: false,
                 oversampler: None,
@@ -987,6 +1061,9 @@ impl EqPlugin {
         if let Some(oversampler) = &mut self.oversampler {
             oversampler.reset();
         }
+        if let Some(automation) = &mut self.oversampled_automation {
+            automation.reset(&self.filters, true);
+        }
         self.auto_gain.reset();
         self.auto_gain_clock.reset();
         self.received_input = false;
@@ -1046,8 +1123,11 @@ impl EqPlugin {
                 let transition = transitions.get(index).and_then(Option::as_ref);
                 let mut output = sample;
                 for (stage_index, stage) in stages.iter_mut().enumerate() {
-                    if let Some(coefficients) =
-                        transition.and_then(|t| t.coefficients(channel, stage_index))
+                    if let Some(coefficients) = self
+                        .oversampled_automation
+                        .as_ref()
+                        .and_then(|a| a.coefficients(index, channel, stage_index))
+                        .or_else(|| transition.and_then(|t| t.coefficients(channel, stage_index)))
                     {
                         output = stage.process_with_coefficients(output, &coefficients);
                     } else {
@@ -1135,6 +1215,9 @@ impl EqPlugin {
         let num_channels = self.num_channels;
         let mut frame = 0;
         while frame < num_frames {
+            if let Some(automation) = &mut self.oversampled_automation {
+                automation.begin_frame();
+            }
             for filter_index in 0..self.ordered_filters.len() {
                 let filter = self.ordered_filters[filter_index];
                 match filter.placement.unwrap_or(EqBandPlacement::Stereo) {
@@ -1183,12 +1266,37 @@ impl EqPlugin {
                     }
                 }
             }
-            self.advance_ordered_transition_clock();
+            if let Some(automation) = &mut self.oversampled_automation {
+                automation.end_frame();
+            } else {
+                self.advance_ordered_transition_clock();
+            }
             frame += 1;
         }
     }
 
     pub(super) fn process_biquads_planar(&mut self, planar: &mut [Vec<f32>], num_frames: usize) {
+        if let Some(automation) = &mut self.oversampled_automation {
+            for frame in 0..num_frames {
+                automation.begin_frame();
+                for (channel, (samples, bands)) in
+                    planar.iter_mut().zip(&mut self.filters).enumerate()
+                {
+                    let mut sample = f64::from(samples[frame]);
+                    for (band, stages) in bands.iter_mut().enumerate() {
+                        for (index, stage) in stages.iter_mut().enumerate() {
+                            let coefficients = automation
+                                .coefficients(band, channel, index)
+                                .expect("prepared EQ coefficient geometry");
+                            sample = stage.process_with_coefficients(sample, &coefficients);
+                        }
+                    }
+                    samples[frame] = sample as f32;
+                }
+                automation.end_frame();
+            }
+            return;
+        }
         let has_transitions = self.transitions.iter().any(|t| t.is_some());
         if has_transitions {
             // planar[ch][frame] requires both indices simultaneously; range loops are correct here.
@@ -1657,6 +1765,7 @@ impl EqPlugin {
             self.auto_gain.set_sample_rate(self.sample_rate)?;
             self.oversampling_factor = new_factor as u32;
             self.oversampler = prepared;
+            self.oversampled_automation = None;
             self.auto_gain_clock = prepared_clock;
             self.publish_cleared_meter_diagnostics();
             // Re-initialize oversampling state (uses current sample_rate)
@@ -1697,6 +1806,9 @@ impl EqPlugin {
                     }
                 }
                 self.recycle_transitions(false);
+                if let Some(automation) = &mut self.oversampled_automation {
+                    automation.reset(&self.filters, false);
+                }
             }
             self.refresh_cached_values();
         } else if name == "topology" {
@@ -1762,6 +1874,7 @@ impl EqPlugin {
                 self.apply_sample_rate_to_filters(filter_rate);
                 self.topology = new_topo;
                 self.oversampler = prepared_oversampler;
+                self.oversampled_automation = None;
                 self.auto_gain_clock = prepared_clock;
                 self.advanced_filters = prepared_advanced;
                 if new_topo == 1 {
@@ -2043,6 +2156,9 @@ impl EqPlugin {
                             }
                         }
                     }
+                    if let Some(automation) = &mut self.oversampled_automation {
+                        automation.enqueue(&self.filters, b_idx);
+                    }
                     self.refresh_cached_values();
                 }
             }
@@ -2165,7 +2281,9 @@ impl EqPlugin {
         self.advanced_filters = prepared_advanced;
         // Rebuild oversampling state if active
         self.oversampler = prepared;
+        self.oversampled_automation = None;
         self.auto_gain_clock = prepared_clock;
+        self.rebuild_oversampled_automation();
 
         // Rebuild SVF filters if SVF topology is active
         if self.topology == 1 {
@@ -2213,6 +2331,9 @@ impl EqPlugin {
         // Reset oversampling resamplers
         if let Some(os) = &mut self.oversampler {
             os.reset();
+        }
+        if let Some(automation) = &mut self.oversampled_automation {
+            automation.reset(&self.filters, true);
         }
     }
     fn latency_samples(&self) -> usize {
@@ -2297,43 +2418,7 @@ impl EqPlugin {
             if self.topology == 1 || self.oversampling_factor == 1 {
                 self.process_ordered_interleaved(buffer, num_frames);
             } else {
-                let mut oversampler = self.oversampler.take().ok_or_else(|| {
-                    "oversampling enabled but oversampler is unavailable".to_string()
-                })?;
-                let mut processed_os_frames = 0usize;
-                let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    oversampler.process(buffer, num_frames, |planar, os_frames| {
-                        processed_os_frames = processed_os_frames.saturating_add(os_frames);
-                        self.process_ordered_planar(planar, os_frames);
-                    })
-                }));
-                self.oversampler = Some(oversampler);
-                match result {
-                    Ok(result) => {
-                        result?;
-                        let elapsed_processing_frames =
-                            num_frames.saturating_mul(self.oversampling_factor as usize);
-                        for transition in &mut self.transitions {
-                            if let Some(state) = transition.as_mut() {
-                                if processed_os_frames < elapsed_processing_frames {
-                                    state.samples_remaining =
-                                        state.samples_remaining.saturating_sub(
-                                            elapsed_processing_frames - processed_os_frames,
-                                        );
-                                } else if processed_os_frames > elapsed_processing_frames {
-                                    state.samples_remaining = state
-                                        .samples_remaining
-                                        .saturating_add(
-                                            processed_os_frames - elapsed_processing_frames,
-                                        )
-                                        .min(state.total_samples);
-                                }
-                            }
-                        }
-                        self.recycle_transitions(true);
-                    }
-                    Err(payload) => std::panic::resume_unwind(payload),
-                }
+                self.process_oversampled(buffer, num_frames, true)?;
             }
             return Ok(());
         }
@@ -2403,50 +2488,7 @@ impl EqPlugin {
                 );
             }
         } else {
-            // ----------------------------------------------------------------
-            // Oversampling path: delegate to shared Oversampler
-            // ----------------------------------------------------------------
-            // Take the oversampler out to split the borrow: the callback
-            // needs &mut self.filters/transitions while oversampler needs &mut.
-            let mut os = self
-                .oversampler
-                .take()
-                .ok_or_else(|| "oversampling enabled but oversampler is unavailable".to_string())?;
-            let mut processed_os_frames = 0usize;
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                os.process(buffer, num_frames, |planar, os_frames| {
-                    processed_os_frames = processed_os_frames.saturating_add(os_frames);
-                    self.process_biquads_planar(planar, os_frames);
-                })
-            }));
-            self.oversampler = Some(os);
-            match result {
-                Ok(result) => {
-                    result?;
-                    // Oversampler callbacks can produce fewer internal frames
-                    // while priming their FIR history. Transition wall-clock
-                    // time nevertheless follows source frames, not the number
-                    // of internal frames emitted by that callback.
-                    let elapsed_processing_frames =
-                        num_frames.saturating_mul(self.oversampling_factor as usize);
-                    for transition in &mut self.transitions {
-                        if let Some(state) = transition.as_mut() {
-                            if processed_os_frames < elapsed_processing_frames {
-                                state.samples_remaining = state.samples_remaining.saturating_sub(
-                                    elapsed_processing_frames - processed_os_frames,
-                                );
-                            } else if processed_os_frames > elapsed_processing_frames {
-                                state.samples_remaining = state
-                                    .samples_remaining
-                                    .saturating_add(processed_os_frames - elapsed_processing_frames)
-                                    .min(state.total_samples);
-                            }
-                        }
-                    }
-                    self.recycle_transitions(true);
-                }
-                Err(payload) => std::panic::resume_unwind(payload),
-            }
+            self.process_oversampled(buffer, num_frames, false)?;
         }
 
         self.process_advanced_interleaved(buffer, num_frames);
