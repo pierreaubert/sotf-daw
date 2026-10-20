@@ -1,5 +1,14 @@
 # Unreleased
 
+- Render complete N-sample HRTF/LFE designs with padded 2N linear convolution,
+  preserving N/4 source hops and N-sample reported latency.
+- Combine diffuse EQ once during preparation; admit full N-sample source HRIRs
+  and retain their final taps through partial-hop EOF continuation.
+- Preserve pending spectral frame tails across mode changes before EOF, and
+  consume output between source hops to prevent oversized-callback ring wrap.
+- Add native non-grid SOFA references for complete design responses, source
+  length boundaries, near-field/EQ, reload/worker paths and callback partitions.
+
 - Share immutable SOFA datasets across completed head-pose states instead of
   copying all measurements per update.
 - Reject prepared HRTF caches over 256 MiB before committing resource changes,

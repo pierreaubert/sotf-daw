@@ -184,7 +184,7 @@ fn completed_crossfade_state_is_handed_to_background_reclaimer() {
     );
     let old = Arc::new(BinauralState {
         hrtf_filters_freq: vec![vec![Complex::new(1.0, 0.0); 66]; 2],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     let weak = Arc::downgrade(&old);
@@ -432,9 +432,10 @@ fn render_binaural_partitioned(input: &[f32], blocks: &[usize]) -> Vec<f32> {
     // streaming/ring contracts from SOFA interpolation and background state.
     let filters = (0..CHANNELS)
         .map(|channel| {
-            let left = filter::ir_to_freq(&[0.15 + channel as f32 * 0.03], 64, &plugin.fft.fft_r2c);
+            let left =
+                filter::ir_to_freq(&[0.15 + channel as f32 * 0.03], 128, &plugin.fft.fft_r2c);
             let right =
-                filter::ir_to_freq(&[0.31 - channel as f32 * 0.02], 64, &plugin.fft.fft_r2c);
+                filter::ir_to_freq(&[0.31 - channel as f32 * 0.02], 128, &plugin.fft.fft_r2c);
             let mut combined = left;
             combined.extend(right);
             combined
@@ -442,7 +443,7 @@ fn render_binaural_partitioned(input: &[f32], blocks: &[usize]) -> Vec<f32> {
         .collect();
     let state = Arc::new(BinauralState {
         hrtf_filters_freq: filters,
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(state.clone());
@@ -776,13 +777,13 @@ fn streaming_hrtf_matches_direct_linear_convolution_across_boundaries() {
                 },
             );
             plugin.initialize(f64::from(sample_rate)).unwrap();
-            let left = filter::ir_to_freq(&left_ir, fft_size, &plugin.fft.fft_r2c);
-            let right = filter::ir_to_freq(&right_ir, fft_size, &plugin.fft.fft_r2c);
+            let left = filter::ir_to_freq(&left_ir, fft_size * 2, &plugin.fft.fft_r2c);
+            let right = filter::ir_to_freq(&right_ir, fft_size * 2, &plugin.fft.fft_r2c);
             let mut combined = left;
             combined.extend(right);
             let state = Arc::new(BinauralState {
                 hrtf_filters_freq: vec![combined],
-                diffuse_field_eq_filter: None,
+                design_diffuse_field_eq: None,
                 _hrtf_data: None,
             });
             plugin.state.store(state.clone());
@@ -843,7 +844,8 @@ fn streaming_hrtf_matches_direct_linear_convolution_across_boundaries() {
         0.0,
         RoomModel::default(),
     );
-    assert!(plugin.validate_linear_convolution_ir(50).is_err());
+    assert!(plugin.validate_hrtf_design_ir(64).is_ok());
+    assert!(plugin.validate_hrtf_design_ir(65).is_err());
 }
 
 #[test]
@@ -966,7 +968,7 @@ fn test_crossfade_triggers_on_state_change() {
             vec![Complex::new(0.5, 0.0); freq_size * 2];
             plugin.config.input_channels
         ],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1008,7 +1010,7 @@ fn test_crossfade_completes() {
             vec![Complex::new(0.5, 0.0); freq_size * 2];
             plugin.config.input_channels
         ],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1127,7 +1129,7 @@ fn test_reset_clears_crossfade() {
             vec![Complex::new(0.5, 0.0); freq_size * 2];
             plugin.config.input_channels
         ],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1215,7 +1217,7 @@ fn test_crossfade_ms_parameter_set_get_and_affects_duration() {
             vec![Complex::new(0.5, 0.0); freq_size * 2];
             plugin.config.input_channels
         ],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(new_state);
@@ -1529,6 +1531,7 @@ fn test_spectral_crossfade_no_tonal_shift() {
     // State A: passthrough-like (all 1.0)
     // State B: different phase response (rotated complex values)
     let make_state = |phase_shift: f32, channels: usize| {
+        let freq_size = fft_size + 1;
         let mut filters = vec![vec![Complex::new(0.0, 0.0); freq_size * 2]; channels];
         for ch in 0..channels {
             for k in 0..freq_size {
@@ -1543,7 +1546,7 @@ fn test_spectral_crossfade_no_tonal_shift() {
         }
         Arc::new(BinauralState {
             hrtf_filters_freq: filters,
-            diffuse_field_eq_filter: None,
+            design_diffuse_field_eq: None,
             _hrtf_data: None,
         })
     };
@@ -2399,11 +2402,11 @@ fn test_head_yaw_background_update_changes_state() {
         data_sample_rate: Some(f64::from(SAMPLE_RATE_F)),
     };
 
-    let freq_size = 1024 / 2 + 1;
+    let freq_size = 1024 + 1;
     let initial_filters = vec![vec![Complex::new(0.0, 0.0); freq_size * 2]; 2];
     let initial_state = Arc::new(BinauralState {
         hrtf_filters_freq: initial_filters,
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: Some(Arc::new(sofa)),
     });
 

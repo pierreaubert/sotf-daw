@@ -127,11 +127,37 @@ explicit `audit_prepared_storage_boundary` release test materializes a cache jus
 below this limit; ordinary tests check arithmetic boundaries without allocating
 that cache. This cap does not bound end-to-end preparation time.
 
-Non-grid interpolation support remains an open audit defect. The current
-log-magnitude/phase interpolator can generate energy outside the admitted source
-HRIR support. A reproduced two-onset half-sample interpolation has energy beyond
-`fft_size - hop_size + 1`, which the current renderer can wrap into earlier samples.
-The source-length check alone does not prove linear convolution of interpolated
-responses. See `binaural-interpolated-support-diagnostic.json` in the audit artifacts
-for the temporary probe and measured results. No response truncation or claimed
-causal-filter correction is included in this ownership change.
+### Complete-response linear convolution
+
+The configured `fft_size = N` is the HRTF design grid, source-ring length, and
+reported startup latency. Source hops remain N/4 samples. Audio convolution uses
+a separately planned 2N transform: preparation retains every sample of the real
+N-point design response, then zero-pads it to 2N. Non-grid phase interpolation,
+near-field shaping, and diffuse EQ therefore cannot wrap the end of that response
+into the beginning of a source hop. Diffuse EQ is combined on the design grid
+exactly once before publication; the retained design EQ is a worker cache only.
+Native source HRIRs up to N samples are admitted. Longer HRIRs require a larger
+design grid. LFE's complete N-point design response uses the same padding.
+
+Linear-mode EOF continuation covers N startup samples plus the final N-1 FIR
+taps after the last accepted source sample, including partial final hops.
+Spectral RTPGHI fades can synthesize an entire 2N frame and use a separate frame
+support bound, retained even when switching back to linear mode before EOF. Recursive late reverb still has its documented truncation policy.
+
+Output consumption follows accepted source time, so callbacks longer than the
+4N output ring cannot overwrite earlier audio with future contributions.
+
+This doubles the audio transform length and increases directional-filter and
+callback scratch storage. The measurement cache remains on the N-point design
+grid and retains its separate 256 MiB limit. The audit's current allocation/timing
+artifact records the new callback cost; earlier timings describe earlier code.
+
+The native-SOFA convolution oracle uses an independent real f64 IDFT and direct
+causal FIR accumulation. It covers short and full-N source IRs, non-grid poses,
+near-field and non-flat diffuse EQ, reload/worker equivalence, callback partitions,
+and complete EOF tails. It proves correct rendering of the retained finite design
+response. It does not make that response minimum phase or establish ideal
+fractional-delay timing: late ringing in the current interpolator, continuous
+real-SOFA motion cues/latency, and perceptual transition/cutoff audibility remain
+open validation. The earlier support diagnostic is retained as historical
+reproduction evidence for the corrected renderer defect.

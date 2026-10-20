@@ -53,3 +53,7 @@ mod fade_cue_tests;
 #[cfg(test)]
 #[path = "lib/head_storage_tests.rs"]
 mod head_storage_tests;
+
+#[cfg(test)]
+#[path = "lib/linear_support_tests.rs"]
+mod linear_support_tests;

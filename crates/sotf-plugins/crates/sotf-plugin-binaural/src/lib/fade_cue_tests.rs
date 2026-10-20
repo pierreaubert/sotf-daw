@@ -19,6 +19,7 @@ fn kernel(id: usize, ear: usize) -> Vec<f64> {
 }
 
 fn state(id: usize, n: usize) -> Arc<BinauralState> {
+    let n = n * 2;
     let bins = n / 2 + 1;
     let mut filters = vec![Complex::new(0.0, 0.0); bins * 2];
     let mut eq = [
@@ -36,9 +37,14 @@ fn state(id: usize, n: usize) -> Arc<BinauralState> {
             eq[ear][k] = Complex::new(e.re as f32, e.im as f32);
         }
     }
+    for ear in 0..2 {
+        for k in 0..bins {
+            filters[ear * bins + k] *= eq[ear][k];
+        }
+    }
     Arc::new(BinauralState {
         hrtf_filters_freq: vec![filters],
-        diffuse_field_eq_filter: Some(eq),
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     })
 }

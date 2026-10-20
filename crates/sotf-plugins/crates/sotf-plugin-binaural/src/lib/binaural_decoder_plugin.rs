@@ -54,7 +54,10 @@ pub(super) struct BinauralConfig {
     pub(super) cached_parameters: Vec<Parameter>,
 }
 
+#[derive(Clone)]
 pub(super) struct BinauralFft {
+    pub(super) hrtf_r2c: Arc<dyn RealToComplex<f32>>,
+    pub(super) hrtf_c2r: Arc<dyn ComplexToReal<f32>>,
     pub(super) fft_r2c: Arc<dyn RealToComplex<f32>>,
     pub(super) fft_c2r: Arc<dyn ComplexToReal<f32>>,
 }
@@ -113,6 +116,9 @@ pub(super) struct BinauralOutput {
     /// callback before the reported fixed latency has elapsed.
     pub(super) latency_filled: usize,
     pub(super) output_scale: f32,
+    // Output extent of already synthesized spectral frames, measured from
+    // the accepted-source clock. Retain it across a later mode switch.
+    pub(super) spectral_tail_remaining: usize,
 }
 
 pub(super) struct BinauralRoom {
@@ -236,11 +242,11 @@ impl BinauralDecoderPlugin {
         });
     }
 
-    pub(super) fn validate_linear_convolution_ir(&self, ir_length: usize) -> PluginResult<()> {
-        let capacity = self.config.fft_size - self.config.hop_size + 1;
+    pub(super) fn validate_hrtf_design_ir(&self, ir_length: usize) -> PluginResult<()> {
+        let capacity = self.config.fft_size;
         if ir_length > capacity {
             return Err(format!(
-                "SOFA IR length {ir_length} exceeds linear convolution capacity {capacity}; increase fft_size"
+                "SOFA IR length {ir_length} exceeds HRTF design capacity {capacity}; increase fft_size"
             ));
         }
         Ok(())
@@ -267,10 +273,17 @@ impl BinauralDecoderPlugin {
 
         let hop_size = fft_size / 4;
         let sr = 44_100.0;
-        let freq_size = fft_size / 2 + 1;
+        // N remains the HRTF design grid, source-ring size and host latency.
+        // A complete N-sample design FIR needs padding beyond its N/4 input hop.
+        let convolution_size = fft_size
+            .checked_mul(2)
+            .expect("convolution FFT size overflow");
+        let freq_size = convolution_size / 2 + 1;
         let mut planner = RealFftPlanner::<f32>::new();
-        let fft_r2c = planner.plan_fft_forward(fft_size);
-        let fft_c2r = planner.plan_fft_inverse(fft_size);
+        let hrtf_r2c = planner.plan_fft_forward(fft_size);
+        let hrtf_c2r = planner.plan_fft_inverse(fft_size);
+        let fft_r2c = planner.plan_fft_forward(convolution_size);
+        let fft_c2r = planner.plan_fft_inverse(convolution_size);
         let scratch_len = fft_r2c.get_scratch_len().max(fft_c2r.get_scratch_len());
 
         let speaker_config = get_speaker_config_by_channels(input_channels)
@@ -288,7 +301,7 @@ impl BinauralDecoderPlugin {
             }
         }
 
-        let output_scale = 1.0 / fft_size as f32;
+        let output_scale = 1.0 / convolution_size as f32;
 
         let mut hrtf_filters_freq =
             vec![vec![Complex::new(0.0, 0.0); freq_size * 2]; input_channels];
@@ -315,7 +328,7 @@ impl BinauralDecoderPlugin {
 
         let initial_state = Arc::new(BinauralState {
             hrtf_filters_freq,
-            diffuse_field_eq_filter: None,
+            design_diffuse_field_eq: None,
             _hrtf_data: None,
         });
 
@@ -364,14 +377,19 @@ impl BinauralDecoderPlugin {
                 late_reverb_damping: 0.3,
                 cached_parameters: Vec::new(),
             },
-            fft: BinauralFft { fft_r2c, fft_c2r },
+            fft: BinauralFft {
+                fft_r2c,
+                fft_c2r,
+                hrtf_r2c,
+                hrtf_c2r,
+            },
             analysis: BinauralAnalysis {
                 temp_freq_buffer: vec![Complex::new(0.0, 0.0); freq_size],
                 temp_fft_scratch: vec![Complex::new(0.0, 0.0); scratch_len],
                 sum_left: vec![Complex::new(0.0, 0.0); freq_size],
                 sum_right: vec![Complex::new(0.0, 0.0); freq_size],
                 lfe_freq: vec![Complex::new(0.0, 0.0); freq_size],
-                ifft_output_buf: vec![0.0; fft_size],
+                ifft_output_buf: vec![0.0; convolution_size],
             },
             coefficients: BinauralCoefficients {
                 lfe_lowpass_filter: vec![Complex::new(1.0, 0.0); freq_size],
@@ -393,6 +411,7 @@ impl BinauralDecoderPlugin {
                 output_read_position: 0,
                 latency_filled: 0,
                 output_scale,
+                spectral_tail_remaining: 0,
             },
             room: BinauralRoom {
                 reflection_delay_line: vec![0.0; delay_size * input_channels],
@@ -546,7 +565,7 @@ impl BinauralDecoderPlugin {
         );
         Arc::new(BinauralState {
             hrtf_filters_freq: filters,
-            diffuse_field_eq_filter: None,
+            design_diffuse_field_eq: None,
             _hrtf_data: None,
         })
     }
@@ -658,16 +677,8 @@ impl BinauralDecoderPlugin {
                             self.crossfade.effective_previous[ch][index]
                         } else {
                             old.hrtf_filters_freq[ch][index]
-                                * old
-                                    .diffuse_field_eq_filter
-                                    .as_ref()
-                                    .map_or(Complex::new(1.0, 0.0), |eq| eq[ear][k])
                         };
-                        let destination = current.hrtf_filters_freq[ch][index]
-                            * current
-                                .diffuse_field_eq_filter
-                                .as_ref()
-                                .map_or(Complex::new(1.0, 0.0), |eq| eq[ear][k]);
+                        let destination = current.hrtf_filters_freq[ch][index];
                         self.crossfade.candidate_previous[ch][index] =
                             previous * (1.0 - alpha) + destination * alpha;
                     }
@@ -730,8 +741,8 @@ impl BinauralDecoderPlugin {
 
         let state = &new_state;
         let filters = &state.hrtf_filters_freq;
-        let df_eq = &state.diffuse_field_eq_filter;
-        let n = self.config.fft_size;
+
+        let n = self.fft.fft_r2c.len();
         let freq_size = self.config.freq_size;
         let mask = self.output.output_accumulator_mask;
         let scale = self.output.output_scale;
@@ -748,7 +759,6 @@ impl BinauralDecoderPlugin {
                 .unwrap()
                 .clone();
             let prev_filters = &prev.hrtf_filters_freq;
-            let prev_df_eq = &prev.diffuse_field_eq_filter;
 
             self.analysis.sum_left.fill(Complex::new(0.0, 0.0));
             self.analysis.sum_right.fill(Complex::new(0.0, 0.0));
@@ -770,7 +780,7 @@ impl BinauralDecoderPlugin {
                 self.analysis.ifft_output_buf.fill(0.0);
                 self.input.copy_hop(
                     ch,
-                    n,
+                    self.config.fft_size,
                     self.config.hop_size,
                     &mut self.analysis.ifft_output_buf,
                 );
@@ -815,39 +825,6 @@ impl BinauralDecoderPlugin {
                 );
             }
 
-            // Apply diffuse field EQ to new output
-            if let Some(eq) = df_eq {
-                for (k, (sl, sr)) in self
-                    .analysis
-                    .sum_left
-                    .iter_mut()
-                    .zip(self.analysis.sum_right.iter_mut())
-                    .enumerate()
-                    .take(freq_size)
-                {
-                    *sl *= eq[0][k];
-                    *sr *= eq[1][k];
-                }
-            }
-
-            // Apply diffuse field EQ to old output
-            if let Some(eq) = prev_df_eq
-                .as_ref()
-                .filter(|_| !self.crossfade.effective_previous_active)
-            {
-                for (k, (sl, sr)) in self
-                    .crossfade
-                    .crossfade_sum_left
-                    .iter_mut()
-                    .zip(self.crossfade.crossfade_sum_right.iter_mut())
-                    .enumerate()
-                    .take(freq_size)
-                {
-                    *sl *= eq[0][k];
-                    *sr *= eq[1][k];
-                }
-            }
-
             // Blend old and new in frequency domain using crossfade gain
             // Linear crossfade: new_gain goes from 0.0 to 1.0 over the crossfade period
             let new_gain = if self.crossfade.crossfade_total > 0 {
@@ -863,6 +840,8 @@ impl BinauralDecoderPlugin {
                 && self.crossfade.rtpghi_right.is_some();
 
             if use_spectral {
+                self.output.spectral_tail_remaining =
+                    self.config.fft_size + n - self.config.hop_size;
                 // Spectral mode: magnitude interpolation + RTPGHI phase reconstruction
                 // This avoids comb-filter artifacts from complex-domain blending.
                 for k in 0..freq_size {
@@ -949,7 +928,7 @@ impl BinauralDecoderPlugin {
                 self.analysis.ifft_output_buf.fill(0.0);
                 self.input.copy_hop(
                     ch,
-                    n,
+                    self.config.fft_size,
                     self.config.hop_size,
                     &mut self.analysis.ifft_output_buf,
                 );
@@ -974,20 +953,6 @@ impl BinauralDecoderPlugin {
                     &hrtf[freq_size..],
                 );
             }
-
-            if let Some(eq) = df_eq {
-                for (k, (sl, sr)) in self
-                    .analysis
-                    .sum_left
-                    .iter_mut()
-                    .zip(self.analysis.sum_right.iter_mut())
-                    .enumerate()
-                    .take(freq_size)
-                {
-                    *sl *= eq[0][k];
-                    *sr *= eq[1][k];
-                }
-            }
         }
 
         // LFE processing (same for both paths -- LFE doesn't use HRTF filters)
@@ -1000,7 +965,7 @@ impl BinauralDecoderPlugin {
             self.analysis.ifft_output_buf.fill(0.0);
             self.input.copy_hop(
                 ch,
-                n,
+                self.config.fft_size,
                 self.config.hop_size,
                 &mut self.analysis.ifft_output_buf,
             );
@@ -1152,6 +1117,34 @@ impl BinauralDecoderPlugin {
         }
     }
 
+    fn linearize_filters(
+        filters: Vec<Vec<Complex<f32>>>,
+        eq: Option<&[Vec<Complex<f32>>; 2]>,
+        fft: &BinauralFft,
+    ) -> Vec<Vec<Complex<f32>>> {
+        let bins = fft.hrtf_r2c.len() / 2 + 1;
+        filters
+            .into_iter()
+            .map(|filter| {
+                let mut result = Vec::with_capacity(2 * (fft.fft_r2c.len() / 2 + 1));
+                for ear in 0..2 {
+                    let mut design = filter[ear * bins..(ear + 1) * bins].to_vec();
+                    if let Some(eq) = eq {
+                        for (h, e) in design.iter_mut().zip(&eq[ear]) {
+                            *h *= *e;
+                        }
+                    }
+                    result.extend(super::filter::linear_convolution_spectrum(
+                        design,
+                        &fft.hrtf_c2r,
+                        &fft.fft_r2c,
+                    ));
+                }
+                result
+            })
+            .collect()
+    }
+
     fn source_for_current_head(
         &self,
         azimuth: f32,
@@ -1254,14 +1247,18 @@ impl BinauralDecoderPlugin {
         // A replacement cannot mix old spectra with new measurement indices.
         let base = state.load();
         let config = self.config.clone();
-        let fft_r2c = Arc::clone(&self.fft.fft_r2c);
+        let fft = self.fft.clone();
         let lfe_channels = self.coefficients.lfe_channels.clone();
         let sofa = base
             ._hrtf_data
             .as_ref()
             .expect("worker requires a loaded SOFA");
-        let prepared =
-            super::hrtf::prepare_hrtf_spectra(sofa, config.fft_size, config.sample_rate, &fft_r2c);
+        let prepared = super::hrtf::prepare_hrtf_spectra(
+            sofa,
+            config.fft_size,
+            config.sample_rate,
+            &fft.hrtf_r2c,
+        );
         self.head_requests.start();
         self.smoothing.last_hrtf_yaw = f32::INFINITY;
         self.smoothing.last_hrtf_pitch = f32::INFINITY;
@@ -1274,10 +1271,9 @@ impl BinauralDecoderPlugin {
                     &base,
                     &config,
                     &prepared,
+                    &fft,
                     &lfe_channels,
-                    pose.angles.0,
-                    pose.angles.1,
-                    pose.angles.2,
+                    pose.angles,
                 )
             });
         });
@@ -1304,11 +1300,11 @@ impl BinauralDecoderPlugin {
         state: &Arc<BinauralState>,
         config: &BinauralConfig,
         prepared: &super::hrtf::PreparedHrtfSpectra,
+        fft: &BinauralFft,
         lfe_channels: &[usize],
-        yaw: f32,
-        pitch: f32,
-        roll: f32,
+        angles: (f32, f32, f32),
     ) -> PluginResult<Arc<BinauralState>> {
+        let (yaw, pitch, roll) = angles;
         if config.sample_rate == 0.0 {
             return Ok(Arc::clone(state));
         }
@@ -1319,8 +1315,9 @@ impl BinauralDecoderPlugin {
             None => return Ok(Arc::clone(state)),
         };
 
+        let design_bins = config.fft_size / 2 + 1;
         let mut filters =
-            vec![vec![Complex::new(0.0, 0.0); config.freq_size * 2]; config.input_channels];
+            vec![vec![Complex::new(0.0, 0.0); design_bins * 2]; config.input_channels];
 
         for spk in config.speaker_config.speakers {
             let ch = spk.channel;
@@ -1342,27 +1339,28 @@ impl BinauralDecoderPlugin {
                 tgt.azimuth,
                 tgt.elevation,
             );
-            filters[ch][..config.freq_size].copy_from_slice(&l_fft[..config.freq_size]);
-            filters[ch][config.freq_size..].copy_from_slice(&r_fft[..config.freq_size]);
+            filters[ch][..design_bins].copy_from_slice(&l_fft[..design_bins]);
+            filters[ch][design_bins..].copy_from_slice(&r_fft[..design_bins]);
         }
 
         super::hrtf::normalize_hrtf_gains(
             &mut filters,
             lfe_channels,
-            config.freq_size,
+            design_bins,
             config.input_channels,
         );
 
         // Diffuse-field EQ depends on the dataset, not on head orientation.
         // Reuse the load-time result instead of transforming every SOFA
         // measurement again for each tracking update.
-        let eq = state_guard.diffuse_field_eq_filter.clone();
+        let eq = state_guard.design_diffuse_field_eq.clone();
 
+        let filters = Self::linearize_filters(filters, eq.as_ref(), fft);
         let sofa_clone = state_guard._hrtf_data.clone();
 
         Ok(Arc::new(BinauralState {
             hrtf_filters_freq: filters,
-            diffuse_field_eq_filter: eq,
+            design_diffuse_field_eq: eq,
             _hrtf_data: sofa_clone,
         }))
     }
@@ -1383,6 +1381,7 @@ impl BinauralDecoderPlugin {
         self.output.next_add_position = 0;
         self.output.output_read_position = 0;
         self.output.latency_filled = 0;
+        self.output.spectral_tail_remaining = 0;
         self.room.reflection_delay_line.fill(0.0);
         self.room.reflection_write_pos = 0;
         self.room.reflection_read_pos = 0;
@@ -1483,16 +1482,15 @@ impl Plugin for BinauralDecoderPlugin {
                     super::hrtf::resample_sofa(&mut sofa, self.config.sample_rate)
                         .map_err(|e| format!("HRTF resample failed: {}", e))?;
                 }
-                self.validate_linear_convolution_ir(sofa.ir_length)?;
+                self.validate_hrtf_design_ir(sofa.ir_length)?;
                 super::hrtf::validate_prepared_hrtf_storage(
                     sofa.num_measurements,
                     self.config.fft_size,
                 )?;
 
-                let mut filters = vec![
-                    vec![Complex::new(0.0, 0.0); self.config.freq_size * 2];
-                    self.config.input_channels
-                ];
+                let design_bins = self.config.fft_size / 2 + 1;
+                let mut filters =
+                    vec![vec![Complex::new(0.0, 0.0); design_bins * 2]; self.config.input_channels];
                 for spk in self.config.speaker_config.speakers {
                     let ch = spk.channel;
                     if ch >= self.config.input_channels
@@ -1509,20 +1507,18 @@ impl Plugin for BinauralDecoderPlugin {
                         &sofa,
                         self.config.fft_size,
                         self.config.sample_rate,
-                        &self.fft.fft_r2c,
+                        &self.fft.hrtf_r2c,
                         self.config.near_field_strength,
                         tgt.azimuth,
                         tgt.elevation,
                     );
-                    filters[ch][..self.config.freq_size]
-                        .copy_from_slice(&l_fft[..self.config.freq_size]);
-                    filters[ch][self.config.freq_size..]
-                        .copy_from_slice(&r_fft[..self.config.freq_size]);
+                    filters[ch][..design_bins].copy_from_slice(&l_fft[..design_bins]);
+                    filters[ch][design_bins..].copy_from_slice(&r_fft[..design_bins]);
                 }
                 super::hrtf::normalize_hrtf_gains(
                     &mut filters,
                     &self.coefficients.lfe_channels,
-                    self.config.freq_size,
+                    design_bins,
                     self.config.input_channels,
                 );
                 let eq = if self.config.diffuse_field_eq {
@@ -1531,16 +1527,17 @@ impl Plugin for BinauralDecoderPlugin {
                             &sofa,
                             self.config.fft_size,
                             self.config.sample_rate,
-                            &self.fft.fft_r2c,
+                            &self.fft.hrtf_r2c,
                         )
                         .map_err(|e| format!("Diffuse field EQ calculation failed: {}", e))?,
                     )
                 } else {
                     None
                 };
+                let filters = Self::linearize_filters(filters, eq.as_ref(), &self.fft);
                 let new_state = Arc::new(BinauralState {
                     hrtf_filters_freq: filters,
-                    diffuse_field_eq_filter: eq,
+                    design_diffuse_field_eq: eq,
                     _hrtf_data: Some(Arc::new(sofa)),
                 });
                 // Commit only after every fallible load/resample/filter step
@@ -1788,7 +1785,7 @@ impl Plugin for BinauralDecoderPlugin {
             if sofa.sample_rate != sr {
                 super::hrtf::resample_sofa(&mut sofa, sr)?;
             }
-            self.validate_linear_convolution_ir(sofa.ir_length)?;
+            self.validate_hrtf_design_ir(sofa.ir_length)?;
             super::hrtf::validate_prepared_hrtf_storage(
                 sofa.num_measurements,
                 self.config.fft_size,
@@ -1814,11 +1811,11 @@ impl Plugin for BinauralDecoderPlugin {
 
         // Initialize RTPGHI processors for spectral crossfade mode
         self.crossfade.rtpghi_left = Some(RtpghiProcessor::new(
-            self.config.fft_size,
+            self.fft.fft_r2c.len(),
             self.config.hop_size,
         ));
         self.crossfade.rtpghi_right = Some(RtpghiProcessor::new(
-            self.config.fft_size,
+            self.fft.fft_r2c.len(),
             self.config.hop_size,
         ));
         // Ensure magnitude/phase scratch buffers are correctly sized
@@ -1841,7 +1838,8 @@ impl Plugin for BinauralDecoderPlugin {
             self.config.lfe_distance,
             self.config.lfe_level,
         );
-        self.coefficients.lfe_lowpass_filter = f;
+        self.coefficients.lfe_lowpass_filter =
+            super::filter::linear_convolution_spectrum(f, &self.fft.hrtf_c2r, &self.fft.fft_r2c);
         self.coefficients.lfe_gain = g;
         self.room.cached_reflections = vec![Vec::new(); self.config.input_channels];
         if let Some(srir_path) = &self.config.srir_file {
@@ -1908,10 +1906,9 @@ impl Plugin for BinauralDecoderPlugin {
         }
 
         if let Some((sofa, delay_rebase_seconds)) = prepared_sofa {
-            let mut filters = vec![
-                vec![Complex::new(0.0, 0.0); self.config.freq_size * 2];
-                self.config.input_channels
-            ];
+            let design_bins = self.config.fft_size / 2 + 1;
+            let mut filters =
+                vec![vec![Complex::new(0.0, 0.0); design_bins * 2]; self.config.input_channels];
             for spk in self.config.speaker_config.speakers {
                 let ch = spk.channel;
                 if ch >= self.config.input_channels || self.coefficients.lfe_channels.contains(&ch)
@@ -1927,20 +1924,18 @@ impl Plugin for BinauralDecoderPlugin {
                     &sofa,
                     self.config.fft_size,
                     sr,
-                    &self.fft.fft_r2c,
+                    &self.fft.hrtf_r2c,
                     self.config.near_field_strength,
                     tgt.azimuth,
                     tgt.elevation,
                 );
-                filters[ch][..self.config.freq_size]
-                    .copy_from_slice(&l_fft[..self.config.freq_size]);
-                filters[ch][self.config.freq_size..]
-                    .copy_from_slice(&r_fft[..self.config.freq_size]);
+                filters[ch][..design_bins].copy_from_slice(&l_fft[..design_bins]);
+                filters[ch][design_bins..].copy_from_slice(&r_fft[..design_bins]);
             }
             super::hrtf::normalize_hrtf_gains(
                 &mut filters,
                 &self.coefficients.lfe_channels,
-                self.config.freq_size,
+                design_bins,
                 self.config.input_channels,
             );
             let eq = if self.config.diffuse_field_eq {
@@ -1949,7 +1944,7 @@ impl Plugin for BinauralDecoderPlugin {
                         &sofa,
                         self.config.fft_size,
                         sr,
-                        &self.fft.fft_r2c,
+                        &self.fft.hrtf_r2c,
                     )
                     .map_err(|e| format!("Diffuse field EQ calculation failed: {}", e))?,
                 )
@@ -1971,7 +1966,7 @@ impl Plugin for BinauralDecoderPlugin {
                     &sofa,
                     self.config.fft_size,
                     sr,
-                    &self.fft.fft_r2c,
+                    &self.fft.hrtf_r2c,
                     0.0, // no near-field for reflections
                     refl.azimuth_deg,
                     refl.elevation_deg,
@@ -1980,9 +1975,10 @@ impl Plugin for BinauralDecoderPlugin {
                     Some(super::room::ReflectionHrtf::from_freq_domain(l_fft, r_fft));
             }
 
+            let filters = Self::linearize_filters(filters, eq.as_ref(), &self.fft);
             let new_state = Arc::new(BinauralState {
                 hrtf_filters_freq: filters,
-                diffuse_field_eq_filter: eq,
+                design_diffuse_field_eq: eq,
                 _hrtf_data: Some(Arc::new(sofa)),
             });
             // Retire the old immutable worker epoch before committing its
@@ -2099,9 +2095,17 @@ impl BinauralDecoderPlugin {
         let n = self.config.fft_size;
         let hop = self.config.hop_size;
         let padding = (hop - self.input.input_fill) % hop;
-        // Last nonempty input hop contributes N transform samples. Include
-        // the fixed N-frame startup delay and partial-hop scheduling zeros.
-        let transform_tail = n + n - hop + padding;
+        // A complete causal design FIR has N samples. The last accepted
+        // source sample can excite tap N-1 even in a partial final hop.
+        let mut transform_tail = n + n - 1;
+        // Preserve already synthesized 2N spectral frames even if the caller
+        // switches back to linear mode immediately before EOF.
+        transform_tail = transform_tail.max(self.output.spectral_tail_remaining);
+        if self.config.crossfade_mode_index == 1 && self.crossfade.crossfade_remaining > 0 {
+            // Completing a partial source hop may synthesize one more 2N
+            // spectral frame. Later all-zero hops add no finite input support.
+            transform_tail = transform_tail.max(n + self.fft.fft_r2c.len() - hop + padding);
+        }
         // Reflection taps read original source channels and have scalar ear
         // gains, so their support is the source delay (no extra HRIR tail).
         let reflection_delay = self
@@ -2189,6 +2193,8 @@ impl BinauralDecoderPlugin {
                 // Complete one source hop before requesting/preparing its HRTF.
                 // Reading a whole callback ahead would use future head angles.
                 let to_copy = (self.config.hop_size - self.input.input_fill).min(nf - ip);
+                self.output.spectral_tail_remaining =
+                    self.output.spectral_tail_remaining.saturating_sub(to_copy);
                 let input_mask = n - 1;
                 for ch in 0..self.config.input_channels {
                     let off = ch * n;
@@ -2230,10 +2236,11 @@ impl BinauralDecoderPlugin {
                 self.input.input_fill -= self.config.hop_size;
             }
 
-            // Consume the complete callback before advancing the output
-            // timeline. Large callbacks may require several input-buffer
-            // fills; draining early would silently drop their tail.
-            if ip < nf {
+            // Advance only through accepted source time. Consume each hop's
+            // available output before accepting an unbounded callback's next
+            // hops, so future contributions cannot wrap the bounded ring.
+            let available = ip - op;
+            if available == 0 {
                 continue;
             }
 
@@ -2243,7 +2250,7 @@ impl BinauralDecoderPlugin {
             // callbacks may be smaller than a hop or larger than an FFT
             // frame, and both cases must observe the same absolute delay.
             if self.output.latency_filled < self.config.fft_size {
-                let to_zero = (self.config.fft_size - self.output.latency_filled).min(nf - op);
+                let to_zero = (self.config.fft_size - self.output.latency_filled).min(available);
                 let zero_end = (op + to_zero) * 2;
                 output[op * 2..zero_end].fill(0.0);
                 self.output.latency_filled += to_zero;
@@ -2251,7 +2258,7 @@ impl BinauralDecoderPlugin {
                 continue;
             }
 
-            let to_drain = self.output.output_accumulator_fill.min(nf - op);
+            let to_drain = self.output.output_accumulator_fill.min(available);
             if to_drain > 0 {
                 let drain_slice = &mut output[op * 2..(op + to_drain) * 2];
                 for i in 0..to_drain {

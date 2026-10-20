@@ -17,7 +17,7 @@ use std::time::Duration;
 fn filters(value: f32) -> Arc<BinauralState> {
     Arc::new(BinauralState {
         hrtf_filters_freq: vec![vec![Complex::new(value, 0.0); 66]; 2],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     })
 }

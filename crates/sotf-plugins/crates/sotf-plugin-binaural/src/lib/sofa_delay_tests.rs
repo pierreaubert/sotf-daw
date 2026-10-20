@@ -78,7 +78,7 @@ fn failed_delay_initialize_retains_ready_publication_active_owners_and_worker() 
         let active = Arc::clone(&plugin.crossfade.current_state_snapshot);
         let pending = Arc::new(BinauralState {
             hrtf_filters_freq: active.hrtf_filters_freq.clone(),
-            diffuse_field_eq_filter: active.diffuse_field_eq_filter.clone(),
+            design_diffuse_field_eq: active.design_diffuse_field_eq.clone(),
             _hrtf_data: active._hrtf_data.clone(),
         });
         plugin.state.store(Arc::clone(&pending));

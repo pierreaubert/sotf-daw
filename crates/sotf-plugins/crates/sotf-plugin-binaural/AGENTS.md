@@ -97,4 +97,8 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 
 - Retain shared immutable `Arc<SofaFile>` ownership across completed poses; never deep-clone the measurement dataset per pose.
 - Validate prepared-cache storage before reload/initialize commits. The 256 MiB cache-payload limit is separate from source IR storage and total process memory.
-- Source HRIR length does not prove interpolated support. The non-grid support diagnostic records an open aliasing defect; held-pose tests do not close it.
+- The configured N design grid is distinct from the 2N audio convolution transform. Keep input-ring indexing/source hops and reported N latency independent of padded IFFT lengths.
+- Retain the complete real N-point combined design (including EQ) before padding. `design_diffuse_field_eq` is a preparation cache; never apply it again in audio or retargeting.
+- Linear EOF must retain N-1 FIR taps after the last accepted sample, regardless of partial-hop phase. Spectral output frames can occupy 2N samples and retain their support bound across a later mode switch.
+- Drain available output through accepted source time between source hops. Feeding an entire unbounded callback first can overwrite the bounded 4N output ring.
+- The historical support diagnostic reproduces the former renderer aliasing defect. Correct convolution does not prove ideal fractional-delay timing, minimum-phase interpolation or continuous-motion cue accuracy.

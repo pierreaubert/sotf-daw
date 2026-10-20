@@ -1,4 +1,4 @@
-use realfft::RealToComplex;
+use realfft::{ComplexToReal, RealToComplex};
 use rustfft::num_complex::Complex;
 use sotf_host::sofa::SofaFile;
 use std::sync::Arc;
@@ -17,8 +17,8 @@ pub fn ir_to_freq(
     // Prepare time-domain buffer (zero-padded)
     let mut time_buffer = vec![0.0f32; fft_size];
 
-    // Callers validate that the complete IR fits the linear overlap-add
-    // partition capacity. Never silently truncate a spatial filter.
+    // Callers validate the complete IR against its design grid. The audio
+    // convolver pads the prepared response separately; never truncate it.
     assert!(ir.len() <= fft_size, "IR exceeds FFT size");
     let copy_len = ir.len();
     let mut max_val = 0.0f32;
@@ -279,4 +279,33 @@ pub fn compute_lfe_filter<S: Into<f64>>(
     );
 
     (lfe_lowpass_filter, lfe_gain)
+}
+
+/// Embeds a complete real design response into a linear-convolution spectrum.
+///
+/// The design's DC and Nyquist bins follow the real-signal convention. Every
+/// inverse-transform sample is retained; no support projection or truncation
+/// is performed. This runs only during control/worker preparation.
+pub fn linear_convolution_spectrum(
+    mut design: Vec<Complex<f32>>,
+    inverse: &Arc<dyn ComplexToReal<f32>>,
+    forward: &Arc<dyn RealToComplex<f32>>,
+) -> Vec<Complex<f32>> {
+    let n = inverse.len();
+    assert_eq!(design.len(), n / 2 + 1, "design spectrum dimensions");
+    assert!(forward.len() >= 2 * n, "linear convolution padding");
+    design[0].im = 0.0;
+    design[n / 2].im = 0.0;
+    let mut time = vec![0.0; forward.len()];
+    inverse
+        .process(&mut design, &mut time[..n])
+        .expect("prepared inverse FFT dimensions");
+    for sample in &mut time[..n] {
+        *sample /= n as f32;
+    }
+    let mut result = vec![Complex::new(0.0, 0.0); forward.len() / 2 + 1];
+    forward
+        .process(&mut time, &mut result)
+        .expect("prepared linear FFT dimensions");
+    result
 }

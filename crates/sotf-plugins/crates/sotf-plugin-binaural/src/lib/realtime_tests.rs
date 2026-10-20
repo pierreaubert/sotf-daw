@@ -178,8 +178,8 @@ fn process_hop(mut plugin: crate::BinauralDecoderPlugin) -> crate::BinauralDecod
 
 fn make_state(gain: f32) -> std::sync::Arc<crate::types::BinauralState> {
     std::sync::Arc::new(crate::types::BinauralState {
-        hrtf_filters_freq: vec![vec![rustfft::num_complex::Complex::new(gain, 0.0); 66]; 2],
-        diffuse_field_eq_filter: None,
+        hrtf_filters_freq: vec![vec![rustfft::num_complex::Complex::new(gain, 0.0); 130]; 2],
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     })
 }
@@ -321,7 +321,7 @@ fn audit_transition_timing() {
                 // while exercising adoption and interrupted-fade ownership.
                 plugin.state.store(Arc::new(crate::types::BinauralState {
                     hrtf_filters_freq: original.hrtf_filters_freq.clone(),
-                    diffuse_field_eq_filter: None,
+                    design_diffuse_field_eq: None,
                     _hrtf_data: None,
                 }));
                 let start = Instant::now();

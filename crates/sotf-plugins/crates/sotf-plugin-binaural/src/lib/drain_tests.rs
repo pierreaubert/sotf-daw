@@ -75,11 +75,15 @@ fn finite_decoder(left_ir: &[f32], right_ir: &[f32]) -> BinauralDecoderPlugin {
         },
     );
     plugin.initialize(f64::from(SAMPLE_RATE)).unwrap();
-    let mut response = filter::ir_to_freq(left_ir, FFT_SIZE, &plugin.fft.fft_r2c);
-    response.extend(filter::ir_to_freq(right_ir, FFT_SIZE, &plugin.fft.fft_r2c));
+    let mut response = filter::ir_to_freq(left_ir, FFT_SIZE * 2, &plugin.fft.fft_r2c);
+    response.extend(filter::ir_to_freq(
+        right_ir,
+        FFT_SIZE * 2,
+        &plugin.fft.fft_r2c,
+    ));
     let state = Arc::new(BinauralState {
         hrtf_filters_freq: vec![response],
-        diffuse_field_eq_filter: None,
+        design_diffuse_field_eq: None,
         _hrtf_data: None,
     });
     plugin.state.store(Arc::clone(&state));
@@ -314,10 +318,9 @@ fn finite_hrir_drain_matches_direct_convolution_and_zero_padded_reference() {
             let mut actual = process_partitioned(&mut plugin, &input, partitions);
             finish(&mut plugin, &mut actual);
 
-            // Each hop contributes one N-frame IFFT block. The last block starts
-            // at floor((T-1)/H)*H; the public timeline adds N startup frames.
-            let hop = FFT_SIZE / 4;
-            let total_frames = FFT_SIZE + ((frames - 1) / hop) * hop + FFT_SIZE;
+            // Complete causal design FIRs have N samples. The final accepted
+            // sample can excite tap N-1 after the fixed N-frame latency.
+            let total_frames = frames + FFT_SIZE * 2 - 1;
             assert_eq!(actual.len(), total_frames * 2, "input frames={frames}");
 
             let mut continued = input.clone();

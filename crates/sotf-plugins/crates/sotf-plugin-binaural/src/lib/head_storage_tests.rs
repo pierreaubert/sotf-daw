@@ -53,7 +53,7 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
         p.initialize(48000.0).unwrap();
         let base = Arc::new(BinauralState {
             hrtf_filters_freq: vec![vec![Complex::new(0.0, 0.0); bins * 2]; 2],
-            diffuse_field_eq_filter: Some([
+            design_diffuse_field_eq: Some([
                 vec![Complex::new(1.0, 0.0); bins],
                 vec![Complex::new(1.0, 0.0); bins],
             ]),
@@ -76,10 +76,9 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
                     &base,
                     &p.config,
                     &prepared,
+                    &p.fft,
                     &[],
-                    pose as f32 * 7.25 - 40.0,
-                    0.0,
-                    0.0,
+                    (pose as f32 * 7.25 - 40.0, 0.0, 0.0),
                 )
                 .unwrap()
             });
@@ -99,10 +98,9 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
                 &base,
                 &p.config,
                 &prepared,
+                &p.fft,
                 &[],
-                0.0,
-                0.0,
-                0.0,
+                (0.0, 0.0, 0.0),
             )
             .unwrap();
             assert_eq!(Arc::strong_count(sofa), 3);
@@ -119,7 +117,7 @@ fn completed_poses_share_the_immutable_dataset_without_measurement_sized_allocat
             "HEAD_STORAGE measurements={measurements} ir={length} fft={n} dataset_bytes={} prep_ns={preparation_ns} max_pose_ns={maximum_ns} max_pose_bytes={maximum_bytes} largest_allocation={largest_allocation} shared={shared}",
             sofa.impulse_responses.len() * 4
         );
-        valid &= shared && largest_allocation <= bins * 2 * size_of::<Complex<f32>>();
+        valid &= shared && largest_allocation <= p.config.freq_size * 2 * size_of::<Complex<f32>>();
     }
     assert!(
         valid,

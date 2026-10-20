@@ -266,7 +266,7 @@ fn prepared_cues(p: &BinauralDecoderPlugin, yaw: f32, strength: f64, measurement
         for bin in [1, 7, 37, p.config.fft_size / 2] {
             let phase =
                 -std::f64::consts::TAU * bin as f64 * delays(yaw, measurement_specific)[ear] as f64
-                    / p.config.fft_size as f64;
+                    / p.fft.fft_r2c.len() as f64;
             let actual = state.hrtf_filters_freq[0][ear * p.config.freq_size + bin];
             let error = ((f64::from(actual.re) - expected_gain * phase.cos()).powi(2)
                 + (f64::from(actual.im) - expected_gain * phase.sin()).powi(2))
