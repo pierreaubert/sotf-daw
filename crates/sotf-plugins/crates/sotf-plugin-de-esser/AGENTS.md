@@ -34,3 +34,11 @@ cargo test -p sotf-plugin-de-esser
   channel. Both controls use sample-based 5 ms smoothing.
 - Append parameters to preserve host indices; Range and Stereo Link use 8 and 9.
 - Meter cadence is sample-count based at about 30 Hz and reset is deterministic.
+- Successful initialize clears prior envelope/history and settles retained
+  controls; rejected initialize preserves populated state.
+- Recorded-sound attenuation, calibrated LF/HF analysis and reinitialize
+  regressions are in `tests/audit_*.rs`. Fixture licenses and source hashes are
+  under `tests/fixtures/recorded`; those audio licenses differ from Rust code.
+- The detector is not speech-conditioned: report unwanted music/plosive/vowel
+  attenuation explicitly. A clean native release stress-matrix pass is not
+  established by focused supported-clock routing tests.

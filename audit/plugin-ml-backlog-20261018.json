@@ -94,6 +94,13 @@
       "production_requirement": false
     },
     {
+      "plugin_id": 17,
+      "plugin": "De-esser",
+      "status": "deferred_optional_research",
+      "proposal_and_constraints": "A small speech-conditioned sibilance classifier could gate the existing detector. Measure false positives on music and use confidence-based fallback. Classical relative band-energy detection and hysteresis are alternatives to benchmark before model adoption. Current recorded-sound baseline: audit/artifacts/plugin-audit-20261018/de-esser-recorded.json. This five-recording, single-phoneme-speaker set establishes conditional attenuation, not adequate training data or population accuracy. At the fixed high-gain setting, Wideband attenuates violin by 5.691 dB and cymbal by 5.038 dB; the production detector is based on absolute band level rather than speech identity.",
+      "production_requirement": false
+    },
+    {
       "plugin_id": 18,
       "plugin": "Declick",
       "status": "deferred_optional_research",

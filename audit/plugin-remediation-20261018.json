@@ -481,9 +481,47 @@
       "id": 17,
       "plugin": "De-esser",
       "audit_text": "[`de_esser_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-de-esser/src/lib/de_esser_plugin.rs):1210\u20131335 accounts for lookahead and FIR group delay and supports split-band behavior. LR4 recursive state and finite retained lookahead are different tail concepts. Detector channel linking and split recombination determine whether stereo image and non-sibilant material survive.\n\n`range_and_link.rs`, `realtime_parameters.rs` and native host sidechain tests are useful. Extend annotated fricatives, plosives, cymbals and bright nonspeech instruments, measuring false attenuation as well as sibilance reduction. Classical relative band-energy detection and hysteresis are sensible. A small speech-conditioned sibilance classifier could gate the existing detector; measure false positives on music and use confidence-based fallback.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "complete_production_scope",
+      "tasks": [
+        {
+          "task": "Clear prior dynamics and settled controls on successful reinitialization",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-de-esser/src/lib/de_esser_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/audit_reinitialize.rs"
+          ],
+          "result": "The pre-fix populated reinitialize regression reproduced maximum sample difference 0.06986481 from a fresh reset processor. initialize now finishes with reset after successful preparation, clearing detector/reduction/filter/delay history, meter cadence and settling retained mix/range/link targets. All three topologies at 44.1/48/96 kHz match fresh output exactly; invalid rate/band refusals preserve populated audio history."
+        },
+        {
+          "task": "Extend annotated fricative, plosive, cymbal and bright instrument measurements",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/audit_recorded.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json",
+            "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/README.md",
+            "audit/artifacts/plugin-audit-20261018/de-esser-recorded.json"
+          ],
+          "result": "Five actual attributed recordings: /s/ and /sh/ with vowels, /p/ speech, violin and cymbal. Offline mono PCM at 48 kHz, fixed annotations selected from source identity/spectrograms before measuring DSP, source/derived SHA256 and separate audio licenses. All three topologies, two fixed input gains, 66 annotated-region measurements. Report full-band, independent LF/HF attenuation and active 10 ms windows reduced >1 dB. Only an isolated single-speaker demonstration and two instrument examples; no population/classifier-accuracy claim."
+        },
+        {
+          "task": "Use phase-matched reference and independent band analysis; measure unwanted reduction",
+          "status": "implemented_and_verified",
+          "evidence": "tests/audit_recorded.rs and de-esser-recorded.json; Range-zero reference has the same topology/delay, not raw input through LR4 phase. Independent centered 129-tap f64 Hann-windowed-sinc analysis separates LF 0-2 kHz and HF 4-12 kHz, calibrated against DC and coherent-tone power. At input gain 1, fricative HF attenuation: Wideband 5.863-5.950 dB, LR4 1.934-3.122 dB, FIR 1.071-3.104 dB. Following-vowel LF attenuation in split modes remains <0.0015 dB at these settings. Wideband unwanted full-band attenuation reaches 3.628 dB on following vowels, 3.301 dB on plosive bursts, 5.691 dB on violin and 5.038 dB on cymbal. These conditional observations expose the absolute-band-level detector limitation, not a claim to eliminate it. Optional speech-conditioned classification, with classical baselines/confidence fallback constraints, is tracked separately in plugin-ml-backlog-20261018.json."
+        },
+        {
+          "task": "Verify block, stereo, realtime, reset and native routing contracts on real programme",
+          "status": "implemented_and_verified",
+          "evidence": "Recorded outputs are bit-identical for regular/irregular callbacks, include a fixed ordinary zero continuation without declaring LR4 support finite, and preserve the linked 4:1 stereo ratio within a fixed 2e-6 sample bound. Callbacks have no allocations/deallocations. Existing range/link, real-time, independent split response, latency/tail and sidechain tests retained and executed; twelve focused native wrapper route/sidechain tests pass. Separate native release stress diagnostic remains red at default detector-invalid clocks; this entry is supported-clock DSP validation, not native release certification."
+        }
+      ],
+      "evidence": [
+        "cargo test -p sotf-plugin-de-esser --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast: 112 passed (83 unit, 2 recorded/analysis, 3 reinitialize, 15 integration, 5 range/link, 4 realtime); no ignored tests. The isolated envelope case retains every control unchanged before reinitializing and checks quiet below-threshold input against fresh output.",
+        "cargo run -p sotf-plugin-de-esser --features qa --bin qa-de-esser --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: ALL PASS, including lookahead/FIR impulses, M/S and external key checks.",
+        "cargo clippy -p sotf-plugin-de-esser --all-targets --features qa --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings: passed.",
+        "cargo test -p plugins-nih --lib --features de-esser wrapper::process_tests::de_esser --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target: 12 passed.",
+        "Broader native command with de_esser filter: 15 passed, 1 failed. clap_activation_matrix_tests::de_esser_activation_matrix rejects 8000, 1234.5678 and 12345.678 Hz with the default detector band. The release diagnostic requires every stress rate; this band-validation refusal precedes the changed reset path and remains documented. No exported loaded-host CLAP/VST3 rerun or clean native release pass is claimed.",
+        "README, CHANGELOG, AGENTS and fixture credits document measurement scope, unwanted attenuation, preserved preset/schema compatibility, reinitialize behavior and the native release limitation."
+      ]
     },
     {
       "id": 18,

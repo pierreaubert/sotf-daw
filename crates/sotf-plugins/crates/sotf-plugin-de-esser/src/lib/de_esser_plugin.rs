@@ -1180,9 +1180,11 @@ impl ParametricInPlacePlugin for DeEsserPlugin {
         self.link_smoother.set_time(5.0, sample_rate);
 
         self.drain_scratch.resize(drain_samples, 0.0);
-        self.has_input = false;
-        self.drain_remaining = None;
         self.initialized = true;
+        // Core initialization rebuilds rate-dependent detectors but retains
+        // its reduction envelope. Begin a fresh program at retained targets,
+        // including settled mix/range/link controls and cleared meter cadence.
+        self.reset();
 
         Ok(())
     }

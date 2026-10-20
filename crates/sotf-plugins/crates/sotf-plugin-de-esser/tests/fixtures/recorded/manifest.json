@@ -1,0 +1,169 @@
+{
+  "sample_rate": 48000,
+  "format": "headerless mono signed 16-bit little-endian PCM; decode sample /32768",
+  "normalization": "Each cropped clip is peak normalized to 0.5 before nearest-integer PCM quantization. No denoising or equalization. Tests additionally apply -12.0412 dB gain.",
+  "annotation_method": "Source-labelled isolated phonemes/instruments; conservative intervals fixed by visual inspection of decoded spectrograms before plugin measurement. No detector output used for annotation. Speech is one speaker in isolated demonstrations, not a conversational/multi-speaker speech corpus.",
+  "fixtures": [
+    {
+      "id": "s",
+      "file": "s.pcm",
+      "source_title": "Voiceless_alveolar_sibilant.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Voiceless_alveolar_sibilant.ogg",
+      "author": "Peter Isotalo",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_sha256": "8e2922dcfaa4c99bd613fbba331398f696d42ae2b774a7f7deccb9903a5ad580",
+      "pcm_sha256": "d379a1403fefe14dc20c1b9154fd2c9d0a046c590a22ef654cc5e7cfadb15e37",
+      "source_crop_seconds": [
+        0,
+        2.6
+      ],
+      "frames": 124274,
+      "normalization_gain": 0.6361536072066475,
+      "regions": [
+        {
+          "label": "fricative",
+          "start_seconds": 0.25,
+          "end_seconds": 0.44,
+          "target_sibilance": true
+        },
+        {
+          "label": "vowel_after_fricative",
+          "start_seconds": 0.52,
+          "end_seconds": 0.72,
+          "target_sibilance": false
+        },
+        {
+          "label": "fricative",
+          "start_seconds": 1.73,
+          "end_seconds": 1.96,
+          "target_sibilance": true
+        }
+      ]
+    },
+    {
+      "id": "sh",
+      "file": "sh.pcm",
+      "source_title": "Voiceless_palato-alveolar_sibilant.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Voiceless_palato-alveolar_sibilant.ogg",
+      "author": "Peter Isotalo",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_sha256": "4fa609472644ce9cde1722fad82c8caba50f525a235bba6b597aadf83b3a7dd5",
+      "pcm_sha256": "970d6166af965cbed485ca46a423de0f378c253ab5ef4f405ff126d018cbe548",
+      "source_crop_seconds": [
+        0,
+        2.4
+      ],
+      "frames": 115200,
+      "normalization_gain": 0.7848383233532934,
+      "regions": [
+        {
+          "label": "fricative",
+          "start_seconds": 0.22,
+          "end_seconds": 0.45,
+          "target_sibilance": true
+        },
+        {
+          "label": "vowel_after_fricative",
+          "start_seconds": 0.52,
+          "end_seconds": 0.7,
+          "target_sibilance": false
+        },
+        {
+          "label": "fricative",
+          "start_seconds": 1.62,
+          "end_seconds": 1.87,
+          "target_sibilance": true
+        }
+      ]
+    },
+    {
+      "id": "p",
+      "file": "p.pcm",
+      "source_title": "Voiceless_bilabial_plosive.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Voiceless_bilabial_plosive.ogg",
+      "author": "Peter Isotalo",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_sha256": "576ae283995962f746a390fbc4461c01f6ce1e296c831d7beb9e1907acffa936",
+      "pcm_sha256": "7542b93a3d5b808a3bfe2e1df3b7b5251e0601fa7375d11f60af54292fd46834",
+      "source_crop_seconds": [
+        0,
+        1.5
+      ],
+      "frames": 72000,
+      "normalization_gain": 1.3023449920508745,
+      "regions": [
+        {
+          "label": "plosive_speech",
+          "start_seconds": 0,
+          "end_seconds": 1.5,
+          "target_sibilance": false
+        },
+        {
+          "label": "plosive_burst",
+          "start_seconds": 0.59,
+          "end_seconds": 0.66,
+          "target_sibilance": false
+        },
+        {
+          "label": "plosive_burst",
+          "start_seconds": 1.02,
+          "end_seconds": 1.1,
+          "target_sibilance": false
+        }
+      ]
+    },
+    {
+      "id": "violin",
+      "file": "violin.pcm",
+      "source_title": "Violin_open_string.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Violin_open_string.ogg",
+      "author": "Clngre~commonswiki",
+      "license": "CC BY-SA 3.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "source_sha256": "5bcb2ae9db3e4652db13cfe5e13d4bddec51adcdbf03ee0f97b8dd53780489cf",
+      "pcm_sha256": "7e752a7bfe578bc9980d981ca72c33dfa9c154f1542cbb4314054de7fef807fd",
+      "source_crop_seconds": [
+        0.6,
+        3.0
+      ],
+      "frames": 115200,
+      "normalization_gain": 0.664510241330359,
+      "regions": [
+        {
+          "label": "bright_bowed_string",
+          "start_seconds": 0.2,
+          "end_seconds": 2.3,
+          "target_sibilance": false
+        }
+      ]
+    },
+    {
+      "id": "cymbal",
+      "file": "cymbal.pcm",
+      "source_title": "Cymbal_sounds.ogg",
+      "source_page": "https://commons.wikimedia.org/wiki/File:Cymbal_sounds.ogg",
+      "author": "aradlaw",
+      "license": "Public domain",
+      "license_url": null,
+      "source_sha256": "8e10577e835c27b738932b13d82ec0b03e0644b6140847463e98546e82ae8efb",
+      "pcm_sha256": "3ca2ede4de3060e3a99ce4edcf010ebfa3f7618e0b6e916d6d9d61b89776c5df",
+      "source_crop_seconds": [
+        0,
+        4.0
+      ],
+      "frames": 192000,
+      "normalization_gain": 0.5032714873748234,
+      "regions": [
+        {
+          "label": "cymbal_hit_and_decay",
+          "start_seconds": 0,
+          "end_seconds": 3.8,
+          "target_sibilance": false
+        }
+      ]
+    }
+  ]
+}

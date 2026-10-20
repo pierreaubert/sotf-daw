@@ -1,5 +1,18 @@
 # 0.5.11
 
+## DSP audit (2026-10-18)
+
+- Successful reinitialization clears prior reduction envelopes, histories and
+  meter cadence, and settles retained mix/range/link targets. Rejected rates
+  preserve the running stream. The regression reproduced a 0.06986481 peak
+  stale-state difference before the fix.
+- Add annotated recorded fricative, vowel, plosive, violin and cymbal
+  measurements, independently calibrated LF/HF band analysis, callback
+  partition/stereo-image checks and allocation/deallocation guards.
+- Document unwanted attenuation on music and following vowels, the limited
+  single-speaker corpus, audio fixture licenses and the separate native release
+  rate-matrix failure. Optional speech-conditioned ML remains separate.
+
 ## Complete 2026-08-12 review remediation
 
 - Split-Band Mix now controls gain-reduction depth against the phase-matched

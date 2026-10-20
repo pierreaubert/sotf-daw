@@ -4,19 +4,21 @@ De-esser — sibilance reduction for audio.
 
 ## What It Does
 
-Reduces harsh sibilant sounds ("s", "sh", "ch") in vocals and other audio. Applies frequency-selective dynamic compression to the sibilance range (typically 4-10 kHz) without affecting the rest of the spectrum.
+Uses band-level detection to reduce sibilant sounds ("s", "sh", "ch"). Wideband
+attenuates the full program; split-band attenuates the crossover's high output.
+The detector responds to other sounds with energy in its band, including music.
 
 ## Features
 
-- **Frequency-selective processing**: Targets only the sibilance band
-- **Dynamic compression**: Reduces sibilance only when it exceeds the threshold
+- **Band-selective detection**: Typically focuses on 4–10 kHz
+- **Dynamic compression**: Responds to detector-band level above the threshold
 - **Range control**: Limits attenuation to 0–60 dB
 - **Stereo linking**: Blends independent channel reduction with a common gain
 - **Lookahead**: Delays program audio so reduction anticipates sibilance
 - **Linear-phase split**: Optional FIR split bank with explicit latency
 - **Mid/Side processing**: Reduces the sum/difference pair on stereo instances
 - **External sidechain**: Detects from a key bus instead of the program input
-- **Transparent operation**: Preserves the natural character of the audio
+- **Phase-matched mix**: Controls reduction depth on the selected signal path
 
 ## DSP contract
 
@@ -79,6 +81,57 @@ Reduces harsh sibilant sounds ("s", "sh", "ch") in vocals and other audio. Appli
   the reported value plus the drained tail.
 - Gain-reduction meters publish from elapsed samples at approximately 30 Hz.
   In M/S mode the meters report Mid/Side-channel reduction.
+- Successful initialization starts a fresh program at retained control targets,
+  clearing prior detector/envelope/crossover/delay state and meter cadence.
+  Rejected initialization preserves the previous running configuration.
+
+## Recorded-sound validation
+
+`tests/audit_recorded.rs` uses five attributed recordings: /s/ and /sh/ with
+vowels, /p/ speech, bowed violin and a cymbal hit. Source identity, license,
+SHA-256 hashes, transformations and fixed annotation intervals are in
+[`tests/fixtures/recorded`](tests/fixtures/recorded/README.md). Speech is an
+isolated single-speaker demonstration, not a population or conversational test.
+
+All three topologies are measured at 48 kHz with two fixed input levels.
+Range-zero processing through the same topology supplies the phase-matched
+reference. The test records interval energy attenuation and the fraction of
+active 10 ms windows attenuated by more than 1 dB. It also checks bit-identical
+regular/irregular callbacks, linked 4:1 stereo image and callback heap activity.
+Independent centered 129-tap `f64` windowed-sinc analysis separates 0–2 kHz and
+4–12 kHz energy; its DC and coherent-tone normalization are tested separately.
+The LR4 observation uses ordinary zero continuation; it does not claim finite
+recursive support.
+
+At the higher input level, with a 6 kHz detector, Q 0.7, threshold −36 dB,
+ratio 8, 1/80 ms attack/release and 6 dB range, the measured full-band energy
+attenuation is:
+
+| Annotated region | Wideband | Split LR4 | Split FIR |
+| --- | ---: | ---: | ---: |
+| Fricatives | 5.86–5.95 dB | 0.68–3.02 dB | 0.29–2.90 dB |
+| Following vowels | 3.44–3.63 dB | 0.004–0.005 dB | 0.000–0.001 dB |
+| Plosive bursts | 3.04–3.30 dB | 0.004–0.012 dB | <0.001 dB |
+| Bowed violin | 5.69 dB | 0.024 dB | 0.001 dB |
+| Cymbal hit/decay | 5.04 dB | 0.324 dB | 0.237 dB |
+
+These results expose unwanted attenuation on speech-oriented non-target labels.
+They are conditional measurements at the stated settings, not classifier
+accuracy. Split mode protects much more low-frequency energy but does not
+identify speech; its lower full-band attenuation is not equivalent to stronger
+sibilance suppression. The measured 4–12 kHz fricative attenuation is
+1.93–3.12 dB for LR4 and 1.07–3.10 dB for FIR; their 0–2 kHz following-vowel
+attenuation stays below 0.0015 dB at this input level. Per-region, per-level results are recorded in
+`audit/artifacts/plugin-audit-20261018/de-esser-recorded.json` at the workspace
+root. Speech-conditioned classifier research remains in the separate optional
+ML backlog; production does not depend on inference.
+
+The native release stress matrix remains red at 8 kHz, 1234.5678 Hz and
+12345.678 Hz with the default detector band, which is not representable at
+those clocks. The DSP rejects invalid bands before altering running state.
+Focused native routing/sidechain tests cover supported configurations; they
+do not establish a clean pass of that separate release stress matrix or of
+the exported CLAP/VST3 loaded-host lanes.
 
 ## Architecture
 
