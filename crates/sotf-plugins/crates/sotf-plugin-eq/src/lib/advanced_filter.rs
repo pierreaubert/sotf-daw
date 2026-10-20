@@ -6,6 +6,25 @@ use super::validate::validate_freq_q_gain;
 use super::validate::validate_sample_rate;
 use math_audio_iir_fir::{WarpedBiquad, bark_lambda};
 
+/// Retains advanced descriptions in their original channel ownership.
+#[derive(Default)]
+pub(super) enum AdvancedFilterConfigs {
+    #[default]
+    Empty,
+    Shared(Vec<BiquadFilterConfig>),
+    PerChannel(Vec<Vec<BiquadFilterConfig>>),
+}
+
+impl AdvancedFilterConfigs {
+    pub(super) fn for_channel(&self, channel: usize) -> &[BiquadFilterConfig] {
+        match self {
+            Self::Empty => &[],
+            Self::Shared(configs) => configs,
+            Self::PerChannel(configs) => configs.get(channel).map_or(&[], Vec::as_slice),
+        }
+    }
+}
+
 pub(super) enum AdvancedFilter {
     Warped {
         filter: WarpedBiquad<f64>,

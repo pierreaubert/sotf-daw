@@ -790,7 +790,11 @@
         },
         {
           "task": "Validate advanced mixed realizations and parameter trajectories (single-realization extremes now independently verified)",
-          "status": "pending"
+          "status": "pending",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json"
+          ],
+          "result": "Stated native 1x/global-SVF mixed placements and interrupted native ramps now independently verified, including per-channel topology fix. Actual oversampled mixed-host combinations and broader trajectory scope remain pending; see the verified bounded mixed-matrix task."
         },
         {
           "task": "Extend actual oversampled biquad/advanced host rate changes and finish finite versus recursive tail review",
@@ -881,6 +885,17 @@
             "audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json"
           ],
           "result": "2304 retained DawHost cases: three rate pairs, eight families, frequency/Q/gain endpoints, explicit -.37/.37 or automatic lambda, both routes, compiled/graph paths. Legacy retains populated allpass histories and ordered resets; auto lambda recomputes. Independent analog-coefficient/implicit-state reference max 9.313225746154785e-10 at fixed 2e-5. Latency 0, Unknown tail and zero measured post-build callback heap work. Frame-duplication fixture is not physical resampling; optimized, extreme-lambda hot retunes and oversampled host combinations are not claimed."
+        },
+        {
+          "task": "Preserve per-channel advanced descriptions through topology rebuilds and verify mixed transfer/state matrices",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/advanced_filter.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes/mixed.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json"
+          ],
+          "result": "Reproduced 144/192 failures (max .005556636024266481) when SVF topology reconstruction silently dropped per-channel Warped/Kautz banks. Private Empty/Shared/PerChannel descriptor ownership and channel-aware detached builder resolve all cases; 144 populated Biquad round trips also pass. Independent 960 static and 768 interrupted native-ramp mixed cases have max9.313225746154785e-10 <2e-5 and bit-identical callback partitions. Four rates, stereo/five-channel disjoint pairs, six permutations, legacy/Stereo/L/R/M/S profiles, native peak/matched DFI/TDFII orders2/8 and static global SVF alias covered. Noncommuting order witness .000360637 >.0001. Advanced-only tail: 24 cases retain Unknown, zero latency, legacy nonmutating COMPLETE and correct nonzero recursive continuation. Measured native setters/process/drain heap-free under retained host-owned IDs. EQ182 passed/11 historical ignored; release16/0 ignored, strict QA Clippy pass. Actual oversampled host combinations remain pending."
         }
       ],
       "evidence": [
@@ -891,7 +906,8 @@
         "Current-state independent verification exposed and corrected shared SVF defects, with existing deterministic-consumer compatibility retained. SVF endpoint and retained-host coverage complete for the stated matrices. EQ remains partial; overall 32/45. Optional ML remains separate.",
         "Native optimized f64 endpoint/phase validation complete with shared production DSP correction. EQ remains partial and overall stays 32/45. Optional ML separate.",
         "Advanced Kautz independent endpoint and retained-host scope verified. New required Warped endpoint gate fails 104/4608 at accepted lambda=-0.9999; EQ remains partial and overall stays 32/45. Normal EQ suite 174 passed, 11 historical ignored plus one explicit required red gate; release 8 passed with that gate excluded; explicit release gate fails; strict all-targets QA Clippy passes.",
-        "Warped endpoint red gate resolved through shared physical-coordinate production fix through math commit d515d16; unignored with 6336 static endpoint cases and 2304 retained standard-family host cases passing. Full EQ 177 passed/11 historical ignored; release 11 passed/0 ignored; strict lint pass. Historical failures retained. EQ partial; overall 32/45; optional ML separate."
+        "Warped endpoint red gate resolved through shared physical-coordinate production fix through math commit d515d16; unignored with 6336 static endpoint cases and 2304 retained standard-family host cases passing. Full EQ 177 passed/11 historical ignored; release 11 passed/0 ignored; strict lint pass. Historical failures retained. EQ partial; overall 32/45; optional ML separate.",
+        "Mixed realization validation found and fixed per-channel advanced-bank loss on topology switch. Bounded independent static/automated/per-channel/tail matrices pass; full EQ182/11 historical ignored, release16/0 ignored and strict lint pass. Actual oversampled/mixed host requirements remain; EQ partial, overall32/45, optional ML separate."
       ]
     },
     {
@@ -1882,6 +1898,15 @@
       ],
       "result": "104/4608 standard failures resolved; 4608 standard +1728 optimized endpoint and 2304 retained-host cases pass fixed bounds. State mapping, old serialization, fallback domain and identical retunes verified; normal dependency path full/release/strict checks pass.",
       "limitations": "EQ still partial for mixed/automated and actual oversampled-host/tail requirements. Overall 32/45. Optional ML separate."
+    },
+    {
+      "name": "Independent mixed EQ matrices and per-channel topology preservation",
+      "state": "verified",
+      "plugin_ids": [
+        23
+      ],
+      "result": "960 static +768 interrupted native trajectories; per-channel192 controls/SVF switches +144 populated return switches; advanced-only24 tail/drain phases. Production descriptor ownership fixes144 reproduced failures; no public schema change.",
+      "limitations": "Bounded f64/native1x/static-global-SVF scope. Actual oversampled/mixed host rate and transport-tail requirements remain; overall32/45."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

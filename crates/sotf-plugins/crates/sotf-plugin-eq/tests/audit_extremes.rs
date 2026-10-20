@@ -1440,3 +1440,6 @@ fn retained_warped_host_rates_preserve_legacy_history_and_reset_ordered_history(
         serde_json::json!({"case":"warped_retained_host_rates","cases":cases,"maximum_reference_error":maximum})
     );
 }
+
+#[path = "audit_extremes/mixed.rs"]
+mod mixed;

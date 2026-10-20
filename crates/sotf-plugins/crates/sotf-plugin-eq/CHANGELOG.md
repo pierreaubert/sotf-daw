@@ -2,6 +2,14 @@
 
 ## Changes
 
+- Preserve per-channel Warped/Kautz configurations when global topology rebuilds
+  advanced banks. Retain Empty/Shared/PerChannel description ownership and build
+  from the appropriate channel, fixing 144 reproduced lost-filter cases.
+- Validate mixed native/Warped/Kautz transfers and interrupted native ramps with
+  independent models, callback partition identity and L/R/M/S order witnesses.
+  Cover per-channel topology round trips and advanced-only recursive tail/drain
+  behavior without changing public preset fields or tail policy.
+
 - Add independent Kautz endpoint and retained-host rate references (576 and 864
   cases), including signed/zero weights, coincident/close modes and legacy
   omitted sections. Preserve the original Warped endpoint audit failure evidence.

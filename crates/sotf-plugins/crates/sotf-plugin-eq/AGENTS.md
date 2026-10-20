@@ -89,3 +89,16 @@ cargo test -p sotf-plugin-eq
   references. Keep accepted lambda range, Biquad fallback domain, legacy history
   versus ordered reset, transactional rebuilds and zero callback heap work.
   Advanced mixed/automated and actual oversampled-host work remains pending.
+
+- Preserve advanced description ownership with `AdvancedFilterConfigs` in
+  `advanced_filter.rs`: Empty/Shared/PerChannel. Per-channel construction must
+  retain each channel's descriptions for detached structural bank rebuilds;
+  the previous empty shared list silently removed Warped/Kautz banks on SVF
+  switches. Native bank replacement clears retained descriptions. Shared global
+  descriptions stay shared, not copied from channel zero to all channels.
+  `tests/audit_extremes/mixed.rs` has 960 static, 768 native-trajectory, 192
+  per-channel +144 populated-return and 24 advanced-only tail cases. Its native
+  IDs are compact band indices regardless of original mixed position. Legacy
+  references cast after native and combined advanced banks; ordered references
+  cast per placed band. Keep native setter/process heap checks and the nonzero
+  order/tail witnesses. Actual oversampled mixed-host paths remain separate.

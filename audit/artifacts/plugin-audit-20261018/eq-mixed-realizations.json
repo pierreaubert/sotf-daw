@@ -1,0 +1,368 @@
+{
+  "scope": "Production fix for per-channel advanced-filter loss on topology reconstruction, plus independent native/Warped/Kautz mixed placement and interrupted native-ramp validation. EQ remains partial; optional ML separate.",
+  "tracking_issue": 9,
+  "base_commit": "9bdaaf323962dcea96efc04cbbe05cb25e5ef893",
+  "math_dependency_commit": "d515d16910f4807dd2be429cad5c6c9c7305b906",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/advanced_filter.rs": "eac347c583309474c7a5fc3e5f61189800b896716f3683938e8fa78358223977",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs": "0095c992ec10e089747092ecf207f40e34acb539a57119a80952926bb5b6a619",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs": "0cdc5f186a9c513e1b35252a3ac180bb41aedd19ba5e541adecdbc908ea62e92",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes/mixed.rs": "f9e106b0714b6eba54ce7fce72baafab3b1202aaca40326f2a6ccd779e9f8aeb"
+  },
+  "before_per_channel_gate": {
+    "initial_cases": 192,
+    "failed": 144,
+    "native_control_passed": 48,
+    "maximum_reference_error": 0.005556636024266481,
+    "fixed_bound": 2e-05,
+    "first_failure": "44100 Hz /2 channels /global SVF /selected factor 1, error .0032026697881519794; factors2/4 same error.",
+    "test_stage": "Initial per-channel matrix, before adding populated round-trip and advanced-only tail extensions.",
+    "cause": "Per-channel from_params built advanced runtime banks but stored no advanced descriptions. Global topology reconstruction read the empty shared description list and silently dropped all per-channel Warped/Kautz filters."
+  },
+  "production_change": {
+    "description": "Private AdvancedFilterConfigs retains Empty/Shared/PerChannel ownership. Per-channel construction saves each channel advanced description list; detached bank reconstruction selects that channel. Shared global lists remain shared and native replacement clears descriptions.",
+    "behavior": "Switching per-channel chains to/from global SVF retains each channel distinct Warped/Kautz filters and empty/advanced-only channel layout. Existing topology-reset semantics remain; configuration is retained, not previous audio history across a realization boundary.",
+    "realtime": "Descriptor collection and detached rebuilds remain on structural control paths. No process-path allocation, locking or logging added.",
+    "compatibility": "No public parameter IDs, preset fields or serialized EqPluginParams schema changed. Existing per-channel override policy retained.",
+    "diagnostic_correction": "An earlier issue comment mentioned a max-filter builder; max_filters only changes metadata. The reproduced affected path is topology reconstruction; the detached bank builder also serves placement and ordered rate rebuilds."
+  },
+  "reference": {
+    "coefficient_design": "Parent analytic analog/bilinear and independent optimized spectral-factor references; Warped matched poles evaluated by independent complex division/spectral factor; Kautz pole/basis/allpass-chain reference. No production DSP instances or coefficient helpers used.",
+    "native_state": "Independent DF-I/TDF-II state, per-stage Butterworth user-Q/gain policy, and exact-target interpolation. Ramps last floor(fs*.005) source frames; interrupted edits snapshot the current reference coefficients.",
+    "legacy_composition": "Run native bank first regardless of stored position, cast to f32, run advanced banks in stored relative order in f64, cast once at end.",
+    "ordered_composition": "Preserve each stored band position and f32 band boundary; use independent L/R/M/S matrices and per-channel states for pairs [0,1] and [3,2]. Unpaired channel4 stays untouched in non-Stereo profiles.",
+    "callback_plans": [
+      [
+        1024,
+        257,
+        17
+      ],
+      [
+        1,
+        17,
+        193,
+        509
+      ]
+    ],
+    "callback_requirement": "bit-identical output between plans, split at event instants including same-frame edits; tested setters/process measured zero allocations/deallocations.",
+    "parameter_id_measurement": "A host-owned ParameterId Arc is retained outside the counter and cloned during setter calls, matching the existing realtime harness. First draft moved its final owner into the measured setter and counted one caller-owned deallocation; corrected ownership without weakening DSP/heap assertions."
+  },
+  "common_matrix": {
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "channels": [
+      2,
+      5
+    ],
+    "permutations": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        2,
+        1
+      ],
+      [
+        1,
+        0,
+        2
+      ],
+      [
+        1,
+        2,
+        0
+      ],
+      [
+        2,
+        0,
+        1
+      ],
+      [
+        2,
+        1,
+        0
+      ]
+    ],
+    "band_identities": [
+      "native",
+      "Warped",
+      "Kautz"
+    ],
+    "profiles": [
+      [
+        "legacy None",
+        "legacy None",
+        "legacy None"
+      ],
+      [
+        "Stereo",
+        "Stereo",
+        "Stereo"
+      ],
+      [
+        "Left",
+        "Mid",
+        "Side"
+      ],
+      [
+        "Side",
+        "Right",
+        "Left"
+      ]
+    ],
+    "modes": [
+      {
+        "kind": "peak",
+        "order": 2,
+        "form": "DF-I"
+      },
+      {
+        "kind": "peak",
+        "order": 8,
+        "form": "TDF-II"
+      },
+      {
+        "kind": "peak_matched",
+        "order": 8,
+        "form": "DF-I"
+      },
+      {
+        "kind": "peak_matched",
+        "order": 2,
+        "form": "TDF-II"
+      },
+      {
+        "kind": "peak_matched alias",
+        "order": 2,
+        "form": "global SVF, static only"
+      }
+    ],
+    "native_initial": {
+      "freq": 800,
+      "q": 0.7,
+      "gain_db": 6
+    },
+    "warped": {
+      "kind": "matched peak or high shelf, selected by permutation index parity",
+      "freq": 3100,
+      "q": 1.1,
+      "gain_db": -6,
+      "lambda": "Rotate -.9999/.37/.9999/automatic by rate, permutation and profile indices; each case has one selection."
+    },
+    "kautz_sections": [
+      {
+        "pole_freq": 67,
+        "q": 20,
+        "linear_gain": -0.02
+      },
+      {
+        "pole_freq": 71,
+        "q": 0.1,
+        "linear_gain": 0.01
+      }
+    ],
+    "input": "3075 frames: channel-distinct 73+13*ch Hz sine (.006), 1733-71*ch Hz cosine (.004, channel phase), .01 channel-staggered impulses, zero after frame2300.",
+    "fixed_reference_error_bound": 2e-05
+  },
+  "static": {
+    "cases": 960,
+    "maximum_reference_error": 9.313225746154785e-10,
+    "partition_comparisons": "960 bit-identical",
+    "svf_saved_factors": "[1,2,4][profile%3], all at base rate; this is not a full factor-by-profile cross product or actual biquad oversampling.",
+    "latency_samples": 0,
+    "tail": "Unknown",
+    "process_heap_activity": [
+      0,
+      0
+    ]
+  },
+  "native_trajectories": {
+    "cases": 768,
+    "maximum_reference_error": 9.313225746154785e-10,
+    "partition_comparisons": "768 bit-identical",
+    "events": [
+      [
+        17,
+        "freq",
+        1200
+      ],
+      [
+        18,
+        "q",
+        2.3
+      ],
+      [
+        63,
+        "gain",
+        -9
+      ],
+      [
+        221,
+        "freq",
+        20000
+      ],
+      [
+        222,
+        "q",
+        20
+      ],
+      [
+        223,
+        "gain",
+        24
+      ],
+      [
+        509,
+        "gain",
+        0
+      ],
+      [
+        733,
+        "freq",
+        20
+      ],
+      [
+        734,
+        "q",
+        0.1
+      ],
+      [
+        1200,
+        "gain",
+        -24
+      ],
+      [
+        1501,
+        "gain",
+        6
+      ],
+      [
+        1501,
+        "freq",
+        997
+      ]
+    ],
+    "target": "Compact native band_0 regardless of position among advanced neighbors. Advanced bands retain fixed designs.",
+    "setter_and_process_heap_activity": [
+      0,
+      0
+    ]
+  },
+  "order_witness": {
+    "profile": [
+      "Left",
+      "Mid",
+      "Side"
+    ],
+    "kind": "Independent forward-versus-reverse noncommuting placements",
+    "peak_output_difference": 0.00036063743755221367,
+    "minimum_required_difference": 0.0001,
+    "purpose": "Shows the reference distinguishes band order rather than comparing commuting scalar transfers."
+  },
+  "per_channel_rebuilds": {
+    "cases": 192,
+    "populated_round_trips": 144,
+    "failures": 0,
+    "maximum_reference_error_including_round_trips": 7.275957614183426e-12,
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "channels": [
+      2,
+      5
+    ],
+    "permutations": 6,
+    "initial_modes": [
+      [
+        "Biquad",
+        1
+      ],
+      [
+        "SVF",
+        1
+      ],
+      [
+        "SVF",
+        2
+      ],
+      [
+        "SVF",
+        4
+      ]
+    ],
+    "chain_shapes": [
+      "channel0 native/Warped/Kautz",
+      "channel1 native/Warped with distinct parameters",
+      "channel2 Kautz only",
+      "channel3 empty",
+      "channel4 native/Kautz"
+    ],
+    "parameter_variation": "Native freq/gain, Warped freq/gain and modal pole/linear weights vary by channel.",
+    "round_trip": "After populated SVF render, explicitly set saved factor1 then return to Biquad and compare to fresh independent reset-state models of the retained per-channel descriptions.",
+    "latency_samples": 0,
+    "tail": "Unknown",
+    "process_heap_activity": [
+      0,
+      0
+    ]
+  },
+  "advanced_only_tail": {
+    "cases": 24,
+    "rates": [
+      44100,
+      48000,
+      96000,
+      192000
+    ],
+    "channels": [
+      2,
+      5
+    ],
+    "phases": [
+      "initial Biquad",
+      "SVF selected4 after populated render",
+      "Biquad selected1 after populated SVF"
+    ],
+    "chain_shapes": [
+      "Warped+Kautz",
+      "Kautz only",
+      "Warped only",
+      "empty",
+      "Warped+Kautz"
+    ],
+    "maximum_reference_error": 1.4551915228366852e-11,
+    "smallest_nonzero_reference_tail_peak": 0.00043676135828718543,
+    "tail": "Unknown through all phases, even when no native filters exist.",
+    "drain": "Legacy COMPLETE, untouched canary buffer and zero heap activity; does not claim finite recursive support.",
+    "continuation": "257 subsequent silence frames match populated independent recursive history, proving drain does not flush/reset it.",
+    "latency_samples": 0,
+    "process_and_drain_heap_activity": [
+      0,
+      0
+    ]
+  },
+  "validation": {
+    "full_eq_passed": 182,
+    "historical_ignored": 11,
+    "release_audit_passed": 16,
+    "release_audit_ignored": 0,
+    "strict_all_targets_qa_clippy": "passed",
+    "commands_artifact": "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations-commands.json"
+  },
+  "limits": [
+    "Matrices certify their specified f64 modes, scripts, placements and prefixes; they are not a complete cross product of every order/type/factor/automation path.",
+    "Global SVF selected factors remain base rate. Actual oversampled biquad/advanced/mixed host rate transitions and associated transport-tail review remain open.",
+    "Dynamic advanced-band controls are not newly exposed; scripted edits target the existing compact native-band API.",
+    "No broad f32 or CPU deadline claim. EQ partial and overall production completion stays 32/45; optional ML remains separate."
+  ]
+}

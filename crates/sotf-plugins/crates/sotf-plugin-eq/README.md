@@ -200,3 +200,30 @@ The original failing artifacts are retained. Current evidence and exact commands
 are in `audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json`. These
 f64 matrices do not prove arbitrary mixed/automated or actual oversampled-host
 trajectories, broad f32 accuracy, or CPU deadlines; those remain separate work.
+
+
+Mixed realization validation in `tests/audit_extremes/mixed.rs` combines the
+independent native, Warped and Kautz models. It covers 960 static and 768
+interrupted native-band trajectory cases at four rates, stereo/five-channel
+layouts, six band permutations and legacy/Stereo/L/R/M/S profiles. The legacy
+reference preserves native-first grouping and combined advanced-bank rounding;
+ordered references preserve stored order and per-band rounding. Both callback
+plans are bit-identical, with maximum reference error 9.32e-10 at the fixed 2e-5
+bound. A noncommuting placement witness distinguishes order by 0.0003606.
+
+A reproduced per-channel defect dropped Warped/Kautz banks when switching to
+SVF: runtime banks existed, but structural rebuilding had no retained channel
+configurations. Descriptions now retain shared or per-channel ownership, and
+rebuilding selects each channel's descriptions. All 192 per-channel cases and
+144 populated return switches pass; distinct parameters, unequal bank shapes,
+empty/advanced-only channels and saved SVF factors are preserved. Public preset
+fields and controls are unchanged.
+
+Another 24 advanced-only topology/drain cases retain zero latency and Unknown
+recursive tails. Legacy drain completion leaves its buffer untouched, and
+subsequent audio matches a populated recursive reference with a nonzero tail.
+That compatibility completion does not establish finite recursive support.
+Measured native scalar setters (with retained host-owned parameter IDs), process
+and drain calls have zero heap activity. Structural bank rebuilds remain control
+operations. These bounded f64 cases do not cover actual oversampled mixed-host
+rate transitions; see `audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json`.

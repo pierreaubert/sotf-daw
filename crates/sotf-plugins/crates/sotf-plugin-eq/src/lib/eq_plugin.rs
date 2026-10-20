@@ -1,4 +1,4 @@
-use super::advanced_filter::AdvancedFilter;
+use super::advanced_filter::{AdvancedFilter, AdvancedFilterConfigs};
 use super::auto_gain_clock::AutoGainClock;
 use super::consts::DEFAULT_SAMPLE_RATE;
 use super::consts::FREQ_MAX;
@@ -229,7 +229,7 @@ pub struct EqPlugin {
     /// Populated from per-filter `topology=warped_biquad` or `topology=kautz_filter`.
     pub(super) advanced_filters: Vec<Vec<AdvancedFilter>>,
     /// Original advanced filter descriptions for detached structural rebuilds.
-    advanced_filter_configs: Vec<BiquadFilterConfig>,
+    advanced_filter_configs: AdvancedFilterConfigs,
     /// Raw filter order mapped to compact runtime banks for an explicit route.
     ordered_filters: Vec<OrderedFilter>,
     /// Cached because this is checked on every process callback.
@@ -434,7 +434,7 @@ impl EqPlugin {
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
             advanced_filters: (0..num_channels).map(|_| Vec::new()).collect(),
-            advanced_filter_configs: Vec::new(),
+            advanced_filter_configs: AdvancedFilterConfigs::default(),
             ordered_filters: (0..num_bands)
                 .map(|band| OrderedFilter {
                     storage: OrderedFilterStorage::Biquad(band),
@@ -667,7 +667,7 @@ impl EqPlugin {
             max_filters: MAX_FILTERS,
             svf_filters: Vec::new(),
             advanced_filters: (0..num_channels).map(|_| Vec::new()).collect(),
-            advanced_filter_configs: Vec::new(),
+            advanced_filter_configs: AdvancedFilterConfigs::default(),
             ordered_filters: Vec::new(),
             ordered_route_active: false,
             stereo_pairs: if num_channels == 2 {
@@ -809,7 +809,17 @@ impl EqPlugin {
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
                 advanced_filters,
-                advanced_filter_configs: Vec::new(),
+                advanced_filter_configs: AdvancedFilterConfigs::PerChannel(
+                    cfgs.iter()
+                        .map(|channel| {
+                            channel
+                                .iter()
+                                .filter(|config| config.topology != EqFilterTopology::Biquad)
+                                .cloned()
+                                .collect()
+                        })
+                        .collect(),
+                ),
                 ordered_filters: Vec::new(),
                 ordered_route_active: false,
                 stereo_pairs,
@@ -881,7 +891,7 @@ impl EqPlugin {
                 max_filters: MAX_FILTERS,
                 svf_filters: Vec::new(),
                 advanced_filters,
-                advanced_filter_configs,
+                advanced_filter_configs: AdvancedFilterConfigs::Shared(advanced_filter_configs),
                 ordered_route_active: ordered_filters
                     .iter()
                     .any(|filter| filter.placement.is_some()),
@@ -970,7 +980,7 @@ impl EqPlugin {
         self.band_orders = vec![2; num_bands];
         self.transitions = (0..num_bands).map(|_| None).collect();
         self.advanced_filters = (0..self.num_channels).map(|_| Vec::new()).collect();
-        self.advanced_filter_configs.clear();
+        self.advanced_filter_configs = AdvancedFilterConfigs::default();
         self.ordered_filters.clear();
         self.ordered_route_active = false;
         if self.topology == 1 {
@@ -1012,9 +1022,10 @@ impl EqPlugin {
         sample_rate: f64,
     ) -> Result<Vec<Vec<AdvancedFilter>>, String> {
         let mut bank = Vec::with_capacity(self.num_channels);
-        for _ in 0..self.num_channels {
-            let mut channel = Vec::with_capacity(self.advanced_filter_configs.len());
-            for config in &self.advanced_filter_configs {
+        for channel_index in 0..self.num_channels {
+            let configs = self.advanced_filter_configs.for_channel(channel_index);
+            let mut channel = Vec::with_capacity(configs.len());
+            for config in configs {
                 let filter = AdvancedFilter::from_config(config, sample_rate, &parse_filter_type)?
                     .ok_or_else(|| "Advanced EQ filter config resolved to biquad".to_string())?;
                 channel.push(filter);
