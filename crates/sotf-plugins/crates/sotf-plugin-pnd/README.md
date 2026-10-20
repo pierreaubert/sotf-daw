@@ -39,6 +39,10 @@ center, across 44.1/96 kHz, 220/440/880 Hz and four fundamental/overtone balance
 It checks accepted-frame accuracy, confidence coverage and zero heap activity;
 six absent-reference octave/even-series cases check rejection. These are
 estimator checks, not proof of corrected-audio or stereo-coherence performance.
+An additional 672-case sine matrix checks fractional-bin accuracy across four
+rates, seven offsets, three phases and two levels. Peak interpolation follows
+the periodic Hann main-lobe model rather than a generic magnitude parabola,
+avoiding the latter's systematic frequency bias at low FFT-bin numbers.
 Pitch trajectories alone do not reveal whether vibrato is deliberate; the
 reference and correction strength express the caller's intended correction.
 
@@ -51,11 +55,19 @@ output can change; CPU cost of this precision change is not benchmarked.
 `tests/audit_audio.rs` calibrates an independent analytic-signal pitch probe
 against the known source, then measures rendered static/wow/flutter/vibrato
 and stereo phase. Correction-disabled vibrato from initialization is compared
-with every delayed source sample in the measurement region. The test records
-flutter residual without claiming that all flutter is suppressed: a 96 kHz
-single-tone 6 Hz flutter case remains worse after correction and is tracked
-as an unresolved quality issue. This is separate from the corrected phase
-precision and stereo-coherence behavior.
+with every delayed source sample in the measurement region. Static, 0.5 Hz wow
+and 6 Hz flutter cases now enforce correction bounds for the tested material,
+including the previously amplified 96 kHz single tone. Four further cases
+verify explicit vibrato correction, and eight settled octave-transition
+measurements verify that missing pilots do not induce false correction. These
+known coherent signals do not establish universal music/flutter suppression.
+
+Moving spectral peaks retain their prior synthesis trajectory across adjacent
+source-bin changes and target remapping, using preallocated prior-hop phase
+and translating the source phase basis. Onset resets and new-peak fallback
+remain explicit. This avoids restarting the correction phase whenever a
+drifting partial crosses a bin boundary; no future samples or extra latency
+are introduced.
 
 All channels are pitch-shifted independently with one shared correction ratio.
 With multi-channel analysis enabled, low-confidence channels are excluded and

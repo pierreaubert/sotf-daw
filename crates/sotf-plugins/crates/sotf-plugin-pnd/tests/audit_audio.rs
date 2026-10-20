@@ -179,7 +179,12 @@ fn rendered_pitch_and_stereo_phase_follow_known_motion_and_strength_policy() {
                 let right = analytic(&output, 1, rate, 440.0 * harmonic);
                 let pitch = frequencies(&left, rate, harmonic);
                 let mut count = 0;
-                let (mut input_square, mut output_square, mut phase_error_square) = (0.0, 0.0, 0.0);
+                let (
+                    mut input_square,
+                    mut output_square,
+                    mut phase_error_square,
+                    mut level_error_square,
+                ) = (0.0, 0.0, 0.0, 0.0);
                 let mut unity_error = 0.0_f64;
                 let mut unity_peak = 0.0_f64;
                 for source in (rate as usize / 2..rate as usize * 7 / 2 - LATENCY).step_by(64) {
@@ -192,6 +197,8 @@ fn rendered_pitch_and_stereo_phase_follow_known_motion_and_strength_policy() {
                     let phase_error =
                         (right[n] * left[n].conj() * Complex::from_polar(1.0, -0.7)).arg();
                     phase_error_square += phase_error * phase_error;
+                    let level_error = 20.0 * (right[n].norm() / (0.5 * left[n].norm())).log10();
+                    level_error_square += level_error * level_error;
                     count += 1;
                 }
                 // Check every neutral frame/channel, independently of probe stride.
@@ -210,13 +217,18 @@ fn rendered_pitch_and_stereo_phase_follow_known_motion_and_strength_policy() {
                 let input_rms = (input_square / count as f64).sqrt();
                 let output_rms = (output_square / count as f64).sqrt();
                 let phase_rms = (phase_error_square / count as f64).sqrt();
+                let level_rms = (level_error_square / count as f64).sqrt();
                 println!(
                     "{}",
-                    serde_json::json!({"case":"rendered_motion","rate":rate,"weak_fundamental":weak,"motion":format!("{motion:?}"),"strength":strength,"input_rms_cents":input_rms,"output_rms_error_cents":output_rms,"stereo_phase_rms_error_rad":phase_rms,"unity_relative_error":(strength==0.0).then(||unity_error/unity_peak)})
+                    serde_json::json!({"case":"rendered_motion","rate":rate,"weak_fundamental":weak,"motion":format!("{motion:?}"),"strength":strength,"input_rms_cents":input_rms,"output_rms_error_cents":output_rms,"stereo_phase_rms_error_rad":phase_rms,"stereo_level_rms_error_db":level_rms,"unity_relative_error":(strength==0.0).then(||unity_error/unity_peak)})
                 );
                 assert!(
                     phase_rms < 0.05,
                     "phase {phase_rms}: {rate}/{weak}/{motion:?}"
+                );
+                assert!(
+                    level_rms < 0.1,
+                    "stereo level {level_rms}: {rate}/{weak}/{motion:?}"
                 );
                 match motion {
                     Motion::Offset => {
@@ -226,13 +238,100 @@ fn rendered_pitch_and_stereo_phase_follow_known_motion_and_strength_policy() {
                         output_rms < input_rms * 0.7,
                         "wow {output_rms}/{input_rms}: {rate}/{weak}"
                     ),
-                    Motion::Flutter => {} // Characterize bandwidth; no suppression claim.
+                    Motion::Flutter => assert!(
+                        output_rms < input_rms * 0.7,
+                        "flutter {output_rms}/{input_rms}: {rate}/{weak}"
+                    ),
                     Motion::Vibrato => assert!(
                         unity_error / unity_peak < 2e-4,
                         "vibrato unity {unity_error}/{unity_peak}"
                     ),
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn deliberate_vibrato_is_corrected_when_the_caller_requests_a_fixed_reference() {
+    for rate in [44_100_u32, 96_000] {
+        for weak in [false, true] {
+            let input = signal(rate, Motion::Vibrato, weak);
+            let output = render(&input, rate, 1.0, 137);
+            assert_eq!(output, render(&input, rate, 1.0, 1024));
+            let harmonic = if weak { 2.0 } else { 1.0 };
+            let data = analytic(&output, 0, rate, 440.0 * harmonic);
+            let pitch = frequencies(&data, rate, harmonic);
+            let (mut raw, mut corrected, mut count) = (0.0, 0.0, 0);
+            for source in (rate as usize / 2..rate as usize * 7 / 2 - LATENCY).step_by(64) {
+                raw += (1200.0
+                    * Motion::Vibrato
+                        .ratio(source as f64 / f64::from(rate))
+                        .log2())
+                .powi(2);
+                corrected += (1200.0 * (pitch[source + LATENCY] / 440.0).log2()).powi(2);
+                count += 1;
+            }
+            let input_rms = (raw / count as f64).sqrt();
+            let output_rms = (corrected / count as f64).sqrt();
+            println!(
+                "{}",
+                serde_json::json!({"case":"requested_vibrato_correction","rate":rate,"weak_fundamental":weak,"input_rms_cents":input_rms,"output_rms_cents":output_rms})
+            );
+            assert!(
+                output_rms < input_rms * 0.7,
+                "vibrato correction {output_rms}/{input_rms}: {rate}/{weak}"
+            );
+        }
+    }
+}
+
+#[test]
+fn octave_transitions_without_a_pilot_do_not_acquire_a_false_correction() {
+    for rate in [44_100_u32, 96_000] {
+        let mut phase = 0.0_f64;
+        let notes = [444.4, 888.8, 444.4, 222.2];
+        let expected = [440.0, 888.8, 440.0, 222.2];
+        let input: Vec<_> = (0..rate as usize * 4)
+            .flat_map(|n| {
+                let frame = [
+                    (0.3 * phase.sin()) as f32,
+                    (0.15 * (phase + 0.7).sin()) as f32,
+                ];
+                phase += TAU * notes[n / rate as usize] / f64::from(rate);
+                frame
+            })
+            .collect();
+        let output = render(&input, rate, 1.0, 137);
+        assert_eq!(output, render(&input, rate, 1.0, 1024));
+        for (segment, &target) in expected.iter().enumerate() {
+            let left = analytic(&output, 0, rate, target);
+            let right = analytic(&output, 1, rate, target);
+            let pitch = frequencies(&left, rate, 1.0);
+            let (mut error, mut phase_error, mut count) = (0.0, 0.0, 0);
+            for source in ((segment * rate as usize + rate as usize / 4)
+                ..(segment * rate as usize + rate as usize * 3 / 4))
+                .step_by(64)
+            {
+                let n = source + LATENCY;
+                assert!(left[n].norm() > 1e-5 && right[n].norm() > 1e-5);
+                error += (1200.0 * (pitch[n] / target).log2()).powi(2);
+                phase_error += (right[n] * left[n].conj() * Complex::from_polar(1.0, -0.7))
+                    .arg()
+                    .powi(2);
+                count += 1;
+            }
+            let rms = (error / count as f64).sqrt();
+            let phase_rms = (phase_error / count as f64).sqrt();
+            println!(
+                "{}",
+                serde_json::json!({"case":"octave_transition","rate":rate,"segment":segment,"source_hz":notes[segment],"target_hz":target,"rms_error_cents":rms,"phase_rms_error_rad":phase_rms})
+            );
+            assert!(rms < 2.0, "octave transition {rms}: {rate}/{segment}");
+            assert!(
+                phase_rms < 0.05,
+                "octave stereo {phase_rms}: {rate}/{segment}"
+            );
         }
     }
 }

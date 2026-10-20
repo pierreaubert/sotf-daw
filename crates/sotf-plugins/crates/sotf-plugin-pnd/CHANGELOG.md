@@ -1,3 +1,15 @@
+## Unreleased Hann estimation and moving-peak phase continuity
+
+- Match three-bin peak interpolation to the periodic Hann main lobe; correct
+  sub-bin bias that amplified the measured 96 kHz single-tone flutter case.
+- Continue existing synthesis anchors when partials migrate between FFT bins,
+  advancing the retained source basis before translation. Preserve onset/new
+  peak resets, fixed latency and allocation-free callbacks with preallocated
+  prior-hop phase scratch.
+- Add 672 fractional-bin checks and strict rendered flutter suppression gates;
+  verify requested vibrato correction, octave transitions and stereo level/phase.
+  These coherent-source measurements do not claim general polyphonic correction.
+
 ## Unreleased continuous vocoder phase precision
 
 - Use f64 phase/frequency histories and arithmetic, casting synthesized spectra
@@ -6,8 +18,8 @@
 - Add calibrated independent output-pitch/stereo measurements for 16 rendered
   cases, including weak fundamentals and correction-disabled deliberate vibrato.
   Preserve fixed frame count, 2047-frame latency and zero callback heap activity.
-- Record the unresolved 96 kHz single-tone fast-flutter residual amplification;
-  passing neutral/slow-wow/stereo gates do not establish universal suppression.
+- Initial audio measurements exposed 96 kHz fast-flutter amplification; the
+  Hann/moving-peak follow-up corrects the checked case without relaxing gates.
 
 ## Unreleased weak-reference harmonic estimation
 

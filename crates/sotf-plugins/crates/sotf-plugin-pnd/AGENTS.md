@@ -32,5 +32,11 @@ the Hann-window center and guards heap activity. Do not substitute estimator
 diagnostics for end-to-end corrected-audio/stereo validation.
 
 `tests/audit_audio.rs` calibrates its f64 analytic-signal frequency probe before
-checking rendered trajectories and stereo phase. Its fast-flutter rows are
-characterization, not a suppression pass; keep unresolved quality work visible.
+checking rendered trajectories and stereo phase. Its known wow/flutter rows
+enforce residual bounds; preserve the missing-pilot octave and explicit
+vibrato-control tests without claiming general music/intention inference.
+
+Use the periodic Hann main-lobe interpolation in `analysis.rs`. Moving vocoder
+peaks must continue prior-hop synthesis phase, advance the previous source
+basis, then translate to the current source bin. Keep prior-phase scratch and
+previous pitch reset together; onset resets remain separate from bin migration.

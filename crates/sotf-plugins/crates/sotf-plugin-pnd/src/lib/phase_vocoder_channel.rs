@@ -40,6 +40,9 @@ pub(super) struct PhaseVocoderChannel {
     pub(super) processed_hops: usize,
     /// Accumulated synthesis phases
     pub(super) synth_phase: Vec<f64>,
+    /// Prior-hop phases retained while remapped peak anchors move between bins.
+    previous_synth_phase: Vec<f64>,
+    previous_pitch_shift: f32,
     pub(super) synth_phase_initialized: Vec<bool>,
     /// Remapped positive-frequency magnitudes for the current synthesis frame.
     pub(super) synth_magnitude: Vec<f32>,
@@ -92,6 +95,8 @@ impl PhaseVocoderChannel {
             transient_position: None,
             processed_hops: 0,
             synth_phase: vec![0.0; PV_FFT_SIZE],
+            previous_synth_phase: vec![0.0; PV_FFT_SIZE],
+            previous_pitch_shift: 1.0,
             synth_phase_initialized: vec![false; PV_FFT_SIZE / 2 + 1],
             synth_magnitude: vec![0.0; PV_FFT_SIZE / 2 + 1],
             synth_frequency_sum: vec![0.0; PV_FFT_SIZE / 2 + 1],
@@ -123,6 +128,8 @@ impl PhaseVocoderChannel {
         self.transient_position = None;
         self.processed_hops = 0;
         self.synth_phase.fill(0.0);
+        self.previous_synth_phase.fill(0.0);
+        self.previous_pitch_shift = 1.0;
         self.synth_phase_initialized.fill(false);
         self.synth_magnitude.fill(0.0);
         self.synth_frequency_sum.fill(0.0);
@@ -340,33 +347,55 @@ impl PhaseVocoderChannel {
         // Advance (or transient-reset) phase only at remapped spectral peaks.
         // The remaining bins are locked to their source peak's relative phase
         // below, preserving waveform shape and inter-channel phase offsets.
+        self.previous_synth_phase.copy_from_slice(&self.synth_phase);
         for target_peak in 0..positive_bins {
             let source_peak = self.target_peak_source[target_peak];
             if source_peak == usize::MAX {
                 continue;
             }
-            if transient
-                || !self.synth_phase_initialized[target_peak]
-                || self.previous_target_peak_source[target_peak] != source_peak
-            {
-                self.synth_phase[target_peak] = if transient {
-                    remap_transient_phase(
-                        self.analysis_phase[source_peak],
-                        source_peak,
-                        target_peak,
-                        transient_sample,
-                        n,
+            // A drifting partial may change its strongest source bin or target
+            // bin without becoming a new onset. Continue its previous anchor;
+            // current ownership prevents one old partial serving two new peaks.
+            let continuation = (source_peak.saturating_sub(1)
+                ..(source_peak + 2).min(positive_bins))
+                .map(|previous_source| {
+                    let previous_target =
+                        (previous_source as f32 * self.previous_pitch_shift).round() as usize;
+                    (previous_source, previous_target)
+                })
+                .filter(|&(source, target)| {
+                    target < positive_bins
+                        && self.previous_target_peak_source[target] == source
+                        && self.synth_phase_initialized[target]
+                        && self.source_peak_owner[source] == source_peak
+                })
+                .min_by_key(|&(source, target)| {
+                    (source.abs_diff(source_peak), target.abs_diff(target_peak))
+                });
+            self.synth_phase[target_peak] = if transient {
+                remap_transient_phase(
+                    self.analysis_phase[source_peak],
+                    source_peak,
+                    target_peak,
+                    transient_sample,
+                    n,
+                )
+            } else if let Some((previous_source, previous_target)) = continuation {
+                // Translate between source-bin phase bases at the current frame
+                // after advancing the retained synthesis trajectory by one hop.
+                self.previous_synth_phase[previous_target]
+                    + self.source_frequency[previous_source]
+                        * f64::from(pitch_shift)
+                        * expected_phase_advance
+                    + wrap_phase(
+                        self.analysis_phase[source_peak] - self.analysis_phase[previous_source],
                     )
-                } else {
-                    self.analysis_phase[source_peak]
-                };
-                self.synth_phase_initialized[target_peak] = true;
             } else {
-                self.synth_phase[target_peak] += self.source_frequency[source_peak]
-                    * f64::from(pitch_shift)
-                    * expected_phase_advance;
-            }
+                self.analysis_phase[source_peak]
+            };
+            self.synth_phase_initialized[target_peak] = true;
         }
+        self.previous_pitch_shift = pitch_shift;
         self.previous_target_peak_source
             .copy_from_slice(&self.target_peak_source);
 

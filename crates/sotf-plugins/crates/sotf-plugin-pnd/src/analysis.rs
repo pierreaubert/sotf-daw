@@ -157,13 +157,16 @@ impl PndAnalyzer {
             let mag_next = self.magnitude_scratch[i + 1];
 
             if mag_curr > threshold && mag_curr > mag_prev && mag_curr > mag_next {
-                // Parabolic interpolation for more accurate frequency
-                let alpha = mag_prev;
-                let beta = mag_curr;
-                let gamma = mag_next;
-                let denom = alpha - 2.0 * beta + gamma;
-                let p = if denom.abs() > f32::EPSILON {
-                    0.5 * (alpha - gamma) / denom
+                // Match the periodic Hann main lobe instead of a parabola.
+                // For fractional offset d, adjacent/main magnitude ratios are
+                // (1-d)/(2+d) and (1+d)/(2-d), giving the relation below.
+                // Positive f64 sums retain level invariance for quiet pilots.
+                let alpha = f64::from(mag_prev);
+                let beta = f64::from(mag_curr);
+                let gamma = f64::from(mag_next);
+                let denom = alpha + 2.0 * beta + gamma;
+                let p = if denom > 0.0 {
+                    (2.0 * (gamma - alpha) / denom).clamp(-0.5, 0.5) as f32
                 } else {
                     0.0
                 };

@@ -13,6 +13,51 @@ static ALLOCATOR: sotf_host::CountingAlloc = sotf_host::CountingAlloc;
 const N: usize = 2048;
 const H: usize = N / 4;
 
+#[test]
+fn known_sines_resolve_fractional_hann_bins_independently_of_level_and_phase() {
+    let mut cases = 0;
+    let mut maximum = 0.0_f64;
+    for rate in [44_100_u32, 48_000, 96_000, 192_000] {
+        for bin in [5.0, 9.0, 20.0, 100.0] {
+            for fraction in [-0.49, -0.35, -0.1, 0.0, 0.1, 0.35, 0.49] {
+                for phase in [0.0, 0.7, std::f64::consts::FRAC_PI_2] {
+                    for amplitude in [1e-6, 0.3] {
+                        let frequency = (bin + fraction) * f64::from(rate) / N as f64;
+                        let reference = frequency / 1.01;
+                        let mut analyzer = PndAnalyzer::new(N, f64::from(rate), 50.0);
+                        let input: Vec<_> = (0..4 * N)
+                            .map(|n| {
+                                (amplitude
+                                    * (TAU * frequency * n as f64 / f64::from(rate) + phase).sin())
+                                    as f32
+                            })
+                            .collect();
+                        analyzer.analyze(&input);
+                        let (ratio, confidence) =
+                            analyzer.estimate_against_reference(reference as f32);
+                        let cents = (1200.0 * (f64::from(ratio) / 1.01).log2()).abs();
+                        maximum = maximum.max(cents);
+                        assert!(
+                            confidence >= 0.5,
+                            "confidence {confidence}: {rate}/{bin}/{fraction}/{amplitude}/{phase}"
+                        );
+                        assert!(
+                            cents < 1.0,
+                            "sub-bin {cents} cents: {rate}/{bin}/{fraction}/{amplitude}/{phase}"
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 672);
+    println!(
+        "{}",
+        serde_json::json!({"case":"hann_fractional_bin_matrix","cases":cases,"max_error_cents":maximum})
+    );
+}
+
 #[derive(Clone, Copy, Debug)]
 enum Motion {
     Offset,

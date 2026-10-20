@@ -1224,7 +1224,7 @@
       "id": 36,
       "plugin": "PND \u2014 pitch-drift correction",
       "audit_text": "[`pnd_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/pnd_plugin.rs):706\u2013870 is a pitch-analysis/phase-vocoder correction path with reference-frequency checks, smoothed ratio/strength, fixed vocoder latency and frozen pitch during draining. Its actual implementation is pitch correction; its name should not be used to infer a noise/decorrelation algorithm.\n\n`finite_stream.rs`, `drain_realtime.rs` and integration tests cover retained audio and lifecycle. Extend known wow/flutter trajectories, deliberate vibrato, octave ambiguities, weak fundamentals and stereo coherence. Classical confidence-gated harmonic estimation and phase-locking are appropriate. A monophonic learned pitch estimator such as CREPE [CREPE][R5] is a candidate only for supported material; test confidence gating and do not treat it as a general polyphonic reference-frequency oracle.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Extend confidence-gated harmonic reference estimation for weak fundamentals and octave ambiguity; validate known trajectories",
@@ -1238,32 +1238,43 @@
         },
         {
           "task": "Measure end-to-end corrected-audio wow/flutter trajectories and intentional vibrato preservation/control choices",
-          "status": "partial",
+          "status": "implemented_and_verified",
           "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/analysis.rs",
             "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/phase_vocoder_channel.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_estimator.rs",
             "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_audio.rs",
-            "audit/artifacts/plugin-audit-20261018/pnd-audio-trajectories.json"
+            "audit/artifacts/plugin-audit-20261018/pnd-hann-interpolation.json"
           ],
-          "result": "Added calibrated f64analytic-signal outputpitch probe,16sourcecalibration and16publicPlugin rendered cases at44.1/96k withpure/weakfundharmonic stereo. Staticmax4.1514cents,slowwowresidualworstratio0.6365,correction-disabled deliberatevibrato every-frame waveformmax5.2162e-7 passunchanged8cent/0.7/2e-4gates. New red96k neutralwaveformerror0.0022845 fixedwithf64phase/frequency histories andwrappingbeforeoscillator;FFT/audio remainf32,2047latencyunchanged. However96k single-tone6Hzflutter residualamplifies3.68047to8.37912centsRMS;this remainsunachievedoutput-qualitywork. Probe calibrationmax0.058557cents,notproductiondiagnostic. Full89tests pass,release2pass,strictQAClippy pass;allnewcallbacksfinite0alloc/free,137/1024partitionsbitexact."
+          "result": "Periodic-Hann interpolation and phase continuation across moving peaks resolve the former flutter amplification. The 672 fractional-bin checks have maximum error 0.059684 cents; 96 estimator trajectories have maximum error 0.83404 cents and 100% settled confidence coverage. Sixteen rendered motion cases pass static, slow-wow, 6 Hz flutter and neutral-vibrato bounds. Four requested-vibrato cases pass residual below 70% of input RMS; strength-zero every-frame preservation remains checked. The calibrated f64 output probe is independent of PND diagnostics. All 92 crate tests, seven release tests and strict QA Clippy pass. Fixed 2047-frame latency, frame count, zero heap activity and 137/1024-frame partition equality remain verified. These are coherent known-reference synthetic cases, not intention inference."
         },
         {
           "task": "Extend end-to-end stereo coherence,octave/weak-fundamental correction and phase-locking validation",
-          "status": "partial",
+          "status": "implemented_and_verified",
           "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/analysis.rs",
             "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/phase_vocoder_channel.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_estimator.rs",
             "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_audio.rs",
-            "audit/artifacts/plugin-audit-20261018/pnd-audio-trajectories.json"
+            "audit/artifacts/plugin-audit-20261018/pnd-hann-interpolation.json"
           ],
-          "result": "Known-phase stereo0.7radoffset and6dBimbalance nowmeasured onrenderedstatic/wow/flutter/neutralvibrato,pureandweakfundamentals. MaxphaseRMSerror7.7209e-7rad passes0.05radboundafterphaseprecisionfix. Existingidentityphaselock/transient/formant tests passwithoutrelaxation. Addend-to-end octaveambiguous transitions andremainingcoherence cases;noarbitrarypolyphonicclaim."
+          "result": "Rendered stereo phase/level coherence and weak-fundamental correction pass. Eight settled measurements across reference-present, upper-octave, reference-return and lower-octave segments preserve absent-pilot pitches and correct the present pilot: maximum 0.057968 cents RMS and 0.00022718 radians phase error. Sixteen motion rows have maximum stereo level error 0.000006283 dB RMS. Existing phase-lock, onset, transient and formant tests retain their tolerances. Bounded prior-hop phase continuation prevents resets when a source peak moves between bins. No arbitrary polyphonic claim."
         },
         {
           "task": "Resolve measured 96 kHz single-tone fast-flutter residual amplification and verify output correction quality",
-          "status": "pending",
-          "evidence": "pnd-audio-trajectories.json unresolved_flutter retains input3.680466/output8.379123centsRMS at6Hz/0.3%FM. Estimator versus rendered-output cause remains to diagnose; passing phase precision/slow-wow gates is not completion."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/analysis.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/phase_vocoder_channel.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_estimator.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/audit_audio.rs",
+            "audit/artifacts/plugin-audit-20261018/pnd-hann-interpolation.json"
+          ],
+          "result": "Resolved 96 kHz single-tone 6 Hz/0.3% flutter amplification: input is 3.68047 cents RMS and output is now 0.36249, previously 8.37912. The fixes match interpolation to the Hann main lobe and continue synthesis phase across peak-bin migration. The new fixed flutter residual gate, below 70% of input RMS, passes all four rate/material cases. Historical failures are retained. All 92 crate tests, seven release tests and strict Clippy pass."
         }
       ],
       "evidence": [
-        "Harmonic estimator andcontinuous vocoder phase precision corrected. Independent output probe now quantifies static/slowwow/vibrato/stereo behavior. Entry36partial: fastflutter amplification andoctave-transition outputwork remain. Overall31/45complete;optionalMLseparate."
+        "Production recommendations are verified: confidence-gated harmonic estimation, phase precision/continuity, Hann sub-bin accuracy, known wow/flutter and deliberate vibrato, weak fundamentals, octave transitions and rendered stereo coherence, plus the finite/realtime baseline. Overall 32/45 complete_production_scope; full goal remains active. Optional learned estimation stays separate. CPU cost is unbenchmarked; synthetic coherent cases do not establish universal polyphonic performance."
       ]
     },
     {
@@ -1692,6 +1703,15 @@
       ],
       "result": "Localized f64crossover correction,accepted choice normalization,linked spectral detector correction,fallible bridge identity/validation.210unity/transient cases,192nonlinear cases,63bridge and81facade configurations;250affected tests pass,1existing ignored doctest;release andstrictClippy pass.",
       "limitations": "Synthetic material;no recorded listening evaluation. Retain user-selected frequency groups and distinct spectral finite/IIRrecursive metadata. Exported binaries notvalidated;optionalMLseparate."
+    },
+    {
+      "name": "PND pitch correction and phase continuity validation",
+      "state": "verified",
+      "plugin_ids": [
+        36
+      ],
+      "result": "Confidence-gated harmonic estimation, f64 phase, Hann interpolation and moving-peak continuation. Validated 672 fractional-bin cases, 96 trajectories, 16 rendered motion cases, four requested-vibrato cases and eight octave measurements. All 92 crate tests, seven release tests and strict Clippy pass, with zero heap activity and unchanged latency.",
+      "limitations": "Explicit reference and coherent synthetic material; no polyphonic or intention oracle. Optional ML is separate; CPU cost is unbenchmarked."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
