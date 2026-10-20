@@ -13,7 +13,9 @@ preset names. Initialized processing performs no heap allocation.
 `room_size` scales only the late-reverb FDN delays; the selected room preset
 defines early-reflection timing. Live pre-delay and room-size changes use 10 ms
 dual-read-head transitions, while RT60 filter coefficients interpolate over
-5 ms. The safety control is emergency feedback headroom above nominal full
+5 ms. Both delay transitions use constant-sum smoothstep weights, so correlated
+old/new taps do not gain amplitude merely from crossfading. This also applies
+inside the FDN feedback loop. The safety control is emergency feedback headroom above nominal full
 scale, so the default +6 dB setting does not distort normal-level decay.
 
 The LFE output is a synthesized effects send, not complementary bass
@@ -39,6 +41,13 @@ distortion/limiter activity, and synthetic dialogue-detector precision/recall
 over a representative preset/layout/rate/partition matrix. See
 `quality-validation.md` for the separate external listening/corpus protocol;
 synthetic results are never presented as listening evidence.
+
+`audit_fdn_decay` isolates the stationary late network at low excitation, with
+modulation and limiting inactive. It measures summed tap energy with a Schroeder
+T30 fit across 44.1/48/96 kHz, room sizes 0.2/1/3 and requested neutral decay
+times 0.5/2 seconds. A separate high-band T20 check verifies the direction of
+treble damping; the shelving endpoint ratio is not an exact octave-band RT60.
+These measurements do not establish modulated decay accuracy or listening quality.
 
 
 ### AutoGain timing

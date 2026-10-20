@@ -19,9 +19,36 @@
             "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_predelay_transition.rs"
           ],
           "result": "Public regression failed at 44.1 kHz with maximum wet-signal difference 0.0007968461 (wet peak 0.0075587574). A constant-sum smoothstep crossfade passes at 44.1/48/96 kHz; full crate selection passed 95 tests."
+        },
+        {
+          "requirement": "Eliminate correlated delay-transition amplification inside late-network feedback.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_transition.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json",
+            "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-baseline.json"
+          ],
+          "result": "Near-identical room-size update reproduced 1.04834384e-4 waveform error at 44.1 kHz despite unchanged integer delays. Constant-sum smoothstep replaces equal-power weights in both static and modulated FDN read heads; all 12 rate/modulation cases match the unchanged twin exactly. Fixed 10 ms duration, parameter/schema/latency/storage contracts unchanged. Eight interrupted extreme-room cases assert finite output, completed transition and zero allocations/frees."
+        },
+        {
+          "requirement": "Measure isolated neutral RT60, treble damping and existing renderer echo density/spatial behavior.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_decay.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-acoustic-quality.json",
+            "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json"
+          ],
+          "result": "18 stationary low-level summed-tap-energy T30 cases span 44.1/48/96 kHz, room sizes 0.2/1/3 and neutral RT60 0.5/2 seconds. Maximum target error 0.5805%, minimum r2 0.9919648, under 10% and above 0.98 bounds. Longer T30 fit was selected after sparse-room T20 quality limitation; both observations retained. Three high-band T20 damping checks shorten neutral ~1.204 s to ~0.837 s. Existing four-preset quality runner passes with normalized echo density 1.254-1.300, mixing times 0.267-0.298 s, spatial coherence 0.1445-0.5802. Preset matrix shares default late controls; no arbitrary preset RT60 claim."
         }
       ],
-      "evidence": []
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json"
+      ],
+      "remaining": [
+        "Extend dynamic noncorrelated predelay/room-size transition peaks and audible interruption behavior; correlated equal-delay invariance is verified.",
+        "Validate modulated and nonlinear frequency-dependent decay across maximum parameter combinations and recursive tail policy.",
+        "External listening/corpus artifacts and measured spatial/envelopment quality remain separate from synthetic gates; the existing synthetic detector precision of 0.5 is not corpus acceptance."
+      ]
     },
     {
       "id": 2,
@@ -2394,6 +2421,15 @@
       ],
       "result": "Corrects held/worker reflection pose bugs and a horizontal-grid query discontinuity. Immutable reflection gains publish with direct filters, follow the N-latency hop ring, and preserve interrupted-fade/epoch/reset/EOF invariants. Revised 256 MiB cache includes log magnitudes; representative worker and full-wet callback costs recorded. 166 release tests, explicit cache/worker/callback gates and strict Clippy pass. Overall stays 35/45.",
       "limitations": "Broadband reflection model and azimuth-only horizontal datasets do not prove full-sphere physical cues, ideal fractional-delay/ringing, larger-dataset end-to-end head latency or perceptual transition/cutoff audibility."
+    },
+    {
+      "name": "AAE bounded correlated feedback transitions and isolated decay measurements",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "Constant-sum FDN tap transitions remove a reproduced feedback amplitude error; 12 exact twin cases, 18 neutral T30 cases, three damping checks and eight extreme-update zero-heap cases. 99 release tests, existing acoustic-quality gate and strict all-target QA Clippy pass. Overall stays 35/45.",
+      "limitations": "Stationary low-level decay and deterministic spatial metrics do not establish arbitrary dynamic, modulated, nonlinear or perceptual/corpus quality."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

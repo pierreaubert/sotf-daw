@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "--release",
+    "-p",
+    "sotf-plugin-aae",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-aae-quality",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 3.293853998184204,
+  "stdout": "metric\tpreset\tlayout\trate\tpartition\tdetail\tvalue\nrt60\tsmall\t5.1\t44100\t64\t250Hz,r2=1.000\t2.1588\nrt60\tsmall\t5.1\t44100\t64\t1000Hz,r2=1.000\t2.0129\nrt60\tsmall\t5.1\t44100\t64\t4000Hz,r2=0.999\t1.7277\necho_density\tsmall\t5.1\t44100\t64\tmixing_time_s=Some(0.27188208616780046)\t1.2863\nspatial\tsmall\t5.1\t44100\t64\tentropy=0.9807,coherence=0.5802,vector=0.5572\t0.4117\nrt60\tmedium\t9.1.6\t48000\t257\t250Hz,r2=1.000\t2.1533\nrt60\tmedium\t9.1.6\t48000\t257\t1000Hz,r2=1.000\t2.0337\nrt60\tmedium\t9.1.6\t48000\t257\t4000Hz,r2=0.999\t1.7725\necho_density\tmedium\t9.1.6\t48000\t257\tmixing_time_s=Some(0.2975)\t1.3000\nspatial\tmedium\t9.1.6\t48000\t257\tentropy=0.7715,coherence=0.1445,vector=0.2623\t0.6601\nrt60\tlarge\t5.1\t48000\t1024\t250Hz,r2=1.000\t2.1589\nrt60\tlarge\t5.1\t48000\t1024\t1000Hz,r2=1.000\t2.0237\nrt60\tlarge\t5.1\t48000\t1024\t4000Hz,r2=0.999\t1.7459\necho_density\tlarge\t5.1\t48000\t1024\tmixing_time_s=Some(0.2675)\t1.2540\nspatial\tlarge\t5.1\t48000\t1024\tentropy=0.9809,coherence=0.5789,vector=0.5562\t0.4131\nrt60\tcathedral\t9.1.6\t44100\t257\t250Hz,r2=1.000\t2.1508\nrt60\tcathedral\t9.1.6\t44100\t257\t1000Hz,r2=1.000\t2.0276\nrt60\tcathedral\t9.1.6\t44100\t257\t4000Hz,r2=0.999\t1.7248\necho_density\tcathedral\t9.1.6\t44100\t257\tmixing_time_s=Some(0.2668934240362812)\t1.2649\nspatial\tcathedral\t9.1.6\t44100\t257\tentropy=0.7718,coherence=0.1602,vector=0.2623\t0.6481\nlfe_transfer\tmedium\t5.1\t48000\t257\t60Hz,phase_deg=170.632\t-76.8710\nlfe_transfer\tmedium\t5.1\t48000\t257\t120Hz,phase_deg=18.752\t-96.8074\nlfe_transfer\tmedium\t5.1\t48000\t257\t250Hz,phase_deg=-14.841\t-109.6146\nlfe_transfer\tmedium\t5.1\t48000\t257\t1000Hz,phase_deg=-175.779\t-132.0009\nmodulation_sideband\tmedium\t5.1\t48000\t257\tmax_0.25-2Hz\t3.4913\nthd\tmedium\t5.1\t48000\t257\t1kHz\t-73.6064\nimd\tmedium\t5.1\t48000\t257\t700+1200Hz\t-162.1019\nlimiter_activity\tmedium\t5.1\t48000\t48000\tfinal_gain\t0.322765\ndetector\tmatrix\tmatrix\t48000\t2400\tprecision=0.500,recall=1.000,pump_total_db=66.776,pump_max_db=6.000\t4\nAAE offline acoustic-quality QA: PASS\nExternal listening/corpus validation is not simulated; run the documented protocol in quality-validation.md\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 2.95s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-quality`\n"
+}

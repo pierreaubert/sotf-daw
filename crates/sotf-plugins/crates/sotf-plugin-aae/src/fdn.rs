@@ -134,6 +134,13 @@ impl Fdn {
     pub fn process(&mut self, input: f32) -> [f32; FDN_SIZE] {
         let scaled_input = input * self.input_gain;
 
+        // Constant-sum interpolation keeps correlated taps from gaining energy
+        // inside the feedback loop. Equal-power weights sum to sqrt(2) at the
+        // midpoint and can amplify even a change that quantizes to equal delays.
+        let progress =
+            1.0 - self.delay_transition_remaining as f32 / self.delay_transition_samples as f32;
+        let delay_blend = progress * progress * (3.0 - 2.0 * progress);
+
         // Read outputs from all delay lines
         let mut outputs = [0.0_f32; FDN_SIZE];
         for i in 0..FDN_SIZE {
@@ -150,11 +157,7 @@ impl Fdn {
                     let previous_delay = self.previous_delay_lengths[i] as f32 + mod_offset;
                     let previous = self.delay_lines[i]
                         .read_allpass(previous_delay.max(1.0), &mut self.previous_interp_states[i]);
-                    let progress = 1.0
-                        - self.delay_transition_remaining as f32
-                            / self.delay_transition_samples as f32;
-                    let angle = progress * std::f32::consts::FRAC_PI_2;
-                    previous * angle.cos() + current * angle.sin()
+                    previous + delay_blend * (current - previous)
                 } else {
                     current
                 };
@@ -169,11 +172,7 @@ impl Fdn {
                 let current = self.delay_lines[i].read(self.delay_lengths[i]);
                 outputs[i] = if self.delay_transition_remaining > 0 {
                     let previous = self.delay_lines[i].read(self.previous_delay_lengths[i]);
-                    let progress = 1.0
-                        - self.delay_transition_remaining as f32
-                            / self.delay_transition_samples as f32;
-                    let angle = progress * std::f32::consts::FRAC_PI_2;
-                    previous * angle.cos() + current * angle.sin()
+                    previous + delay_blend * (current - previous)
                 } else {
                     current
                 };

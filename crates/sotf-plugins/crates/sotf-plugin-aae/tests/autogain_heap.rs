@@ -143,3 +143,38 @@ fn oversized_cold_process_after_control_updates_and_reset_has_no_heap_activity()
         }
     }
 }
+
+#[test]
+fn interrupted_extreme_fdn_room_changes_have_no_heap_activity() {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for modulation in [0.0, 1.0] {
+            let mut fdn = sotf_plugin_aae::fdn::Fdn::new(rate, 1.0, 2.0, 1.5, 0.5, modulation, 0.0);
+            for _ in 0..rate {
+                fdn.process(0.001);
+            }
+            let (peak, heap) = measure_heap(|| {
+                let mut peak = 0.0_f32;
+                for room in [3.0, 0.2, 3.0, 0.2, 1.0] {
+                    fdn.set_room_size(room, 2.0, 1.5, 0.5);
+                    // Retarget halfway through the fixed 10 ms transition.
+                    for _ in 0..rate / 200 {
+                        for sample in fdn.process(0.001) {
+                            assert!(sample.is_finite());
+                            peak = peak.max(sample.abs());
+                        }
+                    }
+                }
+                for _ in 0..rate / 10 {
+                    for sample in fdn.process(0.001) {
+                        assert!(sample.is_finite());
+                        peak = peak.max(sample.abs());
+                    }
+                }
+                peak
+            });
+            assert_eq!(heap, (0, 0), "rate={rate} modulation={modulation}");
+            assert!(peak > 0.0001 && peak < 1.0);
+            assert!(!fdn.delay_transition_active());
+        }
+    }
+}

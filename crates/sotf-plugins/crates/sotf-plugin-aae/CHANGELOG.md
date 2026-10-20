@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Use constant-sum smoothstep weights for live FDN room-size transitions.
+  Eliminate correlated-tap feedback amplification while retaining the 10 ms
+  transition, controls, delay storage, and zero algorithmic latency.
+- Add cross-rate static/modulated correlated-tap regressions and isolated
+  neutral RT60/treble-damping measurements.
 - AutoGain now measures aligned input/output pairs on a fixed 100 ms active-frame clock. A target update affects the following frame, preserving the scalar smoothing law while removing callback-size and future-suffix dependence. Disabling pauses its meter/gain/clock state; reset starts a fresh epoch.
 - Preserve the acoustic feedback path, final limiter placement, and the existing gain history on sample-rate initialization.
 

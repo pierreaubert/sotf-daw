@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--test",
+    "audit_fdn_transition",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nrate=44100 modulation=0 error=1.04834384e-4 reference_peak=2.6799925e-4\ntest quantized_room_changes_do_not_amplify_correlated_feedback ... FAILED\n\nfailures:\n\nfailures:\n    quantized_room_changes_do_not_amplify_correlated_feedback\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 7.84s\n     Running tests/audit_fdn_transition.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_fdn_transition-4a8024edaf9b0188)\n\nthread 'quantized_room_changes_do_not_amplify_correlated_feedback' (327321525) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_transition.rs:40:13:\nrate=44100 modulation=0 error=0.000104834384\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-aae --test audit_fdn_transition`\n"
+}
