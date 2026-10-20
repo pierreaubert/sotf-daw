@@ -77,5 +77,11 @@ cargo test -p sotf-plugin-convolution
 - `resource_tests.rs` verifies channel expansion, resampled admission boundaries,
   sharing and checked overflow. `tests/finite_stream.rs` measures retained bytes
   and planner reserves at both ordinary and matrix admission boundaries.
-- Maximum-load callback timing and pre-admission decoder allocation bounds remain
+- `decode_buffer.rs` caps owned decoded f32 vector capacities at 512 MiB and
+  accumulation at 30 seconds/32 channels. Validate metadata before decoder
+  construction and actual packet geometry/length before bounded growth.
+- Unknown/understated lengths must not bypass the cap. Never silently truncate
+  an IR or change PCM scaling. The cap excludes codec/probe scratch and encoded
+  packet storage; it is not a process RSS bound.
+- Maximum-load callback timing and aggregate peak-memory measurements remain
   open audit work; successful admission is not deadline compliance evidence.

@@ -27,7 +27,6 @@ use std::path::Path;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::{Arc, Mutex, Weak, mpsc};
-use symphonia::core::audio::{Audio, GenericAudioBufferRef};
 use symphonia::core::codecs::CodecParameters;
 use symphonia::core::codecs::audio::AudioDecoderOptions;
 use symphonia::core::codecs::registry::CodecRegistry;
@@ -73,6 +72,11 @@ const IR_LOAD_QUEUE_CAPACITY: usize = 16;
 const MAX_IR_CHANNELS: usize = 32;
 const MAX_IR_SECONDS: usize = 30;
 pub(super) const MAX_IR_MEMORY_BYTES: usize = 512 * 1024 * 1024;
+// Separate control-thread cap for decoded f32 sample-vector capacities.
+const MAX_IR_DECODE_BYTES: usize = 512 * 1024 * 1024;
+#[path = "decode_buffer.rs"]
+mod decode_buffer;
+use decode_buffer::DecodedIr;
 const TRANSITION_SAMPLES: usize = 128;
 const FFT_PLAN_METADATA_BYTES: usize = 4 * 1024;
 
@@ -1327,13 +1331,13 @@ impl ConvolutionPlugin {
             .channels
             .as_ref()
             .map(|c| c.count())
-            .unwrap_or(1);
+            .unwrap_or(0);
+        let mut samples = DecodedIr::new(sample_rate, num_channels, track.num_frames)?;
 
         let mut decoder = IR_CODEC_REGISTRY
             .make_audio_decoder(&codec_params, &AudioDecoderOptions::default())
             .map_err(|e| format!("Decoder: {e}"))?;
 
-        let mut samples = vec![Vec::new(); num_channels];
         loop {
             let packet = match reader.next_packet() {
                 Ok(Some(p)) => p,
@@ -1348,54 +1352,9 @@ impl ConvolutionPlugin {
             let decoded = decoder
                 .decode(&packet)
                 .map_err(|e| format!("Decode: {e}"))?;
-            match &decoded {
-                GenericAudioBufferRef::F32(buf) => {
-                    for (ch, sample_ch) in samples.iter_mut().enumerate() {
-                        sample_ch.extend_from_slice(buf.plane(ch).ok_or("Missing IR channel")?);
-                    }
-                }
-                GenericAudioBufferRef::S16(buf) => {
-                    let scale = 1.0 / 32768.0;
-                    for (ch, sample_ch) in samples.iter_mut().enumerate() {
-                        sample_ch.extend(
-                            buf.plane(ch)
-                                .ok_or("Missing IR channel")?
-                                .iter()
-                                .map(|&s| s as f32 * scale),
-                        );
-                    }
-                }
-                GenericAudioBufferRef::S24(buf) => {
-                    let scale = 1.0 / 8388608.0;
-                    for (ch, sample_ch) in samples.iter_mut().enumerate() {
-                        sample_ch.extend(
-                            buf.plane(ch)
-                                .ok_or("Missing IR channel")?
-                                .iter()
-                                .map(|s| s.inner() as f32 * scale),
-                        );
-                    }
-                }
-                GenericAudioBufferRef::S32(buf) => {
-                    let scale = 1.0 / 2147483648.0;
-                    for (ch, sample_ch) in samples.iter_mut().enumerate() {
-                        sample_ch.extend(
-                            buf.plane(ch)
-                                .ok_or("Missing IR channel")?
-                                .iter()
-                                .map(|&s| s as f32 * scale),
-                        );
-                    }
-                }
-                _ => return Err("Unsupported sample format in IR file".into()),
-            }
+            samples.append(&decoded)?;
         }
-
-        if samples.iter().all(|ch| ch.is_empty()) {
-            return Err("IR file contains no audio data".into());
-        }
-
-        Ok((samples, sample_rate))
+        samples.finish()
     }
 
     /// Resample IR data from one sample rate to another using rubato.

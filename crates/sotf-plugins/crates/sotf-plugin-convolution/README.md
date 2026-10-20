@@ -73,9 +73,15 @@ FFT backend construction. The 512 MiB limit is unchanged.
 This estimates persistent backend payload; it is not a peak RSS or aggregate
 process-memory limit. Decoded/resampled copies, temporary preparation storage,
 active/retired replacement overlap and other plugin instances require additional
-memory. In particular, decoding currently precedes resource admission; bounding
-that temporary decode allocation remains separate work. Admission also does not
-prove that a configuration can meet the audio callback deadline.
+memory. File metadata is checked before decoder construction: valid source rate,
+at most 32 channels, at most 30 seconds, and at most 512 MiB of owned decoded-f32
+sample-vector capacities. Known oversized frame counts are refused immediately.
+Every decoded packet is checked before appending, so unknown or understated
+length metadata cannot bypass the bound. Geometric reservations stop at the cap;
+oversized input returns an error rather than a truncated impulse response.
+Decoder/probe scratch and encoded packets remain outside this sample-buffer cap.
+Backend admission follows bounded decoding and does not prove that a configuration
+can meet the audio callback deadline.
 
 ## End of stream
 

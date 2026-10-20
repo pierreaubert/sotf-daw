@@ -434,14 +434,21 @@
         },
         {
           "task": "Bound decoded input allocation before resource admission",
-          "status": "pending",
-          "evidence": "File decoding currently precedes duration/channel/backend admission. Persistent backend estimate now corrected, but temporary decode/resample/preparation allocations remain a separate resource limit."
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/decode_buffer.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/convolution-decode-bounds.json"
+          ],
+          "result": "New DecodedIr accumulator rejects invalid rate/channel metadata and known over-limit frame counts before decoder construction. Bound source to unchanged 30 s/32 channels and owned decoded-f32 vector capacities to 512 MiB; check each decoded packet for rate/channel/length changes before growth, using checked geometric reservations capped at the exact limit. Unknown/understated metadata cannot bypass capacity. Red-to-green complete 31 s WAV; 30 s boundary accepted; resource preflight/synchronous refusal preserve state and bit-exact live twin continuation. Mock packet tests cover unknown lengths, byte cap, packet geometry, unsupported format and unchanged four PCM conversions. Affected tests 112 passed/4 existing ignored; release lib 73 passed/1 existing ignored; strict all-targets QA Clippy passes. Codec/probe scratch/packets and aggregate RSS remain outside this owned-buffer cap; callback DSP and preset schema unchanged."
         }
       ],
       "evidence": [
         "Parallel finite_stream failure from FIR load checkpoint 2e1ae61 is resolved as test fixture ownership. Historical failure artifacts preserved; follow-up evidence in convolution-fixture-isolation.json. Optional offline ML work remains separate. Overall complete count remains 29/45.",
         "Bounded worker backlog and cancellation now implemented; zero callback work added. Existing reclaimer saturation/recovery and direct f64 convolution/true-stereo/EOS checks pass in the affected regression. Convolution remains partial; maximum-size multichannel performance is unverified. Complete count remains 29/45.",
-        "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete."
+        "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete.",
+        "Owned pre-admission decoded sample buffers are now bounded with per-packet enforcement and metadata refusal. Maximum-load callback timing and sustained mixed-instance/aggregate peak-memory validation remain open. Entry 14 partial; overall 29/45 complete."
       ]
     },
     {

@@ -2,6 +2,12 @@
 
 ## Changes
 
+- Bound decoded IR sample-vector capacities to 512 MiB and source duration to
+  30 seconds before backend admission. Reject oversized known lengths before
+  decoder construction and check every packet for unknown/understated lengths.
+- Preserve PCM conversion and live history on decode refusal. This bounds owned
+  sample accumulation, not decoder scratch or aggregate process RSS.
+
 - Correct ordinary-route resource admission to include UPC per-channel FDL and
   NUPC partition spectra, shared plans and each mapped engine's workspace.
   Reuse geometry and fixed-buffer accounting with matrix routing. Preserve the

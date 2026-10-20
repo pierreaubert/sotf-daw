@@ -101,3 +101,88 @@ fn ordinary_shared_kernel_is_counted_once_and_overflow_refuses() {
         usize::MAX
     );
 }
+
+#[test]
+fn decoding_rejects_duration_before_returning_oversized_samples() {
+    use std::io::Write;
+    let clock = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!(
+        "sotf-decode-duration-{}-{clock}.wav",
+        std::process::id()
+    ));
+    // One Hz keeps real complete duration-limit fixtures tiny.
+    fn write_wav(path: &Path, frames: u32) {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)
+            .unwrap();
+        file.write_all(b"RIFF").unwrap();
+        file.write_all(&(36 + frames * 2).to_le_bytes()).unwrap();
+        file.write_all(b"WAVEfmt ").unwrap();
+        file.write_all(&16_u32.to_le_bytes()).unwrap();
+        file.write_all(&1_u16.to_le_bytes()).unwrap();
+        file.write_all(&1_u16.to_le_bytes()).unwrap();
+        file.write_all(&1_u32.to_le_bytes()).unwrap();
+        file.write_all(&2_u32.to_le_bytes()).unwrap();
+        file.write_all(&2_u16.to_le_bytes()).unwrap();
+        file.write_all(&16_u16.to_le_bytes()).unwrap();
+        file.write_all(b"data").unwrap();
+        file.write_all(&(frames * 2).to_le_bytes()).unwrap();
+        for _ in 0..frames {
+            file.write_all(&8192_i16.to_le_bytes()).unwrap();
+        }
+    }
+    write_wav(&path, 31);
+    let result = ConvolutionPlugin::load_audio_file(path.to_str().unwrap());
+    assert!(
+        ConvolutionPlugin::validate_ir_resource_for_routing(
+            path.to_str().unwrap(),
+            Some(1.0),
+            1,
+            true,
+            false,
+            false,
+            128,
+        )
+        .is_err()
+    );
+    let valid_path = path.with_extension("valid.wav");
+    write_wav(&valid_path, 30);
+    let mut plugin = ConvolutionPlugin::new(1, 1);
+    let mut reference = ConvolutionPlugin::new(1, 1);
+    plugin.load_ir(valid_path.to_str().unwrap()).unwrap();
+    reference.load_ir(valid_path.to_str().unwrap()).unwrap();
+    for active in [&mut plugin, &mut reference] {
+        active
+            .process_in_place(&mut [0.25; 17], &ProcessContext::new(1, 17))
+            .unwrap();
+    }
+    let state = Arc::clone(&plugin.state);
+    let generation = plugin.desired_generation;
+    assert!(plugin.load_ir(path.to_str().unwrap()).is_err());
+    assert!(Arc::ptr_eq(&state, &plugin.state));
+    assert_eq!(plugin.desired_generation, generation);
+    assert_eq!(plugin.max_ir_frames, 30);
+    let mut actual = [0.125; 2048];
+    let mut expected = actual;
+    plugin
+        .process_in_place(&mut actual, &ProcessContext::new(1, 2048))
+        .unwrap();
+    reference
+        .process_in_place(&mut expected, &ProcessContext::new(1, 2048))
+        .unwrap();
+    assert_eq!(
+        actual, expected,
+        "decode refusal changed live audio history"
+    );
+    std::fs::remove_file(path).unwrap();
+    std::fs::remove_file(valid_path).unwrap();
+    assert!(
+        result.is_err(),
+        "raw decoding accepted 31 seconds of samples before resource admission"
+    );
+}
