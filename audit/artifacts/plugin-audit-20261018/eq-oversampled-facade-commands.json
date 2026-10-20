@@ -1,0 +1,5 @@
+{
+  "command": "rtk proxy cargo test -p sotf-plugins --test native_drain_bounds --test finite_chain --test realtime_allocation_tests --test all_plugins_parameter_robustness --test all_plugins_dsp_matrix --test automation_tests --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target --no-fail-fast",
+  "exit_code": 0,
+  "summary": "    Finished `test` profile [optimized + debuginfo] target(s) in 30.03s\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.84s\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\ntest result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\ntest result: ok. 63 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.79s"
+}

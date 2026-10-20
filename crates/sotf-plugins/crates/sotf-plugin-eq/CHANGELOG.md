@@ -2,6 +2,14 @@
 
 ## Changes
 
+- Publish conservative state-independent support for finite empty-bank EQ and
+  exact process/geometry-only drain frame envelopes, enabling finite host support
+  composition. Recursive banks retain Unknown/unproven support.
+- Verify actual internal 2x/4x retained-host rate epochs across native, mixed and
+  per-channel chains (1,776 cases), plus exact finite EOF/final-marker drain
+  output and reset replay (216 cases). Preserve the latency-barrier graph fallback
+  and distinguish legacy recursive completion from finite support.
+
 - Preserve per-channel Warped/Kautz configurations when global topology rebuilds
   advanced banks. Retain Empty/Shared/PerChannel description ownership and build
   from the appropriate channel, fixing 144 reproduced lost-filter cases.

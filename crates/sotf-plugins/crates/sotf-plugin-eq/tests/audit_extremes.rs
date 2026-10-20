@@ -1302,7 +1302,14 @@ impl ImplicitWarpedReference {
             freq: k.atan() * f64::from(rate) / PI,
             ..d
         };
-        self.c = coefficients(mapped, rate)[0];
+        self.c = if matches!(
+            mapped.kind,
+            "peak_matched" | "lowshelf_orf" | "highshelf_orf"
+        ) {
+            optimized_coefficients(mapped, rate)[0]
+        } else {
+            coefficients(mapped, rate)[0]
+        };
     }
     fn process(&mut self, x: f64) -> f64 {
         fn ap(x: f64, s: &mut f64, l: f64) -> f64 {

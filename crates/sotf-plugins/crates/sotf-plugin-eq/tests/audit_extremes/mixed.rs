@@ -187,7 +187,15 @@ fn design(c: &BiquadFilterConfig) -> Design {
         kind: match c.filter_type.as_str() {
             "peak" => "peak",
             "peak_matched" => "peak_matched",
+            "lowshelf" => "lowshelf",
             "highshelf" => "highshelf",
+            "lowshelf_orf" => "lowshelf_orf",
+            "highshelf_orf" => "highshelf_orf",
+            "lowpass" => "lowpass",
+            "highpass" => "highpass",
+            "notch" => "notch",
+            "bandpass" => "bandpass",
+            "allpass" => "allpass",
             _ => unreachable!(),
         },
         freq: c.freq,
@@ -199,7 +207,7 @@ fn design(c: &BiquadFilterConfig) -> Design {
 fn native_coefficients(d: Design, rate: u32, svf: bool) -> Vec<[f64; 5]> {
     if svf {
         vec![svf_coefficients(d, rate)]
-    } else if d.kind == "peak_matched" {
+    } else if matches!(d.kind, "peak_matched" | "lowshelf_orf" | "highshelf_orf") {
         optimized_coefficients(d, rate)
     } else {
         coefficients(d, rate)
@@ -254,6 +262,7 @@ impl Sections {
 enum Core {
     Sections(Sections),
     Modal(Vec<ModalReference>),
+    WarpedHistory(Vec<ImplicitWarpedReference>),
 }
 struct Band {
     native: bool,
@@ -303,6 +312,7 @@ impl Band {
         match &mut self.core {
             Core::Sections(s) => s.process(ch, x),
             Core::Modal(m) => m[ch].process(x),
+            Core::WarpedHistory(m) => m[ch].process(x),
         }
     }
     fn frame(&mut self, frame: &mut [f32], pairs: &[[usize; 2]]) {
@@ -867,3 +877,6 @@ fn per_channel_advanced_only_banks_stay_recursive_through_topology_and_drain() {
         serde_json::json!({"case":"mixed_advanced_only_tail","cases":cases,"maximum_reference_error":maximum,"smallest_nonzero_reference_tail_peak":smallest_tail})
     );
 }
+
+#[path = "oversampled_host.rs"]
+mod oversampled_host;

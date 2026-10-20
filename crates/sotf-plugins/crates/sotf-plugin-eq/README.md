@@ -85,8 +85,8 @@ Exact coefficient payload storage is `385 * total channel-stage count * 40` byte
 plus timestamps, indices and active endpoints. For 20 stereo second-order bands
 this is 616,000 payload bytes; the tested 20-band/32-channel/eighth-order case uses
 39,424,000 bytes. Native 1x allocates no history. These are prepared owned payload
-sizes, not aggregate RSS or a CPU deadline claim. Optimized/advanced-family extremes, mixed realizations and oversampled
-host rate changes remain audit work.
+sizes, not aggregate RSS or a CPU deadline claim. Additional optimized/advanced,
+mixed-realization and host-rate validation is described below.
 
 
 Exact serialized `Q = 0.1` is accepted at the documented minimum. Configuration,
@@ -113,8 +113,8 @@ heap-free. Recursive tail metadata stays `Unknown`, while the existing empty-ban
 finite-stream policy remains covered separately. The fixture validates rate
 metadata and history handling; it is not a physical resampler.
 
-These matrices cover standard 1x filters and stated endpoints. Advanced extremes, mixed-realization trajectories, oversampled host
-rate changes and broader tail-policy review remain separate audit requirements.
+These matrices cover standard 1x filters and stated endpoints. Advanced/mixed,
+actual oversampled-host and tail-policy checks have their own evidence below.
 
 
 Global SVF processing is verified against independent analog-polynomial models
@@ -158,8 +158,8 @@ center-response spectral factoring. All 1,440 actual f64 sections have stable
 poles and minimum-phase zeros, including long-tail sections beyond the 4,096-frame
 prefix. Tested processing callbacks have zero measured heap activity. Shared f64
 response tests verify center/endpoints, reciprocal phase and zero-gain continuity;
-this does not establish an analog bandwidth match or CPU deadline. Optimized
-transitions and actual oversampled host rate changes remain separate work.
+this does not establish an analog bandwidth match or CPU deadline. Mixed native
+peaking trajectories and actual oversampled host rates are covered below.
 
 
 Independent advanced validation covers 576 Kautz endpoint cases and 864 retained
@@ -198,8 +198,9 @@ Unknown tail and heap-free measured post-build callbacks. Maximum error is
 
 The original failing artifacts are retained. Current evidence and exact commands
 are in `audit/artifacts/plugin-audit-20261018/eq-warped-conditioning.json`. These
-f64 matrices do not prove arbitrary mixed/automated or actual oversampled-host
-trajectories, broad f32 accuracy, or CPU deadlines; those remain separate work.
+f64 matrices cover the stated endpoints and native 1x host cases. Additional
+mixed and actual oversampled-host checks are described below; arbitrary
+trajectories, broad f32 accuracy and CPU deadlines are not established.
 
 
 Mixed realization validation in `tests/audit_extremes/mixed.rs` combines the
@@ -225,5 +226,38 @@ subsequent audio matches a populated recursive reference with a nonzero tail.
 That compatibility completion does not establish finite recursive support.
 Measured native scalar setters (with retained host-owned parameter IDs), process
 and drain calls have zero heap activity. Structural bank rebuilds remain control
-operations. These bounded f64 cases do not cover actual oversampled mixed-host
-rate transitions; see `audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json`.
+operations. This standalone mixed matrix covers base-rate processing; see
+`audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json` and the actual
+oversampled-host coverage below.
+
+
+Actual internal 2x/4x processing is validated through retained `DawHost` rate
+rebuilds in `tests/audit_extremes/oversampled_host.rs`: 1,056 native-family,
+576 mixed-placement and 144 heterogeneous per-channel cases. The reference
+shares the existing FIR transport while independently deriving EQ coefficients,
+histories, routing and rate epochs. Legacy advanced filters stay at base rate;
+ordered advanced filters run at the inner rate. Partial old/new chunks,
+retained legacy histories, reset ordered/modal histories, saved factor and
+latency are checked. Maximum error is 7.16e-7 at the fixed 2e-5 bound. Nonzero
+latency is an explicit host compilation barrier: both compile-enable settings
+use the verified graph fallback. The upstream rate fixture duplicates frames;
+the EQ itself performs real FIR up/downsampling.
+
+Empty banks now publish geometry-only state-independent support: zero for
+active 1x/SVF, four transport chunks for prepared oversampling. Process output
+has an exact identity frame envelope; drain output has the fixed geometry-only
+canonical refill bound. Recursive native/SVF/advanced banks keep Unknown tail
+and unproven support, including zero-gain configurations. These declarations
+let the host compose finite empty-bank support without using live drain progress
+as an all-state proof.
+
+In 216 finite host EOF cases, drain matches explicit zero-input FIR continuation
+exactly, including the final marker, completion and reset replay. Actual emitted
+frames stay within the composed host support. In the 1,776 recursive cases,
+legacy completion does not discard queued transport or recursive history;
+subsequent input matches the independent continuation and support stays unknown.
+Measured process/drain calls perform no heap operations. Evidence and the
+requirement-by-requirement EQ row audit are in `eq-oversampled-host.json` and
+`eq-completion-audit.json` under `audit/artifacts/plugin-audit-20261018`. These
+are bounded f64 integration checks, not an independent resampler-design or
+CPU/f32-wide conformance claim.

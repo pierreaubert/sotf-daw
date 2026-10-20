@@ -775,7 +775,7 @@
       "id": 23,
       "plugin": "EQ",
       "audit_text": "[`eq_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs):1400\u20131520 is one entry into a broad implementation with ordered/advanced realizations, autogain and differing finite/recursive responses. The complexity calls for route-specific guarantees rather than one \u201cEQ passed\u201d label. Recursive tails and explicit finite responses have different EOF policies.\n\nThe `aud145_*` accuracy/oracle tests, property tests, realtime automation, autogain reset/clock and finite-stream tests are a strength. Extend coefficient transitions, extreme stable parameters, mixed realizations and rate changes through the host. Preserve independent frequency/impulse references rather than only replaying old output. Classical stable parameter interpolation, topology-preserving structures and explicit phase choices are appropriate. ML can fit target responses or propose bands offline; it should not replace exact filter realization.",
-      "status": "partial",
+      "status": "complete_production_scope",
       "tasks": [
         {
           "task": "Validate native peaking-band coefficient transitions against independent realizations and callback partitions",
@@ -790,15 +790,22 @@
         },
         {
           "task": "Validate advanced mixed realizations and parameter trajectories (single-realization extremes now independently verified)",
-          "status": "pending",
+          "status": "implemented_and_verified",
           "evidence": [
-            "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json"
+            "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json",
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-host.json",
+            "audit/artifacts/plugin-audit-20261018/eq-completion-audit.json"
           ],
-          "result": "Stated native 1x/global-SVF mixed placements and interrupted native ramps now independently verified, including per-channel topology fix. Actual oversampled mixed-host combinations and broader trajectory scope remain pending; see the verified bounded mixed-matrix task."
+          "result": "Completed the stated mixed/trajectory and host-rate/EOF recommendation scopes. Actual internal2x/4x: native1056 cases(max7.152557373046875e-7), mixed576 and per-channel144(max1.862645149230957e-9), below fixed2e-5. Partial old/new chunks, retained legacy native/Warped states, rebuilt modal/ordered states, base/inner advanced-rate distinction, retained factor/latency and documented Graph latency fallback verified. Recursive1776 EOF completions retain Unknown/None and match later continuation; finite216 EOF cases deliver exact padded FIR tail and final marker, reset/replay, no heap work. Production geometry-only finite support and process/drain envelopes now exported. Full EQ186/11 historical ignored, release20/0 ignored, strict QA Clippy, transport36 and facade88 pass. See requirement-by-requirement completion record for reference boundaries."
         },
         {
           "task": "Extend actual oversampled biquad/advanced host rate changes and finish finite versus recursive tail review",
-          "status": "pending"
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-host.json",
+            "audit/artifacts/plugin-audit-20261018/eq-completion-audit.json"
+          ],
+          "result": "Completed the stated mixed/trajectory and host-rate/EOF recommendation scopes. Actual internal2x/4x: native1056 cases(max7.152557373046875e-7), mixed576 and per-channel144(max1.862645149230957e-9), below fixed2e-5. Partial old/new chunks, retained legacy native/Warped states, rebuilt modal/ordered states, base/inner advanced-rate distinction, retained factor/latency and documented Graph latency fallback verified. Recursive1776 EOF completions retain Unknown/None and match later continuation; finite216 EOF cases deliver exact padded FIR tail and final marker, reset/replay, no heap work. Production geometry-only finite support and process/drain envelopes now exported. Full EQ186/11 historical ignored, release20/0 ignored, strict QA Clippy, transport36 and facade88 pass. See requirement-by-requirement completion record for reference boundaries."
         },
         {
           "task": "Resolve measured oversampled automation callback dependence with buffered source-time controls",
@@ -896,6 +903,15 @@
             "audit/artifacts/plugin-audit-20261018/eq-mixed-realizations.json"
           ],
           "result": "Reproduced 144/192 failures (max .005556636024266481) when SVF topology reconstruction silently dropped per-channel Warped/Kautz banks. Private Empty/Shared/PerChannel descriptor ownership and channel-aware detached builder resolve all cases; 144 populated Biquad round trips also pass. Independent 960 static and 768 interrupted native-ramp mixed cases have max9.313225746154785e-10 <2e-5 and bit-identical callback partitions. Four rates, stereo/five-channel disjoint pairs, six permutations, legacy/Stereo/L/R/M/S profiles, native peak/matched DFI/TDFII orders2/8 and static global SVF alias covered. Noncommuting order witness .000360637 >.0001. Advanced-only tail: 24 cases retain Unknown, zero latency, legacy nonmutating COMPLETE and correct nonzero recursive continuation. Measured native setters/process/drain heap-free under retained host-owned IDs. EQ182 passed/11 historical ignored; release16/0 ignored, strict QA Clippy pass. Actual oversampled host combinations remain pending."
+        },
+        {
+          "task": "Publish conservative finite empty-bank all-state support and process/drain envelopes",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs",
+            "audit/artifacts/plugin-audit-20261018/eq-oversampled-host.json"
+          ],
+          "result": "Empty active1x/SVF support0; prepared empty oversampled banks support4chunks; every recursive bank stays Unknown/None. Identity process output and geometry-only drain envelopes make finite host composition provable without using live drain progress as all-state support. Initial host support regression failed before declarations;216 finite host marker/drain/reset cases now pass exact transport continuation, and1776 recursive host continuations retain unproven support."
         }
       ],
       "evidence": [
@@ -907,7 +923,8 @@
         "Native optimized f64 endpoint/phase validation complete with shared production DSP correction. EQ remains partial and overall stays 32/45. Optional ML separate.",
         "Advanced Kautz independent endpoint and retained-host scope verified. New required Warped endpoint gate fails 104/4608 at accepted lambda=-0.9999; EQ remains partial and overall stays 32/45. Normal EQ suite 174 passed, 11 historical ignored plus one explicit required red gate; release 8 passed with that gate excluded; explicit release gate fails; strict all-targets QA Clippy passes.",
         "Warped endpoint red gate resolved through shared physical-coordinate production fix through math commit d515d16; unignored with 6336 static endpoint cases and 2304 retained standard-family host cases passing. Full EQ 177 passed/11 historical ignored; release 11 passed/0 ignored; strict lint pass. Historical failures retained. EQ partial; overall 32/45; optional ML separate.",
-        "Mixed realization validation found and fixed per-channel advanced-bank loss on topology switch. Bounded independent static/automated/per-channel/tail matrices pass; full EQ182/11 historical ignored, release16/0 ignored and strict lint pass. Actual oversampled/mixed host requirements remain; EQ partial, overall32/45, optional ML separate."
+        "Mixed realization validation found and fixed per-channel advanced-bank loss on topology switch. Bounded independent static/automated/per-channel/tail matrices pass; full EQ182/11 historical ignored, release16/0 ignored and strict lint pass. Actual oversampled/mixed host requirements remain; EQ partial, overall32/45, optional ML separate.",
+        "EQ-specific production recommendations closed after current-source requirement-by-requirement audit: eq-completion-audit.json. Complete suite186 passed/11 historical captures ignored; all20 release gates, strict QA Clippy,36 transport and88 facade tests pass. Optional ML separate; overall33/45, shared host/adapters and other plugin rows remain open."
       ]
     },
     {
@@ -1907,6 +1924,15 @@
       ],
       "result": "960 static +768 interrupted native trajectories; per-channel192 controls/SVF switches +144 populated return switches; advanced-only24 tail/drain phases. Production descriptor ownership fixes144 reproduced failures; no public schema change.",
       "limitations": "Bounded f64/native1x/static-global-SVF scope. Actual oversampled/mixed host rate and transport-tail requirements remain; overall32/45."
+    },
+    {
+      "name": "Actual oversampled EQ host epochs and conservative finite support",
+      "state": "verified",
+      "plugin_ids": [
+        23
+      ],
+      "result": "1776 actual internal2x/4x retained-host cases and216 finite EOF cases pass. Finite support/process/drain envelopes implemented; required EQ row recommendations mapped to verified artifacts, closing plugin23 production scope.",
+      "limitations": "FIR transport shared as primitive; bounded f64 matrices, no universal/f32/deadline claim. Cross-wrapper/platform shared work and optional ML tracked separately. Overall33/45."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

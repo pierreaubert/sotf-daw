@@ -1473,6 +1473,11 @@ impl ParametricPlugin for EqPlugin {
         true
     }
 
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        // Internal oversampling never changes the public process frame count.
+        Some(input_frames)
+    }
+
     fn input_channels(&self) -> usize {
         self.num_channels
     }
@@ -1571,6 +1576,19 @@ impl ParametricPlugin for EqPlugin {
             .map_or(TailLength::Unknown, |frames| {
                 TailLength::Finite(frames as u64)
             })
+    }
+
+    fn tail_support(&self) -> Option<u64> {
+        // Empty banks retain only finite transport queues/FFT overlaps. Their
+        // four-chunk bound depends on geometry, not EOF progress; recursive
+        // native/SVF/advanced banks stay unproven even at zero configured gain.
+        self.finite_response_frames().map(|frames| frames as u64)
+    }
+
+    fn drain_frames_envelope(&self) -> Option<usize> {
+        // This bound depends only on the active realization geometry, not
+        // received-input state, queued tail data or the current drain cursor.
+        Some(self.drain_output_frames_max())
     }
 
     fn drain_output_frames_max(&self) -> usize {

@@ -1,0 +1,117 @@
+{
+  "plugin_id": 23,
+  "plugin": "EQ",
+  "source": "audit-20261018.md section23",
+  "status": "complete_production_scope",
+  "requirements": [
+    {
+      "requirement": "Route-specific guarantees for ordered/advanced, autogain and differing finite/recursive responses",
+      "status": "proven",
+      "evidence": [
+        "eq-mixed-realizations.json",
+        "eq-oversampled-host.json",
+        "tests/autogain_clock.rs",
+        "tests/autogain_realtime.rs",
+        "tests/finite_stream.rs"
+      ],
+      "result": "Independent legacy/ordered and heterogeneous per-channel references, shared and advanced-only chains, native/SVF/saved-factor clocks, finite/recursive metadata and EOS behavior; current full crate suite rerun."
+    },
+    {
+      "requirement": "Extend coefficient transitions",
+      "status": "proven",
+      "evidence": [
+        "eq-transitions.json",
+        "eq-oversampled-scheduling.json",
+        "eq-mixed-realizations.json",
+        "tests/audit_transitions.rs"
+      ],
+      "result": "Exact settled targets, interrupted native ramps, source-timed oversampled control queues, dense wrap/coalescing, callback invariance and independent DFI/TDFII coefficient/state references; signal bounds retained."
+    },
+    {
+      "requirement": "Extreme stable parameters",
+      "status": "proven",
+      "evidence": [
+        "eq-standard-extremes.json",
+        "eq-svf-extremes.json",
+        "eq-native-optimized-extremes.json",
+        "eq-advanced-extremes.json",
+        "eq-warped-conditioning.json"
+      ],
+      "result": "Frequency/Q/gain endpoints, four rates and native orders2/4/6/8; independent analog/spectral/modal models and actual section stability checks. Q minimum, shared shelves/response, optimized cut phase/gain and Warped conditioning corrected. Original red artifacts preserved and resolved."
+    },
+    {
+      "requirement": "Mixed realizations",
+      "status": "proven",
+      "evidence": [
+        "eq-mixed-realizations.json",
+        "eq-oversampled-host.json"
+      ],
+      "result": "Six permutations, distinct placement profiles, disjoint pairs/unpaired channels, interrupted native ramps, per-channel topology retention and actual 2x/4x integration. Noncommuting order and nonzero tail witnesses are explicit."
+    },
+    {
+      "requirement": "Rate changes through the host",
+      "status": "proven",
+      "evidence": [
+        "eq-standard-extremes.json",
+        "eq-svf-extremes.json",
+        "eq-advanced-extremes.json",
+        "eq-warped-conditioning.json",
+        "eq-oversampled-host.json"
+      ],
+      "result": "Retained native1x, SVF, Kautz and Warped histories, actual FIR-oversampled native/advanced/mixed/per-channel paths, partial old/new chunks, documented reset versus preservation, rates/factors/latency and supported graph/compiled scheduling policies."
+    },
+    {
+      "requirement": "Independent frequency/impulse references instead of only frozen replay",
+      "status": "proven",
+      "evidence": [
+        "tests/audit_extremes.rs",
+        "tests/audit_extremes/mixed.rs",
+        "tests/audit_extremes/oversampled_host.rs",
+        "shared math tests through d515d16"
+      ],
+      "result": "Independent prewarped analog polynomials, spectral factors, pole/allpass chains, factored complex matched transfer and explicit state recurrences. Only transport primitive is shared in host integration; prior frozen fixtures retained."
+    },
+    {
+      "requirement": "Classical stable interpolation, topology-preserving structures and explicit phase choices",
+      "status": "proven",
+      "evidence": [
+        "eq-transitions.json",
+        "eq-svf-extremes.json",
+        "eq-native-optimized-extremes.json",
+        "eq-warped-conditioning.json"
+      ],
+      "result": "Convex denominator interpolation and exact targets, preserved SVF integrators, explicit minimum-phase optimized cuts/reciprocity, equivalent conditioned Warped realization and allpass-history mapping; no claim that abrupt arbitrary parameter changes are click-free."
+    },
+    {
+      "requirement": "Optional offline ML stays separate from exact runtime realization",
+      "status": "proven",
+      "evidence": [
+        "audit/plugin-ml-backlog-20261018.json",
+        "audit/plugin-remediation-20261018.json research_scope"
+      ],
+      "result": "User explicitly excluded optional ML from production scope; exact runtime DSP remains classical."
+    }
+  ],
+  "validation": {
+    "eq_passed": 186,
+    "eq_historical_ignored": 11,
+    "release_audit_passed": 20,
+    "release_audit_ignored": 0,
+    "strict_all_targets_qa_clippy": "passed",
+    "shared_transport_tests_passed": 36,
+    "factory_tests_passed": 88,
+    "factory_suites": [
+      "all_plugins_dsp_matrix",
+      "all_plugins_parameter_robustness",
+      "automation_tests",
+      "finite_chain",
+      "native_drain_bounds",
+      "realtime_allocation_tests"
+    ],
+    "commands_artifacts": [
+      "audit/artifacts/plugin-audit-20261018/eq-oversampled-host-commands.json",
+      "audit/artifacts/plugin-audit-20261018/eq-oversampled-facade-commands.json"
+    ]
+  },
+  "scope_note": "Closes the EQ-specific production row, not the overall audit. Historical capture utilities stay ignored; all required independent gates are active. Cross-wrapper/platform work remains in its separate shared adapter entry, and optional ML is excluded by the user. Bounded numerical matrices are not a universal parameter, f32 or CPU deadline proof."
+}

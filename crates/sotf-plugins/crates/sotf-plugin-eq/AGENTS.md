@@ -88,7 +88,8 @@ cargo test -p sotf-plugin-eq
   2,304 retained-host standard-family cases cover independent transfer/state
   references. Keep accepted lambda range, Biquad fallback domain, legacy history
   versus ordered reset, transactional rebuilds and zero callback heap work.
-  Advanced mixed/automated and actual oversampled-host work remains pending.
+  Advanced mixed/automated and actual oversampled-host checks have separate
+  reference modules described below.
 
 - Preserve advanced description ownership with `AdvancedFilterConfigs` in
   `advanced_filter.rs`: Empty/Shared/PerChannel. Per-channel construction must
@@ -101,4 +102,18 @@ cargo test -p sotf-plugin-eq
   IDs are compact band indices regardless of original mixed position. Legacy
   references cast after native and combined advanced banks; ordered references
   cast per placed band. Keep native setter/process heap checks and the nonzero
-  order/tail witnesses. Actual oversampled mixed-host paths remain separate.
+  order/tail witnesses. Actual oversampled mixed-host paths are in the child
+  `oversampled_host.rs` reference module.
+
+- EQ finite metadata must use geometry-only all-state guarantees: empty active
+  1x/SVF support0, empty prepared oversampling support4*input_chunk_frames,
+  recursive native/SVF/advanced supportNone even at zero gain. Process envelope
+  is identity; drain envelope uses the geometry-only canonical refill bound.
+  Do not derive state-independent support from live EOF progress or quiet audio.
+  The host latency barrier sends actual oversampling to Graph with compilation
+  either enabled or disabled; do not force a zero-latency compiled assertion.
+  `tests/audit_extremes/oversampled_host.rs` shares only FIR transport and models
+  EQ coefficients/history/routing independently: native1056, mixed576,
+  per-channel144 retained-host cases plus finite216 EOF cases. Keep partial old
+  and new chunks, recursive post-COMPLETE continuation, exact finite final-marker
+  tail, actual emission <=composed support and zero process/drain heap checks.

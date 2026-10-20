@@ -1,0 +1,207 @@
+{
+  "scope": "Actual internal 2x/4x oversampled EQ through retained host-rate epochs, mixed/per-channel routing and finite versus recursive host EOF contracts. Production finite support/envelope metadata completed. Optional ML separate.",
+  "tracking_issue": 9,
+  "base_commit": "f79c495eac71d662eb3de3c9e66b85e3f9b12474",
+  "math_dependency_commit": "d515d16910f4807dd2be429cad5c6c9c7305b906",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-eq/src/lib/eq_plugin.rs": "7484e1e3256103c2d2a3c295e0e7ba8f6c7f26b028bf56ebe5dc9c5faf88513b",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes.rs": "98a71126f5a308e142bd08780ce3d2f239717fe6e36b28278792dbbeccbab982",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes/mixed.rs": "7d6ac68b20bf5f79b10ebd4c9a755b38f123c3fdafe6ce7a7c0c4ab8029ce0fa",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/audit_extremes/oversampled_host.rs": "9f64e1eedb344a57163af2e6685346ef4daed01eb574830b8b4ef8287434012c"
+  },
+  "reference_boundary": "Shares only sotf_host::oversampling::Oversampler FIR transport. Native coefficients/state, Warped implicit histories, Kautz pole/allpass-chain model, placement, rate selection and epoch resets are independent. This is an EQ/host integration oracle, not independent validation of Rubato/FIR coefficient design. Existing transport tests run separately.",
+  "production_metadata": {
+    "before": "Finite empty-bank EQ tail_length reported four chunks, but default tail_support/process/drain envelopes were None; host.tail_support therefore stayed None in the finite EOF regression.",
+    "tail_support": "finite_response_frames supplies a geometry-only all-state bound: Some(0) for empty active 1x/SVF; Some(4*chunk) for prepared empty oversampled banks; None for any recursive native/SVF/advanced bank or active transition.",
+    "process_envelope": "Some(input_frames), matching the existing guarantees_identity_frame_geometry invariant: every successful public/compiled process returns exactly its input frame count; internal oversampling is transparent to external frame geometry.",
+    "drain_envelope": "Some(drain_output_frames_max()), which depends only on active realization geometry: canonical DRAIN_FRAMES bound for finite transport, zero for native empty or unsupported recursive completion. Independent of received-input/cursor/remaining-tail state.",
+    "support_justification": "The pre-existing empty-bank bound includes startup queue, input chunk phase and finite up/down FFT overlaps. Drain canonical refill cache advances that same bounded continuation and cannot add support beyond its original budget. AutoGain changes gain/measurement state but does not create audio from zero. Recursive banks remain unproven even when configured gain/weight is zero.",
+    "schema": "No new public control/preset fields; no audio algorithm or latency policy changed."
+  },
+  "host_epoch_protocol": {
+    "base_rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "old_eq_rates": [
+      88200,
+      96000,
+      192000
+    ],
+    "factors": [
+      2,
+      4
+    ],
+    "maximum_tested_inner_rate": 768000,
+    "source_fixture": "RateDoublerN duplicates each complete multichannel source frame and declares twice the host rate. It is not a physical converter; the EQ itself performs actual FIR up/downsampling.",
+    "warm_input_frames": 1025,
+    "old_eq_input_frames": 2050,
+    "old_partial_chunk_frames": 2,
+    "new_input_frames": 3075,
+    "new_partial_chunk_frames": 3,
+    "continuation_after_recursive_completion_frames": 517,
+    "actual_callback_source_frames": 193,
+    "history": "Legacy native states retained with new inner-rate coefficients; legacy Warped allpass histories retuned at base rate, Kautz rebuilt. Ordered route rebuild resets all core histories together at the new inner rate. FIR transport epoch resets and drops old queued transport, while retained legacy recursive state continues.",
+    "metadata_assertions": [
+      "output sample rate changes from twice base to base after upstream removal",
+      "EQ selected factor retained",
+      "EQ and host latency equal transport pair latency and are nonzero",
+      "recursive EQ/host tail Unknown, state-independent support None",
+      "host actual Graph path asserted for both compilation settings"
+    ],
+    "compiled_path": "Host compiled_plan::barrier_for treats nonzero latency as an explicit barrier; EQ compile metadata also marks latency-bearing routes unsupported for the zero-latency plan. Both compilation enable settings are exercised and must use Graph. Earlier native 1x/SVF tests cover actual CompiledLinear paths.",
+    "input": "Channel-distinct deterministic multitone and staggered impulse input, ending in source silence; reference and actual warm/continuation samples compared at a fixed absolute 2e-5 bound.",
+    "heap": "All post-build process and recursive drain calls measured 0 allocations/0 deallocations."
+  },
+  "native_family_matrix": {
+    "cases": 1056,
+    "maximum_reference_error": 7.152557373046875e-07,
+    "bound": 2e-05,
+    "families": [
+      "peak",
+      "lowshelf",
+      "highshelf",
+      "lowpass",
+      "highpass",
+      "notch",
+      "bandpass",
+      "allpass",
+      "peak_matched",
+      "lowshelf_orf",
+      "highshelf_orf"
+    ],
+    "channels": 1,
+    "orders": [
+      2,
+      8
+    ],
+    "forms": [
+      "DF-I",
+      "TDF-II"
+    ],
+    "routes": [
+      "legacy",
+      "ordered Stereo"
+    ],
+    "compile_enabled": [
+      false,
+      true
+    ],
+    "paired_parameter_selection": "freq20/20000 by (rate_index+family_index)%2; Q.1/20 by form; gain-24/+24 by order. Not the full endpoint cross product, which is covered separately in static matrices."
+  },
+  "mixed_matrix": {
+    "cases": 576,
+    "maximum_reference_error": 1.862645149230957e-09,
+    "bound": 2e-05,
+    "channels": [
+      2,
+      5
+    ],
+    "permutations": 6,
+    "profiles": [
+      "legacy None",
+      "ordered Stereo/Stereo/Stereo",
+      "ordered Left/Mid/Side",
+      "ordered Side/Right/Left"
+    ],
+    "native_modes": "First four mixed.rs modes selected by permutation_index%4: peak/matched, DF-I/TDF-II, order2/8.",
+    "warped": "Matched peak or high shelf; explicit -.37/.37 or automatic lambda rotated by rate/permutation/profile.",
+    "modal": "Two independent pole/allpass-chain sections.",
+    "rate_selection": "Legacy advanced stages base rate after downsampling; ordered advanced stages inner rate before downsampling."
+  },
+  "per_channel_matrix": {
+    "cases": 144,
+    "maximum_reference_error": 1.862645149230957e-09,
+    "bound": 2e-05,
+    "channels": [
+      2,
+      5
+    ],
+    "permutations": 6,
+    "mode_selection": "permutation_index%4 as mixed matrix",
+    "bank_shapes": [
+      "native/Warped/Kautz",
+      "native/Warped",
+      "Kautz only",
+      "empty",
+      "native/Kautz"
+    ],
+    "parameters": "Distinct per-channel native freq/gain, Warped freq/gain and modal pole/weight.",
+    "route": "Legacy per-channel, advanced base-rate histories and actual oversampled native banks."
+  },
+  "recursive_eof": {
+    "cases": 1776,
+    "tail": "Unknown",
+    "all_state_support": null,
+    "legacy_completion": "Host drain COMPLETE with zero frames and zero heap activity; never promotes the plugin recursive metadata to finite support.",
+    "continuation": "517 new accepted silence frames match independently retained recursive and queued FIR state, including three unprocessed source frames at EOS."
+  },
+  "finite_eof": {
+    "cases": 216,
+    "rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "channels": [
+      1,
+      2,
+      5
+    ],
+    "factors": [
+      2,
+      4
+    ],
+    "compile_enabled": [
+      false,
+      true
+    ],
+    "input_frames": [
+      1,
+      257,
+      1025
+    ],
+    "drain_capacity_multipliers": [
+      1,
+      3
+    ],
+    "old_epoch": "Warm twice-rate stream then remove upstream source and rebuild before final-marker input.",
+    "live_support_frames": 1024,
+    "support_chunks": 4,
+    "result": "Exact equality to four explicit zero-input FIR chunks; emits exactly the declared tail frame count, completes, then reports zero remaining host tail and repeated empty drain completes. State-independent host support is now known.",
+    "maximum_reference_error": 0.0,
+    "minimum_reference_final_marker_peak": 0.4701635241508484,
+    "after_bound": "4096 additional reference silence frames below1e-7; host reset replay matches fresh transport.",
+    "heap": "All measured host process/drain callbacks allocate/deallocate zero.",
+    "composed_support_check": "Pre-drain state-independent host support must bound the actual drained frame count, not merely compare two reported metadata bounds."
+  },
+  "harness_correction": "Initial test expected CompiledLinear with compilation enabled; authoritative latency-barrier policy requires Graph. Corrected the scheduling expectation only; fixed signal bound and state/history requirements unchanged. Initial missing finite support was a production metadata gap and was fixed, not waived.",
+  "validation": {
+    "eq_passed": 186,
+    "eq_historical_ignored": 11,
+    "release_audit_passed": 20,
+    "release_audit_ignored": 0,
+    "strict_all_targets_qa_clippy": "passed",
+    "shared_transport_tests_passed": 36,
+    "factory_tests_passed": 88,
+    "factory_suites": [
+      "all_plugins_dsp_matrix",
+      "all_plugins_parameter_robustness",
+      "automation_tests",
+      "finite_chain",
+      "native_drain_bounds",
+      "realtime_allocation_tests"
+    ],
+    "commands_artifacts": [
+      "audit/artifacts/plugin-audit-20261018/eq-oversampled-host-commands.json",
+      "audit/artifacts/plugin-audit-20261018/eq-oversampled-facade-commands.json"
+    ]
+  },
+  "limits": [
+    "Signal references independently model the EQ cores and integration, sharing FIR transport; no independent resampler-design claim.",
+    "Specified paired matrices/scripts and supported host paths are tested; no universal all-parameter cross-product, broad f32 or CPU deadline guarantee.",
+    "The upstream doubling fixture supplies rate-domain metadata with frame holding; physical converter behavior is not claimed.",
+    "Cross-wrapper/platform validation remains tracked separately under adapters/support; optional ML remains in its separate backlog."
+  ]
+}
