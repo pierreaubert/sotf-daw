@@ -42,3 +42,13 @@ cargo test -p sotf-plugin-hal-output
 - ConfigurationChanged is a local latch, like FormatError. Clearing the shared
   notification from another consumer does not validate this output's format or
   authorize writes. Require explicit control-side format validation/recovery.
+
+- Explicit service, prepared recovery and reprepare must re-open the current
+  mapping even when a retired header still says driver_ready. Native reconnect
+  retires old engine readiness and gates the new mapping before prime/validation.
+- `native_transport` is an ignored isolated target; require a fresh owned fixture
+  root and child mapping/key/runtime overrides. Never substitute the full native
+  suite, whose other constructors may open live default transport.
+- Preserve dirty dependency provenance and distinguish mapped-ring checks from
+  Swift/device/deadline certification. A raw rate setter alone does not publish
+  config_changed; unnotified format/race detection remains an explicit gap.

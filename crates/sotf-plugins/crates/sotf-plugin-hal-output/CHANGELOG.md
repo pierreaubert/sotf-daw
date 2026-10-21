@@ -1,3 +1,12 @@
+# Unreleased native recovery audit
+
+- Re-open the current mapping on every explicit service, prepared recovery and
+  reprepare. A retired driver-ready bit can no longer keep control recovery on
+  the wrong region. Clear old readiness and gate the new mapping until prime.
+- Add an isolated native 1–16-channel/48–96 kHz matrix for real saturation/FIFO,
+  key changes, pending ownership, three remap paths and 64-to-128-frame reprepare.
+  Keep dirty-driver provenance and unnotified-format limitations explicit.
+
 # Unreleased process-queue audit (2026-10-21)
 
 - Share a bounded complete-frame FIFO flush between process and EOF drain.

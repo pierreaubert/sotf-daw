@@ -90,7 +90,12 @@ impl HalWriter for HalOutputWriter {
     }
 
     fn reconnect(&mut self) -> Result<(), String> {
-        HalOutputWriter::reconnect(self).map_err(|error| error.to_string())
+        // Retire readiness on the old region even when its cached driver bit
+        // still says connected. The new region is gated until explicit prime.
+        HalOutputWriter::set_engine_ready(self, false);
+        HalOutputWriter::reconnect(self).map_err(|error| error.to_string())?;
+        HalOutputWriter::set_engine_ready(self, false);
+        Ok(())
     }
 
     fn reload_cipher(&mut self) -> Result<(), String> {
@@ -321,9 +326,9 @@ impl HalOutputPlugin {
                 .writer
                 .as_mut()
                 .ok_or_else(|| ERR_HAL_WRITER_NOT_AVAILABLE.to_string())?;
-            if !writer.is_connected()
-                && let Err(error) = writer.reconnect()
-            {
+            // An explicit service must observe the current mapping; readiness
+            // on a retired region does not prove that it is still current.
+            if let Err(error) = writer.reconnect() {
                 self.is_connected = false;
                 self.state = HalOutputTransportState::Disconnected;
                 return Err(error);
@@ -394,7 +399,9 @@ impl HalOutputPlugin {
                 SinkTransportWaitingReason::FormatUnavailable,
             ));
         };
-        if !writer.is_connected() && writer.reconnect().is_err() {
+        // The expected prepared geometry was checked above. Re-open even if
+        // an old region's readiness bit survived its daemon/session.
+        if writer.reconnect().is_err() {
             self.is_connected = false;
             self.state = HalOutputTransportState::Disconnected;
             return Ok(SinkTransportRecoveryStatus::Waiting(
@@ -639,7 +646,7 @@ impl HalOutputPlugin {
                     SinkTransportWaitingReason::FormatUnavailable,
                 ));
             };
-            if !writer.is_connected() && writer.reconnect().is_err() {
+            if writer.reconnect().is_err() {
                 self.is_connected = false;
                 self.state = HalOutputTransportState::Disconnected;
                 return Ok(SinkTransportRecoveryStatus::Waiting(
@@ -5540,6 +5547,27 @@ mod tests {
         let value = i32::MAX as u64 + 42;
         plugin.underrun_counter.store(value, Ordering::Relaxed);
         assert_eq!(plugin.telemetry().backpressure_events, value);
+    }
+
+    #[test]
+    fn explicit_control_recovery_reopens_even_a_connected_transport() {
+        let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
+        plugin.initialize(48_000.0).unwrap();
+        let before = state.lock().unwrap().reconnect_count;
+        plugin.service_transport().unwrap();
+        let after_service = state.lock().unwrap().reconnect_count;
+        assert_eq!(after_service, before + 1);
+        let expected = SinkTransportFormat {
+            sample_rate: 48_000,
+            channels: 2,
+            buffer_frames: 8,
+        };
+        assert_eq!(
+            plugin.recover_prepared_transport(expected).unwrap(),
+            SinkTransportRecoveryStatus::Ready
+        );
+        let after_terminal = state.lock().unwrap().reconnect_count;
+        assert_eq!(after_terminal, before + 2);
     }
 
     #[test]

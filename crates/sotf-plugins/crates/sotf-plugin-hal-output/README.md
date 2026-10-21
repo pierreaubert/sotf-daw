@@ -19,7 +19,10 @@ not through the automation parameter schema.
 Daemon restarts, shared-memory remapping, configuration changes, and encryption
 key rotation are serviced by `service_transport()`. Hosts must call it from a
 non-realtime control thread; the audio callback never performs filesystem or
-key-loading work. Re-service quiesces readiness, preserves the logical pending FIFO, flushes the
+key-loading work. Explicit service, prepared recovery and reprepare always open
+the current mapping, even when a retired region's cached driver-ready bit stays
+true. The native adapter retires the old region's engine readiness and gates the
+new region before validation/priming. Re-service quiesces readiness, preserves the logical pending FIFO, flushes the
 shared ring, and re-primes it before publishing readiness. Reset or successful
 reinitialization explicitly cancels pending frames and counts those drops.
 A failed prime leaves readiness false and the shared ring empty.
@@ -51,6 +54,31 @@ occupancy is separate from the fixed boundary latency.
 The queue audit uses controlled transports, all 1-16 channel layouts, five ring
 geometries and 44.1/96 kHz clocks. It verifies sample order, frame conservation,
 partial writes, blocked states, recovery, reset/reinitialize and prepared storage.
-Real driver restart/key rotation, cross-process saturation/clock drift and device
-deadline behavior still require separate native runtime evidence. Native feature
-compile checks do not execute the live HAL output.
+The explicit native target below additionally verifies actual mapped-ring
+saturation, key changes and region replacement. Real Swift producer/consumer,
+cross-process timing/clock drift and device deadline behavior remain separate.
+Routine native feature compile checks do not execute live HAL output.
+
+The ignored `native_transport` target uses a bounded child whose mapping, key and
+runtime paths are redirected before any constructor. Give it a fresh owned root
+and run only this target, rather than native tests that may use live defaults:
+
+```bash
+SOTF_HAL_AUDIT_FIXTURE_ROOT=/absolute/fresh/private-dir cargo test \
+  -p sotf-plugin-hal-output --release --features hal,sotf-host/qa \
+  --test native_transport -- --ignored --nocapture --test-threads=1
+```
+
+The native worktree matrix covers 1–16 channels at 48/96 kHz, real ring saturation
+and FIFO/drop accounting, plain/encrypted reads, pending data through service and
+prepared recovery, stale-ready region replacement through all three control
+paths, ring-size reprepare, key mismatch/reload, notified configuration latching,
+and readiness on Drop. Successful callbacks assert zero allocations. Dependency
+hashes identify the current uncommitted driver worktree; these are not clean-driver,
+Swift callback, device audibility or deadline results.
+
+Configuration changes require owner publication of `config_changed`; raw geometry
+setters do not publish that flag. The diagnostic retains an initial unnotified
+rate-change observation in which data was written at the changed transport clock.
+Automatic unnotified-format/race detection remains open; the validated format
+scenario uses the owner notification contract and tests its sticky local latch.

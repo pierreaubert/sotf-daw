@@ -1,0 +1,28 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--features",
+    "hal,sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "native_transport",
+    "--",
+    "--ignored",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest isolated_brokered_transport ... \nrunning 1 test\nnative_output_config_tail telemetry=HalOutputTelemetry { version: 2, state: Ready, requested_frames: 112, written_frames: 95, dropped_frames: 17, queued_frames: 0, queue_capacity_frames: 64, backpressure_events: 1, connected: true, encryption_key_ready: true, transport_fill_frames: 0, target_fill_frames: 64, device_latency_frames: 64, safety_offset_frames: 0, boundary_latency_frames: 128 } read=74 write=74 ready=true changed=false\ntest isolated_brokered_transport ... FAILED\n\nfailures:\n\nfailures:\n    isolated_brokered_transport\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s\n\n\nFAILED\n\nfailures:\n\nfailures:\n    isolated_brokered_transport\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 2.87s\n     Running tests/native_transport.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/native_transport-42f0d6abdd0d1c0a)\n\nthread 'isolated_brokered_transport' (335143133) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs:60:5:\nassertion `left == right` failed\n  left: 0\n right: 10\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\n\nthread 'isolated_brokered_transport' (335143130) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs:307:5:\nisolated native child failed: exit status: 101\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-hal-output --test native_transport`\n",
+  "fixture_root": "/Volumes/home_tmp/tmp/ho-dxm1e5ha",
+  "fixture_cleaned_after_terminal_run": true
+}
