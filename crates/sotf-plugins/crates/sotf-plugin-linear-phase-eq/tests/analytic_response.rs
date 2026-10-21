@@ -389,3 +389,165 @@ fn combined_low_frequency_bands_match_the_product_of_analytic_responses() {
         }
     }
 }
+
+#[test]
+fn short_linear_fir_retains_centered_phase_for_unresolved_low_bands() {
+    let bands = [
+        BandConfig {
+            filter_type: "Peak".into(),
+            frequency: 500.0,
+            q: 2.0,
+            gain_db: 9.0,
+            active: true,
+            placement: None,
+        },
+        BandConfig {
+            filter_type: "Peak".into(),
+            frequency: 2000.0,
+            q: 1.5,
+            gain_db: -6.0,
+            active: true,
+            placement: None,
+        },
+        BandConfig {
+            filter_type: "Lowshelf".into(),
+            frequency: 150.0,
+            q: 1.0,
+            gain_db: 3.0,
+            active: true,
+            placement: None,
+        },
+    ];
+    let mut maximum_phase_error = 0.0_f64;
+    let mut maximum_magnitude_error = 0.0_f64;
+    let mut maximum_delay_error = 0.0_f64;
+    let mut worst = String::new();
+    let mut cases = 0;
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for length_index in 0..4 {
+            let (impulse, latency) = impulse_response(&bands, rate, length_index, 0);
+            let mut phase_error = 0.0_f64;
+            let mut magnitude_error = 0.0_f64;
+            for probe in 0..257 {
+                // Whole audible band with non-grid points: no special-case fit
+                // to the known failing 500 Hz magnitude probe.
+                let frequency = 20.0 * (1000.0_f64).powf(probe as f64 / 256.0);
+                let (re, im) = response(&impulse, frequency, rate, latency);
+                let expected: f64 = bands
+                    .iter()
+                    .map(|b| magnitude(b, frequency, f64::from(rate)))
+                    .product();
+                let phase = im.atan2(re).abs();
+                let h = (frequency * 1e-3).max(1.0);
+                let (re_lo, im_lo) = response(&impulse, frequency - h, rate, latency);
+                let (re_hi, im_hi) = response(&impulse, frequency + h, rate, latency);
+                let delta = (im_hi.atan2(re_hi) - im_lo.atan2(re_lo) + std::f64::consts::PI)
+                    .rem_euclid(std::f64::consts::TAU)
+                    - std::f64::consts::PI;
+                let delay_error =
+                    (f64::from(rate) * delta / (std::f64::consts::TAU * 2.0 * h)).abs();
+                maximum_delay_error = maximum_delay_error.max(delay_error);
+                assert!(
+                    delay_error < 0.5,
+                    "rate={rate} taps={} frequency={frequency} delay_error={delay_error}",
+                    1024 << length_index
+                );
+                phase_error = phase_error.max(phase);
+                magnitude_error =
+                    magnitude_error.max((20.0 * (re.hypot(im) / expected).log10()).abs());
+                if phase > maximum_phase_error {
+                    maximum_phase_error = phase;
+                    worst = format!(
+                        "rate={rate} taps={} frequency={frequency}",
+                        1024 << length_index
+                    );
+                }
+                cases += 1;
+            }
+            maximum_magnitude_error = maximum_magnitude_error.max(magnitude_error);
+            println!(
+                "{}",
+                serde_json::json!({"measurement":"fir_short_phase","rate":rate,"taps":1024<<length_index,"phase_error_rad":phase_error,"magnitude_error_db":magnitude_error})
+            );
+        }
+    }
+    println!(
+        "short_fir_phase probes={cases} maximum_phase_error={maximum_phase_error} maximum_magnitude_error={maximum_magnitude_error} worst={worst}"
+    );
+    println!("short_fir_group_delay maximum_error_samples={maximum_delay_error}");
+    assert!(
+        maximum_phase_error < 1e-4,
+        "{worst}: {maximum_phase_error} rad"
+    );
+}
+
+#[test]
+fn centered_fir_support_and_latency_hold_for_legacy_and_ordered_routes() {
+    use sotf_plugin_linear_phase_eq::LinearPhaseEqBandPlacement as Placement;
+    let mut cases = 0;
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for length_index in 0..4 {
+            for auto_gain in [false, true] {
+                for ordered in [false, true] {
+                    // Ordered routes deliberately disallow auto gain.
+                    if ordered && auto_gain {
+                        continue;
+                    }
+                    for shape in ["Peak", "Lowshelf", "Highshelf", "Lowpass", "Highpass"] {
+                        let filters = [500.0, 150.0]
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &frequency)| BandConfig {
+                                filter_type: shape.into(),
+                                frequency,
+                                q: 2.0,
+                                gain_db: if i == 0 { 9.0 } else { -6.0 },
+                                active: true,
+                                placement: if ordered {
+                                    Some(if i == 0 {
+                                        Placement::Left
+                                    } else {
+                                        Placement::Mid
+                                    })
+                                } else {
+                                    None
+                                },
+                            })
+                            .collect();
+                        let plugin = LinearPhaseEqPlugin::from_params(
+                            2,
+                            rate,
+                            LinearPhaseEqPluginParams {
+                                num_filters: 2,
+                                fir_length_index: length_index,
+                                phase_mode_index: 0,
+                                auto_gain,
+                                mix: 1.0,
+                                filters,
+                                stereo_pairs: None,
+                            },
+                        )
+                        .unwrap();
+                        let taps = 1024 << length_index;
+                        let stages = if ordered { 2 } else { 1 };
+                        assert_eq!(plugin.latency_samples(), stages * (taps / 2 + 32));
+                        for stage in 0..stages {
+                            let fir = plugin.stage_fir(stage).unwrap();
+                            assert_eq!(fir.len(), taps);
+                            assert_eq!(
+                                fir[0], 0.0,
+                                "rate={rate} taps={taps} shape={shape} stage={stage}"
+                            );
+                            for i in 1..taps / 2 {
+                                assert_eq!(fir[i], fir[taps - i]);
+                            }
+                            assert!(fir.iter().all(|v| v.is_finite()));
+                        }
+                        cases += 1;
+                    }
+                }
+            }
+        }
+    }
+    println!("centered_fir_support cases={cases} exact_symmetry=true");
+}

@@ -1607,7 +1607,18 @@
         {
           "task": "Resolve deferred FIR-M1 response limitation without weakening contracts",
           "status": "pending",
-          "evidence": "Explicit deferred FIR-M1 run still fails at 96 kHz /1024 taps/500 Hz linear phase: -0.24574399592456375 dB vs unchanged 0.05 dB. Preserve release deferral and numerical diagnostic. Accepted-revision/owner freshness is now enforced and separately verified; same-current-base jobs intentionally retain existing queue/cancel semantics, not newest-intent ordering."
+          "evidence": "Current centered-phase correction resolves phase leakage but FIR-M1 magnitude remains failing: 96 kHz/1024 taps/500 Hz linear phase -0.24629655784366697 dB versus unchanged 0.05 dB; previous -0.24574399592456375 dB. Existing ignored test stimulus/assertions are byte-identical. Rectangular/log-weighted/reweighted full-spectrum fit experiments were rejected; no solver shipped. Preserve explicit release deferral and dense magnitude diagnostics."
+        },
+        {
+          "task": "Enforce centered linear-phase symmetry even for unresolved low-band targets",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs",
+            "audit/artifacts/plugin-audit-20261018/fir-centered-phase-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/fir-centered-phase-validation.json"
+          ],
+          "result": "Fixed an actual centered-phase defect found during FIR-M1 investigation: even-N FIR synthesis retained the unpaired lag -N/2 sample while reporting N/2 delay. Linear design now zeros that endpoint and averages representable pairs before f32 conversion. N taps, latency N/2+32 per stage, parameters/serialized settings and minimum-phase design stay unchanged. Independent streamed DTFT: 4112 non-grid probes from 20 Hz to 20 kHz, four rates 44.1/48/96/192 kHz and all lengths; maximum aligned phase error drops from 9.42126519e-4 to 2.68891455e-7 rad under unchanged 1e-4. Maximum aligned group-delay error 2.0151667e-4 samples under unchanged 0.5. Exact support/symmetry/latency hold in 240 legacy/ordered/auto-gain configurations. Full release crate 145 passed, two existing ignores retained; strict all-target QA Clippy/format pass and existing dynamic/convolution/heap/EOF coverage remains passing. FIR-M1 still fails its unchanged 0.05 dB bound: -0.2462965578 dB versus baseline -0.2457439959. Dense short-filter magnitude error is retained, up to 1.3314987 dB at 192 kHz/1024 taps. Static QA exits zero under its historical 4x jitter gate but records six physical misses; no deadline compliance claimed. Rectangular/log-weighted/reweighted whole-spectrum experiments were rejected and removed; the reweighted patch/raw results are retained. Overall remains 35/45, FIR entry partial."
         }
       ],
       "evidence": [
@@ -1616,7 +1627,8 @@
         "Opaque accepted revision/owner fencing closes ABA/no-op and foreign-graph acceptance, preserving zero-heap refusals, retained ownership and live audio. In-memory snapshot API extension and RevisionExhausted are documented; serialized settings, FIR behavior/latency and bounds unchanged. Same-current-base request ordering follows existing queue/cancel semantics. Full-load/native deadlines and deferred FIR-M1 remain pending. Entry stays partial; overall complete count is 29/45.",
         "Load follow-up: two full 108-row release measurements intentionally exit 1; data and rejected candidate retained. No production DSP runtime change accepted in this follow-up. Static QA reporting corrected. Final restored shared/FIR/convolution/crossover verification recorded separately; legacy ignored capture/replay inventory preserved and required AUD134 replay folders absent (not regenerated).",
         "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log.",
-        "Follow-up resolves the previous combined Convolution failure: timestamp-only parallel fixture names collided. Exclusive-create diagnostic proves AlreadyExists; sequence IDs plus exclusive creation pass 40 parallel suites and final four-crate regression 366 passed/8 existing ignored. See convolution-fixture-isolation.json. Full-load deadline and FIR-M1 limits remain unchanged."
+        "Follow-up resolves the previous combined Convolution failure: timestamp-only parallel fixture names collided. Exclusive-create diagnostic proves AlreadyExists; sequence IDs plus exclusive creation pass 40 parallel suites and final four-crate regression 366 passed/8 existing ignored. See convolution-fixture-isolation.json. Full-load deadline and FIR-M1 limits remain unchanged.",
+        "audit/artifacts/plugin-audit-20261018/fir-centered-phase-validation.json"
       ]
     },
     {
@@ -2871,6 +2883,15 @@
       ],
       "result": "Lateral-only displacement and every nonzero yaw now select the full two-ear matrix; positive X points right consistently with room reflections. Asymmetric filters now honor the existing explicit LF-delay blend through one shared contralateral transfer helper also used by analytical diagnostics. Centered default matches all 4100 recorded coefficient words exactly locally (portable fixture tolerance 2e-6). Twenty-four independent f64 path cases have maximum error 1.0176653e-7; 72 mirrored filter cases are exact; 240 near-center cases retain raw finite-pose variation and have midpoint residual at most 1.884145e-4 under the 2e-4 numerical gate. Independent Brown-Duda prediction coverage expands to 180 phase/LF-mode cases with maximum 0.0110524 dB error under unchanged 0.02 dB gate. Twenty-four rendered pose matrices mirror and partition exactly; 18 cold/reset cases preserve exact waveforms, zero allocations/frees and latency 2048. Full release suite passes 243 tests with one existing timing ignore; standard QA, strict all-target release Clippy and formatting pass. Existing 360 nominal-filter mismatch rows remain identical (134 degraded, worst normalized -5.010439 dB); nominal acoustic report remains 15/17 with both previous failures retained. Parameter IDs/ranges/defaults unchanged; noncentered presets intentionally change behavior.",
       "limitations": "XTC and overall goal remain partial: 35/45 complete; physical model, measured robustness and real head-tracking validation remain open. Optional ML remains separate."
+    },
+    {
+      "name": "Linear-phase FIR centered support correction and retained FIR-M1 experiments",
+      "state": "verified_partial",
+      "plugin_ids": [
+        30
+      ],
+      "result": "Fixed an actual centered-phase defect found during FIR-M1 investigation: even-N FIR synthesis retained the unpaired lag -N/2 sample while reporting N/2 delay. Linear design now zeros that endpoint and averages representable pairs before f32 conversion. N taps, latency N/2+32 per stage, parameters/serialized settings and minimum-phase design stay unchanged. Independent streamed DTFT: 4112 non-grid probes from 20 Hz to 20 kHz, four rates 44.1/48/96/192 kHz and all lengths; maximum aligned phase error drops from 9.42126519e-4 to 2.68891455e-7 rad under unchanged 1e-4. Maximum aligned group-delay error 2.0151667e-4 samples under unchanged 0.5. Exact support/symmetry/latency hold in 240 legacy/ordered/auto-gain configurations. Full release crate 145 passed, two existing ignores retained; strict all-target QA Clippy/format pass and existing dynamic/convolution/heap/EOF coverage remains passing. FIR-M1 still fails its unchanged 0.05 dB bound: -0.2462965578 dB versus baseline -0.2457439959. Dense short-filter magnitude error is retained, up to 1.3314987 dB at 192 kHz/1024 taps. Static QA exits zero under its historical 4x jitter gate but records six physical misses; no deadline compliance claimed. Rectangular/log-weighted/reweighted whole-spectrum experiments were rejected and removed; the reweighted patch/raw results are retained. Overall remains 35/45, FIR entry partial.",
+      "limitations": "Original magnitude target, full-load/native deadlines remain pending; phase correctness is not a substitute completion criterion. Overall 35/45; optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

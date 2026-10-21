@@ -91,3 +91,13 @@ cargo test -p sotf-plugin-linear-phase-eq
   capacity. The ring-span experiment was discarded and its shared runtime is
   restored. Numerical experiment tests and candidate code are artifact patches,
   not extra production arithmetic-order requirements.
+
+- Even-length linear-phase FIRs are centered at N/2 for the existing latency
+  contract. Zero index 0 (lag -N/2, whose partner is outside N taps) and average
+  each representable pair before f32 conversion. Do not silently shift to
+  (N-1)/2 or add a tap. Both legacy/ordered and prepared-update paths share this
+  designer. Minimum-phase generation remains separate.
+- Include unresolved low-band targets in phase checks: finite magnitude
+  resolution does not justify phase leakage. Keep 1e-4 rad phase and 0.5-sample
+  group-delay bounds; retain measured magnitude failures separately. FIR-M1
+  remains deferred at -0.2462965578 dB versus 0.05 dB after the phase correction.

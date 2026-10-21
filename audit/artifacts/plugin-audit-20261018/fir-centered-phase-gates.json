@@ -1,0 +1,74 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-linear-phase-eq",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--test",
+      "analytic_response",
+      "multiband_response_matches_on_every_tap_count_and_phase",
+      "--",
+      "--ignored",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "stdout": "\nrunning 1 test\ntest multiband_response_matches_on_every_tap_count_and_phase ... FAILED\n\nfailures:\n\nfailures:\n    multiband_response_matches_on_every_tap_count_and_phase\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.02s\n\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.22s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\n\nthread 'multiband_response_matches_on_every_tap_count_and_phase' (334007791) panicked at crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs:307:25:\nrate=96000 taps=1024 phase=0 frequency=500: magnitude error -0.24629655784366697 dB\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-linear-phase-eq --test analytic_response`\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "run",
+      "-p",
+      "sotf-plugin-linear-phase-eq",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--bin",
+      "qa-linear-phase-eq"
+    ],
+    "exit_code": 0,
+    "stdout": "=== QA: LinearPhaseEQ Plugin ===\n\n[Test 1] Peak Boost (+6dB at 1kHz)\n  Expected: ~-4.0dB, Measured: -4.00dB\n\n[Test 2] Latency Reporting\n  Reported Latency: 1056 samples\n  Latency: PASS\n\n[Test 3] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 4] Performance Benchmark\n  Processed 5.0s of audio in 18.77ms\n  Estimated CPU Usage: 0.38%\n  Performance: PASS\n\n[Test 5] Partitioned-convolution layout/block matrix\n  aggregate p50/p95/p99/max: 41.167\u00b5s/821.25\u00b5s/1.424625ms/1.980333ms; actual-callback misses: 6; reported-horizon misses: 0; 4x-jitter-threshold misses: 0\n  local 4x-jitter timing diagnostic: PASS (zero allocations; this threshold does not prove the reported work horizon)\n  direct-callback status: UNRESOLVED (6 measured physical-deadline misses); AU/NIH require an approved fixed-rate adapter\n\n[LOCAL 4X TIMING DIAGNOSTIC COMPLETE; WORK-HORIZON/DIRECT-CALLBACK COMPLIANCE UNRESOLVED] LinearPhaseEQ QA Complete.\n",
+    "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 5.56s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-linear-phase-eq`\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-linear-phase-eq",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking regex-syntax v0.8.11\n    Checking wait-timeout v0.2.1\n    Checking quick-error v1.2.3\n    Checking fnv v1.0.7\n    Checking bit-vec v0.10.1\n    Checking rand_xorshift v0.5.0\n    Checking core_detect v1.0.0\n    Checking unarray v0.1.4\n    Checking rusty-fork v0.3.1\n    Checking bit-set v0.11.1\n    Checking regex-automata v0.4.18\n    Checking proptest v1.12.0\n    Checking regex v1.13.1\n    Checking env_filter v2.0.0\n    Checking criterion v0.8.2\n    Checking env_logger v0.11.11\n    Checking sofa-reader v0.2.1 (https://github.com/pierreaubert/sofa-reader#c2ba490d)\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Checking sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 4.95s\n"
+  }
+]

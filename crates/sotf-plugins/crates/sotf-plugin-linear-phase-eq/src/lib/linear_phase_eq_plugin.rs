@@ -443,7 +443,7 @@ impl LinearPhaseEqPlugin {
     ///
     /// Pure core shared by the legacy path, the ordered stages and off-thread
     /// update preparation. The operation sequence is the long-established
-    /// design pipeline, so legacy output is unchanged.
+    /// design pipeline, with centered symmetry enforced for linear phase.
     fn design_fir_coefficients(
         sample_rate: f64,
         fir_length: usize,
@@ -492,7 +492,21 @@ impl LinearPhaseEqPlugin {
             ..Default::default()
         };
 
-        let fir_f64 = generate_fir_from_response(design_freqs, design_magnitudes_db, &config);
+        let mut fir_f64 = generate_fir_from_response(design_freqs, design_magnitudes_db, &config);
+        if phase == FirPhase::Linear {
+            // With even N and the advertised N/2 delay, index zero is the
+            // unpaired lag -N/2. Its +N/2 partner would require N+1 taps.
+            // Keep the existing support and delay: discard that endpoint and
+            // average representable pairs before conversion to f32. Otherwise
+            // low-frequency designs leak phase despite selecting linear mode.
+            fir_f64[0] = 0.0;
+            for i in 1..fir_length / 2 {
+                let paired = fir_length - i;
+                let value = (fir_f64[i] + fir_f64[paired]) * 0.5;
+                fir_f64[i] = value;
+                fir_f64[paired] = value;
+            }
+        }
 
         // Convert to f32 and store
         let mut fir = vec![0.0f32; fir_f64.len()];

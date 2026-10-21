@@ -1,5 +1,14 @@
 # Unreleased
 
+- Enforce centered linear-phase symmetry without changing N-tap support or
+  N/2+32 per-stage delay: discard the unpaired endpoint and average pairs before
+  f32 conversion. Minimum-phase design is unchanged. Independent streamed
+  low-band phase/group-delay and exact legacy/ordered symmetry checks cover
+  44.1-192 kHz and every tap count.
+- Keep FIR-M1 magnitude failure deferred (-0.2462965578 dB versus 0.05 dB).
+  Rejected whole-spectrum fits are retained as evidence, not runtime changes;
+  full-load and native deadline failures remain unresolved.
+
 - Add an explicit full-load default-host QA target with all 108 rows retained,
   raw deadline budgets, phase timings and allocation/free/invariant checks.
   The observed high-load deadline gate remains failing; no runtime optimization

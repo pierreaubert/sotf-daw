@@ -193,10 +193,23 @@ is `3.05565e-7` under `1e-5`. Lifecycle checks retain stale candidates without
 allocation/free after reset, overwrite, transfer, rate change and drain.
 Empty history and switching to synchronous completion are also covered.
 
-The existing explicitly deferred `FIR-M1` diagnostic remains failing when
-run: 96 kHz / 1024 taps / 500 Hz multiband error `-0.2457439959` dB versus the
-unchanged `0.05` dB bound. It remains ignored in the regular suite under
-`audit/RELEASE-DEFERRED.md`; no taps, phase, tolerances or case changed.
+Linear-phase taps now enforce symmetry around the reported N/2 delay. The
+unpaired lag -N/2 endpoint is zero; representable pairs are averaged before
+f32 conversion. Tap count and latency stay fixed. Minimum-phase design is
+unchanged. A streamed independent DTFT sweep of unresolved low bands across
+four rates/all lengths reduces worst aligned phase error from `9.42127e-4`
+to `2.68892e-7` rad (unchanged `1e-4` bound); aligned group-delay error stays
+below `2.016e-4` samples (unchanged `0.5` bound). Exact tap symmetry and latency
+are checked in 240 legacy/ordered/auto-gain configurations.
+
+The explicitly deferred `FIR-M1` magnitude diagnostic still fails at 96 kHz /
+1024 taps / 500 Hz: `-0.2462965578` dB versus the unchanged `0.05` dB bound
+(previously `-0.2457439959` dB). It remains ignored under
+`audit/RELEASE-DEFERRED.md`, with its stimulus/assertions unchanged. The dense
+20 Hz-20 kHz sweep also retains short-filter magnitude limitations, up to
+`1.33150` dB at 192 kHz/1024 taps. Exact centered phase does not establish
+unresolved-band magnitude accuracy. Whole-spectrum fitting experiments failed
+the original bound and were removed from production; their evidence is retained.
 The historical static QA used a four-times-horizon scheduler-jitter threshold;
 its old "negotiated-quantum misses" count referred to that relaxed threshold,
 not the raw reported horizon. It now prints physical, raw horizon and 4x

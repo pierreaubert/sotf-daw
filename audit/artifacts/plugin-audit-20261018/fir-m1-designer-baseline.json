@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "analytic_response",
+    "multiband_response_matches_on_every_tap_count_and_phase",
+    "--",
+    "--ignored",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest multiband_response_matches_on_every_tap_count_and_phase ... FAILED\n\nfailures:\n\nfailures:\n    multiband_response_matches_on_every_tap_count_and_phase\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.02s\n\n",
+  "stderr": "   Compiling regex-syntax v0.8.11\n   Compiling wait-timeout v0.2.1\n   Compiling fnv v1.0.7\n   Compiling bit-vec v0.10.1\n   Compiling quick-error v1.2.3\n   Compiling rand_xorshift v0.5.0\n   Compiling core_detect v1.0.0\n   Compiling unarray v0.1.4\n   Compiling rusty-fork v0.3.1\n   Compiling bit-set v0.11.1\n   Compiling regex-automata v0.4.18\n   Compiling proptest v1.12.0\n   Compiling regex v1.13.1\n   Compiling env_filter v2.0.0\n   Compiling criterion v0.8.2\n   Compiling env_logger v0.11.11\n   Compiling sofa-reader v0.2.1 (https://github.com/pierreaubert/sofa-reader#c2ba490d)\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 17.99s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\n\nthread 'multiband_response_matches_on_every_tap_count_and_phase' (333936273) panicked at crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs:307:25:\nrate=96000 taps=1024 phase=0 frequency=500: magnitude error -0.24574399592456375 dB\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-linear-phase-eq --test analytic_response`\n"
+}

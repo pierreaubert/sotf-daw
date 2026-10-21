@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "analytic_response",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 5 tests\ntest multiband_response_matches_on_every_tap_count_and_phase ... ignored, FIR-M1: known 96kHz/1024-tap response accuracy limitation deferred for release; see audit/RELEASE-DEFERRED.md\n{\"magnitude_error_db\":0.012712070044335087,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.153400843674812e-7,\"rate\":44100,\"taps\":1024}\n{\"magnitude_error_db\":0.00019785955785321308,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.0954847707839808e-7,\"rate\":44100,\"taps\":2048}\ntest combined_low_frequency_bands_match_the_product_of_analytic_responses ... ok\n{\"magnitude_error_db\":0.00004385478643991527,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.979335915385201e-7,\"rate\":44100,\"taps\":4096}\n{\"magnitude_error_db\":0.000010513926813994507,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.3524557047748834e-7,\"rate\":44100,\"taps\":8192}\n{\"magnitude_error_db\":0.019675045396570633,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.2405471120523155e-7,\"rate\":48000,\"taps\":1024}\n{\"magnitude_error_db\":0.0002515259791947561,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":6.906435000218799e-8,\"rate\":48000,\"taps\":2048}\n{\"magnitude_error_db\":0.000042437794608298,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.610705998733834e-7,\"rate\":48000,\"taps\":4096}\n{\"magnitude_error_db\":0.000011045036239057401,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.6889145480860523e-7,\"rate\":48000,\"taps\":8192}\n{\"magnitude_error_db\":0.2514570347561665,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.6116874468032596e-7,\"rate\":96000,\"taps\":1024}\n{\"magnitude_error_db\":0.019611660416549673,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.2018682082835727e-7,\"rate\":96000,\"taps\":2048}\n{\"magnitude_error_db\":0.0001283292207647247,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.406294545828322e-7,\"rate\":96000,\"taps\":4096}\n{\"magnitude_error_db\":0.000012781571240807915,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.941664203714422e-7,\"rate\":96000,\"taps\":8192}\n{\"magnitude_error_db\":1.331498687172847,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":7.90331235444825e-8,\"rate\":192000,\"taps\":1024}\n{\"magnitude_error_db\":0.2510559723129545,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.072788838617908e-7,\"rate\":192000,\"taps\":2048}\n{\"magnitude_error_db\":0.019558778696832504,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.8590669053530128e-7,\"rate\":192000,\"taps\":4096}\n{\"magnitude_error_db\":0.00009883050292245589,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.0988337538108635e-7,\"rate\":192000,\"taps\":8192}\nshort_fir_phase probes=4112 maximum_phase_error=0.00000026889145480860523 maximum_magnitude_error=1.331498687172847 worst=rate=48000 taps=8192 frequency=1861.1440818593978\ntest short_linear_fir_retains_centered_phase_for_unresolved_low_bands ... ok\ntest all_filter_shapes_match_their_analytic_magnitude_and_linear_phase ... ok\ntest all_tap_counts_match_complex_response_and_group_delay ... ok\n\ntest result: ok. 4 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.28s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 9.51s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\n"
+}

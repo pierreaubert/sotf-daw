@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "analytic_response",
+    "short_linear_fir_retains_centered_phase_for_unresolved_low_bands",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\n{\"magnitude_error_db\":0.01269895029007283,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":5.708350936951619e-6,\"rate\":44100,\"taps\":1024}\n{\"magnitude_error_db\":0.00019748187171340226,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.889396849018403e-7,\"rate\":44100,\"taps\":2048}\n{\"magnitude_error_db\":0.00004385221270634433,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.988792256451062e-7,\"rate\":44100,\"taps\":4096}\n{\"magnitude_error_db\":0.000010513767754736658,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.3520980746423196e-7,\"rate\":44100,\"taps\":8192}\n{\"magnitude_error_db\":0.0196266678916085,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":0.000017282339897147498,\"rate\":48000,\"taps\":1024}\n{\"magnitude_error_db\":0.00025081760346294093,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":5.488486753821457e-7,\"rate\":48000,\"taps\":2048}\n{\"magnitude_error_db\":0.00004243678962662565,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.600483364532102e-7,\"rate\":48000,\"taps\":4096}\n{\"magnitude_error_db\":0.000011045193945371822,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.6906387570072434e-7,\"rate\":48000,\"taps\":8192}\n{\"magnitude_error_db\":0.25078331915115915,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":0.0006581075263335228,\"rate\":96000,\"taps\":1024}\n{\"magnitude_error_db\":0.019587605528728784,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":8.656030681736943e-6,\"rate\":96000,\"taps\":2048}\n{\"magnitude_error_db\":0.00012796589041984442,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":3.634910698811607e-7,\"rate\":96000,\"taps\":4096}\n{\"magnitude_error_db\":0.000012781306942368598,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":1.9420751843910142e-7,\"rate\":96000,\"taps\":8192}\n{\"magnitude_error_db\":1.330737898224592,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":0.0009421265191345335,\"rate\":192000,\"taps\":1024}\n{\"magnitude_error_db\":0.2507191823000119,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":0.0003289255386268428,\"rate\":192000,\"taps\":2048}\n{\"magnitude_error_db\":0.01954677157975761,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":4.472581327375922e-6,\"rate\":192000,\"taps\":4096}\n{\"magnitude_error_db\":0.00009864941705781471,\"measurement\":\"fir_short_phase\",\"phase_error_rad\":2.9097048689632813e-7,\"rate\":192000,\"taps\":8192}\nshort_fir_phase probes=4112 maximum_phase_error=0.0009421265191345335 maximum_magnitude_error=1.330737898224592 worst=rate=192000 taps=1024 frequency=1964.3437783760758\ntest short_linear_fir_retains_centered_phase_for_unresolved_low_bands ... FAILED\n\nfailures:\n\nfailures:\n    short_linear_fir_retains_centered_phase_for_unresolved_low_bands\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.09s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 9.31s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\n\nthread 'short_linear_fir_retains_centered_phase_for_unresolved_low_bands' (333980019) panicked at crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs:462:5:\nrate=192000 taps=1024 frequency=1964.3437783760758: 0.0009421265191345335 rad\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-linear-phase-eq --test analytic_response`\n"
+}

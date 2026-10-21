@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "analytic_response",
+    "multiband_response_matches_on_every_tap_count_and_phase",
+    "--",
+    "--ignored",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest multiband_response_matches_on_every_tap_count_and_phase ... FAILED\n\nfailures:\n\nfailures:\n    multiband_response_matches_on_every_tap_count_and_phase\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.11s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 12.33s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\n\nthread 'multiband_response_matches_on_every_tap_count_and_phase' (333970395) panicked at crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs:307:25:\nrate=96000 taps=1024 phase=0 frequency=500: magnitude error -0.24629655784366697 dB\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-linear-phase-eq --test analytic_response`\n"
+}
