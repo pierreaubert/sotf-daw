@@ -59,3 +59,18 @@ These measurements do not establish modulated decay accuracy or listening qualit
 AutoGain compares the original stereo source with the uncorrected multichannel output, using the existing stereo speaker fold and excluding LFE from measurement. It updates the target every `sample_rate / 10` active frames; that target starts affecting the next frame through the existing smoothing. Disabling pauses metering and gain history. Reset clears them; sample-rate initialization preserves its existing gain history.
 
 Compensation stays after the acoustic renderer and before the final safety limiter and audible bypass blend. It does not enter ER/FDN feedback. The audio callback uses prepared bounded scratch even above 8192 frames. This timing correction does not add a finite native drain policy for AAE's recursive response.
+
+Room-size retargets during an active fade preserve its two read heads. One
+fixed pending slot keeps only the latest requested room; it begins a fresh
+10 ms fade after the current one finishes. Returning to the active destination
+cancels a queued change. After requests stop, the latest destination completes
+within the remaining active fade plus one 10 ms fade. This is control-response
+time; the direct signal path still reports zero algorithmic latency.
+
+RT60/bass/treble changes update the current room's damping immediately through
+the existing 5 ms coefficient ramp. Setters also prepare the pending room's
+gains so admission performs no power calculations or allocations. Reset applies
+the latest requested room and decay settings, clears recursive state and ramps,
+and cancels pending fades; it matches a freshly constructed network at that
+endpoint. These rules preserve noncorrelated active room fades but do not
+establish listening quality, arbitrary nonlinear decay or a finite tail policy.

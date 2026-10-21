@@ -34,6 +34,10 @@ pub struct Fdn {
     /// Current delay lengths in samples (scaled by room_size and sample_rate)
     delay_lengths: [usize; FDN_SIZE],
     previous_delay_lengths: [usize; FDN_SIZE],
+    /// Latest room target waits for the active two-head fade to finish.
+    pending_delay_lengths: Option<[usize; FDN_SIZE]>,
+    pending_tone_gains: [(f32, f32); FDN_SIZE],
+    decay_params: (f32, f32, f32),
     /// Allpass interpolation states for modulated reads
     interp_states: [f32; FDN_SIZE],
     previous_interp_states: [f32; FDN_SIZE],
@@ -113,6 +117,9 @@ impl Fdn {
             tone_filters,
             delay_lengths,
             previous_delay_lengths: delay_lengths,
+            pending_delay_lengths: None,
+            pending_tone_gains: [(0.0, 0.0); FDN_SIZE],
+            decay_params: (rt60, bass_ratio, treble_ratio),
             interp_states: [0.0; FDN_SIZE],
             previous_interp_states: [0.0; FDN_SIZE],
             delay_transition_remaining: 0,
@@ -178,8 +185,6 @@ impl Fdn {
                 };
             }
         }
-        self.delay_transition_remaining = self.delay_transition_remaining.saturating_sub(1);
-
         // Apply tone correction (frequency-dependent decay)
         for i in 0..FDN_SIZE {
             outputs[i] = self.tone_filters[i].process(outputs[i]);
@@ -196,41 +201,81 @@ impl Fdn {
             self.delay_lines[i].push(limited);
         }
 
+        self.delay_transition_remaining = self.delay_transition_remaining.saturating_sub(1);
+        if self.delay_transition_remaining == 0
+            && let Some(target) = self.pending_delay_lengths.take()
+        {
+            self.start_delay_transition(target);
+            // Gains were prepared by setters; admission needs no powers,
+            // allocation, or additional delay-line read heads.
+            for i in 0..FDN_SIZE {
+                let (dc, ny) = self.pending_tone_gains[i];
+                self.tone_filters[i].set_gains_smooth(
+                    dc,
+                    ny,
+                    (self.sample_rate * 0.005).round().max(1.0) as usize,
+                );
+            }
+        }
         outputs
     }
 
     /// Update RT60 parameters without reallocating.
     pub fn set_rt60(&mut self, rt60: f32, bass_ratio: f32, treble_ratio: f32) {
-        let rt60_bass = rt60 * bass_ratio;
-        let rt60_treble = rt60 * treble_ratio;
-        for i in 0..FDN_SIZE {
-            let m = self.delay_lengths[i] as f32;
-            let g_dc = 10.0_f32.powf(-3.0 * m / (rt60_bass * self.sample_rate));
-            let g_ny = 10.0_f32.powf(-3.0 * m / (rt60_treble * self.sample_rate));
-            self.tone_filters[i].set_gains_smooth(
-                g_dc,
-                g_ny,
-                (self.sample_rate * 0.005).round().max(1.0) as usize,
-            );
+        self.decay_params = (rt60, bass_ratio, treble_ratio);
+        let gains = self.decay_gains(self.delay_lengths);
+        for (filter, (dc, ny)) in self.tone_filters.iter_mut().zip(gains) {
+            filter.set_gains_smooth(dc, ny, (self.sample_rate * 0.005).round().max(1.0) as usize);
         }
+        if let Some(target) = self.pending_delay_lengths {
+            self.pending_tone_gains = self.decay_gains(target);
+        }
+    }
+
+    fn decay_gains(&self, delays: [usize; FDN_SIZE]) -> [(f32, f32); FDN_SIZE] {
+        let (rt60, bass, treble) = self.decay_params;
+        let bass_rt60 = rt60 * bass;
+        let treble_rt60 = rt60 * treble;
+        std::array::from_fn(|i| {
+            let delay = delays[i] as f32;
+            (
+                10.0_f32.powf(-3.0 * delay / (bass_rt60 * self.sample_rate)),
+                10.0_f32.powf(-3.0 * delay / (treble_rt60 * self.sample_rate)),
+            )
+        })
     }
 
     /// Update room size without reallocating delay buffers.
     ///
-    /// Keeping delay-line state and modulator state avoids audible tail truncation when
-    /// room_size changes at runtime.
+    /// Finish an active 10 ms read-head fade before starting the latest pending
+    /// target. Repeated requests coalesce in one fixed slot, preserving audible
+    /// head ownership and bounded work. Decay controls apply to the active room
+    /// immediately. Setters prepare the queued room's gains for later admission.
     pub fn set_room_size(&mut self, room_size: f32, rt60: f32, bass_ratio: f32, treble_ratio: f32) {
+        let scale = room_size.clamp(0.2, MAX_ROOM_SIZE) * self.sample_rate / 48000.0;
+        let target = std::array::from_fn(|i| {
+            ((BASE_DELAYS_48K[i] as f32 * scale).round() as usize)
+                .max(1)
+                .min(self.delay_lines[i].max_delay_samples())
+        });
+        if self.delay_transition_remaining > 0 {
+            self.pending_delay_lengths = (target != self.delay_lengths).then_some(target);
+            if self.decay_params != (rt60, bass_ratio, treble_ratio) {
+                self.set_rt60(rt60, bass_ratio, treble_ratio);
+            } else if let Some(target) = self.pending_delay_lengths {
+                self.pending_tone_gains = self.decay_gains(target);
+            }
+        } else {
+            self.start_delay_transition(target);
+            self.set_rt60(rt60, bass_ratio, treble_ratio);
+        }
+    }
+
+    fn start_delay_transition(&mut self, target: [usize; FDN_SIZE]) {
         self.previous_delay_lengths = self.delay_lengths;
         self.previous_interp_states = self.interp_states;
-        let scale = room_size.clamp(0.2, MAX_ROOM_SIZE) * self.sample_rate / 48000.0;
-        for i in 0..FDN_SIZE {
-            self.delay_lengths[i] = (BASE_DELAYS_48K[i] as f32 * scale).round() as usize;
-            self.delay_lengths[i] = self.delay_lengths[i]
-                .max(1)
-                .min(self.delay_lines[i].max_delay_samples());
-        }
+        self.delay_lengths = target;
         self.delay_transition_remaining = self.delay_transition_samples;
-        self.set_rt60(rt60, bass_ratio, treble_ratio);
     }
 
     pub fn delay_transition_active(&self) -> bool {
@@ -249,6 +294,18 @@ impl Fdn {
 
     /// Reset all internal state (delay lines, filters, LFO phases).
     pub fn reset(&mut self) {
+        // Reset installs the requested endpoint, including a coalesced room,
+        // rather than leaving old room geometry or coefficient ramps behind.
+        if let Some(target) = self.pending_delay_lengths.take() {
+            self.delay_lengths = target;
+        }
+        let (rt60, bass, treble) = self.decay_params;
+        for i in 0..FDN_SIZE {
+            let delay = self.delay_lengths[i] as f32;
+            let dc = 10.0_f32.powf(-3.0 * delay / (rt60 * bass * self.sample_rate));
+            let ny = 10.0_f32.powf(-3.0 * delay / (rt60 * treble * self.sample_rate));
+            self.tone_filters[i] = ToneFilter::new(dc, ny);
+        }
         for dl in &mut self.delay_lines {
             dl.reset();
         }

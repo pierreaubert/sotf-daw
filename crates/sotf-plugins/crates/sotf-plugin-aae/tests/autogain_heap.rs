@@ -178,3 +178,33 @@ fn interrupted_extreme_fdn_room_changes_have_no_heap_activity() {
         }
     }
 }
+
+#[test]
+fn pending_room_admission_and_reset_have_no_heap_activity() {
+    for rate in [44_100, 48_000, 96_000, 192_000] {
+        for modulation in [0.0, 1.0] {
+            let mut fdn = sotf_plugin_aae::fdn::Fdn::new(rate, 1.0, 2.0, 1.5, 0.5, modulation, 0.0);
+            let (_, heap) = measure_heap(|| {
+                fdn.set_room_size(3.0, 2.0, 1.5, 0.5);
+                for _ in 0..rate / 300 {
+                    fdn.process(0.001);
+                }
+                fdn.set_room_size(0.2, 0.6, 0.5, 1.5);
+                fdn.set_room_size(2.2, 0.6, 0.5, 1.5);
+                fdn.set_rt60(3.0, 0.8, 0.3);
+                for _ in 0..rate / 30 {
+                    fdn.process(0.001);
+                }
+                assert!(!fdn.delay_transition_active());
+                fdn.set_room_size(0.2, 3.0, 0.8, 0.3);
+                fdn.set_room_size(3.0, 3.0, 0.8, 0.3);
+                fdn.reset();
+                for _ in 0..rate / 30 {
+                    assert_eq!(fdn.process(0.0), [0.0; 8]);
+                }
+                assert!(!fdn.delay_transition_active());
+            });
+            assert_eq!(heap, (0, 0));
+        }
+    }
+}

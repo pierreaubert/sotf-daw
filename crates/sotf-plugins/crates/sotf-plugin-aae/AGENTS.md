@@ -51,3 +51,13 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
 - `audit_fdn_limiter` checks threshold-adjacent recursive responses across four
   rates, both extreme room sizes and three modulation depths. It does not
   certify arbitrary modulated RT60, recursive finite tails or listening quality.
+
+- An active room fade owns its two read heads until completion. Coalesce room
+  retargets in one fixed latest-target slot; do not restart active fades or grow
+  head count. A request for the active destination cancels queued changes.
+- Keep pending damping gains current in setters, including independent RT60
+  changes. Admission must use prepared gains with no power calculation/heap work.
+- Reset installs the latest requested room/decay endpoint and clears coefficient
+  ramps as well as recursive state, so output matches a fresh endpoint network.
+- `audit_room_retarget` compares sample-exact staged twins at multiple fade
+  phases, rates and modulation depths; it does not establish perceptual acceptance.

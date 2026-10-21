@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Preserve active FDN room-size crossfades when retargeted: coalesce the latest
+  room in one bounded slot and begin its fade after the current 10 ms fade.
+  Pending gain preparation follows independent decay controls in setters;
+  admission adds no power calculation, allocation or extra read heads.
+- Reset installs the latest requested room and decay endpoint and clears
+  coefficient ramps, matching fresh-network state. Signal latency and serialized
+  controls stay unchanged; room-control response can span two sequential fades.
+
 - Remove the discontinuity in FDN feedback limiting. A continuous monotone
   soft knee starts at half the configured ceiling and approaches that ceiling;
   small-signal unity gain and delay/latency/parameter contracts are unchanged.

@@ -1,0 +1,35 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "2ff886d0c89a16ea0554dced36efbd41bc4860eac3e55499199eb0eff5ac7b6b",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_room_retarget.rs": "dbbfd3b6f1b31c3d19dd96b2dafb5bd16fe00d5a055b6a63710503af7b9465b1",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs": "805074bafe0c57286c59832235755e90f8303d0ddbbfc9d43cb3ca618030d6e4",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "0e48a75f70f78305372a73dec46587abb827e3fbc69adeefb5f5d8780c95b05c",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "8952e714b0aa667be472d70decc36325dc87f2c135fac4a5ae38358ea67c3fd9",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "a32f5d329d04d630f46a166a592bf7edcd16e7433cf8af730a723b51606c5e40"
+  },
+  "release_passed": 107,
+  "active_fade_and_staged_destination_exact_cases": 24,
+  "reset_fresh_endpoint_exact_cases": 8,
+  "pending_cancellation_exact_cases": 8,
+  "independent_decay_admission_exact_cases": 8,
+  "queued_admission_reset_heap_cases": 8,
+  "allocations": 0,
+  "frees": 0,
+  "baseline_active_fade_sample_error": 0.0037842088,
+  "final_active_fade_sample_error": 0,
+  "quality_stdout_identical_to_previous": true,
+  "raw_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-focused.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-suite.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-quality.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-final-suite.json",
+    "audit/artifacts/plugin-audit-20261018/aae-room-retarget-final-clippy.json"
+  ],
+  "contract": "One pending latest room, two active read heads, one complete fade before queued admission. Control-response time up to remainder of active 10ms fade plus one 10ms fade; graph latency unchanged.",
+  "limitations": [
+    "Preserving the active fade and exact staged twins is not listening acceptance.",
+    "Noncorrelated predelay retargets, maximum modulated/nonlinear decay, recursive tail policy and native/device evidence remain open."
+  ]
+}

@@ -49,13 +49,24 @@
             "audit/artifacts/plugin-audit-20261018/aae-limiter-validation.json"
           ],
           "result": "Feedback soft_clip previously used identity through the ceiling then ceiling*tanh(x/ceiling), producing a -0.23839164 normalized jump at threshold. Threshold-adjacent impulses reproduced 0.22968596 peak recursive sample difference. Continuous odd monotone C1 half-ceiling knee now preserves small-signal unity and remains bounded by the same configured ceiling. 131076 signed grid probes at four ceilings assert bounds, monotonicity, symmetry and low-level identity; knee slopes match unity. 24 three-second recursive renders span 44.1/48/96/192 kHz, room 0.2/3 and modulation 0/0.5/1; worst difference 8.165836e-06, no allocations. Full release 102 passed, strict all-target QA Clippy and offline quality diagnostic pass; only printed quality change is high-level limiter_activity final_gain 0.322765 -> 0.322770; all other acoustic/detector rows unchanged. Existing neutral T30/treble damping and interrupted room-change heap tests pass. High-level feedback tails intentionally change above half ceiling; delay, latency, parameters, presets and storage unchanged. No universal nonlinear RT60, finite-tail, listening or device-deadline claim."
+        },
+        {
+          "requirement": "Preserve noncorrelated active room fades under interruption, coalesce bounded targets and reset to the requested endpoint.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_room_retarget.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-room-retarget-validation.json"
+          ],
+          "result": "Interrupted noncorrelated room fades reproduced 0.0037842088 sample deviation from the uninterrupted active fade. One fixed latest-target slot now preserves both active heads until their 10ms fade finishes, then admits a new 10ms fade. Superseded targets coalesce; requesting the active endpoint cancels pending work without restarting the fade. Damping gains are prepared in setters, refreshed on independent RT60/bass/treble edits, and applied on admission without power calculations, allocation or extra read heads. Reset installs requested room/decay and clears coefficient ramps plus recursive state. 24 four-rate/two-modulation/three-interruption cases are sample-exact against two staged complete fades; eight each validate cancellation, independent decay admission and reset-to-fresh endpoint. Eight admission/reset cases and existing interrupted-room tests have zero allocations/frees. Full release 107 tests pass, strict all-target QA Clippy/format pass; printed acoustic-quality output is byte-identical to prior. Fixed signal latency, serialized settings and delay buffer capacity unchanged. After requests stop, latest room completes within remaining active fade plus one fade; no perceptual or native-deadline claim."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json"
       ],
       "remaining": [
-        "Extend dynamic noncorrelated predelay/room-size transition peaks and audible interruption behavior; correlated equal-delay invariance is verified.",
+        "Extend noncorrelated predelay retarget peaks and audible interruption evidence; noncorrelated FDN room fades now preserve the active fade and match bounded sequential twins exactly.",
         "Validate modulated and nonlinear frequency-dependent decay across maximum parameter combinations and recursive tail policy.",
         "External listening/corpus artifacts and measured spatial/envelopment quality remain separate from synthetic gates; the existing synthetic detector precision of 0.5 is not corpus acceptance."
       ]
@@ -3032,6 +3043,15 @@
       ],
       "result": "Feedback soft_clip previously used identity through the ceiling then ceiling*tanh(x/ceiling), producing a -0.23839164 normalized jump at threshold. Threshold-adjacent impulses reproduced 0.22968596 peak recursive sample difference. Continuous odd monotone C1 half-ceiling knee now preserves small-signal unity and remains bounded by the same configured ceiling. 131076 signed grid probes at four ceilings assert bounds, monotonicity, symmetry and low-level identity; knee slopes match unity. 24 three-second recursive renders span 44.1/48/96/192 kHz, room 0.2/3 and modulation 0/0.5/1; worst difference 8.165836e-06, no allocations. Full release 102 passed, strict all-target QA Clippy and offline quality diagnostic pass; only printed quality change is high-level limiter_activity final_gain 0.322765 -> 0.322770; all other acoustic/detector rows unchanged. Existing neutral T30/treble damping and interrupted room-change heap tests pass. High-level feedback tails intentionally change above half ceiling; delay, latency, parameters, presets and storage unchanged. No universal nonlinear RT60, finite-tail, listening or device-deadline claim.",
       "limitations": "AAE remains partial for noncorrelated transitions, maximum nonlinear/modulated decay and real listening/corpus evidence; overall 35/45 complete."
+    },
+    {
+      "name": "AAE bounded interrupted room transitions and deterministic endpoint reset",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "Interrupted noncorrelated room fades reproduced 0.0037842088 sample deviation from the uninterrupted active fade. One fixed latest-target slot now preserves both active heads until their 10ms fade finishes, then admits a new 10ms fade. Superseded targets coalesce; requesting the active endpoint cancels pending work without restarting the fade. Damping gains are prepared in setters, refreshed on independent RT60/bass/treble edits, and applied on admission without power calculations, allocation or extra read heads. Reset installs requested room/decay and clears coefficient ramps plus recursive state. 24 four-rate/two-modulation/three-interruption cases are sample-exact against two staged complete fades; eight each validate cancellation, independent decay admission and reset-to-fresh endpoint. Eight admission/reset cases and existing interrupted-room tests have zero allocations/frees. Full release 107 tests pass, strict all-target QA Clippy/format pass; printed acoustic-quality output is byte-identical to prior. Fixed signal latency, serialized settings and delay buffer capacity unchanged. After requests stop, latest room completes within remaining active fade plus one fade; no perceptual or native-deadline claim.",
+      "limitations": "AAE remains partial for predelay interruption, maximum modulated/nonlinear decay/tails and real listening/corpus; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
