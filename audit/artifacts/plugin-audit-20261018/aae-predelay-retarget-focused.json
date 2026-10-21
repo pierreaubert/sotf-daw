@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_predelay_retarget",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 1 test\npredelay_retarget rate=44100 elapsed=0 error=0\npredelay_retarget rate=44100 elapsed=220 error=0\npredelay_retarget rate=44100 elapsed=440 error=0\npredelay_retarget rate=48000 elapsed=0 error=0\npredelay_retarget rate=48000 elapsed=240 error=0\npredelay_retarget rate=48000 elapsed=479 error=0\npredelay_retarget rate=96000 elapsed=0 error=0\npredelay_retarget rate=96000 elapsed=480 error=0\npredelay_retarget rate=96000 elapsed=959 error=0\npredelay_retarget rate=192000 elapsed=0 error=0\npredelay_retarget rate=192000 elapsed=960 error=0\npredelay_retarget rate=192000 elapsed=1919 error=0\npredelay_retarget cases=12 worst_error=0\ntest noncorrelated_predelay_retargets_match_staged_fades_across_partitions ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 5.73s\n     Running tests/audit_predelay_retarget.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_predelay_retarget-7f382186e5bada9f)\n"
+}

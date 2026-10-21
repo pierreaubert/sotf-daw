@@ -208,3 +208,41 @@ fn pending_room_admission_and_reset_have_no_heap_activity() {
         }
     }
 }
+
+#[test]
+fn pending_predelay_admission_and_reset_have_no_heap_activity() {
+    for rate in [44_100_u32, 48_000, 96_000, 192_000] {
+        let mut plugin = AaePlugin::from_params(AaePluginParams {
+            auto_gain_enabled: false,
+            ..Default::default()
+        })
+        .unwrap();
+        plugin.initialize(f64::from(rate)).unwrap();
+        let id = ParameterId::from("pre_delay_ms");
+        let input = vec![0.001; 1024 * 2];
+        let mut output = vec![0.0; 1024 * plugin.output_channels()];
+        let context = ProcessContext::new(rate, 1024);
+        let (_, heap) = measure_heap(|| {
+            plugin
+                .set_parameter(id.clone(), ParameterValue::Float(50.0))
+                .unwrap();
+            plugin
+                .set_parameter(id.clone(), ParameterValue::Float(0.0))
+                .unwrap();
+            for _ in 0..8 {
+                plugin.process(&input, &mut output, &context).unwrap();
+            }
+            plugin
+                .set_parameter(id.clone(), ParameterValue::Float(20.0))
+                .unwrap();
+            plugin
+                .set_parameter(id.clone(), ParameterValue::Float(50.0))
+                .unwrap();
+            plugin.reset();
+            for _ in 0..8 {
+                plugin.process(&input, &mut output, &context).unwrap();
+            }
+        });
+        assert_eq!(heap, (0, 0));
+    }
+}

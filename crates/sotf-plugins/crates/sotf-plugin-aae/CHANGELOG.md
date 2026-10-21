@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Preserve active predelay fades under retargeting, coalescing one latest target
+  without replacing audible read heads. Reset/initialize install the latest
+  requested delay and cancel pending work. Add noncorrelated public-plugin
+  partition, cancellation, reset, initialization and zero-heap coverage.
+
 - Preserve active FDN room-size crossfades when retargeted: coalesce the latest
   room in one bounded slot and begin its fade after the current 10 ms fade.
   Pending gain preparation follows independent decay controls in setters;

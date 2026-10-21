@@ -74,3 +74,14 @@ the latest requested room and decay settings, clears recursive state and ramps,
 and cancels pending fades; it matches a freshly constructed network at that
 endpoint. These rules preserve noncorrelated active room fades but do not
 establish listening quality, arbitrary nonlinear decay or a finite tail policy.
+
+Predelay retargeting follows the same bounded policy as room retargeting: keep
+an active 10 ms fade intact, coalesce one latest pending destination, and cancel
+it if the active destination is requested again. Reported parameter values are
+the latest request. Once requests stop, the delay reaches that request within
+the remaining active fade plus one 10 ms fade. Zero-delay targets preserve the
+existing immediate-input tap behavior. Reset and sample-rate initialization
+install the latest requested delay and clear pending fades. Public regression
+renders compare 31- and 257-frame partitions, including the maximum 100 ms
+predelay and noncorrelated excitation;
+these sample-exact checks do not establish audible acceptance.

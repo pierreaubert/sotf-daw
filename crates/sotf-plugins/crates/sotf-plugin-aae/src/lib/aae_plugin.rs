@@ -55,6 +55,7 @@ pub struct AaePlugin {
     pub(super) pre_delay: super::delay_line::DelayLine,
     pub(super) pre_delay_samples: usize,
     pub(super) previous_pre_delay_samples: usize,
+    pending_pre_delay_samples: Option<usize>,
     pub(super) pre_delay_transition_remaining: usize,
     pub(super) pre_delay_transition_samples: usize,
     pub(super) diffusion_allpass: [AllpassDiffuser; 2],
@@ -251,6 +252,7 @@ impl AaePlugin {
             ),
             pre_delay_samples,
             previous_pre_delay_samples: pre_delay_samples,
+            pending_pre_delay_samples: None,
             pre_delay_transition_remaining: 0,
             pre_delay_transition_samples: ms_to_samples(10.0, sr),
             diffusion_allpass: [
@@ -641,9 +643,15 @@ impl Plugin for AaePlugin {
             "pre_delay_ms" => {
                 if let Some(v) = value.as_float() {
                     self.params.pre_delay_ms = v;
-                    self.previous_pre_delay_samples = self.pre_delay_samples;
-                    self.pre_delay_samples = (v * 0.001 * self.sample_rate as f32).round() as usize;
-                    self.pre_delay_transition_remaining = self.pre_delay_transition_samples;
+                    let target = (v * 0.001 * self.sample_rate as f32).round() as usize;
+                    if self.pre_delay_transition_remaining > 0 {
+                        self.pending_pre_delay_samples =
+                            (target != self.pre_delay_samples).then_some(target);
+                    } else {
+                        self.previous_pre_delay_samples = self.pre_delay_samples;
+                        self.pre_delay_samples = target;
+                        self.pre_delay_transition_remaining = self.pre_delay_transition_samples;
+                    }
                 }
             }
             "room_preset" => {
@@ -836,6 +844,7 @@ impl Plugin for AaePlugin {
         self.pre_delay =
             super::delay_line::DelayLine::new((MAX_PRE_DELAY_MS * 0.001 * sr) as usize + 16);
         self.pre_delay_samples = (self.params.pre_delay_ms * 0.001 * sr).round() as usize;
+        self.pending_pre_delay_samples = None;
         self.previous_pre_delay_samples = self.pre_delay_samples;
         self.pre_delay_transition_samples = ms_to_samples(10.0, sample_rate);
         self.pre_delay_transition_remaining = 0;
@@ -917,6 +926,9 @@ impl Plugin for AaePlugin {
         self.fdn.reset();
         self.lfe_filter.reset();
         self.pre_delay_transition_remaining = 0;
+        self.pre_delay_samples =
+            (self.params.pre_delay_ms * 0.001 * self.sample_rate as f32).round() as usize;
+        self.pending_pre_delay_samples = None;
         self.previous_pre_delay_samples = self.pre_delay_samples;
         self.dialogue_duck_gain = 1.0;
         self.dialogue_level_fast = 0.0;
@@ -1025,6 +1037,16 @@ impl Plugin for AaePlugin {
             } else {
                 new_delayed
             };
+
+            if self.pre_delay_transition_remaining == 0
+                && let Some(target) = self.pending_pre_delay_samples.take()
+            {
+                // Preserve the completed audible fade; start the latest queued
+                // destination on the next sample, with only two active heads.
+                self.previous_pre_delay_samples = self.pre_delay_samples;
+                self.pre_delay_samples = target;
+                self.pre_delay_transition_remaining = self.pre_delay_transition_samples;
+            }
 
             // Input diffusion (allpass chain)
             let mut diffused = delayed;

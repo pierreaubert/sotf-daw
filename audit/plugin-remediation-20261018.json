@@ -60,13 +60,24 @@
             "audit/artifacts/plugin-audit-20261018/aae-room-retarget-validation.json"
           ],
           "result": "Interrupted noncorrelated room fades reproduced 0.0037842088 sample deviation from the uninterrupted active fade. One fixed latest-target slot now preserves both active heads until their 10ms fade finishes, then admits a new 10ms fade. Superseded targets coalesce; requesting the active endpoint cancels pending work without restarting the fade. Damping gains are prepared in setters, refreshed on independent RT60/bass/treble edits, and applied on admission without power calculations, allocation or extra read heads. Reset installs requested room/decay and clears coefficient ramps plus recursive state. 24 four-rate/two-modulation/three-interruption cases are sample-exact against two staged complete fades; eight each validate cancellation, independent decay admission and reset-to-fresh endpoint. Eight admission/reset cases and existing interrupted-room tests have zero allocations/frees. Full release 107 tests pass, strict all-target QA Clippy/format pass; printed acoustic-quality output is byte-identical to prior. Fixed signal latency, serialized settings and delay buffer capacity unchanged. After requests stop, latest room completes within remaining active fade plus one fade; no perceptual or native-deadline claim."
+        },
+        {
+          "requirement": "Preserve noncorrelated predelay fade ownership through worst-range interrupted updates and endpoint lifecycle.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/src/lib/aae_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_predelay_retarget.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-validation.json"
+          ],
+          "result": "Public noncorrelated predelay retargeting reproduced 0.0012540973 output error versus two uninterrupted fades. One latest pending target now preserves the active 10ms fade before starting the queued 10ms fade; supersession coalesces and active-destination requests cancel pending work. Reset/initialize install requested delay and clear pending state, including zero. 24 exact public-plugin staged-twin cases span four rates, three interruption phases, 50/100ms destinations (maximum supported 100ms), zero-delay final target and 31/257-frame partitions. Eight reset/reinitialization fresh-twin and four cancellation cases are exact; four prepared setter/admission/reset heap cases allocate/free nothing. Full release 111 passed before extending the existing test to 100ms; final expanded focused suite three passed and strict all-target QA Clippy/format pass. Offline acoustic-quality printed output unchanged. No schema/preset/direct latency/delay buffer change; latest requested delay settles within remaining active fade plus one 10ms fade after requests stop. No listening or native-deadline claim."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json"
       ],
       "remaining": [
-        "Extend noncorrelated predelay retarget peaks and audible interruption evidence; noncorrelated FDN room fades now preserve the active fade and match bounded sequential twins exactly.",
+        "Perceptual acceptance of interrupted predelay/room transitions remains; deterministic noncorrelated room and maximum-range predelay fades now match bounded staged references exactly.",
         "Validate modulated and nonlinear frequency-dependent decay across maximum parameter combinations and recursive tail policy.",
         "External listening/corpus artifacts and measured spatial/envelopment quality remain separate from synthetic gates; the existing synthetic detector precision of 0.5 is not corpus acceptance."
       ]
@@ -3052,6 +3063,15 @@
       ],
       "result": "Interrupted noncorrelated room fades reproduced 0.0037842088 sample deviation from the uninterrupted active fade. One fixed latest-target slot now preserves both active heads until their 10ms fade finishes, then admits a new 10ms fade. Superseded targets coalesce; requesting the active endpoint cancels pending work without restarting the fade. Damping gains are prepared in setters, refreshed on independent RT60/bass/treble edits, and applied on admission without power calculations, allocation or extra read heads. Reset installs requested room/decay and clears coefficient ramps plus recursive state. 24 four-rate/two-modulation/three-interruption cases are sample-exact against two staged complete fades; eight each validate cancellation, independent decay admission and reset-to-fresh endpoint. Eight admission/reset cases and existing interrupted-room tests have zero allocations/frees. Full release 107 tests pass, strict all-target QA Clippy/format pass; printed acoustic-quality output is byte-identical to prior. Fixed signal latency, serialized settings and delay buffer capacity unchanged. After requests stop, latest room completes within remaining active fade plus one fade; no perceptual or native-deadline claim.",
       "limitations": "AAE remains partial for predelay interruption, maximum modulated/nonlinear decay/tails and real listening/corpus; overall 35/45 complete."
+    },
+    {
+      "name": "AAE bounded interrupted predelay transitions",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "Public noncorrelated predelay retargeting reproduced 0.0012540973 output error versus two uninterrupted fades. One latest pending target now preserves the active 10ms fade before starting the queued 10ms fade; supersession coalesces and active-destination requests cancel pending work. Reset/initialize install requested delay and clear pending state, including zero. 24 exact public-plugin staged-twin cases span four rates, three interruption phases, 50/100ms destinations (maximum supported 100ms), zero-delay final target and 31/257-frame partitions. Eight reset/reinitialization fresh-twin and four cancellation cases are exact; four prepared setter/admission/reset heap cases allocate/free nothing. Full release 111 passed before extending the existing test to 100ms; final expanded focused suite three passed and strict all-target QA Clippy/format pass. Offline acoustic-quality printed output unchanged. No schema/preset/direct latency/delay buffer change; latest requested delay settles within remaining active fade plus one 10ms fade after requests stop. No listening or native-deadline claim.",
+      "limitations": "AAE remains partial for perceptual/corpus evidence, maximum modulated/nonlinear decay and recursive tail policy; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

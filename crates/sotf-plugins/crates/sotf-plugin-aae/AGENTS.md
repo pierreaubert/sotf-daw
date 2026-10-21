@@ -61,3 +61,10 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   ramps as well as recursive state, so output matches a fresh endpoint network.
 - `audit_room_retarget` compares sample-exact staged twins at multiple fade
   phases, rates and modulation depths; it does not establish perceptual acceptance.
+
+- Predelay uses one latest pending target and preserves the active two-head
+  fade, matching room retarget semantics. Returning to the active destination
+  cancels pending work. Reset/initialize must install the latest requested delay
+  and clear its pending slot, including zero-delay targets.
+- Public predelay request values may lead the audible fade by up to the remaining
+  fade plus one 10 ms fade. Keep direct graph latency and delay capacity unchanged.

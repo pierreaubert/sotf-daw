@@ -1,0 +1,50 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/lib/aae_plugin.rs": "9d6d8c70884e8faf4962f163044112ca0f0ca6e872253d8de9e09245245aa696",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_predelay_retarget.rs": "3c1b134f970ba9e7a8400509fa4f2b4d17d94d2bf1dcb1da45a799c49dc3d56f",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs": "0bc852a04970269aa725bcd15d55502fc76a0a8a91c1436ece4b1c1234bd7e4f",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "5f11af309e77a801da034622111c6a5ec5aa3637469344cde6a902178c4a0aff",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "06c36566d4bff64562575dd3845dff5163b95a2438e85e03f63e70ae8797b167",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "1646d0ec0418af87868b49f0d13a503a7f319b89ea34a3aafc9f7dd57efea12c"
+  },
+  "full_release_tests_passed": 111,
+  "final_expanded_focused_tests_passed": 3,
+  "noncorrelated_staged_fade_cases": 24,
+  "rates": [
+    44100,
+    48000,
+    96000,
+    192000
+  ],
+  "initial_delay_ms": 5,
+  "destination_delay_ms": [
+    50,
+    100
+  ],
+  "queued_endpoint_ms": 0,
+  "callback_partitions": [
+    31,
+    257
+  ],
+  "max_sample_difference": 0,
+  "baseline_sample_difference": 0.0012540973,
+  "reset_and_initialization_cases": 8,
+  "cancellation_cases": 4,
+  "heap_admission_reset_cases": 4,
+  "allocations": 0,
+  "frees": 0,
+  "quality_stdout_unchanged": true,
+  "raw_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-focused.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-suite.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-quality.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-maximum.json",
+    "audit/artifacts/plugin-audit-20261018/aae-predelay-retarget-final-clippy.json"
+  ],
+  "limitations": [
+    "Public staged reference equality is not listening acceptance.",
+    "Maximum nonlinear/modulated decay, recursive tail policy, external corpus/listening and native deadline requirements remain open."
+  ]
+}
