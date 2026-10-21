@@ -73,3 +73,13 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   callback timing and existing acoustic QA. Preserve the full matrix, raw failed
   rows, 10% neutral target and r² > 0.98 checks; do not trim sparse failing cases.
   Band fits are frequency-region observations, not endpoint-ratio guarantees.
+
+- Reject invalid/overflowing buffer geometry, non-finite input and wrong clocks
+  before output, recursive DSP or excitation metadata changes. Preserve established
+  AAE input/output size diagnostics.
+- Empty/reset/reinitialized tail is Finite(0); accepted excitation conservatively
+  makes it Infinite until reset/reinitialize. Bypass/muted sends/silence cannot
+  establish finite support. Active EOF must reject without consuming state;
+  never inherit default drain completion or invent support from RT60.
+- AAE preserves frame count despite changing channels; identity frame geometry
+  and the output envelope must agree with every successful process call.

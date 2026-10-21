@@ -80,6 +80,17 @@
             "audit/artifacts/plugin-audit-20261018/aae-decay-corners-validation.json"
           ],
           "result": "New explicit offline qa-aae-decay diagnostic covers 208 distinct rows: 16 neutral controls, complete 128 min/max impulse corners and 64 additional 250ms high-level noise-burst corners. Rates 48/192k; room 0.2/3, RT60 0.3/6s, bass 0.8/2, treble 0.2/1, modulation 0/1 and impulse 0.001/4. Each tail retains four longest endpoint RT60s, summed tap energy and three band regions (125/1000/8000Hz), T30 fits and residual energy. Separate direct-form versus streaming filter test passes, strict all-target QA Clippy passes and independent coverage verifier proves every Cartesian row plus exact preservation of initial 144 observations. Matrix exits 1 with 16 failed rows, all at room3/RT0.3: 12 fit-quality failures (minimum r2 0.9728202 versus 0.98) and four endpoint-envelope failures at 48k (T30 ~0.2696-0.2700s versus 1.1*0.24=0.264s). Four neutral controls fail fit quality while remaining within 10% target time. All 64 sustained cases pass, all 208 finite; largest last/first-quarter energy ratio 7.94849e-14. Maximum FDN tap sample 1.44995 is not a device-output ceiling claim. Preserve failed rows; no tolerance, room range, renderer or tail contract change. Sparse impulse decay at these extremes is not certified by a single exponential fit; parameter-endpoint accuracy remains open."
+        },
+        {
+          "requirement": "Declare recursive EOF behavior and preserve DSP state on invalid host blocks or unsupported drain.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/src/lib/aae_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_host_contract.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-host-tail-validation.json"
+          ],
+          "result": "AAE previously inherited Unknown tail/default immediate-complete drain, and direct processing could accept non-finite input or advance recursive state/output before wrong-clock AutoGain rejection. Checked geometry, finite input and prepared clock now preflight before mutation; original AAE size error wording retained. Accepted excitation explicitly yields Infinite until reset/successful initialize; empty/only-zero-input state is Finite(0), state-independent support remains None. Bypass/muted sends/silence do not infer finite support. Active begin_drain/drain reject without advancing audio or output, preserving continuation; identity frame geometry and envelope now advertised. Three red baseline tests reproduced all defects. Eight populated nonfinite/wrong-clock twin cases retain exact future audio and sentinel output; cold malformed/overflow/nonfinite blocks cannot arm a tail. Direct and actual DawHost EOF refusal retain sample-exact future reverb. Empty/reset/init/bypass/mute metadata and all-size frame envelope checks pass. Two cold successful render/query/reset/empty EOF heap cases have zero allocations/frees. Full release 118 passed; final five focused tests, strict all-target QA Clippy/format and acoustic quality pass with printed quality unchanged. Initial wording mismatch and redundant conversion lint attempts retained; no test weakening. No fabricated finite tail, signal latency, serialized parameter or valid-render arithmetic change. Finite offline rendering still needs an explicit truncation/fade policy."
         }
       ],
       "evidence": [
@@ -87,7 +98,7 @@
       ],
       "remaining": [
         "Perceptual acceptance of interrupted predelay/room transitions remains; deterministic noncorrelated room and maximum-range predelay fades now match bounded staged references exactly.",
-        "Resolve sparse large-room/minimum-RT60 impulse fit and endpoint-time failures identified by qa-aae-decay (16/208 failed rows); finite recursive tail/host EOF policy and broader native validation remain open. All 64 sustained high-level corner cases pass the recorded diagnostic.",
+        "Resolve 16/208 sparse large-room/minimum-RT60 decay fit/endpoint failures. Recursive EOF now explicitly reports Infinite and refuses transactionally; finite offline truncation/fade policy and broader native validation remain open.",
         "External listening/corpus artifacts and measured spatial/envelopment quality remain separate from synthetic gates; the existing synthetic detector precision of 0.5 is not corpus acceptance."
       ]
     },
@@ -3090,6 +3101,15 @@
       ],
       "result": "New explicit offline qa-aae-decay diagnostic covers 208 distinct rows: 16 neutral controls, complete 128 min/max impulse corners and 64 additional 250ms high-level noise-burst corners. Rates 48/192k; room 0.2/3, RT60 0.3/6s, bass 0.8/2, treble 0.2/1, modulation 0/1 and impulse 0.001/4. Each tail retains four longest endpoint RT60s, summed tap energy and three band regions (125/1000/8000Hz), T30 fits and residual energy. Separate direct-form versus streaming filter test passes, strict all-target QA Clippy passes and independent coverage verifier proves every Cartesian row plus exact preservation of initial 144 observations. Matrix exits 1 with 16 failed rows, all at room3/RT0.3: 12 fit-quality failures (minimum r2 0.9728202 versus 0.98) and four endpoint-envelope failures at 48k (T30 ~0.2696-0.2700s versus 1.1*0.24=0.264s). Four neutral controls fail fit quality while remaining within 10% target time. All 64 sustained cases pass, all 208 finite; largest last/first-quarter energy ratio 7.94849e-14. Maximum FDN tap sample 1.44995 is not a device-output ceiling claim. Preserve failed rows; no tolerance, room range, renderer or tail contract change. Sparse impulse decay at these extremes is not certified by a single exponential fit; parameter-endpoint accuracy remains open.",
       "limitations": "Diagnostic coverage complete but 16 actual fit/endpoint failures retained; no universal decay, finite-tail, perceptual or deadline claim. Overall 35/45 complete."
+    },
+    {
+      "name": "AAE atomic host block admission and explicit recursive EOF",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "AAE previously inherited Unknown tail/default immediate-complete drain, and direct processing could accept non-finite input or advance recursive state/output before wrong-clock AutoGain rejection. Checked geometry, finite input and prepared clock now preflight before mutation; original AAE size error wording retained. Accepted excitation explicitly yields Infinite until reset/successful initialize; empty/only-zero-input state is Finite(0), state-independent support remains None. Bypass/muted sends/silence do not infer finite support. Active begin_drain/drain reject without advancing audio or output, preserving continuation; identity frame geometry and envelope now advertised. Three red baseline tests reproduced all defects. Eight populated nonfinite/wrong-clock twin cases retain exact future audio and sentinel output; cold malformed/overflow/nonfinite blocks cannot arm a tail. Direct and actual DawHost EOF refusal retain sample-exact future reverb. Empty/reset/init/bypass/mute metadata and all-size frame envelope checks pass. Two cold successful render/query/reset/empty EOF heap cases have zero allocations/frees. Full release 118 passed; final five focused tests, strict all-target QA Clippy/format and acoustic quality pass with printed quality unchanged. Initial wording mismatch and redundant conversion lint attempts retained; no test weakening. No fabricated finite tail, signal latency, serialized parameter or valid-render arithmetic change. Finite offline rendering still needs an explicit truncation/fade policy.",
+      "limitations": "Infinite EOF remains unsupported for finite host rendering. Sparse decay failures and external listening/native evidence remain; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

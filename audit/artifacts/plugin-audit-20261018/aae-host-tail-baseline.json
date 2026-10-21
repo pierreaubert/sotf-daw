@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_host_contract",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 3 tests\ntest recursive_metadata_is_explicit_and_empty_drain_does_not_touch_audio ... FAILED\ntest active_eof_refusal_preserves_the_tail_for_continued_processing ... FAILED\ntest rejected_nonfinite_or_wrong_clock_blocks_preserve_output_and_recursive_state ... FAILED\n\nfailures:\n\nfailures:\n    active_eof_refusal_preserves_the_tail_for_continued_processing\n    recursive_metadata_is_explicit_and_empty_drain_does_not_touch_audio\n    rejected_nonfinite_or_wrong_clock_blocks_preserve_output_and_recursive_state\n\ntest result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 3.83s\n     Running tests/audit_host_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_host_contract-58a96d119b4ff346)\n\nthread 'recursive_metadata_is_explicit_and_empty_drain_does_not_touch_audio' (334949787) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_host_contract.rs:43:5:\nassertion `left == right` failed\n  left: Unknown\n right: Finite(0)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'active_eof_refusal_preserves_the_tail_for_continued_processing' (334949786) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_host_contract.rs:75:5:\nassertion failed: actual.begin_drain(&context).is_err()\n\nthread 'rejected_nonfinite_or_wrong_clock_blocks_preserve_output_and_recursive_state' (334949788) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_host_contract.rs:34:13:\nassertion failed: result.is_err()\nerror: test failed, to rerun pass `-p sotf-plugin-aae --test audit_host_contract`\n"
+}

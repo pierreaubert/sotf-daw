@@ -29,7 +29,8 @@ use sotf_host::auto_gain::{AutoGainLoudnessType, AutoGainParams};
 use sotf_host::multichannel_auto_gain::MultichannelAutoGain;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
 use sotf_host::plugin::{
-    Plugin, PluginCompileMetadata, PluginCostClass, PluginInfo, PluginResult, ProcessContext,
+    Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength, validate_process_block_f32,
 };
 use sotf_host::simd::flush_denormals_inplace;
 use sotf_host::smoothing::Smoother;
@@ -56,6 +57,8 @@ pub struct AaePlugin {
     pub(super) pre_delay_samples: usize,
     pub(super) previous_pre_delay_samples: usize,
     pending_pre_delay_samples: Option<usize>,
+    /// Accepted excitation conservatively retains an unbounded recursive tail.
+    has_excitation: bool,
     pub(super) pre_delay_transition_remaining: usize,
     pub(super) pre_delay_transition_samples: usize,
     pub(super) diffusion_allpass: [AllpassDiffuser; 2],
@@ -253,6 +256,7 @@ impl AaePlugin {
             pre_delay_samples,
             previous_pre_delay_samples: pre_delay_samples,
             pending_pre_delay_samples: None,
+            has_excitation: false,
             pre_delay_transition_remaining: 0,
             pre_delay_transition_samples: ms_to_samples(10.0, sr),
             diffusion_allpass: [
@@ -567,6 +571,18 @@ impl AaePlugin {
                 }
             }
         }
+    }
+}
+
+impl AaePlugin {
+    fn validate_clock(&self, context: &ProcessContext<'_>) -> PluginResult<()> {
+        if context.sample_rate != self.sample_rate {
+            return Err(format!(
+                "AAE callback rate {} does not match prepared rate {}",
+                context.sample_rate, self.sample_rate
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -913,11 +929,13 @@ impl Plugin for AaePlugin {
 
         // Recompute VBAP gains (ER taps may have changed)
         self.precompute_gains();
+        self.has_excitation = false;
 
         Ok(())
     }
 
     fn reset(&mut self) {
+        self.has_excitation = false;
         self.pre_delay.reset();
         for ap in &mut self.diffusion_allpass {
             ap.reset();
@@ -955,9 +973,14 @@ impl Plugin for AaePlugin {
         let num_frames = context.num_frames;
         let in_ch = 2;
         let out_ch = self.num_output_channels;
-        let expected_input = num_frames * in_ch;
-        let expected_output = num_frames * out_ch;
-
+        self.validate_clock(context)?;
+        // Retain the established AAE geometry diagnostics, with checked counts.
+        let expected_input = num_frames
+            .checked_mul(in_ch)
+            .ok_or_else(|| "AAE input size overflow".to_string())?;
+        let expected_output = num_frames
+            .checked_mul(out_ch)
+            .ok_or_else(|| "AAE output size overflow".to_string())?;
         if input.len() != expected_input {
             return Err(format!(
                 "AAE input size mismatch: expected {}, got {}",
@@ -972,6 +995,8 @@ impl Plugin for AaePlugin {
                 output.len()
             ));
         }
+        validate_process_block_f32(input, output, context, in_ch, out_ch)?;
+        self.has_excitation |= input.iter().any(|&sample| sample != 0.0);
 
         // Zero output
         output.fill(0.0);
@@ -1163,6 +1188,39 @@ impl Plugin for AaePlugin {
             }
         }
         Ok(num_frames)
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.has_excitation {
+            TailLength::Infinite
+        } else {
+            TailLength::Finite(0)
+        }
+    }
+
+    fn guarantees_identity_frame_geometry(&self) -> bool {
+        true
+    }
+
+    fn output_frames_envelope(&self, input_frames: usize) -> Option<usize> {
+        Some(input_frames)
+    }
+
+    fn begin_drain(&mut self, context: &ProcessContext) -> PluginResult<()> {
+        self.validate_clock(context)?;
+        if self.has_excitation {
+            return Err("AAE recursive tail has no finite EOF drain policy; continue zero-input processing or reset explicitly".into());
+        }
+        Ok(())
+    }
+
+    fn drain(
+        &mut self,
+        _output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.begin_drain(context)?;
+        Ok(PluginDrainResult::COMPLETE)
     }
 
     fn latency_samples(&self) -> usize {

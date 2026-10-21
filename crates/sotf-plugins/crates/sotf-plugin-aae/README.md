@@ -101,3 +101,18 @@ retains every row, and exits nonzero on any failure. It is separate from the
 existing acoustic-quality runner and device deadline gates. Sparse maximum-room,
 minimum-RT60 cases have known fit/endpoint-bound failures; a decaying tail does
 not establish one exponential RT60 or finite recursive support.
+
+AAE now advertises its recursive EOF contract explicitly. An empty network
+reports `Finite(0)` and empty drain completion. Once finite nonzero input is
+accepted, it reports `Infinite` until reset or successful initialization; silence,
+bypass and muted sends do not establish finite response support. State-independent
+support remains unknown. Active `begin_drain`/`drain` calls reject without
+advancing audio or changing output, so continued zero-input processing retains
+the tail. DawHost rejects this infinite-tail EOF path before consuming the
+recursive response. A finite offline truncation/fade policy is still required
+for exporting excited AAE graphs; RT60 is not substituted for finite support.
+
+Direct f32 processing validates checked buffer geometry, finite input and the
+prepared clock before changing output, recursive state or tail metadata. Every
+successful call preserves frame count, including channel-changing layouts; its
+host frame envelope is the identity. Geometry error wording is retained.

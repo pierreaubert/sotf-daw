@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_host_contract",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 3 tests\ntest recursive_metadata_is_explicit_and_empty_drain_does_not_touch_audio ... ok\ntest active_eof_refusal_preserves_the_tail_for_continued_processing ... ok\ntest rejected_nonfinite_or_wrong_clock_blocks_preserve_output_and_recursive_state ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 7.76s\n     Running tests/audit_host_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_host_contract-58a96d119b4ff346)\n"
+}

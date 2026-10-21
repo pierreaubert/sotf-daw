@@ -1,0 +1,40 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/lib/aae_plugin.rs": "423a739e9dcab3e2d40302cb537cc7b81f64af57c759e0ce108414c06a7612d5",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_host_contract.rs": "e91bd08ca44f4ac5b3fffa8343f56b313990c821f4db1ca2ee5f16100ca4775c",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/autogain_heap.rs": "83504fc08bd0b0a81da90e06409e728d0785b6bfa00d5a238dc1aaaa755a3385",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "e87897a500c591b84d15e2ba122688fd7d802ba681904e12386d7d8ec76fda18",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "d2ee91d3f56549c28707cbeae004a4ff7c3516a1c07f84b67ee87db95d39052e",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "2eb6851b09106d7f9d336900a106f1808a5878162391317d109b286f94214f8c"
+  },
+  "full_release_passed": 118,
+  "final_focused_passed": 5,
+  "rejected_block_twin_cases": 8,
+  "cold_malformed_and_overflow_cases": 5,
+  "host_eof_audio_retained": true,
+  "active_eof_audio_retained": true,
+  "empty_tail": "Finite(0)",
+  "excited_tail": "Infinite",
+  "state_independent_support": null,
+  "identity_frame_geometry": true,
+  "heap_cases": 2,
+  "allocations": 0,
+  "frees": 0,
+  "quality_stdout_unchanged": true,
+  "raw_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-focused.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-initial-error-wording.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-initial-redundant-conversion-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-suite.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-final-focused.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/aae-host-tail-quality.json"
+  ],
+  "limitations": [
+    "Explicit infinite response remains unsupported for finite host EOF rendering; no truncation/fade policy implemented.",
+    "Accepted nonzero input conservatively retains Infinite until reset or successful initialize, even under mute/bypass or long silence.",
+    "Error Strings can allocate; zero-heap evidence covers successful processing/queries/reset and empty EOF only.",
+    "Existing 16/208 sparse decay diagnostic failures and external listening/corpus/native deadline requirements remain open."
+  ]
+}

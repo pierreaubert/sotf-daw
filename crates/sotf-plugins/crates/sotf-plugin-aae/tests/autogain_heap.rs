@@ -246,3 +246,27 @@ fn pending_predelay_admission_and_reset_have_no_heap_activity() {
         assert_eq!(heap, (0, 0));
     }
 }
+
+#[test]
+fn tail_metadata_and_empty_eof_have_no_heap_activity() {
+    for rate in [48_000_u32, 192_000] {
+        let mut p = AaePlugin::from_params(AaePluginParams::default()).unwrap();
+        p.initialize(f64::from(rate)).unwrap();
+        let mut output = vec![0.0; 128 * p.output_channels()];
+        let input = vec![0.001; 128 * 2];
+        let context = ProcessContext::new(rate, 128);
+        let (_, heap) = measure_heap(|| {
+            assert_eq!(p.tail_length(), sotf_host::TailLength::Finite(0));
+            assert_eq!(p.tail_support(), None);
+            p.begin_drain(&context).unwrap();
+            assert!(p.drain(&mut output, &context).unwrap().complete);
+            p.process(&input, &mut output, &context).unwrap();
+            assert_eq!(p.tail_length(), sotf_host::TailLength::Infinite);
+            assert_eq!(p.output_frames_envelope(usize::MAX), Some(usize::MAX));
+            assert!(p.guarantees_identity_frame_geometry());
+            p.reset();
+            assert_eq!(p.tail_length(), sotf_host::TailLength::Finite(0));
+        });
+        assert_eq!(heap, (0, 0));
+    }
+}

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Preflight finite input, checked geometry and prepared clock before AAE state
+  or output advances; retain existing geometry diagnostics.
+- Report empty Finite(0) versus excited Infinite recursive tails, rejecting active
+  EOF without discarding state. Publish identity frame geometry/envelope. Finite
+  offline tail rendering remains unsupported pending an explicit policy.
+
 - Add explicit offline `qa-aae-decay` parameter-corner measurements for static,
   modulated, impulse and sustained high-level operation, with bandwise fits and
   residual-energy reporting. Preserve all failed rows and nonzero failure exit;
