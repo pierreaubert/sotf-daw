@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--bin",
+    "qa-aae-decay"
+  ],
+  "exit_code": 1,
+  "elapsed_seconds": 40.01389658311382,
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 3.35s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-decay`\n",
+  "stdout_artifact": "audit/artifacts/plugin-audit-20261018/aae-radial-damping-candidate-corners.jsonl"
+}

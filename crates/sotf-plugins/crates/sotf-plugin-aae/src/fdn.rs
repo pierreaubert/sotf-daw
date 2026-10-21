@@ -14,7 +14,7 @@
 
 use crate::delay_line::DelayLine;
 use crate::hadamard::hadamard8;
-use crate::tone_filter::ToneFilter;
+use crate::tone_filter::{ToneCoefficients, ToneFilter};
 
 /// Number of delay lines in the FDN.
 pub const FDN_SIZE: usize = 8;
@@ -36,7 +36,7 @@ pub struct Fdn {
     previous_delay_lengths: [usize; FDN_SIZE],
     /// Latest room target waits for the active two-head fade to finish.
     pending_delay_lengths: Option<[usize; FDN_SIZE]>,
-    pending_tone_gains: [(f32, f32); FDN_SIZE],
+    pending_tone_coefficients: [ToneCoefficients; FDN_SIZE],
     decay_params: (f32, f32, f32),
     /// Allpass interpolation states for modulated reads
     interp_states: [f32; FDN_SIZE],
@@ -104,7 +104,7 @@ impl Fdn {
             let m = delay_lengths[i] as f32 + 1.0;
             let g_dc = 10.0_f32.powf(-3.0 * m / (rt60_bass * sr));
             let g_ny = 10.0_f32.powf(-3.0 * m / (rt60_treble * sr));
-            ToneFilter::new(g_dc, g_ny)
+            ToneFilter::new_for_loop(g_dc, g_ny, m)
         });
 
         // Modulation phase increments
@@ -120,7 +120,7 @@ impl Fdn {
             delay_lengths,
             previous_delay_lengths: delay_lengths,
             pending_delay_lengths: None,
-            pending_tone_gains: [(0.0, 0.0); FDN_SIZE],
+            pending_tone_coefficients: [ToneCoefficients::SILENCE; FDN_SIZE],
             decay_params: (rt60, bass_ratio, treble_ratio),
             interp_states: [0.0; FDN_SIZE],
             previous_interp_states: [0.0; FDN_SIZE],
@@ -208,13 +208,12 @@ impl Fdn {
             && let Some(target) = self.pending_delay_lengths.take()
         {
             self.start_delay_transition(target);
-            // Gains were prepared by setters; admission needs no powers,
+            // Coefficients were prepared by setters; admission needs no powers,
             // allocation, or additional delay-line read heads.
             for i in 0..FDN_SIZE {
-                let (dc, ny) = self.pending_tone_gains[i];
-                self.tone_filters[i].set_gains_smooth(
-                    dc,
-                    ny,
+                let coefficients = self.pending_tone_coefficients[i];
+                self.tone_filters[i].set_coefficients_smooth(
+                    coefficients,
                     (self.sample_rate * 0.005).round().max(1.0) as usize,
                 );
             }
@@ -225,26 +224,28 @@ impl Fdn {
     /// Update RT60 parameters without reallocating.
     pub fn set_rt60(&mut self, rt60: f32, bass_ratio: f32, treble_ratio: f32) {
         self.decay_params = (rt60, bass_ratio, treble_ratio);
-        let gains = self.decay_gains(self.delay_lengths);
-        for (filter, (dc, ny)) in self.tone_filters.iter_mut().zip(gains) {
-            filter.set_gains_smooth(dc, ny, (self.sample_rate * 0.005).round().max(1.0) as usize);
+        let coefficients = self.decay_coefficients(self.delay_lengths);
+        for (filter, coefficients) in self.tone_filters.iter_mut().zip(coefficients) {
+            filter.set_coefficients_smooth(
+                coefficients,
+                (self.sample_rate * 0.005).round().max(1.0) as usize,
+            );
         }
         if let Some(target) = self.pending_delay_lengths {
-            self.pending_tone_gains = self.decay_gains(target);
+            self.pending_tone_coefficients = self.decay_coefficients(target);
         }
     }
 
-    fn decay_gains(&self, delays: [usize; FDN_SIZE]) -> [(f32, f32); FDN_SIZE] {
+    fn decay_coefficients(&self, delays: [usize; FDN_SIZE]) -> [ToneCoefficients; FDN_SIZE] {
         let (rt60, bass, treble) = self.decay_params;
         let bass_rt60 = rt60 * bass;
         let treble_rt60 = rt60 * treble;
         std::array::from_fn(|i| {
             // Include the read-before-write clock, as in construction/reset.
             let delay = delays[i] as f32 + 1.0;
-            (
-                10.0_f32.powf(-3.0 * delay / (bass_rt60 * self.sample_rate)),
-                10.0_f32.powf(-3.0 * delay / (treble_rt60 * self.sample_rate)),
-            )
+            let dc = 10.0_f32.powf(-3.0 * delay / (bass_rt60 * self.sample_rate));
+            let ny = 10.0_f32.powf(-3.0 * delay / (treble_rt60 * self.sample_rate));
+            ToneFilter::coefficients_for_loop(dc, ny, delay)
         })
     }
 
@@ -266,7 +267,7 @@ impl Fdn {
             if self.decay_params != (rt60, bass_ratio, treble_ratio) {
                 self.set_rt60(rt60, bass_ratio, treble_ratio);
             } else if let Some(target) = self.pending_delay_lengths {
-                self.pending_tone_gains = self.decay_gains(target);
+                self.pending_tone_coefficients = self.decay_coefficients(target);
             }
         } else {
             self.start_delay_transition(target);
@@ -307,7 +308,7 @@ impl Fdn {
             let delay = self.delay_lengths[i] as f32 + 1.0;
             let dc = 10.0_f32.powf(-3.0 * delay / (rt60 * bass * self.sample_rate));
             let ny = 10.0_f32.powf(-3.0 * delay / (rt60 * treble * self.sample_rate));
-            self.tone_filters[i] = ToneFilter::new(dc, ny);
+            self.tone_filters[i] = ToneFilter::new_for_loop(dc, ny, delay);
         }
         for dl in &mut self.delay_lines {
             dl.reset();

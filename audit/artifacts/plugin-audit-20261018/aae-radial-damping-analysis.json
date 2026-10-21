@@ -1,0 +1,69 @@
+{
+  "scope": "independent scalar positive-pole loop; not full FDN rendered quality",
+  "rows": [
+    {
+      "rate": 44100,
+      "loop_frames": 4281,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.3172249158504812,
+      "radial_scalar_dc_mode_s": 0.24000000000002708,
+      "new_ny_relative_error": 0.0
+    },
+    {
+      "rate": 44100,
+      "loop_frames": 12423,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.26894376747056303,
+      "radial_scalar_dc_mode_s": 0.24000000000002708,
+      "new_ny_relative_error": -1.7469670154923733e-10
+    },
+    {
+      "rate": 48000,
+      "loop_frames": 4660,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.309239150426124,
+      "radial_scalar_dc_mode_s": 0.24000000000001254,
+      "new_ny_relative_error": 2.220446049250313e-16
+    },
+    {
+      "rate": 48000,
+      "loop_frames": 13522,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.2655507286829361,
+      "radial_scalar_dc_mode_s": 0.24000000000001254,
+      "new_ny_relative_error": 2.821689548682116e-10
+    },
+    {
+      "rate": 96000,
+      "loop_frames": 9319,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.2699285421421588,
+      "radial_scalar_dc_mode_s": 0.24000000000002109,
+      "new_ny_relative_error": 2.220446049250313e-16
+    },
+    {
+      "rate": 96000,
+      "loop_frames": 27043,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.2504561150929976,
+      "radial_scalar_dc_mode_s": 0.24000000000002109,
+      "new_ny_relative_error": -5.057304575117882e-10
+    },
+    {
+      "rate": 192000,
+      "loop_frames": 18637,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.2538761776818351,
+      "radial_scalar_dc_mode_s": 0.2400000000000136,
+      "new_ny_relative_error": 0.0
+    },
+    {
+      "rate": 192000,
+      "loop_frames": 54085,
+      "requested_bass_s": 0.24,
+      "original_scalar_dc_mode_s": 0.24479689027961307,
+      "radial_scalar_dc_mode_s": 0.2400000000000136,
+      "new_ny_relative_error": 1.4437779860543287e-09
+    }
+  ]
+}

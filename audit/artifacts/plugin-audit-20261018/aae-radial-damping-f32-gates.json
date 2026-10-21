@@ -1,0 +1,98 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--lib",
+      "radial_tests",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 18.309301709057763,
+    "stdout": "\nrunning 1 test\nradial_constraints cases=512 max_slow_relative_error=0.000000054383441613050845 max_fast_relative_error=89.10026528634481 max_circle_ratio=1.0000000543846916 original_max_circle_ratio=2.8763919520006724\ntest tone_filter::radial_tests::loop_design_matches_radial_constraints_with_f32_quantization ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 81 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 18.15s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aae-2477f556ca324757)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--tests"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 171.10009245807305,
+    "stdout": "\nrunning 82 tests\ntest delay_line::tests::test_reset ... ok\ntest delay_line::tests::test_linear_interpolation_midpoint ... ok\ntest delay_line::tests::test_push_read_basic ... ok\ntest delay_line::tests::test_max_delay_is_exactly_n ... ok\ntest delay_line::tests::test_wrap_around ... ok\ntest early_reflections::tests::test_cathedral_tap_count ... ok\ntest early_reflections::tests::test_impulse_response ... ok\ntest early_reflections::tests::test_small_room_tap_count ... ok\ntest delay_line::tests::test_allpass_interpolation_at_integer ... ok\ntest early_reflections::tests::test_reset ... ok\ntest early_reflections::tests::test_tap_directions ... ok\ntest fdn::tests::limiter_knee_has_matching_unit_slope ... ok\ntest fdn::tests::test_safety_limit_is_headroom_above_nominal ... ok\ntest fdn::tests::test_fdn_reset ... ok\ntest fdn::tests::test_soft_clip ... ok\ntest hadamard::tests::test_hadamard_energy_preservation ... ok\ntest fdn::tests::limiter_is_continuous_and_monotone_through_its_ceiling ... ok\ntest hadamard::tests::test_hadamard_orthogonality ... ok\ntest hadamard::tests::test_hadamard_uniform_input ... ok\ntest hadamard::tests::test_hadamard_zero_input ... ok\ntest fdn::tests::test_set_room_size_preserves_state ... ok\ntest quality::tests::echo_density_distinguishes_sparse_and_dense_sequences ... ok\ntest quality::tests::spatial_metrics_identify_coherent_and_diffuse_fields ... ok\ntest fdn::tests::test_fdn_decorrelation ... ok\ntest quality::tests::schroeder_recovers_exponential_rt60 ... ok\ntest quality_validation::tests::manifest_digest_is_stable ... ok\ntest quality_validation::tests::manifest_requires_every_external_fixture_class ... ok\ntest quality_validation::tests::missing_external_run_can_never_be_accepted ... ok\ntest tests::misc::test_auto_gain_parameters_roundtrip_and_data ... ok\ntest fdn::tests::test_fdn_impulse_decays ... ok\ntest tests::misc::test_bypass_passes_dry ... ok\ntest quality::tests::transfer_reports_known_gain_and_phase ... ok\ntest tests::misc::test_content_aware_dialogue_ducks_wet_signal ... ok\ntest tests::misc::test_content_aware_ignores_quiet_centered_noise ... ok\ntest tests::misc::test_content_aware_holds_through_sustained_centered_voice ... ok\ntest tests::misc::test_dialogue_detector_accepts_panned_voice_and_rejects_impulses ... ok\ntest tests::misc::test_content_aware_ignores_steady_centered_music ... ok\ntest quality::tests::distortion_and_detector_statistics_have_numeric_oracles ... ok\ntest tests::misc::test_no_nan_inf ... ok\ntest tests::misc::test_output_channel_count ... ok\ntest tests::misc::test_output_safety_limit_preserves_channel_ratios ... ok\ntest tests::misc::test_parameter_roundtrip ... ok\ntest tests::misc::test_pre_delay_is_not_reported_as_plugin_latency ... ok\ntest tests::misc::test_process_rejects_mismatched_buffers ... ok\ntest tests::misc::test_room_and_routing_parameter_changes_do_not_break_processing ... ok\ntest tests::misc::test_output_energy_bounded ... ok\ntest tests::misc::test_silence_in_silence_out ... ok\ntest tests::test_7_1_4_config ... ok\ntest early_reflections::tests::test_modulated_taps_use_allpass_not_linear ... ok\ntest tests::test_allpass_diffuser_unity_gain_dc ... ok\ntest tests::test_allpass_diffuser_energy_preservation ... ok\ntest tests::misc::test_reset_clears_state ... ok\ntest tests::test_auto_gain_preallocated_when_disabled ... ok\ntest tests::test_delay_changes_start_click_safe_transitions ... ok\ntest tests::test_invalid_construction_state_is_rejected ... ok\ntest tests::misc::test_solo_early ... ok\ntest tests::test_lfe_source_energy_does_not_cancel_with_signed_sum ... ok\ntest tests::test_lfe_lr4_rejects_midrange ... ok\ntest tests::test_every_declared_layout_and_room_preset_constructs ... ok\ntest tests::test_live_solo_modes_remain_mutually_exclusive ... ok\ntest tests::test_signed_rms_keeps_energy_unsigned ... ok\ntest tests::test_spatial_automation_reuses_routing_storage ... ok\ntest tests::test_setup_only_parameters_require_rebuild ... ok\ntest tone_filter::radial_tests::loop_design_matches_radial_constraints_with_f32_quantization ... ok\ntest tone_filter::tests::test_both_gains_equal ... ok\ntest tests::test_routing_rows_are_sparse_and_exclude_lfe ... ok\ntest tone_filter::tests::test_reset ... ok\ntest tone_filter::tests::test_dc_gain ... ok\ntest tests::test_output_safety_limit_bounds_final_mix ... ok\ntest tone_filter::tests::test_extreme_gain_ratio_decays_properly ... ok\ntest tone_filter::tests::test_gain_updates_interpolate_over_requested_samples ... ok\ntest tone_filter::tests::test_nyquist_gain ... ok\ntest tone_filter::tests::test_extreme_inverse_ratio_decays_properly ... ok\ntest tone_filter::tests::test_unity_filter ... ok\ntest tone_filter::tests::test_zero_gains ... ok\ntest tests::test_level_smoothing_is_block_partition_invariant ... ok\ntest tests::test_lfe_tracks_late_reverb_tail ... ok\ntest early_reflections::tests::test_high_sample_rate_max_modulation_does_not_panic ... ok\ntest fdn::tests::test_fdn_no_blowup ... ok\ntest tests::misc::test_impulse_produces_reverb ... ok\ntest autogain_state_tests::reinitialize_preserves_gain_history_while_reset_clears_it ... ok\ntest autogain_state_tests::final_compensation_does_not_enter_acoustic_feedback_history ... ok\n\ntest result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 1 test\ntest tests::streaming_band_energy_matches_independent_direct_form_reference ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 2 tests\ntest treble_damping_shortens_high_band_decay ... ok\ntest neutral_network_meets_requested_energy_decay_across_rates_and_room_sizes ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.20s\n\n\nrunning 1 test\ntest limiter_threshold_crossing_preserves_continuity_in_static_and_modulated_networks ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.57s\n\n\nrunning 1 test\ntest quantized_room_changes_do_not_amplify_correlated_feedback ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.18s\n\n\nrunning 5 tests\ntest malformed_and_overflowing_blocks_do_not_arm_an_empty_network ... ok\ntest host_rejects_recursive_eof_without_consuming_future_audio ... ok\ntest recursive_metadata_is_explicit_and_empty_drain_does_not_touch_audio ... ok\ntest active_eof_refusal_preserves_the_tail_for_continued_processing ... ok\ntest rejected_nonfinite_or_wrong_clock_blocks_preserve_output_and_recursive_state ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n\nrunning 1 test\ntest neutral_decay_matches_independent_lossless_exponential_weighting ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.39s\n\n\nrunning 3 tests\ntest requesting_active_predelay_cancels_pending_target ... ok\ntest reset_and_initialize_install_latest_pending_predelay ... ok\ntest noncorrelated_predelay_retargets_match_staged_fades_across_partitions ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.61s\n\n\nrunning 1 test\ntest correlated_predelay_change_preserves_the_steady_wet_signal ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s\n\n\nrunning 4 tests\ntest request_for_active_room_cancels_pending_room_without_restarting_fade ... ok\ntest reset_installs_latest_queued_room_and_independent_decay_controls ... ok\ntest queued_room_admission_uses_latest_independent_decay_controls ... ok\ntest interrupted_room_changes_match_two_complete_bounded_fades ... ok\n\ntest result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s\n\n\nrunning 3 tests\ntest fixed_position_autogain_controls_and_reset_preserve_sample_clock ... ok\ntest fixed_raw_processing_has_partition_independent_autogain ... ok\ntest future_callback_suffix_cannot_retime_prefix_gain ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s\n\n\nrunning 5 tests\ntest tail_metadata_and_empty_eof_have_no_heap_activity ... ok\ntest pending_room_admission_and_reset_have_no_heap_activity ... ok\ntest pending_predelay_admission_and_reset_have_no_heap_activity ... ok\ntest interrupted_extreme_fdn_room_changes_have_no_heap_activity ... ok\ntest oversized_cold_process_after_control_updates_and_reset_has_no_heap_activity ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s\n\n\nrunning 11 tests\ntest info_and_channels ... ok\ntest parameter_roundtrip_and_validation ... ok\ntest get_data_is_present ... ok\ntest wrong_buffer_sizes_return_error ... ok\ntest speaker_config_change_requires_graph_rebuild ... ok\ntest initialize_and_process_silence ... ok\ntest bypass_copies_stereo_input ... ok\ntest process_with_signal_produces_output ... ok\ntest reset_clears_state ... ok\ntest bypass_advances_tail_before_reenable ... ok\ntest quality_telemetry_observes_detector_and_limiter_without_changing_audio_contract ... ok\n\ntest result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 2m 43s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aae-2477f556ca324757)\n     Running unittests bin/qa_aae.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae-ffa745b02985fe33)\n     Running unittests bin/qa_aae_decay.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_decay-f59466fecb1832e8)\n     Running unittests bin/qa_aae_quality.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_quality-9712e7cd546950a4)\n     Running unittests bin/qa_aae_validation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_validation-0c2f24b8b65c921c)\n     Running tests/audit_fdn_decay.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_fdn_decay-df6bf7f251332eae)\n     Running tests/audit_fdn_limiter.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_fdn_limiter-480fcacc06e2b3c3)\n     Running tests/audit_fdn_transition.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_fdn_transition-9d19e74766dbdbb7)\n     Running tests/audit_host_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_host_contract-58a96d119b4ff346)\n     Running tests/audit_neutral_decay.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_neutral_decay-712196ab818688cd)\n     Running tests/audit_predelay_retarget.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_predelay_retarget-53d9f54ab1eb9254)\n     Running tests/audit_predelay_transition.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_predelay_transition-fdcae78eff90c02f)\n     Running tests/audit_room_retarget.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_room_retarget-932c2a821870e998)\n     Running tests/autogain_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/autogain_clock-8a6226e40dee4318)\n     Running tests/autogain_heap.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/autogain_heap-e70a6df620623f45)\n     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-a34454bc33c2c38f)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--all-targets",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.2669732919894159,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 1.16s\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "run",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-quality"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.6650835000909865,
+    "stdout": "metric\tpreset\tlayout\trate\tpartition\tdetail\tvalue\nrt60\tsmall\t5.1\t44100\t64\t250Hz,r2=1.000\t2.1578\nrt60\tsmall\t5.1\t44100\t64\t1000Hz,r2=1.000\t2.0120\nrt60\tsmall\t5.1\t44100\t64\t4000Hz,r2=0.999\t1.7269\necho_density\tsmall\t5.1\t44100\t64\tmixing_time_s=Some(0.27188208616780046)\t1.2863\nspatial\tsmall\t5.1\t44100\t64\tentropy=0.9807,coherence=0.5802,vector=0.5571\t0.4117\nrt60\tmedium\t9.1.6\t48000\t257\t250Hz,r2=1.000\t2.1523\nrt60\tmedium\t9.1.6\t48000\t257\t1000Hz,r2=1.000\t2.0328\nrt60\tmedium\t9.1.6\t48000\t257\t4000Hz,r2=0.999\t1.7718\necho_density\tmedium\t9.1.6\t48000\t257\tmixing_time_s=Some(0.2975)\t1.3000\nspatial\tmedium\t9.1.6\t48000\t257\tentropy=0.7715,coherence=0.1445,vector=0.2622\t0.6601\nrt60\tlarge\t5.1\t48000\t1024\t250Hz,r2=1.000\t2.1579\nrt60\tlarge\t5.1\t48000\t1024\t1000Hz,r2=1.000\t2.0229\nrt60\tlarge\t5.1\t48000\t1024\t4000Hz,r2=0.999\t1.7452\necho_density\tlarge\t5.1\t48000\t1024\tmixing_time_s=Some(0.2675)\t1.2540\nspatial\tlarge\t5.1\t48000\t1024\tentropy=0.9810,coherence=0.5789,vector=0.5561\t0.4131\nrt60\tcathedral\t9.1.6\t44100\t257\t250Hz,r2=1.000\t2.1497\nrt60\tcathedral\t9.1.6\t44100\t257\t1000Hz,r2=1.000\t2.0267\nrt60\tcathedral\t9.1.6\t44100\t257\t4000Hz,r2=0.999\t1.7241\necho_density\tcathedral\t9.1.6\t44100\t257\tmixing_time_s=Some(0.2668934240362812)\t1.2649\nspatial\tcathedral\t9.1.6\t44100\t257\tentropy=0.7718,coherence=0.1602,vector=0.2623\t0.6481\nlfe_transfer\tmedium\t5.1\t48000\t257\t60Hz,phase_deg=170.387\t-76.9925\nlfe_transfer\tmedium\t5.1\t48000\t257\t120Hz,phase_deg=19.497\t-96.2984\nlfe_transfer\tmedium\t5.1\t48000\t257\t250Hz,phase_deg=-15.470\t-111.6177\nlfe_transfer\tmedium\t5.1\t48000\t257\t1000Hz,phase_deg=-175.393\t-131.9153\nmodulation_sideband\tmedium\t5.1\t48000\t257\tmax_0.25-2Hz\t3.4900\nthd\tmedium\t5.1\t48000\t257\t1kHz\t-73.6116\nimd\tmedium\t5.1\t48000\t257\t700+1200Hz\t-162.1019\nlimiter_activity\tmedium\t5.1\t48000\t48000\tfinal_gain\t0.322766\ndetector\tmatrix\tmatrix\t48000\t2400\tprecision=0.500,recall=1.000,pump_total_db=66.776,pump_max_db=6.000\t4\nAAE offline acoustic-quality QA: PASS\nExternal listening/corpus validation is not simulated; run the documented protocol in quality-validation.md\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.32s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-quality`\n"
+  }
+]

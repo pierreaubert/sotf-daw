@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Include tone-filter memory in FDN bass/treble decay design by solving shelf
+  constraints at the requested decaying pole radii. Use f64 coefficients/state
+  to preserve fast-endpoint precision; continue returning f32 audio.
+- Prepare full coefficient targets in setters, including queued rooms. Audio
+  admission copies them without powers or allocation and keeps the existing ramp.
+  Standalone tone-filter gain APIs and neutral scalar damping retain their semantics.
+
 - Calibrate FDN damping for the complete read-before-write loop: tap index `m`
   traverses `m+1` process clocks. Use that length in construction, prepared
   active/pending gains and reset; echo arrival timing and delay storage stay fixed.

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--lib",
+    "radial_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 9.623685042141005,
+  "stdout": "\nrunning 1 test\nradial_constraints cases=512 max_slow_relative_error=0.00000000000000035997240057485904 max_fast_relative_error=0.00000007791411580287429 max_circle_ratio=1.00000000000236 original_max_circle_ratio=2.876322507672848\ntest tone_filter::radial_tests::loop_design_matches_radial_constraints_with_f64_precision ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 81 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 9.57s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aae-2477f556ca324757)\n"
+}

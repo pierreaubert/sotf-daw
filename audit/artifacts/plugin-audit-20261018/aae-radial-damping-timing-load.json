@@ -1,0 +1,11 @@
+{
+  "observation": "after failed callback wall-clock maximum; system-wide CPU observation, not callback profiling",
+  "high_cpu_processes": [
+    "  108 19-14:38:05 100.0 /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/Support/fseventsd",
+    "  263 19-14:38:04  35.2 /usr/libexec/syspolicyd",
+    "18009 02-13:05:11  71.9 /System/Library/PrivateFrameworks/MediaAnalysis.framework/Versions/A/mediaanalysisd",
+    "21584       00:01  52.9 /Users/pierre/.rustup/toolchains/stable-aarch64-apple-darwin/bin/rustc",
+    "57603    02:14:31  47.8 /Users/pierre/.cargo/bin/tokensave",
+    "18049    05:17:06  62.6 target/release/roomeq-qa-coverage"
+  ]
+}

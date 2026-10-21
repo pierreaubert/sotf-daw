@@ -1,0 +1,98 @@
+{
+  "root": "/Volumes/home_worktrees/issue9-radial-6jm1_f42",
+  "checkout": "/Volumes/home_worktrees/issue9-radial-6jm1_f42/sotf-daw",
+  "runroot": "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq",
+  "base_commit": "33a21cff9f0c27a125ec7caea839f8c10459b6a3",
+  "candidate_binary_sha256": "04ce4b377fcea09700cd19048b6f432ae18f7448bea261c8c0d365a10670a594",
+  "candidate_source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "9ce4821697786de065b3b4cca5f78c8a60d0404c1722f55ff5fc17aead55721c",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs": "028df733e678556db4cef7d1fc714706a04f77256ba3ab4cc91f97bb7b66ca3b"
+  },
+  "runs": [
+    {
+      "variant": "baseline",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/baseline-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.35962408292107284,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372456\n  Late energy (500ms\u20131s): 0.434366\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8308\n    FR: 185.2566\n    C: 181.0193\n    LFE: 0.0969\n    SL: 25.5138\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005214\n  RT60=4.0s late energy: 4.79973936\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0445\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 177.18ms\n  Estimated CPU Usage: 3.54%\n  callback p50/p95/max: 0.267/0.781/8.410 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    },
+    {
+      "variant": "candidate",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/candidate-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.2682880840729922,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372280\n  Late energy (500ms\u20131s): 0.434273\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8317\n    FR: 185.2575\n    C: 181.0204\n    LFE: 0.0969\n    SL: 25.5139\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005195\n  RT60=4.0s late energy: 4.79951668\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0721\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 127.88ms\n  Estimated CPU Usage: 2.56%\n  callback p50/p95/max: 0.268/0.300/0.738 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    },
+    {
+      "variant": "candidate",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/candidate-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.27963041607290506,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372280\n  Late energy (500ms\u20131s): 0.434273\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8317\n    FR: 185.2575\n    C: 181.0204\n    LFE: 0.0969\n    SL: 25.5139\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005195\n  RT60=4.0s late energy: 4.79951668\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0721\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 152.11ms\n  Estimated CPU Usage: 3.04%\n  callback p50/p95/max: 0.270/0.434/6.454 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    },
+    {
+      "variant": "baseline",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/baseline-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.31395175005309284,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372456\n  Late energy (500ms\u20131s): 0.434366\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8308\n    FR: 185.2566\n    C: 181.0193\n    LFE: 0.0969\n    SL: 25.5138\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005214\n  RT60=4.0s late energy: 4.79973936\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0445\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 147.48ms\n  Estimated CPU Usage: 2.95%\n  callback p50/p95/max: 0.255/0.447/5.715 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    },
+    {
+      "variant": "baseline",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/baseline-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.24033533409237862,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372456\n  Late energy (500ms\u20131s): 0.434366\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8308\n    FR: 185.2566\n    C: 181.0193\n    LFE: 0.0969\n    SL: 25.5138\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005214\n  RT60=4.0s late energy: 4.79973936\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0445\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 118.95ms\n  Estimated CPU Usage: 2.38%\n  callback p50/p95/max: 0.251/0.275/0.300 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    },
+    {
+      "variant": "candidate",
+      "command": [
+        "/Volumes/home_tmp/tmp/aae-radial-timing-4u0orvfq/candidate-qa-aae"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.2746792498510331,
+      "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372280\n  Late energy (500ms\u20131s): 0.434273\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8317\n    FR: 185.2575\n    C: 181.0204\n    LFE: 0.0969\n    SL: 25.5139\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005195\n  RT60=4.0s late energy: 4.79951668\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0721\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 154.64ms\n  Estimated CPU Usage: 3.09%\n  callback p50/p95/max: 0.287/0.545/1.875 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+      "stderr": ""
+    }
+  ],
+  "baseline_build": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-radial-6jm1_f42/sotf-daw",
+    "exit_code": 0,
+    "elapsed_seconds": 78.04342500003986,
+    "stdout": "",
+    "stderr": "   Compiling math-iir-fir v0.5.27 (/Volumes/home_worktrees/issue9-radial-6jm1_f42/math-audio/crates/math-iir-fir)\n   Compiling math-dsp v0.5.35 (/Volumes/home_worktrees/issue9-radial-6jm1_f42/math-audio/crates/math-dsp)\n   Compiling sotf-host v0.6.0 (/Volumes/home_worktrees/issue9-radial-6jm1_f42/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_worktrees/issue9-radial-6jm1_f42/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 1m 17s\n"
+  },
+  "temporary_lock_diff": "diff --git a/Cargo.lock b/Cargo.lock\nindex a45962e..61c7745 100644\n--- a/Cargo.lock\n+++ b/Cargo.lock\n@@ -7526,6 +7526,7 @@ dependencies = [\n  \"math-rir\",\n  \"rtrb\",\n  \"rustfft\",\n+ \"rustix\",\n  \"serde\",\n  \"serde_json\",\n  \"sha2\",\n",
+  "baseline_binary_sha256": "e69e0982c2d9e6a2d27c08f5133d1bc38021eb9f9f7ed5e2ca614d8689ab0707"
+}

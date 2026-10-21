@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--lib",
+    "radial_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 1.4058125829324126,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\nerror[E0308]: mismatched types\n   --> crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs:390:24\n    |\n390 |         assert!((out - f.b0).abs() < 1e-6);\n    |                        ^^^^ expected `f32`, found `f64`\n\nerror[E0277]: cannot subtract `f64` from `f32`\n   --> crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs:390:22\n    |\n390 |         assert!((out - f.b0).abs() < 1e-6);\n    |                      ^ no implementation for `f32 - f64`\n    |\n    = help: the trait `Sub<f64>` is not implemented for `f32`\n    = help: the following other types implement trait `Sub<Rhs>`:\n              `&f32` implements `Sub<&num_complex::Complex<f32>>`\n              `&f32` implements `Sub<&wide::f32x16_::f32x16>`\n              `&f32` implements `Sub<&wide::f32x4_::f32x4>`\n              `&f32` implements `Sub<&wide::f32x8_::f32x8>`\n              `&f32` implements `Sub<f32>`\n              `&f32` implements `Sub<num_complex::Complex<f32>>`\n              `&f32` implements `Sub<wide::f32x16_::f32x16>`\n              `&f32` implements `Sub<wide::f32x4_::f32x4>`\n            and 16 others\n\nSome errors have detailed explanations: E0277, E0308.\nFor more information about an error, try `rustc --explain E0277`.\nerror: could not compile `sotf-plugin-aae` (lib test) due to 2 previous errors\n"
+}

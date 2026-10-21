@@ -1,0 +1,41 @@
+{
+  "result": "FDN colored damping now solves the first-order shelf at requested decay radii: H(r_dc)=g_dc and H(-r_ny)=g_ny, where r=g^(1/M) and M includes the full traversal. This includes IIR memory that unit-circle endpoint gains omitted. Neutral scalar attenuation and standalone ToneFilter gain API semantics remain. Prepared coefficient triples replace pending gain pairs, so queued room admission only copies targets/starts the existing ramp; construction/setters/reset perform design. Setter preparation does additional bounded work. Coefficients and recursive tone-filter state use f64, with f32 audio ports. The first f32 radial candidate improved the matrix but had maximum fast-endpoint relative error 89.1003 due to cancellation; its source/gates are retained as rejected evidence. Final 512 coefficient cases have maximum slow relative error 3.60e-16, fast relative error 7.79e-8, and slow-radius maximum transfer/target ratio 1.00000000000236 (original unit-circle design 2.87632). Full release 120 tests pass without ignores, including 80 neutral lossless-reference cases, staged room/predelay twins, reset/host and heap regressions; strict all-target QA Clippy and acoustic-quality QA pass. The unchanged 208-row corner runner improves from 16 to 12 failed rows: all four endpoint-envelope failures resolve (~0.270 -> 0.246 seconds), no passing row regresses, neutral observations remain exactly identical, and all rows are finite. Independent coverage/decision verifier preserves configurations and thresholds. Twelve sparse fit-quality failures remain and the gate still exits 1. Representative wall-clock QA initially failed maximum 12.858ms versus 10.667ms (median .391ms); preserve this failure. A balanced six-run comparison of copied baseline/candidate binaries then passed all runs: candidate medians .268/.270/.287ms versus baseline .267/.255/.251ms, with candidate maxima .738/6.454/1.875ms and baseline 8.410/5.715/.300ms. The comparison characterizes nominal cost and jitter, not worst-case device certification; source/binary hashes and isolated baseline lock repair are recorded. No echo geometry, latency, parameters, transition durations, EOF policy or tolerances change. Native/loaded deadline, listening/corpus, sparse fit and finite offline-tail requirements remain open; AAE is partial and overall completion remains 35/45.",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "a080f23183f73a9e7a0ff77e11edabaf19043f0c68d5cc76452f3718b374c5ae",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "28fbf459269e5e73e9f81c94708b712f3b206972625b62dddd5c795de84f1cd6",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "ed75949132f31383af0d097659576047a5efb7ace32527f811cc7749453c246a",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "9ce4821697786de065b3b4cca5f78c8a60d0404c1722f55ff5fc17aead55721c",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs": "028df733e678556db4cef7d1fc714706a04f77256ba3ab4cc91f97bb7b66ca3b"
+  },
+  "unchanged_corner_runner_sha256": "f013e9d1fd7980fac66c388703a13ff6c50b00e1de49054ceb13fe91fa1ce4c1",
+  "coefficient_cases": 512,
+  "release_tests_passed": 120,
+  "neutral_reference_cases": 80,
+  "corner_coverage": {
+    "rows": 208,
+    "configuration_keys_preserved": true,
+    "neutral_controls_exactly_preserved": true,
+    "failed": 12,
+    "fixed": 4,
+    "regressions": 0,
+    "fit_failures": 12,
+    "target_failures": 0,
+    "all_finite": true,
+    "max_late_energy_ratio": 1.9793246037716174e-16,
+    "minimum_wide_r2": 0.9728150845847301,
+    "quality_gate_passed": false
+  },
+  "raw_gates": "aae-radial-damping-final-gates.json",
+  "focused_constraints": "aae-radial-damping-f64-focused.json",
+  "rejected_f32_source": "aae-radial-damping-f32-source.json",
+  "rejected_f32_gates": "aae-radial-damping-f32-gates.json",
+  "paired_timing": "aae-radial-damping-paired-timing.json",
+  "initial_wall_clock_deadline_gate_passed": false,
+  "balanced_timing_runs_passed": 6,
+  "limits": [
+    "The 208-row fit gate still fails 12 rows; no full AAE completion claim.",
+    "An initial callback maximum missed the unchanged deadline; paired runs do not certify device or worst-load timing.",
+    "Radial constraints and static radius checks are analytical sampled design checks, not measured room/ear response or arbitrary nonlinear/modulated decay proof.",
+    "Finite offline-tail policy and external listening/corpus validation remain open."
+  ]
+}

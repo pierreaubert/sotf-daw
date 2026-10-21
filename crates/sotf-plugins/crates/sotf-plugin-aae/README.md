@@ -130,3 +130,18 @@ fitted RT60. The independently weighted lossless reference also has a poor T30
 fit at the largest room and shortest decay. The existing corner gate retains its
 failed rows and thresholds; colored-filter memory, modulation, nonlinear levels,
 listening acceptance and finite offline-tail policy remain separate requirements.
+
+Colored FDN damping is designed at the requested decaying poles rather than only
+at unit-circle DC/Nyquist points. For a full loop length `M`, endpoint gain `g`
+defines radius `r = g^(1/M)`. The prepared shelf solves `H(r_bass) = g_bass` and
+`H(-r_treble) = g_treble`, including the tone filter's own memory in loop decay.
+Neutral equal-gain damping retains scalar attenuation. The standalone public
+`ToneFilter::new`/`set_gains` gain semantics remain DC/Nyquist constraints.
+
+Coefficients and tone-filter state use f64 internally to preserve the heavily
+attenuated endpoint when numerator terms nearly cancel; audio remains f32.
+Construction, setters and reset perform coefficient design. Queued room admission
+copies prepared coefficients and starts the existing ramp; no powers or allocation
+are added there. Setter preparation does additional bounded design work. This is
+an analytical endpoint correction, not measured room matching or a listening-test
+result; sparse impulse fit failures and finite offline tail policy remain open.

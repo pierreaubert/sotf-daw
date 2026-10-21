@@ -91,3 +91,15 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
 - Preserve `audit_neutral_decay`'s independent f64 rings/dense matrix and neutral
   exponential-weighting checks. It excludes modulation/limiting and does not
   override the 208-row fit gate: an exactly weighted sparse response can fail r².
+
+- Colored FDN shelves must account for filter memory: solve `H(r_dc)=g_dc` and
+  `H(-r_ny)=g_ny` at `r=g^(1/M)` for the full loop length, not only `H(+/-1)`.
+  Preserve equal-gain scalar attenuation and public standalone unit-circle APIs.
+- Keep prepared coefficient targets (not only gains) for queued rooms. Admission
+  may copy targets/start ramps but must not run radial powers/design or allocate.
+  Setters/reset/construction own design work. Preserve f64 coefficients/state so
+  near-canceling fast-endpoint numerators do not lose relative accuracy.
+- Keep independent radial constraints, the exact neutral lossless reference,
+  lifecycle/heap tests and the unweakened 208-row fit gate. Endpoint correction
+  does not make a sparse impulse response exponentially dense or establish
+  measured/listening quality, deadline certification or finite tail support.
