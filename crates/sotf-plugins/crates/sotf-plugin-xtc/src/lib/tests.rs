@@ -762,13 +762,14 @@ fn test_brown_duda_alpha_min_matches_paper_formula() {
 #[test]
 fn test_woodworth_itd() {
     let head_radius = 0.0875;
-    let angle = std::f32::consts::FRAC_PI_2 + 0.5; // ~120° contralateral angle
+    let angle = std::f32::consts::FRAC_PI_2 + 0.5; // ~119° source azimuth
 
     let woodworth_delay = woodworth_diffraction_path(angle.abs(), head_radius) / 343.0;
-    // For 120°, delay should be a*(120*pi/180 + sin(120*pi/180))/c
-    // 120° = 2.094 rad, sin(120°) = 0.866
-    // delay = 0.0875 * (2.094 + 0.866) / 343 = 0.000755 s (755 us)
-    assert!(woodworth_delay > 0.0005 && woodworth_delay < 0.0010);
+    // This is source azimuth, not an ear-normal shadow angle. In the rear
+    // hemisphere the shorter arc is pi-theta, not theta.
+    let theta = f64::from(angle);
+    let expected = f64::from(head_radius) * (std::f64::consts::PI - theta + theta.sin()) / 343.0;
+    assert!((f64::from(woodworth_delay) - expected).abs() < 1e-10);
 }
 
 /// Test that zero angle gives zero diffraction delay.

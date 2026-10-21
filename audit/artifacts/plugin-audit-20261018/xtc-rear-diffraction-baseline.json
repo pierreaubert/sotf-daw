@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "sotf-host/qa",
+    "--lib",
+    "antipodal_diffraction_matches_independent",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 6.5217595000285655,
+  "stdout": "\nrunning 1 test\nrear_median radius=0.07 extra_path_m=0.21991149 delay_us=641.14136\nrear_median radius=0.0875 extra_path_m=0.27488935 delay_us=801.42664\nrear_median radius=0.11 extra_path_m=0.3455752 delay_us=1007.50793\nrear_diffraction cases=4326 maximum_error_m=0.3455751941993005 failed_values=2160\ntest filters::misc::rear_diffraction_tests::antipodal_diffraction_matches_independent_interaural_projection ... FAILED\n\nfailures:\n\nfailures:\n    filters::misc::rear_diffraction_tests::antipodal_diffraction_matches_independent_interaural_projection\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 6.47s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c4a8d400ec30aee)\n\nthread 'filters::misc::rear_diffraction_tests::antipodal_diffraction_matches_independent_interaural_projection' (338653564) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/misc.rs:137:9:\nassertion `left == right` failed\n  left: 2160\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+}

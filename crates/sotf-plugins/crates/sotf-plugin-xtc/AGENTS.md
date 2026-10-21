@@ -102,3 +102,11 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
   fixed left/right ipsilateral assignments. Large-yaw ear reclassification,
   ear-surface paths and measured calibration remain open. Cartesian arithmetic and
   routing tests do not resolve those physical-model limitations.
+
+- `woodworth_diffraction_path` accepts source azimuth magnitude, not an ear-normal
+  shadow angle. Fold rear incidence through `pi-theta`; antipodal ears require
+  zero extra path at both median-plane directions. Keep the independent signed
+  projection oracle and front/default coefficient fixture.
+- Correct geometric path magnitude does not establish correct yaw-dependent ear
+  assignment. Reassigning fixed matrix labels needs continuous per-path amplitude
+  and phase references; do not introduce a median-plane gain jump with a sign flip.

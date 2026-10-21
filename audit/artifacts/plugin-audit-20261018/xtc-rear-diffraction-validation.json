@@ -1,0 +1,42 @@
+{
+  "result": "Correct the documented Woodworth rear-hemisphere extra-path branch: theta=abs(source azimuth) clipped to pi, phi=min(theta,pi-theta), path=a*(phi+sin(phi)). The old theta+sin(theta) formula incorrectly continued through the rear hemisphere and gave641.14/801.43/1007.51us of extra rear-median delay for radii0.07/0.0875/0.11m. Independent f64 interaural-projection baseline failed2160/4326signed/radius probes,maxerror0.34557519m. Corrected sweep has0failures/maxerror3.9666845e-8m and exactly zero rear-median path/delay. Reference Aaronson/Hartmann2014 equations1a/1b,plane-wave antipodal-ear assumptions; this does not implement an exact finite-distance/frequency-dependent diffraction solution. Front/default4100coefficient words remain bit-identical. Independent Cartesian pose oracle now covers102poses incl+/-90yaw,maxerror1.5874703e-7;216mirror cases pass exactly and720near-center cases retain thresholds. Core186passes/1existingignored diagnostic; full lib/integration244passes/1ignore. Large-yaw rendered120cases have zero mirror/partition error;60cold/reset cases have0allocations/frees,exactpartitionwaveform and unchanged2048samplelatency. StrictalltargetreleaseClippy/format/diff checks pass. Replace an old broad wrong-formula120degree delay test with an independent rear-arc numerical check; no threshold widening. Existing spherical shadow magnitude, fixed ipsilateral assignment, parameter/schema/defaults and callback work unchanged. Fixed ear labels remain incorrect when a source crosses the head median plane; resolving that requires continuous four-path normalization rather than a discontinuous sign flip. Ear-surface/finite-distance/measuredHRTF/robustness/native/device/listening and retained nominal8kILD/93.75Hzcancellation failures remain; XTCpartial and overall35/45complete.",
+  "reference": {
+    "title": "Testing, correcting, and extending the Woodworth model for interaural time difference",
+    "authors": "Neil L. Aaronson and William M. Hartmann",
+    "year": 2014,
+    "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3985894/",
+    "equations": [
+      "1a",
+      "1b"
+    ],
+    "assumptions": "plane wave, rigid sphere, antipodal ears"
+  },
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/AGENTS.md": "6987f8ac50d18fc465ee21b0c965a1aafd3eac9c0ad6ebcc3e0dc4199422db87",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/CHANGELOG.md": "63fba6195f164db6a75ebebde0e4cb0e98b91a1d95212f141b4120e0ba38be2e",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/USAGE.md": "c889cf01ddc44736675e0e4299a449b64a56c888787f47d4a1fad995953ee6dd",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs": "77ca2a13c6c50f191d6510812b0f0edeb02c96ae4d493967b235dd3e57766e31",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/misc.rs": "7c39e9ce91ca75dde3e81fc23d0c7e56f7f1fe1137bd71960d2a673d41388cca",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/tests.rs": "170b4f50dcd37acac31a8f29b8a8917e61c00fe789b2f7f6a15a73d5f57f647a",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/audit_cancellation.rs": "5d349ee35b20cd01ef9a308b34ec6471f100c4c69b6e3869de81882b9ef93e97",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/stream_clock.rs": "67117cb8e384deb4ff894616e546fe0994706f9b7275f3316de1b82213894084"
+  },
+  "baseline": "xtc-rear-diffraction-baseline.json",
+  "initial_core": "xtc-rear-diffraction-core.json",
+  "gates": "xtc-rear-diffraction-gates.json",
+  "core_passed": 186,
+  "full_matrix_passed": 244,
+  "existing_ignored": 1,
+  "signed_projection_probes": 4326,
+  "maximum_projection_error_m": 3.966684486433891e-08,
+  "cartesian_poses": 102,
+  "mirror_cases": 216,
+  "rendered_cases": 120,
+  "zero_heap_cases": 60,
+  "latency_samples": 2048,
+  "limitations": [
+    "Fixed ipsilateral/contralateral assignment needs continuous four-path model correction at median crossings.",
+    "No exact finite-distance/frequency-dependent diffraction or measured HRTF/device/listening validation.",
+    "Nominal acoustic conformance failures remain; front/default coefficients unchanged."
+  ]
+}

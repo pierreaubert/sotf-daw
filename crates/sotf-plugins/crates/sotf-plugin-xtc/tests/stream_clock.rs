@@ -302,6 +302,10 @@ fn lateral_pose_cold_process_and_reset_keep_latency_and_zero_heap() {
             (-0.1, 0.0, -0.5),
             (0.0, 0.0, 0.5),
             (0.04, 20.0, 0.5),
+            (0.0, 90.0, 0.0),
+            (0.0, -90.0, 0.0),
+            (0.1, 75.0, 0.5),
+            (-0.1, -75.0, 0.5),
         ] {
             for mode in ["phase_only", "explicit_delay"] {
                 let mut plugin = XtcPlugin::new(

@@ -123,7 +123,7 @@ fn pose_paths_match_independent_f64_geometry() {
     let mut failures = 0;
     for x in [-0.5, -0.1, 0.0, 0.1, 0.5] {
         for z in [-0.5, 0.0, 0.5] {
-            for yaw in [-60.0, -15.0, 0.0, 15.0, 60.0] {
+            for yaw in [-90.0, -60.0, -15.0, 0.0, 15.0, 60.0, 90.0] {
                 if x == 0.0 && yaw == 0.0 {
                     continue;
                 }
@@ -152,11 +152,12 @@ fn pose_paths_match_independent_f64_geometry() {
                 let right_angle = incidence(right_x);
                 let left = left_x.hypot(forward);
                 let right = right_x.hypot(forward);
-                // The legacy spherical-head diffraction approximation remains;
-                // this oracle independently checks its Cartesian input geometry.
+                // The antipodal spherical-head diffraction approximation uses
+                // the shorter front/rear arc after Cartesian input geometry.
                 let diffraction = |angle: f64| {
                     let t = angle.abs().min(std::f64::consts::PI);
-                    f64::from(params.head_radius_m) * (t + t.sin())
+                    let arc = t.min(std::f64::consts::PI - t);
+                    f64::from(params.head_radius_m) * (arc + t.sin())
                 };
                 let left_cross = right + diffraction(right_angle);
                 let right_cross = left + diffraction(left_angle);
@@ -197,6 +198,9 @@ fn mirrored_pose_swaps_both_filter_rows_and_columns() {
                         (0.1, 0.0, -0.5),
                         (0.0, 15.0, 0.5),
                         (0.04, -20.0, 0.5),
+                        (0.0, 90.0, 0.0),
+                        (0.0, -90.0, 0.0),
+                        (0.1, 75.0, 0.5),
                     ] {
                         let p = XtcPluginParams {
                             head_offset_x: x,

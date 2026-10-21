@@ -48,10 +48,12 @@ pub(crate) fn soft_limit_complex_magnitude(c: Complex<f32>, max_mag: f32) -> Com
 #[inline]
 pub(crate) fn woodworth_diffraction_path(angle_rad: f32, head_radius: f32) -> f32 {
     let theta = angle_rad.abs().min(PI);
-    // Standard Woodworth formula for spherical head diffraction:
-    // extra_path = a * (theta + sin(theta))
-    // Valid for all angles from 0 to PI.
-    head_radius * (theta + theta.sin())
+    // Antipodal spherical ears have front/back symmetry. Fold the rear
+    // hemisphere before evaluating the shorter arc, so rear median incidence
+    // has zero ITD. Aaronson & Hartmann (2014), equations 1a/1b:
+    // https://pmc.ncbi.nlm.nih.gov/articles/PMC3985894/
+    let folded = if theta <= PI / 2.0 { theta } else { PI - theta };
+    head_radius * (folded + folded.sin())
 }
 
 /// Compute the angular separation between a sound source and the contralateral ear.
@@ -102,4 +104,43 @@ pub(super) fn condition_number_2x2(
 #[inline]
 pub(super) fn sigmoid_smooth(x: f32, width: f32) -> f32 {
     1.0 / (1.0 + (-x / width).exp())
+}
+
+#[cfg(test)]
+mod rear_diffraction_tests {
+    use super::*;
+
+    #[test]
+    fn antipodal_diffraction_matches_independent_interaural_projection() {
+        let mut cases = 0;
+        let mut failures = 0;
+        let mut maximum_error = 0.0_f64;
+        for radius in [0.07_f32, 0.0875, 0.11] {
+            for quarter_degrees in 0..=720 {
+                for sign in [-1.0_f32, 1.0] {
+                    let angle = sign * (quarter_degrees as f32 * 0.25).to_radians();
+                    // The source projection on the interaural axis determines
+                    // the shorter spherical arc. This f64 oracle does not use
+                    // the production front/rear branch.
+                    let projection = f64::from(angle).sin().abs();
+                    let expected = f64::from(radius) * (projection.asin() + projection);
+                    let actual = woodworth_diffraction_path(angle, radius);
+                    let error = (f64::from(actual) - expected).abs();
+                    maximum_error = maximum_error.max(error);
+                    failures += usize::from(error > 5e-8);
+                    cases += 1;
+                }
+            }
+            assert_eq!(woodworth_diffraction_path(0.0, radius), 0.0);
+            let rear = woodworth_diffraction_path(PI, radius);
+            println!(
+                "rear_median radius={radius} extra_path_m={rear} delay_us={}",
+                rear / 343.0 * 1e6
+            );
+        }
+        println!(
+            "rear_diffraction cases={cases} maximum_error_m={maximum_error} failed_values={failures}"
+        );
+        assert_eq!(failures, 0);
+    }
 }

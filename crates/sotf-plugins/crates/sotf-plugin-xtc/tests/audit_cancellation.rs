@@ -186,6 +186,10 @@ fn rendered_pose_mirrors_both_columns_and_keeps_callback_partition_invariance() 
                 (0.0, 0.0, 0.5),
                 (0.1, 0.0, -0.5),
                 (0.04, 20.0, 0.5),
+                (0.0, 90.0, 0.0),
+                (0.0, -90.0, 0.0),
+                (0.1, 75.0, 0.5),
+                (-0.1, -75.0, 0.5),
             ] {
                 let params = XtcPluginParams {
                     head_offset_x: x,

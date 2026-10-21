@@ -1,3 +1,13 @@
+# Unreleased rear-hemisphere diffraction audit (2026-10-21)
+
+- Evaluate the shorter rear spherical arc for source azimuths beyond 90 degrees.
+  Directly rear incidence now has zero extra interaural path, consistent with
+  antipodal spherical ears. Front-hemisphere/default coefficients stay unchanged.
+- Add a 4,326-point signed/radius sweep against independent interaural projection
+  and extend pose/render/reset/heap regressions through +/-90-degree yaw.
+- This repairs the geometric extra-path helper. Fixed near/far ear assignment,
+  ear-surface paths and head-shadow calibration remain separate model limitations.
+
 # Unreleased Cartesian source geometry audit (2026-10-21)
 
 - Keep speakers fixed in Cartesian world coordinates and subtract listener X/Z

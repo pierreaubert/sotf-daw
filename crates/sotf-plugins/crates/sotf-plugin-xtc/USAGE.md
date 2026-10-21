@@ -274,3 +274,12 @@ uses these center ranges as references for its spherical diffraction approximati
 not exact speaker-to-ear-surface distances. Pinna shaping follows the translated
 incidence. Large-yaw ear classification and measured head/room calibration remain
 limitations; these coordinate checks do not certify cancellation at a real listener.
+
+The geometric extra-path approximation uses the shorter front or rear spherical
+arc. For source azimuth magnitude `theta` in `[0, pi]`, set
+`phi = min(theta, pi - theta)` and use `a * (phi + sin(phi))` for the
+nonnegative path difference. This is the plane-wave, antipodal-ear Woodworth
+approximation, not an exact finite-distance or frequency-dependent diffraction
+solution. See [Aaronson and Hartmann (2014), equations 1a–1b](https://pmc.ncbi.nlm.nih.gov/articles/PMC3985894/).
+The model still assigns paths to fixed speaker/ear labels; full yaw-dependent
+near/far reassignment and continuous four-path normalization remain open.
