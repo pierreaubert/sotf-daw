@@ -2178,7 +2178,19 @@
             "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-baseline.json",
             "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json"
           ],
-          "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; active structural restore retains old DSP until explicit reactivation. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
+          "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; direct pending-parameter replacement retains old DSP until explicit reactivation; actual native state.load was not covered by that test. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
+        },
+        {
+          "requirement": "Prevent native Upmixer state loading from rebuilding active FFT state and changing latency before host restart.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/plugins-nih/src/params.rs",
+            "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs",
+            "crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/upmixer-clap-state-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upmixer-clap-state-validation.json"
+          ],
+          "result": "Exported CLAP entry/factory regression accepted an active raw-bypass snapshot and changed latency 2048 -> 0 before the host accepted restart. Upmixer snapshots are now inactive/control-thread only, including scalar-only, identical and sparse snapshots; rejection precedes parameter mutation and audio-thread allocating restore. Live scalar automation paths are unchanged. Five focused tests cover actual CLAP state streams, ports/latency, refusal without notifications or history loss, exact inactive retry and malformed streams. Sixteen independently constructed DSP comparisons across 44.1/48/96/192 kHz and raw-bypass/FFT modes are exactly equal through irregular callbacks and zero continuation; 0/1024/2048-frame latency is reported before audio. 132 shared parameter tests, three existing Upmixer wrapper tests, formatting and strict all-target release Clippy pass. Earlier wrapper-context tests did not exercise actual state.load; their coverage is now clarified. In-process callbacks do not establish dynamic-loader packaging, exported VST3, external DAW PDC, device deadlines or perceptual quality."
         }
       ],
       "evidence": [
@@ -2210,10 +2222,15 @@
           "kind": "validated_host_structural_admission",
           "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json",
           "finding": "Concrete queued bypass/stale PDC gap fixed. Actual built-in graph compensation and native activation context contracts validated; exported ABI/external DAW and device/perceptual work remain separate."
+        },
+        {
+          "kind": "validated_native_clap_snapshot_lifecycle",
+          "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-clap-state-validation.json",
+          "finding": "Actual state.load bypassed the earlier direct-wrapper guard and changed active DSP latency before restart. Inactive-only snapshot admission now retains parameters, history and latency, with exact native/reference audio and inactive retry. Exported VST3/external DAW validation stays open."
         }
       ],
       "remaining": [
-        "Validate exported native CLAP/VST3 restart/PDC behavior in external DAWs; built-in host admission/compensation and generated-wrapper activation contexts are verified, with explicit reactivation required.",
+        "Validate exported VST3 and external DAW restart/PDC behavior, including dynamically loaded artifacts. Actual in-process CLAP snapshot lifecycle and built-in host compensation are verified; Upmixer snapshots require deactivation, load and reactivation.",
         "Extend real recorded speech/music center leakage, mono/downmix compatibility and onset/perceptual quality; current recorded automation probes do not establish separation or localization quality.",
         "Measure worst-layout and frequent-control-update deadline distribution under device load; representative standard steady QA is insufficient."
       ]
@@ -2334,7 +2351,19 @@
           "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-baseline.json",
           "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json"
         ],
-        "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; active structural restore retains old DSP until explicit reactivation. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
+        "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; direct pending-parameter replacement retains old DSP until explicit reactivation; actual native state.load was not covered by that test. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
+      },
+      {
+        "requirement": "Prevent native Upmixer state loading from rebuilding active FFT state and changing latency before host restart.",
+        "status": "implemented_and_verified",
+        "evidence": [
+          "crates/sotf-plugins/crates/plugins-nih/src/params.rs",
+          "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs",
+          "crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs",
+          "audit/artifacts/plugin-audit-20261018/upmixer-clap-state-baseline.json",
+          "audit/artifacts/plugin-audit-20261018/upmixer-clap-state-validation.json"
+        ],
+        "result": "Exported CLAP entry/factory regression accepted an active raw-bypass snapshot and changed latency 2048 -> 0 before the host accepted restart. Upmixer snapshots are now inactive/control-thread only, including scalar-only, identical and sparse snapshots; rejection precedes parameter mutation and audio-thread allocating restore. Live scalar automation paths are unchanged. Five focused tests cover actual CLAP state streams, ports/latency, refusal without notifications or history loss, exact inactive retry and malformed streams. Sixteen independently constructed DSP comparisons across 44.1/48/96/192 kHz and raw-bypass/FFT modes are exactly equal through irregular callbacks and zero continuation; 0/1024/2048-frame latency is reported before audio. 132 shared parameter tests, three existing Upmixer wrapper tests, formatting and strict all-target release Clippy pass. Earlier wrapper-context tests did not exercise actual state.load; their coverage is now clarified. In-process callbacks do not establish dynamic-loader packaging, exported VST3, external DAW PDC, device deadlines or perceptual quality."
       }
     ],
     "evidence": [
@@ -2747,6 +2776,15 @@
       ],
       "result": "Fixes admitted raw bypass changing DSP latency 512 -> 0 while host stayed at 512. 156 admission checks, 36 exact real-plugin compensation cases, geometry/reset and native activation tests. 904 host, 227 Upmixer and three targeted native tests pass; strict Clippy passes. Overall stays 35/45.",
       "limitations": "Exported ABI/external-DAW reactivation/PDC and device deadlines/perceptual material remain open. Native checks are generated-wrapper context tests; automatic host reactivation is not implemented."
+    },
+    {
+      "name": "Upmixer native CLAP snapshot lifecycle",
+      "state": "verified_partial",
+      "plugin_ids": [
+        43
+      ],
+      "result": "Exported CLAP entry/factory regression accepted an active raw-bypass snapshot and changed latency 2048 -> 0 before the host accepted restart. Upmixer snapshots are now inactive/control-thread only, including scalar-only, identical and sparse snapshots; rejection precedes parameter mutation and audio-thread allocating restore. Live scalar automation paths are unchanged. Five focused tests cover actual CLAP state streams, ports/latency, refusal without notifications or history loss, exact inactive retry and malformed streams. Sixteen independently constructed DSP comparisons across 44.1/48/96/192 kHz and raw-bypass/FFT modes are exactly equal through irregular callbacks and zero continuation; 0/1024/2048-frame latency is reported before audio. 132 shared parameter tests, three existing Upmixer wrapper tests, formatting and strict all-target release Clippy pass. Earlier wrapper-context tests did not exercise actual state.load; their coverage is now clarified. In-process callbacks do not establish dynamic-loader packaging, exported VST3, external DAW PDC, device deadlines or perceptual quality.",
+      "limitations": "In-process CLAP callbacks only; exported VST3/dynamic-loader/external DAW PDC, device deadlines and perceptual quality remain open. Overall stays 35/45; optional ML stays separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

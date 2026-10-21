@@ -78,16 +78,27 @@ Unsupported legacy compressor sidechain settings also fail explicitly when
 their saved values differ from the historical defaults.
 
 Structural settings retain their existing hidden, non-automatable host
-presentation. If a host restores different structural state while audio is
-active, processing returns an error and silence until the host deactivates
-and reactivates the plugin. Automatic host reactivation is not implemented.
-Ordinary realtime parameter automation continues without reconstruction.
+presentation. If pending structural parameter values differ from the prepared
+DSP, its process callback returns an error and silence until the host deactivates
+and reactivates the plugin. Native snapshot loading follows each plugin's
+additional lifecycle policy. Ordinary realtime parameter automation continues
+without reconstruction.
 
-Upmixer activation tests cover saved raw bypass and low-latency FFT state for
-CLAP and VST3 contexts. The wrapper reports 0/1024/2048 frames to the host before
-audio; an active structural restore retains the old DSP and reported latency,
-returns error/silence, then publishes the new latency only on reactivation.
-The packaged Upmixer bus geometry remains fixed at stereo input/5.1 output.
+Upmixer snapshots must be loaded on the control thread while deactivated.
+Active loads, including identical, scalar-only and sparse snapshots, are rejected
+before parameter mutation or DSP reconstruction. The host must deactivate, load,
+then reactivate; refused loads preserve current audio, FFT history and reported
+latency. Live scalar parameter automation remains available. Audio-thread snapshot
+restoration is rejected before NIH enters its allocating restore path.
+
+Exported CLAP entry/factory tests exercise actual save/load streams, latency and
+port queries, activation and audio callbacks. Saved raw bypass and low-latency
+FFT states report 0/1024/2048 frames before audio, with fixed stereo input/5.1
+output. Separately constructed DSP references cover irregular callbacks and zero
+continuation at 44.1/48/96/192 kHz. Earlier generated-wrapper CLAP/VST3 context
+tests cover initialization and direct pending-parameter changes; they do not
+exercise native state loading. Exported VST3 and external DAW restart/PDC behavior
+still need validation.
 
 Saturation includes saved mode and oversampling choices. Native wrappers apply
 the plugin's requested 2x/4x oversampling before initialization and report the

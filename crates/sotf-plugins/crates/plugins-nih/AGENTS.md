@@ -47,3 +47,9 @@ eq, compressor, limiter, gate, gain, delay, expander, crossfeed, saturation, den
 - Uses `plugins-bridge::create_plugin()` to instantiate the underlying SOTF plugin
 - The `assert_process_allocs` nih-plug feature is enabled to catch allocations in the audio thread
 - All plugins default to 2 channels (stereo)
+
+## Upmixer snapshot lifecycle
+
+- Upmixer state snapshots are inactive/control-thread only. Both `DynamicParams::validate_state` and the macro's `state_restore_allows_audio_thread` gate are required: NIH can otherwise rebuild active FFT state and change latency before host restart.
+- Reject all active snapshots before mutation, including identical/scalar/sparse states; ordinary scalar automation stays live. Retry by deactivating, loading and reactivating.
+- `native_upmixer_clap_tests` uses the exported CLAP entry/factory and real state/audio callbacks. Generated wrapper-context tests alone do not validate native state loading. Exported VST3/external DAW coverage remains separate.

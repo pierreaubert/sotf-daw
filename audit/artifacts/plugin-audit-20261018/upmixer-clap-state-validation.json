@@ -1,0 +1,330 @@
+{
+  "prior_test_runs": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "native_upmixer_clap_tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 5 tests\ntest native_upmixer_clap_tests::upmixer_snapshot_policy_rejects_active_and_audio_thread_before_mutation ... ok\nactive_load accepted=false latency_before=2048 latency_after=2048 restart_delta=0\ntest native_upmixer_clap_tests::exported_clap_truncated_or_invalid_streams_preserve_state ... ok\ntest native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart ... ok\nexported_clap_audio rate=44100 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_reject processing=false snapshots=4 history_error=0 retry_latency=0\nexported_clap_audio rate=44100 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_reject processing=true snapshots=4 history_error=0 retry_latency=0\ntest native_upmixer_clap_tests::exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry ... ok\nexported_clap_audio rate=48000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=true latency=0 frames=12291 maximum_error=0\ntest native_upmixer_clap_tests::exported_clap_inactive_state_latency_and_audio_match_direct_dsp ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 241 filtered out; finished in 0.07s\n\n",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 1m 37s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    }
+  ],
+  "review_updates": "Added explicit finite-history assertion, exact rejected-snapshot retry and Clippy-recommended fixed-array iteration. Prior lint failure retained below.",
+  "initial_commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "native_upmixer_clap_tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 5 tests\nactive_load accepted=false latency_before=2048 latency_after=2048 restart_delta=0\ntest native_upmixer_clap_tests::upmixer_snapshot_policy_rejects_active_and_audio_thread_before_mutation ... ok\ntest native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart ... ok\ntest native_upmixer_clap_tests::exported_clap_truncated_or_invalid_streams_preserve_state ... ok\nexported_clap_audio rate=44100 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_reject processing=false snapshots=4 history_error=0 retry_latency=0\nexported_clap_audio rate=44100 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_reject processing=true snapshots=4 history_error=0 retry_latency=0\ntest native_upmixer_clap_tests::exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry ... ok\nexported_clap_audio rate=44100 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=true latency=0 frames=12291 maximum_error=0\ntest native_upmixer_clap_tests::exported_clap_inactive_state_latency_and_audio_match_direct_dsp ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 241 filtered out; finished in 0.25s\n\n",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 5m 01s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "params::"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 132 tests\ntest params::ambisonics_custom::tests::decode_accepts_dsp_layout_json ... ok\ntest params::ambisonics_custom::tests::decode_rejects_malformed_and_invalid_payloads ... ok\ntest params::ambisonics_custom::tests::encode_roundtrips_decode ... ok\ntest params::ambisonics_custom::tests::field_key_matches_host_schema ... ok\ntest params::ambisonics_custom::tests::speaker_ceiling_matches_decoder_bound ... ok\ntest params::ambisonics_custom_tests::default_params_carry_no_custom_state ... ok\ntest params::ambisonics_custom::tests::target_index_matches_host_schema ... ok\ntest params::ambisonics_custom_tests::all_lfe_geometry_rejected_at_staging ... ok\ntest params::ambisonics_custom_tests::attempt_drop_discards_pending_commit_publishes ... ok\ntest params::ambisonics_custom_tests::custom_layout_setter_bounds ... ok\ntest params::ambisonics_custom_tests::custom_negotiation_matches_host_for_7_1_2 ... ok\ntest params::ambisonics_custom_tests::custom_permutation_matches_host_for_7_1_4 ... ok\ntest params::ambisonics_custom_tests::dual_band_custom_drains_within_bound ... ok\ntest params::ambisonics_custom_tests::custom_constructs_and_processes_at_order_7 ... ok\ntest params::ambisonics_custom_tests::custom_render_is_partition_invariant ... ok\ntest params::ambisonics_custom_tests::crossrate_custom_processes_finite_nonzero ... ok\ntest params::ambisonics_custom_tests::custom_save_reload_is_bit_exact ... ok\ntest params::ambisonics_custom_tests::malformed_restore_fails_and_preserves_accepted ... ok\ntest params::ambisonics_custom_tests::malformed_then_fieldless_named_recovers_cleanly ... ok\ntest params::ambisonics_custom_tests::fieldless_target_8_restore_fails_despite_committed ... ok\ntest params::ambisonics_custom_tests::missing_survives_attempt_drop_and_refuses_until_valid_stage ... ok\ntest params::ambisonics_custom_tests::validate_state_gates_custom_field ... ok\ntest params::analog_limiter_restart_tests::analog_model_is_a_visible_manual_restart_control ... ok\ntest params::ambisonics_custom_tests::named_construction_ignores_stale_staged_geometry ... ok\ntest params::ambisonics_custom_tests::negotiate_selects_wire_expectations_per_format ... ok\ntest params::ambisonics_custom_tests::serialize_omits_field_for_named_includes_pending ... ok\ntest params::ambisonics_custom_tests::negotiation_rejects_width_order_and_wire_mismatches ... ok\ntest params::ambisonics_custom_tests::wide_64ch_constructs_at_macro_level_with_honest_format_rejections ... ok\ntest params::analog_limiter_restart_tests::restartable_model_value_does_not_mask_lookahead_guard ... ok\ntest params::ambisonics_custom_tests::serialize_omits_stale_committed_after_custom_to_named ... ok\ntest params::configuration::tests::bandsplit_constructor_translates_choices_and_builds_selected_widths ... ok\ntest params::ambisonics_custom_tests::stereo_constructs_but_reports_format_rejection_reasons ... ok\ntest params::ambisonics_custom_tests::single_band_custom_reaches_exact_zero_tail ... ok\ntest params::ambisonics_custom_tests::target_8_without_geometry_fails_construction ... ok\ntest params::analog_limiter_restart_tests::all_six_models_construct_readable_and_render ... ok\ntest params::de_esser_restart_tests::structural_lookahead_split_and_key_are_visible_manual_restart_controls ... ok\ntest params::declick_restart_tests::restartable_declick_values_do_not_mask_nonrestartable_guards ... ok\ntest params::de_esser_restart_tests::restartable_deesser_values_do_not_mask_other_structural_changes ... ok\ntest params::configuration::tests::dynamiceq_constructor_serializes_all_shapes_and_late_band_slots ... ok\ntest params::declick_restart_tests::structural_declick_controls_are_visible_manual_restart_controls ... ok\ntest params::default_sync_tests::aae_room_preset_schema_matches_setup_only_runtime_contract ... ok\ntest params::default_sync_tests::compressor_detector_roundtrip_restores_and_processes ... ok\ntest params::default_sync_tests::native_band_split_constructs_with_requested_cutoff_at_fractional_low_rate ... ok\ntest params::default_sync_tests::native_hiss_uses_effective_low_rate_cutoff_without_changing_host_request ... ok\ntest params::dynamic_eq_restart_tests::restartable_shelf_values_do_not_mask_other_structural_changes ... ok\ntest params::default_sync_tests::nondefault_realtime_values_preserve_runtime_types ... ok\ntest params::dynamic_eq_restart_tests::shelf_shape_and_slope_are_visible_manual_restart_controls ... ok\ntest params::hiss_profile_tests::hiss_native_clear_runtime_revision_preserves_semantic_empty_state ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_edges_allocate_nothing ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_momentaries_never_replay_or_rebuild ... ok\ntest params::hiss_profile_tests::hiss_native_legacy_generic_construction_carries_no_profile ... ok\ntest params::hiss_profile_tests::hiss_native_legacy_generation_preserves_nonempty_profile_with_canonical_save ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_clear_reports_explicit_null ... ok\ntest params::default_sync_tests::legacy_choice_ids_preserve_saved_state_identity ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_cancel_preserves_accepted_profile ... ok\ntest params::hiss_profile_tests::hiss_native_crossrate_v2_matches_explicit_v1_fallback ... ok\ntest params::hiss_profile_tests::hiss_native_no_action_replay_and_momentaries_excluded ... ok\ntest params::hiss_profile_tests::hiss_native_process_path_allocates_and_locks_nothing ... ok\ntest params::hiss_profile_tests::hiss_native_malformed_rejected_live_retained ... ok\ntest params::hiss_profile_tests::hiss_native_busy_never_drops_blob ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_capture_save_restore_bitexact_full_eof ... ok\ntest params::hiss_profile_tests::hiss_native_partial_omission_null_clear_and_use_off_retain ... ok\ntest params::hiss_profile_tests::hiss_native_busy_with_no_known_profile_emits_retry_marker ... ok\ntest params::hiss_profile_tests::hiss_native_time_domain_v1_capture_roundtrip_zero_tail ... ok\ntest params::hiss_profile_tests::hiss_wiring_keeps_requested_cutoff_and_processes_at_low_rate ... ok\ntest params::native_eq_admission_tests::control_thread_retry_migrates_legacy_and_stages_pending_route ... ok\ntest params::native_eq_admission_tests::audio_thread_refusal_leaves_populated_instance_untouched ... ok\ntest params::hiss_profile_tests::hiss_native_wrapper_malformed_preserves_history ... ok\ntest params::native_eq_admission_tests::eq_hook_refuses_every_restore_shape_without_mutation ... ok\ntest params::native_eq_admission_tests::generated_wrappers_report_eq_refusal_and_unrelated_compat ... ok\ntest params::native_eq_admission_tests::malformed_restores_reject_transactionally_on_both_threads ... ok\ntest params::native_eq_route_tests::apply_commits_pair_route_and_failed_apply_keeps_the_previous_state ... ok\ntest params::native_eq_route_tests::eq_native_channel_maps_are_permutations_within_each_layout ... ok\ntest params::native_eq_route_tests::eq_native_layouts_cover_all_eleven_speaker_widths ... ok\ntest params::native_eq_route_tests::construction_controls_are_visible_non_automatable_restart_parameters ... ok\ntest params::native_eq_route_tests::legacy_migration::corrected_apply_recovers_after_restored_route_exceeds_layout_width ... ok\ntest params::native_eq_route_tests::legacy_migration::current_version_missing_placement_is_rejected_without_migration_repair ... ok\ntest params::native_eq_route_tests::legacy_migration::invalid_legacy_order_cannot_become_a_valid_current_choice_index ... ok\ntest params::native_eq_route_tests::legacy_migration::synthetic_legacy_missing_placements_migrates_to_complete_implicit_route ... ok\ntest params::native_eq_route_tests::malformed_saved_route_is_refused_without_replacing_committed_route ... ok\ntest params::native_eq_route_tests::state_restore_commits_explicit_route_and_schema_failure_is_transactional ... ok\ntest params::native_eq_route_tests::wrong_integer_field_types_are_refused_before_commit_or_draft_publication ... ok\ntest params::scalar_getter_tests::analog_limiter ... ok\ntest params::scalar_getter_tests::compressor ... ok\ntest params::scalar_getter_tests::crossfeed ... ok\ntest params::scalar_getter_tests::channel_mute_solo ... ok\ntest params::scalar_getter_tests::de_esser ... ok\ntest params::scalar_getter_tests::declick ... ok\ntest params::scalar_getter_tests::denoiser_audition ... ok\ntest params::scalar_getter_tests::denoiser_curve ... ok\ntest params::scalar_getter_tests::dynamic_eq ... ok\ntest params::scalar_getter_tests::denoiser ... ok\ntest params::scalar_getter_tests::hiss_reducer ... ok\ntest params::scalar_getter_tests::expander ... ok\ntest params::scalar_getter_tests::multiband_compressor ... ok\ntest params::scalar_getter_tests::multiband_expander ... ok\ntest params::scalar_getter_tests::speech_denoiser ... ok\ntest params::scalar_getter_tests::spectral_compressor ... ok\ntest params::scalar_setter_tests::channel_all_exported_controls ... ok\ntest params::scalar_setter_tests::channel_controls_match_independent_gain_arithmetic ... ok\ntest params::scalar_setter_tests::compressor_all_exported_controls ... ok\ntest params::scalar_getter_tests::stereo_imager ... ok\ntest params::scalar_setter_tests::dynamic_eq_all_exported_controls ... ok\ntest params::scalar_setter_tests::denoiser_all_exported_controls ... ok\ntest params::scalar_setter_tests::imager_all_exported_controls ... ok\ntest params::scalar_setter_tests::imager_width_matches_independent_mid_side_arithmetic ... ok\ntest params::scalar_getter_tests::transient_shaper ... ok\ntest params::scalar_setter_tests::invalid_scalar_writes_preserve_existing_values ... ok\ntest params::hiss_profile_tests::hiss_native_wrapper_capture_save_restore_renders_bitexact ... ok\ntest params::speech_restore_tests::speech_audio_thread_restore_is_refused ... ok\ntest params::speech_restore_tests::speech_model_selector_is_visible_manual_structural ... ok\ntest params::speech_restore_tests::failed_speech_restore_preserves_history_and_processing ... ok\ntest params::scalar_setter_tests::transient_all_exported_controls ... ok\ntest params::scalar_setter_tests::transient_trim_matches_independent_one_pole_gain ... ok\ntest params::speech_restore_tests::speech_preflight_accepts_valid_and_migrating_states ... ok\ntest params::speech_restore_tests::speech_preflight_rejects_invalid_scalars ... ok\ntest params::tests::ambisonics_restore_marker_is_consumed_on_match_and_mismatch ... ok\ntest params::tests::bandsplit_restore_marker_survives_conflict_and_clears_only_on_success ... ok\ntest params::scalar_setter_tests::speech_bypass_changes_on_first_sync_without_allocating ... ok\ntest params::scalar_setter_tests::multiband_compressor_all_exported_controls ... ok\ntest params::tests::linear_structural_parameters_are_not_realtime_automation_entries ... ok\ntest params::tests::structural_fingerprint_changes_with_restored_constructor_state ... ok\ntest params::speech_restore_tests::valid_speech_restore_applies_and_renders ... ok\ntest params::scalar_setter_tests::speech_large_callbacks_are_cold_allocation_free_and_preserve_sentinels ... ok\ntest params::tests::ten_band_restored_state_has_a_complete_constructor_schema ... ok\ntest params::tests::structural_linear_state_builds_adapter_with_matching_latency_and_bands ... ok\ntest params::tests::linear_phase_missing_placement_predates_control_and_stays_legacy ... ok\ntest params::tests::linear_phase_placement_indices_match_public_schema_and_dsp_roundtrip ... ok\ntest params::tests::linear_phase_filter_types_match_template_and_dsp_roundtrip ... ok\ntest params::hiss_profile_tests::hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof ... ok\ntest params::default_sync_tests::all_wrapper_defaults_sync_to_initialized_plugins ... ok\ntest params::default_sync_tests::every_exposed_structural_control_restores_or_rejects_unsupported_layout ... ok\n\ntest result: ok. 132 passed; 0 failed; 0 ignored; 0 measured; 114 filtered out; finished in 13.17s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 2.47s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "upmixer_latency_tests"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 2 tests\ntest wrapper::process_tests::upmixer_latency_tests::upmixer_active_structural_restore_fails_closed_until_latency_reactivation ... ok\ntest wrapper::process_tests::upmixer_latency_tests::upmixer_restored_bypass_and_fft_state_report_prepared_latency_before_audio ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 244 filtered out; finished in 0.01s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 3.28s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "wrapper::process_tests::upmixer_routing",
+        "--",
+        "--exact"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 1 test\ntest wrapper::process_tests::upmixer_routing ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 245 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 4.04s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Checking sotf-plugin-analog-common v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-common)\n    Checking sotf-plugin-resampler v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler)\n    Checking sotf-plugin-limiter v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter)\n    Checking sotf-plugin-gain v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain)\n    Checking sotf-plugin-channel-mute-solo v0.5.66 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo)\n    Checking sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n    Checking sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)\n    Checking sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n    Checking sotf-plugin-delay v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-delay)\n    Checking sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)\n    Checking sotf-plugin-crossfeed v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed)\n    Checking sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Checking sotf-plugin-spectral-compressor v0.5.25 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor)\n    Checking sotf-plugin-band-split v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split)\n    Checking sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Checking sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)\n    Checking sotf-plugin-analog-compressor v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-compressor)\n    Checking sotf-plugin-matrix v0.5.93 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix)\n    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Checking sotf-plugin-analog-eq v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-eq)\n    Checking sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)\n    Checking sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Checking sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Checking sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)\n    Checking sotf-plugin-ambisonics v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)\n    Checking sotf-plugin-dynamic-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)\n    Checking sotf-plugin-transient-shaper v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper)\n    Checking sotf-plugin-saturation v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation)\n    Checking sotf-plugin-band-merge v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-merge)\n    Checking sotf-plugin-loudness-compensation v0.5.5 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation)\n    Checking sotf-plugin-downmix v0.5.28 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)\n    Checking sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n    Checking sotf-plugin-ab-compare v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare)\n    Checking sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)\n    Checking sotf-plugin-de-esser v0.5.11 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-de-esser)\n    Checking sotf-plugin-stereo-imager v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager)\n    Checking sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n    Checking sotf-plugin-dither v0.5.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dither)\n    Checking sotf-plugin-crossover v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover)\n    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Checking sotf-plugin-mono-to-stereo v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo)\n    Checking sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)\n    Checking plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Checking sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)\n    Checking plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nerror: using `chunks_exact` with a constant chunk size\n   --> crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs:622:39\n    |\n622 |         for (frame, source) in actual.chunks_exact(6).zip(input) {\n    |                                       ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<6>().0.iter()`\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks\n    = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`\n\nerror: could not compile `plugins-nih` (lib test) due to 1 previous error\n"
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "params::"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 132 tests\ntest params::ambisonics_custom::tests::decode_accepts_dsp_layout_json ... ok\ntest params::ambisonics_custom::tests::decode_rejects_malformed_and_invalid_payloads ... ok\ntest params::ambisonics_custom::tests::encode_roundtrips_decode ... ok\ntest params::ambisonics_custom::tests::field_key_matches_host_schema ... ok\ntest params::ambisonics_custom::tests::speaker_ceiling_matches_decoder_bound ... ok\ntest params::ambisonics_custom_tests::default_params_carry_no_custom_state ... ok\ntest params::ambisonics_custom::tests::target_index_matches_host_schema ... ok\ntest params::ambisonics_custom_tests::all_lfe_geometry_rejected_at_staging ... ok\ntest params::ambisonics_custom_tests::attempt_drop_discards_pending_commit_publishes ... ok\ntest params::ambisonics_custom_tests::custom_layout_setter_bounds ... ok\ntest params::ambisonics_custom_tests::custom_negotiation_matches_host_for_7_1_2 ... ok\ntest params::ambisonics_custom_tests::custom_permutation_matches_host_for_7_1_4 ... ok\ntest params::ambisonics_custom_tests::dual_band_custom_drains_within_bound ... ok\ntest params::ambisonics_custom_tests::custom_constructs_and_processes_at_order_7 ... ok\ntest params::ambisonics_custom_tests::custom_render_is_partition_invariant ... ok\ntest params::ambisonics_custom_tests::crossrate_custom_processes_finite_nonzero ... ok\ntest params::ambisonics_custom_tests::custom_save_reload_is_bit_exact ... ok\ntest params::ambisonics_custom_tests::malformed_restore_fails_and_preserves_accepted ... ok\ntest params::ambisonics_custom_tests::malformed_then_fieldless_named_recovers_cleanly ... ok\ntest params::ambisonics_custom_tests::fieldless_target_8_restore_fails_despite_committed ... ok\ntest params::ambisonics_custom_tests::missing_survives_attempt_drop_and_refuses_until_valid_stage ... ok\ntest params::ambisonics_custom_tests::validate_state_gates_custom_field ... ok\ntest params::analog_limiter_restart_tests::analog_model_is_a_visible_manual_restart_control ... ok\ntest params::ambisonics_custom_tests::named_construction_ignores_stale_staged_geometry ... ok\ntest params::ambisonics_custom_tests::negotiate_selects_wire_expectations_per_format ... ok\ntest params::ambisonics_custom_tests::serialize_omits_field_for_named_includes_pending ... ok\ntest params::ambisonics_custom_tests::negotiation_rejects_width_order_and_wire_mismatches ... ok\ntest params::ambisonics_custom_tests::wide_64ch_constructs_at_macro_level_with_honest_format_rejections ... ok\ntest params::analog_limiter_restart_tests::restartable_model_value_does_not_mask_lookahead_guard ... ok\ntest params::ambisonics_custom_tests::serialize_omits_stale_committed_after_custom_to_named ... ok\ntest params::configuration::tests::bandsplit_constructor_translates_choices_and_builds_selected_widths ... ok\ntest params::ambisonics_custom_tests::stereo_constructs_but_reports_format_rejection_reasons ... ok\ntest params::ambisonics_custom_tests::single_band_custom_reaches_exact_zero_tail ... ok\ntest params::ambisonics_custom_tests::target_8_without_geometry_fails_construction ... ok\ntest params::analog_limiter_restart_tests::all_six_models_construct_readable_and_render ... ok\ntest params::de_esser_restart_tests::structural_lookahead_split_and_key_are_visible_manual_restart_controls ... ok\ntest params::declick_restart_tests::restartable_declick_values_do_not_mask_nonrestartable_guards ... ok\ntest params::de_esser_restart_tests::restartable_deesser_values_do_not_mask_other_structural_changes ... ok\ntest params::configuration::tests::dynamiceq_constructor_serializes_all_shapes_and_late_band_slots ... ok\ntest params::declick_restart_tests::structural_declick_controls_are_visible_manual_restart_controls ... ok\ntest params::default_sync_tests::aae_room_preset_schema_matches_setup_only_runtime_contract ... ok\ntest params::default_sync_tests::compressor_detector_roundtrip_restores_and_processes ... ok\ntest params::default_sync_tests::native_band_split_constructs_with_requested_cutoff_at_fractional_low_rate ... ok\ntest params::default_sync_tests::native_hiss_uses_effective_low_rate_cutoff_without_changing_host_request ... ok\ntest params::dynamic_eq_restart_tests::restartable_shelf_values_do_not_mask_other_structural_changes ... ok\ntest params::default_sync_tests::nondefault_realtime_values_preserve_runtime_types ... ok\ntest params::dynamic_eq_restart_tests::shelf_shape_and_slope_are_visible_manual_restart_controls ... ok\ntest params::hiss_profile_tests::hiss_native_clear_runtime_revision_preserves_semantic_empty_state ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_edges_allocate_nothing ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_momentaries_never_replay_or_rebuild ... ok\ntest params::hiss_profile_tests::hiss_native_legacy_generic_construction_carries_no_profile ... ok\ntest params::hiss_profile_tests::hiss_native_legacy_generation_preserves_nonempty_profile_with_canonical_save ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_clear_reports_explicit_null ... ok\ntest params::default_sync_tests::legacy_choice_ids_preserve_saved_state_identity ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_cancel_preserves_accepted_profile ... ok\ntest params::hiss_profile_tests::hiss_native_crossrate_v2_matches_explicit_v1_fallback ... ok\ntest params::hiss_profile_tests::hiss_native_no_action_replay_and_momentaries_excluded ... ok\ntest params::hiss_profile_tests::hiss_native_process_path_allocates_and_locks_nothing ... ok\ntest params::hiss_profile_tests::hiss_native_malformed_rejected_live_retained ... ok\ntest params::hiss_profile_tests::hiss_native_busy_never_drops_blob ... ok\ntest params::hiss_profile_tests::hiss_native_host_action_capture_save_restore_bitexact_full_eof ... ok\ntest params::hiss_profile_tests::hiss_native_partial_omission_null_clear_and_use_off_retain ... ok\ntest params::hiss_profile_tests::hiss_native_busy_with_no_known_profile_emits_retry_marker ... ok\ntest params::hiss_profile_tests::hiss_native_time_domain_v1_capture_roundtrip_zero_tail ... ok\ntest params::hiss_profile_tests::hiss_wiring_keeps_requested_cutoff_and_processes_at_low_rate ... ok\ntest params::native_eq_admission_tests::control_thread_retry_migrates_legacy_and_stages_pending_route ... ok\ntest params::native_eq_admission_tests::audio_thread_refusal_leaves_populated_instance_untouched ... ok\ntest params::hiss_profile_tests::hiss_native_wrapper_malformed_preserves_history ... ok\ntest params::native_eq_admission_tests::eq_hook_refuses_every_restore_shape_without_mutation ... ok\ntest params::native_eq_admission_tests::generated_wrappers_report_eq_refusal_and_unrelated_compat ... ok\ntest params::native_eq_admission_tests::malformed_restores_reject_transactionally_on_both_threads ... ok\ntest params::native_eq_route_tests::apply_commits_pair_route_and_failed_apply_keeps_the_previous_state ... ok\ntest params::native_eq_route_tests::eq_native_channel_maps_are_permutations_within_each_layout ... ok\ntest params::native_eq_route_tests::eq_native_layouts_cover_all_eleven_speaker_widths ... ok\ntest params::native_eq_route_tests::construction_controls_are_visible_non_automatable_restart_parameters ... ok\ntest params::native_eq_route_tests::legacy_migration::corrected_apply_recovers_after_restored_route_exceeds_layout_width ... ok\ntest params::native_eq_route_tests::legacy_migration::current_version_missing_placement_is_rejected_without_migration_repair ... ok\ntest params::native_eq_route_tests::legacy_migration::invalid_legacy_order_cannot_become_a_valid_current_choice_index ... ok\ntest params::native_eq_route_tests::legacy_migration::synthetic_legacy_missing_placements_migrates_to_complete_implicit_route ... ok\ntest params::native_eq_route_tests::malformed_saved_route_is_refused_without_replacing_committed_route ... ok\ntest params::native_eq_route_tests::state_restore_commits_explicit_route_and_schema_failure_is_transactional ... ok\ntest params::native_eq_route_tests::wrong_integer_field_types_are_refused_before_commit_or_draft_publication ... ok\ntest params::scalar_getter_tests::analog_limiter ... ok\ntest params::scalar_getter_tests::compressor ... ok\ntest params::scalar_getter_tests::crossfeed ... ok\ntest params::scalar_getter_tests::channel_mute_solo ... ok\ntest params::scalar_getter_tests::de_esser ... ok\ntest params::scalar_getter_tests::declick ... ok\ntest params::scalar_getter_tests::denoiser_audition ... ok\ntest params::scalar_getter_tests::denoiser_curve ... ok\ntest params::scalar_getter_tests::dynamic_eq ... ok\ntest params::scalar_getter_tests::denoiser ... ok\ntest params::scalar_getter_tests::hiss_reducer ... ok\ntest params::scalar_getter_tests::expander ... ok\ntest params::scalar_getter_tests::multiband_compressor ... ok\ntest params::scalar_getter_tests::multiband_expander ... ok\ntest params::scalar_getter_tests::speech_denoiser ... ok\ntest params::scalar_getter_tests::spectral_compressor ... ok\ntest params::scalar_setter_tests::channel_all_exported_controls ... ok\ntest params::scalar_setter_tests::channel_controls_match_independent_gain_arithmetic ... ok\ntest params::scalar_setter_tests::compressor_all_exported_controls ... ok\ntest params::scalar_getter_tests::stereo_imager ... ok\ntest params::scalar_setter_tests::dynamic_eq_all_exported_controls ... ok\ntest params::scalar_setter_tests::denoiser_all_exported_controls ... ok\ntest params::scalar_setter_tests::imager_all_exported_controls ... ok\ntest params::scalar_setter_tests::imager_width_matches_independent_mid_side_arithmetic ... ok\ntest params::scalar_getter_tests::transient_shaper ... ok\ntest params::scalar_setter_tests::invalid_scalar_writes_preserve_existing_values ... ok\ntest params::hiss_profile_tests::hiss_native_wrapper_capture_save_restore_renders_bitexact ... ok\ntest params::speech_restore_tests::speech_audio_thread_restore_is_refused ... ok\ntest params::speech_restore_tests::speech_model_selector_is_visible_manual_structural ... ok\ntest params::speech_restore_tests::failed_speech_restore_preserves_history_and_processing ... ok\ntest params::scalar_setter_tests::transient_all_exported_controls ... ok\ntest params::scalar_setter_tests::transient_trim_matches_independent_one_pole_gain ... ok\ntest params::speech_restore_tests::speech_preflight_accepts_valid_and_migrating_states ... ok\ntest params::speech_restore_tests::speech_preflight_rejects_invalid_scalars ... ok\ntest params::tests::ambisonics_restore_marker_is_consumed_on_match_and_mismatch ... ok\ntest params::tests::bandsplit_restore_marker_survives_conflict_and_clears_only_on_success ... ok\ntest params::scalar_setter_tests::speech_bypass_changes_on_first_sync_without_allocating ... ok\ntest params::scalar_setter_tests::multiband_compressor_all_exported_controls ... ok\ntest params::tests::linear_structural_parameters_are_not_realtime_automation_entries ... ok\ntest params::tests::structural_fingerprint_changes_with_restored_constructor_state ... ok\ntest params::speech_restore_tests::valid_speech_restore_applies_and_renders ... ok\ntest params::scalar_setter_tests::speech_large_callbacks_are_cold_allocation_free_and_preserve_sentinels ... ok\ntest params::tests::ten_band_restored_state_has_a_complete_constructor_schema ... ok\ntest params::tests::structural_linear_state_builds_adapter_with_matching_latency_and_bands ... ok\ntest params::tests::linear_phase_missing_placement_predates_control_and_stays_legacy ... ok\ntest params::tests::linear_phase_placement_indices_match_public_schema_and_dsp_roundtrip ... ok\ntest params::tests::linear_phase_filter_types_match_template_and_dsp_roundtrip ... ok\ntest params::hiss_profile_tests::hiss_native_actual_capture_save_fresh_load_renders_bitexact_with_eof ... ok\ntest params::default_sync_tests::all_wrapper_defaults_sync_to_initialized_plugins ... ok\ntest params::default_sync_tests::every_exposed_structural_control_restores_or_rejects_unsupported_layout ... ok\n\ntest result: ok. 132 passed; 0 failed; 0 ignored; 0 measured; 114 filtered out; finished in 13.17s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 2.47s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "upmixer_latency_tests"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 2 tests\ntest wrapper::process_tests::upmixer_latency_tests::upmixer_active_structural_restore_fails_closed_until_latency_reactivation ... ok\ntest wrapper::process_tests::upmixer_latency_tests::upmixer_restored_bypass_and_fft_state_report_prepared_latency_before_audio ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 244 filtered out; finished in 0.01s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 3.28s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "wrapper::process_tests::upmixer_routing",
+        "--",
+        "--exact"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 1 test\ntest wrapper::process_tests::upmixer_routing ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 245 filtered out; finished in 0.00s\n\n",
+      "stderr": "    Finished `release` profile [optimized] target(s) in 4.04s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "native_upmixer_clap_tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 5 tests\nactive_load accepted=false latency_before=2048 latency_after=2048 restart_delta=0\ntest native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart ... ok\nexported_clap_reject processing=false snapshots=4 history_error=0 retry_latency=0\nexported_clap_reject processing=true snapshots=4 history_error=0 retry_latency=0\ntest native_upmixer_clap_tests::exported_clap_truncated_or_invalid_streams_preserve_state ... ok\ntest native_upmixer_clap_tests::upmixer_snapshot_policy_rejects_active_and_audio_thread_before_mutation ... ok\ntest native_upmixer_clap_tests::exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry ... ok\nexported_clap_audio rate=44100 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=44100 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=48000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=96000 bypass=true low=true latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=false latency=2048 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=false low=true latency=1024 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=false latency=0 frames=12291 maximum_error=0\nexported_clap_audio rate=192000 bypass=true low=true latency=0 frames=12291 maximum_error=0\ntest native_upmixer_clap_tests::exported_clap_inactive_state_latency_and_audio_match_direct_dsp ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 241 filtered out; finished in 0.07s\n\n",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 3m 40s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "    Checking plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 26.33s\n"
+    }
+  ],
+  "tested_source_sha256": {
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs": "cf0f9c359f3c5abb97f323db63761d6dced6760043b057bc849ae34dccedec55",
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs": "953a8dfcffdc414e12fcf17c722fa99b0809f68be2112e2401de77bb4aecb899",
+    "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs": "a5b2bdb64c09654dcfaad3c0b020a46be5803d2f39afb281844ce56c8f70e7b8",
+    "crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs": "8e3b254314cd72e97202407e10debb1456d952ffca086fa2ec206a717f79f126"
+  },
+  "base_commit": "998e8e8e9b99ac4e883a61d44da43b2c093871ac",
+  "status": "passed",
+  "result": "Exported CLAP entry/factory regression accepted an active raw-bypass snapshot and changed latency 2048 -> 0 before the host accepted restart. Upmixer snapshots are now inactive/control-thread only, including scalar-only, identical and sparse snapshots; rejection precedes parameter mutation and audio-thread allocating restore. Live scalar automation paths are unchanged. Five focused tests cover actual CLAP state streams, ports/latency, refusal without notifications or history loss, exact inactive retry and malformed streams. Sixteen independently constructed DSP comparisons across 44.1/48/96/192 kHz and raw-bypass/FFT modes are exactly equal through irregular callbacks and zero continuation; 0/1024/2048-frame latency is reported before audio. 132 shared parameter tests, three existing Upmixer wrapper tests, formatting and strict all-target release Clippy pass. Earlier wrapper-context tests did not exercise actual state.load; their coverage is now clarified. In-process callbacks do not establish dynamic-loader packaging, exported VST3, external DAW PDC, device deadlines or perceptual quality.",
+  "coverage": {
+    "new_native_tests_passed": 5,
+    "shared_parameter_tests_passed": 132,
+    "existing_upmixer_wrapper_tests_passed": 3,
+    "unique_targeted_tests_passed": 140,
+    "direct_dsp_waveform_cases": 16,
+    "maximum_waveform_error": 0,
+    "waveform_tolerance_unchanged": 2e-06,
+    "frames_per_waveform_case": 12291,
+    "history_preservation_cases": 2,
+    "history_error": 0,
+    "snapshot_shapes_rejected_per_active_case": 4,
+    "latency_frames": [
+      0,
+      1024,
+      2048
+    ],
+    "sample_rates_hz": [
+      44100,
+      48000,
+      96000,
+      192000
+    ]
+  },
+  "limits": [
+    "In-process exported CLAP entry/factory callbacks; no dynamic-loader or packaged-artifact validation.",
+    "No exported VST3 or external DAW restart/PDC proof.",
+    "Audio-thread policy hook and preflight tested; no GUI/audio-thread restore ABI simulation.",
+    "No new device-deadline, recorded-material separation or perceptual quality claim.",
+    "Full native library activation stress matrix was not run; these are targeted gates.",
+    "Optional ML work remains in the separate backlog."
+  ],
+  "formatting": {
+    "command": [
+      "rtk",
+      "proxy",
+      "rustfmt",
+      "--check",
+      "--edition",
+      "2024",
+      "--config",
+      "skip_children=true",
+      "crates/sotf-plugins/crates/plugins-nih/src/lib.rs",
+      "crates/sotf-plugins/crates/plugins-nih/src/params.rs",
+      "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs",
+      "crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs"
+    ],
+    "exit_code": 0
+  },
+  "dependency_source_sha256": {
+    "/Users/pierre/.cargo/git/checkouts/sotf-3rdparties-0caf45676cb6921b/d476ae9/nih-plug/src/wrapper/state.rs": "d5ad671f1ce79c55867e1b5001b773f0311f4535b3fac5a9bf38722ad4097d2e",
+    "/Users/pierre/.cargo/git/checkouts/sotf-3rdparties-0caf45676cb6921b/d476ae9/nih-plug/src/wrapper/clap/wrapper.rs": "f5887fb7e2e8bd1f60bf5414839069551d604673814dc32c31c6035164590a99",
+    "/Users/pierre/.cargo/git/checkouts/sotf-3rdparties-0caf45676cb6921b/d476ae9/nih-plug/src/wrapper/vst3/wrapper.rs": "fd0466c5c938d1ae7bc09f970363a9c0921995cd08332cc5c150ddc4172bf31a"
+  },
+  "nih_plug_checkout_revision": "d476ae9bc3165145d4a8e43b6bafbef11b196a04",
+  "math_audio_revision": "d515d16910f4807dd2be429cad5c6c9c7305b906"
+}

@@ -2,9 +2,11 @@
 
 ## Changes
 
-- Verify Upmixer saved raw bypass/low-latency FFT states publish actual latency
-  during CLAP/VST3-context activation; active structural restoration fails closed
-  until reactivation reports the new latency and resumes matching audio.
+- Reject Upmixer snapshots while active or on the audio thread, preserving DSP
+  history and published latency until the host deactivates, loads and reactivates.
+  Exported CLAP tests cover factory/state streams, inactive retry and independent
+  waveform references. Earlier CLAP/VST3-context tests cover direct wrapper
+  initialization; native VST3/external DAW validation remains open.
 
 - Correct CLAP surround capability advertisement for Ambisonics and Crossover; keep the reserved legacy BandSplit VST3 output bus silent when active.
 - Reuse prepared Convolution resources when reactivating unchanged geometry and configuration, allowing reset after the original IR file has been removed.

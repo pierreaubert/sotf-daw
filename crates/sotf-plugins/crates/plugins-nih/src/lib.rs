@@ -70,6 +70,9 @@ mod gui_state_return_tests;
 #[cfg(test)]
 mod limiter_oversampling_tests;
 
+#[cfg(all(test, feature = "upmixer"))]
+mod native_upmixer_clap_tests;
+
 #[cfg(all(test, any(feature = "aec", feature = "crossfeed", feature = "upmixer")))]
 mod clap_param_text_roundtrip_tests;
 

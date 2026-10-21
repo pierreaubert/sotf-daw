@@ -1534,6 +1534,11 @@ macro_rules! sotf_nih_plugin {
             fn state_restore_allows_audio_thread(
                 state: &nih_plug::wrapper::state::PluginState,
             ) -> bool {
+                // Snapshot restoration rebuilds Upmixer FFT resources. This hook
+                // runs before NIH enters its allocating audio-thread restore path.
+                if matches!($plugin_type, "Upmixer") {
+                    return false;
+                }
                 if matches!($plugin_type, "EQ") {
                     return $crate::params::eq_state_restore_allows_audio_thread(state);
                 }

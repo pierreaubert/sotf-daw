@@ -1,0 +1,64 @@
+{
+  "base_commit": "998e8e8e9b99ac4e883a61d44da43b2c093871ac",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-nih",
+    "--release",
+    "--features",
+    "upmixer",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "native_upmixer_clap_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nactive_load accepted=true latency_before=2048 latency_after=0 restart_delta=1\ntest native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart ... FAILED\n\nfailures:\n\nfailures:\n    native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 241 filtered out; finished in 0.02s\n\n",
+  "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 1m 04s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-7b4142cba8b59dfd)\n07:10:56 [ERROR] thread 'native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart' panicked at 'active snapshot replaced DSP before host accepted restart': crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs:399\n   0: backtrace::backtrace::trace::<<backtrace::capture::Backtrace>::create::{closure#0}>\n   1: <backtrace::capture::Backtrace>::create\n   2: <backtrace::capture::Backtrace>::new\n   3: nih_plug::wrapper::util::log_panics::{closure#0}\n   4: std::panicking::panic_with_hook\n   5: std::panicking::panic_handler::{closure#0}\n   6: std::sys::backtrace::__rust_end_short_backtrace::<std::panicking::panic_handler::{closure#0}, !>\n   7: __rustc::rust_begin_unwind\n   8: core::panicking::panic_fmt\n   9: plugins_nih::native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart\n  10: <plugins_nih::native_upmixer_clap_tests::exported_clap_active_structural_load_cannot_change_latency_before_restart::{closure#0} as core::ops::function::FnOnce<()>>::call_once\n  11: test::__rust_begin_short_backtrace::<core::result::Result<(), alloc::string::String>, fn() -> core::result::Result<(), alloc::string::String>>\n  12: test::run_test::{closure#0}\n  13: std::sys::backtrace::__rust_begin_short_backtrace::<test::run_test::{closure#1}, ()>\n  14: <std::thread::lifecycle::spawn_unchecked<test::run_test::{closure#1}, ()>::{closure#1} as core::ops::function::FnOnce<()>>::call_once::{shim:vtable#0}\n  15: <std::sys::thread::unix::Thread>::new::thread_start\n  16: __pthread_exit\n\nerror: test failed, to rerun pass `-p plugins-nih --lib`\n",
+  "harness_compile_attempt": {
+    "base_commit": "998e8e8e9b99ac4e883a61d44da43b2c093871ac",
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-nih",
+      "--release",
+      "--features",
+      "upmixer",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "native_upmixer_clap_tests",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "stdout": "",
+    "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-analog-common v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-common)\n   Compiling sotf-plugin-limiter v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter)\n   Compiling sotf-plugin-resampler v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler)\n   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n   Compiling sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)\n   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n   Compiling sotf-plugin-delay v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-delay)\n   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)\n   Compiling sotf-plugin-channel-mute-solo v0.5.66 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo)\n   Compiling sotf-plugin-gain v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain)\n   Compiling sotf-plugin-dynamic-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)\n   Compiling sotf-plugin-transient-shaper v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper)\n   Compiling sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)\n   Compiling sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)\n   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n   Compiling sotf-plugin-ab-compare v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare)\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)\n   Compiling sotf-plugin-ambisonics v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)\n   Compiling sotf-plugin-matrix v0.5.93 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix)\n   Compiling sotf-plugin-analog-compressor v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-compressor)\n   Compiling sotf-plugin-analog-eq v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-eq)\n   Compiling sotf-plugin-saturation v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation)\n   Compiling sotf-plugin-band-merge v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-merge)\n   Compiling sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)\n   Compiling sotf-plugin-loudness-compensation v0.5.5 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation)\n   Compiling sotf-plugin-downmix v0.5.28 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)\n   Compiling sotf-plugin-stereo-imager v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager)\n   Compiling sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling sotf-plugin-de-esser v0.5.11 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-de-esser)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n   Compiling sotf-plugin-dither v0.5.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dither)\n   Compiling sotf-plugin-mono-to-stereo v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo)\n   Compiling sotf-plugin-crossover v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n   Compiling sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)\n   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n   Compiling sotf-plugin-spectral-compressor v0.5.25 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor)\n   Compiling sotf-plugin-crossfeed v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed)\n   Compiling sotf-plugin-band-split v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n   Compiling sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)\n   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nerror[E0369]: binary operation `==` cannot be applied to type `std::collections::BTreeMap<std::string::String, ParamValue>`\n   --> crates/sotf-plugins/crates/plugins-nih/src/native_upmixer_clap_tests.rs:404:5\n    |\n404 |     assert_eq!(subject.saved().params, before.params);\n    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |     |\n    |     std::collections::BTreeMap<std::string::String, ParamValue>\n    |     std::collections::BTreeMap<std::string::String, ParamValue>\n    |\nnote: `ParamValue` does not implement `PartialEq`\n   --> /Users/pierre/.cargo/git/checkouts/sotf-3rdparties-0caf45676cb6921b/d476ae9/nih-plug/src/wrapper/state.rs:18:1\n    |\n 18 | pub enum ParamValue {\n    | ^^^^^^^^^^^^^^^^^^^ `ParamValue` is defined in another crate\n\nFor more information about this error, try `rustc --explain E0369`.\nerror: could not compile `plugins-nih` (lib test) due to 1 previous error\n"
+  },
+  "expected_regression_failure": true,
+  "observed": {
+    "active_load_accepted": true,
+    "latency_before_frames": 2048,
+    "latency_after_frames": 0,
+    "restart_delta": 1,
+    "host_restart_accepted": false
+  },
+  "finding": "Actual exported CLAP entry/factory state.load reinitialized active Upmixer and published new latency before the host accepted restart. Earlier direct wrapper-context parameter replacement did not exercise this path.",
+  "production_source_sha256_at_base": {
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs": "2845d299bfc472e9eb4f865003c94fd2e0c7ee0778dcdfdb2d2082a6dd9111b7",
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs": "5850c18fbc9361b870606ce328713d16c35059a0ed9a4464428802f32ec0a3ff",
+    "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs": "c1ad4182cf002429865ff8174c3c3f64936f0a0cc4608672381d465b086a6e22"
+  }
+}

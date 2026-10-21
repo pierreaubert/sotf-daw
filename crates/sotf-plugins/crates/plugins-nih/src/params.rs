@@ -134,6 +134,8 @@ pub struct DynamicParams {
     hiss_schema: bool,
     /// True for the SpeechDenoiser schema; gates Speech restore preflight.
     speech_schema: bool,
+    /// Upmixer snapshots rebuild FFT state; only inactive control-thread loads are safe.
+    upmixer_schema: bool,
     /// Hiss generation-tagged profile carrier with staged restore.
     /// Pending values commit only after a candidate DSP initializes.
     hiss_profile_state: Option<Mutex<HissProfileRestoreState>>,
@@ -1188,6 +1190,7 @@ impl DynamicParams {
                 .then(|| Mutex::new(ConvolutionRestoreState::default())),
             hiss_schema: plugin_type == "HissReducer",
             speech_schema: plugin_type == "SpeechDenoiser",
+            upmixer_schema: plugin_type == "Upmixer",
             hiss_profile_state: (plugin_type == "HissReducer")
                 .then(|| Mutex::new(HissProfileRestoreState::default())),
             hiss_learn_action,
@@ -2980,7 +2983,11 @@ unsafe impl Params for DynamicParams {
         is_audio_thread: bool,
         sample_rate: Option<f64>,
     ) -> bool {
-        self.validate_aae_solo_restore(state)
+        // NIH reinitializes an already prepared plugin after every accepted snapshot,
+        // including scalar-only and sparse snapshots. Reject before any mutation so
+        // active FFT history and published latency survive until host deactivation.
+        !(self.upmixer_schema && (is_active || is_audio_thread))
+            && self.validate_aae_solo_restore(state)
             && self.validate_eq_native_state(state)
             && self.validate_convolution_restore(state, is_active, is_audio_thread, sample_rate)
             && self.validate_hiss_restore(state, is_active, is_audio_thread)
