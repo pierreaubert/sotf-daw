@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-aae-subnormal-state.py"
+  ],
+  "exit_code": 0,
+  "stdout": "{\n  \"corner_rows\": 208,\n  \"corner_stdout_byte_identical\": true,\n  \"corner_failures_retained\": 12,\n  \"acoustic_quality_stdout_identical\": true,\n  \"reference_cases\": 48,\n  \"reference_samples\": 12288,\n  \"nonzero_output_bit_differences\": 0,\n  \"silent_zero_sign_differences\": 279,\n  \"normal_double_state_preserved\": true,\n  \"f32_subnormal_audio_preserved\": true,\n  \"representative_timing_exit_code\": 101,\n  \"overall_plugin_complete\": false\n}\n",
+  "stderr": ""
+}

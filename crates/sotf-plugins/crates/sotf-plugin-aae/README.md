@@ -145,3 +145,11 @@ copies prepared coefficients and starts the existing ramp; no powers or allocati
 are added there. Setter preparation does additional bounded design work. This is
 an analytical endpoint correction, not measured room matching or a listening-test
 result; sparse impulse fit failures and finite offline tail policy remain open.
+
+The f64 recursive tone-filter state clears a value once it becomes double
+subnormal, preventing a tiny rounded state from persisting through idle
+callbacks. All normal f64 state remains, and the current f32 output is returned
+unchanged. Legitimate f32-subnormal inputs are normal f64 values and retain their
+output. Independent recurrence tests preserve nonzero f32 bits and numerical
+zero values; silent positive/negative-zero bit patterns may differ. This state
+cleanup leaves the conservative excited `Infinite` tail contract in place.

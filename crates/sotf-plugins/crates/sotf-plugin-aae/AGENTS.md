@@ -103,3 +103,11 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   lifecycle/heap tests and the unweakened 208-row fit gate. Endpoint correction
   does not make a sparse impulse response exponentially dense or establish
   measured/listening quality, deadline certification or finite tail support.
+
+- Do not retain f64-subnormal tone-filter output state across silent samples: a
+  near-unit pole can round it back to itself forever. Clear only that state,
+  preserving normal f64 values and current f32 output. Keep f32-subnormal audio
+  intact; it is normal in f64. No global floating-point-mode changes are needed.
+- Keep long-silence and seeded-state regressions plus the unflushed recurrence
+  comparison. Preserve nonzero output bits/numerical zeros; signed silent zero
+  bits may differ. This cleanup must not change excited Infinite tail metadata.

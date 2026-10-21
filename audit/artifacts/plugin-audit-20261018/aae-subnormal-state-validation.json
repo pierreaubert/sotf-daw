@@ -1,0 +1,46 @@
+{
+  "result": "ToneFilter now clears only a double-subnormal recursive output state, preserving its current f32 output and all normal double state. No global floating-point-mode changes, allocations, coefficient changes or tail-metadata changes. Two red baseline tests reproduced persistence: after one million zero-input samples both near-unit pole signs retained state bits499 (~2.465e-321) despite f32 output already zero; a seeded smallest-subnormal state also persisted. Long-silence and seeded-state tests now clear that state. Forty-eight independent unflushed-recurrence cases check 12288 samples across normal/subnormal double seeds, actual small-gain endpoints, f32-subnormal input and resumed audio; all nonzero f32 bits and numerical zero values match, and normal double state is exact. Signed silent-zero bits differ in279 comparisons and are explicitly disclosed. Unity processing preserves four signed/min/max f32-subnormal audio values exactly. Full release123 tests pass with no ignores, final strengthened three focused tests pass, strict all-target QA Clippy/format pass, and existing radial/neutral/lifecycle/heap/host regressions remain passing. Re-run208-corner stdout is byte-identical to fe7b317, including12 failed fits; acoustic-quality stdout is also identical and passes. Independent verifier proves both comparisons. Representative timing QA failed its unchanged5% wall-derived load gate at6.11%; observed p50/p95/max .392/1.719/39.700ms versus10.667ms deadline. Preserve this failure; no retry selected for a green result and no performance/device certification claim. This removes persistent hidden subnormal state, not mathematical recursive support: excited tail remains Infinite. Sparse12/208 fit failures, timing diagnosis/loaded-native deadlines, listening/corpus and finite offline-tail policy remain; AAE partial, overall35/45 complete.",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "10e5e4fc52017565c709fe6d9a9eb4580927efc9288de457d9be58bb1ecd5fd7",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "b733d0156b5793be12192dc7d4b4fc27e64f646e5415016064d00d43146d721c",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "09bc767c4d41853a1a6d6887eb4ed45c2cda2494bf51d227a551f91eb206a652",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs": "cd96ed750f4329a8dce4d4cb4a962088ea37c5787b123b413154282626843168"
+  },
+  "baseline": "aae-subnormal-state-baseline.json",
+  "full_gates": "aae-subnormal-state-gates.json",
+  "final_gates": "aae-subnormal-state-final-gates.json",
+  "coverage": {
+    "corner_rows": 208,
+    "corner_stdout_byte_identical": true,
+    "corner_failures_retained": 12,
+    "acoustic_quality_stdout_identical": true,
+    "reference_cases": 48,
+    "reference_samples": 12288,
+    "nonzero_output_bit_differences": 0,
+    "silent_zero_sign_differences": 279,
+    "normal_double_state_preserved": true,
+    "f32_subnormal_audio_preserved": true,
+    "representative_timing_exit_code": 101,
+    "overall_plugin_complete": false
+  },
+  "full_release_passed": 123,
+  "focused_passed": 3,
+  "ignored": 0,
+  "seeded_state_cases": 4,
+  "long_silence_cases": 2,
+  "reference_cases": 48,
+  "reference_samples": 12288,
+  "timing_gate_passed": false,
+  "wall_derived_load_percent": 6.11,
+  "wall_load_limit_percent": 5.0,
+  "callback_p50_ms": 0.392,
+  "callback_p95_ms": 1.719,
+  "callback_max_ms": 39.7,
+  "deadline_ms": 10.667,
+  "limitations": [
+    "Silent zero sign bits may differ; nonzero output bits and normal double state are preserved in the independent reference.",
+    "No universal CPU speedup claim: current representative timing QA failed and requires diagnosis.",
+    "The unchanged208-row decay gate still fails12 fits.",
+    "No finite recursive support or native/listening/corpus completion claim."
+  ]
+}

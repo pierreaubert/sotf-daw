@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--lib",
+    "silence_state_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 8.805837707826868,
+  "stdout": "\nrunning 2 tests\ntest tone_filter::silence_state_tests::smallest_hidden_state_cannot_persist_through_zero_input ... FAILED\nlong_silence dc=0.1 ny=0.000000000001 nonzero_outputs=87549 state=0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002465 state_bits=499 subnormal=true\nlong_silence dc=0.000000000001 ny=0.1 nonzero_outputs=87549 state=0.000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002465 state_bits=499 subnormal=true\ntest tone_filter::silence_state_tests::long_silence_clears_hidden_double_subnormal_state ... FAILED\n\nfailures:\n\nfailures:\n    tone_filter::silence_state_tests::long_silence_clears_hidden_double_subnormal_state\n    tone_filter::silence_state_tests::smallest_hidden_state_cannot_persist_through_zero_input\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 82 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 8.73s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aae-2477f556ca324757)\n\nthread 'tone_filter::silence_state_tests::smallest_hidden_state_cannot_persist_through_zero_input' (339164650) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs:517:17:\nassertion `left == right` failed: hidden state must clear despite f32 output already being zero\n  left: -5e-324\n right: 0.0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'tone_filter::silence_state_tests::long_silence_clears_hidden_double_subnormal_state' (339164649) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/src/tone_filter.rs:507:9:\nassertion `left == right` failed\n  left: 2\n right: 0\nerror: test failed, to rerun pass `-p sotf-plugin-aae --lib`\n"
+}

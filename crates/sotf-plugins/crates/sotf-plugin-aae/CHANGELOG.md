@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Clear only double-subnormal recursive tone-filter output state during silence.
+  Prevent a near-unit pole from rounding hidden state back to itself indefinitely.
+  Preserve normal f64 state, current f32 output and legitimate f32-subnormal audio.
+- Add long-silence, smallest-state and independent unflushed-reference regressions,
+  including resumption. Numerical audio values stay equal; silent zero signs may
+  differ. Recursive tail metadata remains conservative.
+
 - Include tone-filter memory in FDN bass/treble decay design by solving shelf
   constraints at the requested decaying pole radii. Use f64 coefficients/state
   to preserve fast-endpoint precision; continue returning f32 audio.

@@ -199,7 +199,15 @@ impl ToneFilter {
         }
         let output = self.b0 * input + self.b1 * self.x1 - self.a1 * self.y1;
         self.x1 = input;
-        self.y1 = output;
+        // A near-unit pole can round a double subnormal back to itself forever.
+        // It is far below any f32 output, but retaining it makes silent callbacks
+        // repeatedly process subnormals. Preserve all normal double state and
+        // the current output; this is not an audible tail cutoff.
+        self.y1 = if output.is_subnormal() {
+            0.0_f64.copysign(output)
+        } else {
+            output
+        };
         output as f32
     }
 
@@ -483,6 +491,122 @@ mod radial_tests {
         );
         println!(
             "radial_constraints cases={cases} max_slow_relative_error={maximum_slow_relative_error} max_fast_relative_error={maximum_fast_relative_error} max_circle_ratio={maximum_circle_ratio} original_max_circle_ratio={original_circle_ratio}"
+        );
+    }
+}
+
+#[cfg(test)]
+mod silence_state_tests {
+    use super::*;
+
+    #[test]
+    fn long_silence_clears_hidden_double_subnormal_state() {
+        let mut failures = 0;
+        for (dc, ny) in [(0.1, 1e-12), (1e-12, 0.1)] {
+            let mut filter = ToneFilter::new_for_loop(dc, ny, 10_000.0);
+            let _ = filter.process(0.001);
+            let mut nonzero_outputs = 0;
+            for _ in 0..1_000_000 {
+                nonzero_outputs += usize::from(filter.process(0.0) != 0.0);
+            }
+            println!(
+                "long_silence dc={dc} ny={ny} nonzero_outputs={nonzero_outputs} state={} state_bits={} subnormal={}",
+                filter.y1,
+                filter.y1.to_bits(),
+                filter.y1.is_subnormal()
+            );
+            failures += usize::from(filter.y1 != 0.0);
+        }
+        assert_eq!(failures, 0);
+    }
+
+    #[test]
+    fn smallest_hidden_state_cannot_persist_through_zero_input() {
+        for (dc, ny) in [(0.1, 1e-12), (1e-12, 0.1)] {
+            for sign in [-1.0, 1.0] {
+                let mut filter = ToneFilter::new_for_loop(dc, ny, 10_000.0);
+                filter.y1 = sign * f64::from_bits(1);
+                assert_eq!(filter.process(0.0), 0.0);
+                assert_eq!(
+                    filter.y1, 0.0,
+                    "hidden state must clear despite f32 output already being zero"
+                );
+            }
+        }
+    }
+    #[test]
+    fn clearing_hidden_state_preserves_small_audio_and_resumption() {
+        let mut cases = 0;
+        let mut signed_zero_differences = 0;
+        let m = 13_522.0;
+        let dc = 10.0_f32.powf(-3.0 * m / (0.24 * 48_000.0));
+        let ny = 10.0_f32.powf(-3.0 * m / (0.06 * 48_000.0));
+        for (dc, ny) in [(0.1, 1e-12), (1e-12, 0.1), (dc, ny), (0.9, 0.9)] {
+            for seed in [
+                f64::from_bits(1),
+                f64::MIN_POSITIVE * 0.5,
+                f64::MIN_POSITIVE,
+                f64::MIN_POSITIVE * 2.0,
+                1e-100,
+                0.0,
+            ] {
+                for sign in [-1.0, 1.0] {
+                    let mut filter = ToneFilter::new_for_loop(dc, ny, m);
+                    filter.y1 = seed * sign;
+                    let mut x1 = 0.0_f64;
+                    let mut y1 = seed * sign;
+                    for frame in 0..256 {
+                        let input = match frame {
+                            0..=31 => 0.0,
+                            32 => f32::from_bits(1),
+                            33 => -f32::from_bits(1),
+                            34 => f32::MIN_POSITIVE,
+                            35 => -f32::MIN_POSITIVE,
+                            _ => ((frame * 23 % 127) as f32 - 63.0) / 512.0,
+                        };
+                        // Independent unflushed direct recurrence, with the same
+                        // static coefficients and initially identical state.
+                        let expected =
+                            filter.b0 * f64::from(input) + filter.b1 * x1 - filter.a1 * y1;
+                        x1 = f64::from(input);
+                        y1 = expected;
+                        let expected_state = expected;
+                        let expected = expected as f32;
+                        let actual = filter.process(input);
+                        if expected_state.is_normal() {
+                            assert_eq!(
+                                filter.y1, expected_state,
+                                "normal f64 state must remain intact"
+                            );
+                        }
+                        assert_eq!(
+                            actual, expected,
+                            "dc={dc} ny={ny} seed={seed} sign={sign} frame={frame}"
+                        );
+                        if actual == 0.0 && expected == 0.0 {
+                            signed_zero_differences +=
+                                usize::from(actual.to_bits() != expected.to_bits());
+                        } else {
+                            assert_eq!(actual.to_bits(), expected.to_bits());
+                        }
+                        assert!(!filter.y1.is_subnormal());
+                    }
+                    cases += 1;
+                }
+            }
+        }
+        // A legitimate f32 subnormal is a normal f64 value and remains audio.
+        let mut unity = ToneFilter::unity();
+        for input in [
+            f32::from_bits(1),
+            -f32::from_bits(1),
+            f32::from_bits(0x7fffff),
+            -f32::from_bits(0x7fffff),
+        ] {
+            assert_eq!(unity.process(input).to_bits(), input.to_bits());
+        }
+        println!(
+            "subnormal_audio_reference cases={cases} nonzero_bit_differences=0 signed_zero_differences={signed_zero_differences} f32_subnormal_audio_preserved=true"
         );
     }
 }
