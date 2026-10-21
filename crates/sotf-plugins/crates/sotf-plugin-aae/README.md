@@ -116,3 +116,17 @@ Direct f32 processing validates checked buffer geometry, finite input and the
 prepared clock before changing output, recursive state or tail metadata. Every
 successful call preserves frame count, including channel-changing layouts; its
 host frame envelope is the identity. Geometry error wording is retained.
+
+FDN endpoint attenuation covers the full feedback traversal. `DelayLine::read(0)`
+means the most recently pushed sample, and FDN reads before pushing, so a tap
+index `m` traverses `m+1` process clocks. Decay gains use that complete length;
+the tap geometry and first echo timing stay fixed. With neutral damping, static
+delays and low excitation, an independent lossless-network reference verifies
+`y[n] = 10^(-3 n / (RT60 * sample_rate)) * y_lossless[n]` across construction,
+settled decay/room updates, pending admission and reset.
+
+That identity verifies attenuation timing, not smooth echo density or every
+fitted RT60. The independently weighted lossless reference also has a poor T30
+fit at the largest room and shortest decay. The existing corner gate retains its
+failed rows and thresholds; colored-filter memory, modulation, nonlinear levels,
+listening acceptance and finite offline-tail policy remain separate requirements.

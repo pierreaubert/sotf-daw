@@ -99,7 +99,9 @@ impl Fdn {
         let rt60_bass = rt60 * bass_ratio;
         let rt60_treble = rt60 * treble_ratio;
         let tone_filters = std::array::from_fn(|i| {
-            let m = delay_lengths[i] as f32;
+            // read(m) is the (m+1)th previous push. Reads precede this
+            // sample's push, so attenuation must cover all m+1 loop clocks.
+            let m = delay_lengths[i] as f32 + 1.0;
             let g_dc = 10.0_f32.powf(-3.0 * m / (rt60_bass * sr));
             let g_ny = 10.0_f32.powf(-3.0 * m / (rt60_treble * sr));
             ToneFilter::new(g_dc, g_ny)
@@ -237,7 +239,8 @@ impl Fdn {
         let bass_rt60 = rt60 * bass;
         let treble_rt60 = rt60 * treble;
         std::array::from_fn(|i| {
-            let delay = delays[i] as f32;
+            // Include the read-before-write clock, as in construction/reset.
+            let delay = delays[i] as f32 + 1.0;
             (
                 10.0_f32.powf(-3.0 * delay / (bass_rt60 * self.sample_rate)),
                 10.0_f32.powf(-3.0 * delay / (treble_rt60 * self.sample_rate)),
@@ -301,7 +304,7 @@ impl Fdn {
         }
         let (rt60, bass, treble) = self.decay_params;
         for i in 0..FDN_SIZE {
-            let delay = self.delay_lengths[i] as f32;
+            let delay = self.delay_lengths[i] as f32 + 1.0;
             let dc = 10.0_f32.powf(-3.0 * delay / (rt60 * bass * self.sample_rate));
             let ny = 10.0_f32.powf(-3.0 * delay / (rt60 * treble * self.sample_rate));
             self.tone_filters[i] = ToneFilter::new(dc, ny);

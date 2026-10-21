@@ -1,0 +1,41 @@
+{
+  "result": "Correct FDN read-before-write damping clock: DelayLine::read(m) returns the(m+1)th previous pushed sample, so each traversal needs attenuation for m+1clocks. Constructor, active/pending prepared gain paths and reset now include that clock; tap reads/storage/arrival timing and callback work remain unchanged. Independent f64 lossless rings+dense Sylvester matrix predict neutral static low-level output y[n]=10^(-3n/(RT60*sr))*y_lossless[n]. Eight red baseline cases fail; max error/input1.51344175e-4. Final80cases cover44.1/48/96/192k,rooms0.2/3,RT0.3/6,andconstruction/settledRT/settledroom/pendingadmission/reset; all pass unchanged3e-7 tolerance,max error/input5.56577196e-8. Example48kroom0.2RT6 T30 improves6.011444s->6.000181s versus independent6.000189s; a fitted T30 remains distinct from prescribed exponential weighting. Independent lossless weighted static large-room/minRT reference itself reproduces r2~0.972815,so poor sparse fit is not fixed by correcting the scalar attenuation clock. Fullrelease119tests pass(noignores),including existing lifecycle/heap/host regressions;strictalltargetQAClippy/format pass;acousticqualityQAPASS with small intended decay-related value changes. Fullunchanged208corner matrix remainsred16sameconfigurationkeys:12fitquality/4endpointenvelope/4neutralfailures,allfinite,maxlateenergy7.91474e-14,minr2.97281508. Independent verifier recomputes target/fit/pass status and checkscomplete208keys and80referencecrossproduct;originalqa-aae-decay source unchanged. No tolerance/parameter/latency/tailpolicy change. Coloredfiltermemory,modulated/nonlinear/perceptual acceptance,16remainingdecayfailures andfiniteofflineEOFpolicy remain;AAEpartial andoverall35/45complete.",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "5b7e6a3396ba9ca256c57a3d94714df291b0b74eaebbe47a91ceddfd4385a078",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "19474406f2f3cb56123a8619ecd64a0645f56978cc6849839e37dbd76ab58a51",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "6333fa7b3917fdc97d4ee7b90c1f0af15cc7b00ea74095f232cbca2025ed1b68",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "1337922bf42e5fb8d34f0456302797a1409271ce89574ecf482099c8a18a54d8",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_neutral_decay.rs": "5f5a0e70febd59d61540ce38c8982270100624c4f5c33bb42ce01e4e8003debb"
+  },
+  "unchanged_corner_runner_sha256": "f013e9d1fd7980fac66c388703a13ff6c50b00e1de49054ceb13fe91fa1ce4c1",
+  "baseline": "aae-neutral-loop-clock-baseline.json",
+  "initial_reference": "aae-neutral-loop-clock-reference.json",
+  "gates": "aae-neutral-loop-clock-gates.json",
+  "corners": "aae-neutral-loop-clock-corners.jsonl",
+  "quality": "aae-neutral-loop-clock-quality.json",
+  "coverage": {
+    "coverage_rows": 208,
+    "configuration_keys_preserved": true,
+    "failed_rows": 16,
+    "same_failure_keys": true,
+    "fit_failures": 12,
+    "target_failures": 4,
+    "neutral_failures": 4,
+    "all_finite": true,
+    "minimum_wide_r2": 0.9728150845847301,
+    "max_residual_energy_ratio": 7.914741613330585e-14,
+    "reference_cases": 80,
+    "maximum_error_over_input": 5.565771959575549e-08,
+    "quality_gate_passed": false
+  },
+  "reference_formula": "neutral static low-level y[n] = 10^(-3*n/(RT60*sr))*y_lossless[n]",
+  "release_tests_passed": 119,
+  "reference_cases": 80,
+  "tolerance_over_input": 3e-07,
+  "maximum_error_over_input": 5.565771959575549e-08,
+  "limitations": [
+    "Reference excludes modulation, colored damping, limiting and time-varying transition interiors.",
+    "208-corner gate still fails16samecases; no loosening or completion claim.",
+    "No finite recursive tail, native/device deadline or listening/corpus acceptance proof."
+  ]
+}

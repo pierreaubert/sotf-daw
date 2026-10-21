@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Calibrate FDN damping for the complete read-before-write loop: tap index `m`
+  traverses `m+1` process clocks. Use that length in construction, prepared
+  active/pending gains and reset; echo arrival timing and delay storage stay fixed.
+- Add an independent f64 lossless ring/dense-Hadamard reference proving neutral
+  exponential weighting across four rates and five lifecycle paths. Corrected
+  attenuation does not eliminate sparse large-room fit or colored-damping failures.
+
 - Preflight finite input, checked geometry and prepared clock before AAE state
   or output advances; retain existing geometry diagnostics.
 - Report empty Finite(0) versus excited Infinite recursive tails, rejecting active

@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-aae-neutral-loop-clock.py"
+  ],
+  "exit_code": 0,
+  "stdout": "{\n  \"coverage_rows\": 208,\n  \"configuration_keys_preserved\": true,\n  \"failed_rows\": 16,\n  \"same_failure_keys\": true,\n  \"fit_failures\": 12,\n  \"target_failures\": 4,\n  \"neutral_failures\": 4,\n  \"all_finite\": true,\n  \"minimum_wide_r2\": 0.9728150845847301,\n  \"max_residual_energy_ratio\": 7.914741613330585e-14,\n  \"reference_cases\": 80,\n  \"maximum_error_over_input\": 5.565771959575549e-08,\n  \"quality_gate_passed\": false\n}\n",
+  "stderr": ""
+}

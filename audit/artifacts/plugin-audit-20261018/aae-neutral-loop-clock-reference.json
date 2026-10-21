@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "sotf-host/qa",
+    "--test",
+    "audit_neutral_decay",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 4.681163583183661,
+  "stdout": "\nrunning 1 test\nneutral_weighting rate=48000 room=0.2 rt60=0.3 frames=57601 first_arrival=312 max_error_over_input=0.000000027598976371342543 actual_rt60=0.3006259682246876 expected_rt60=0.30062598874206403 actual_r2=0.9999866874528113 expected_r2=0.9999866874531586\nneutral_weighting rate=48000 room=0.2 rt60=6 frames=1152000 first_arrival=312 max_error_over_input=0.00000005565771959575549 actual_rt60=6.000181075061977 expected_rt60=6.000189274643246 actual_r2=0.999999971088404 expected_r2=0.9999999710884508\nneutral_weighting rate=48000 room=3 rt60=0.3 frames=57601 first_arrival=4660 max_error_over_input=0.000000003818244550263986 actual_rt60=0.3222023916762215 expected_rt60=0.32220239730499123 actual_r2=0.972815084583174 expected_r2=0.9728150817202368\nneutral_weighting rate=48000 room=3 rt60=6 frames=1152000 first_arrival=4660 max_error_over_input=0.000000029119347476174135 actual_rt60=6.005343380183877 expected_rt60=6.005343850046121 actual_r2=0.9999975344551003 expected_r2=0.9999975344545423\nneutral_weighting rate=192000 room=0.2 rt60=0.3 frames=230401 first_arrival=1243 max_error_over_input=0.000000016693597858952085 actual_rt60=0.3004787171232678 expected_rt60=0.30047872217544874 actual_r2=0.9999927299262724 expected_r2=0.9999927299276726\nneutral_weighting rate=192000 room=0.2 rt60=6 frames=4608000 first_arrival=1243 max_error_over_input=0.000000035614094172027416 actual_rt60=6.000115177561629 expected_rt60=6.000124592127272 actual_r2=0.999999993054745 expected_r2=0.9999999930543926\nneutral_weighting rate=192000 room=3 rt60=0.3 frames=230401 first_arrival=18637 max_error_over_input=0.000000001554821213873947 actual_rt60=0.3222144753279642 expected_rt60=0.32221445575007157 actual_r2=0.9728202003327693 expected_r2=0.9728202036328267\nneutral_weighting rate=192000 room=3 rt60=6 frames=4608000 first_arrival=18637 max_error_over_input=0.00000003308342201608174 actual_rt60=6.006541557579944 expected_rt60=6.0065424237191065 actual_r2=0.9999977245159418 expected_r2=0.9999977245153425\nneutral_weighting_summary cases=8 failed=0\ntest neutral_decay_matches_independent_lossless_exponential_weighting ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 4.01s\n     Running tests/audit_neutral_decay.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_neutral_decay-cdbd5ff4a17e8fbb)\n"
+}

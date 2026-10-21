@@ -83,3 +83,11 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   never inherit default drain completion or invent support from RT60.
 - AAE preserves frame count despite changing channels; identity frame geometry
   and the output envelope must agree with every successful process call.
+
+- FDN reads before push, while `DelayLine::read(0)` returns the most recent push.
+  A tap index `m` therefore traverses `m+1` process clocks. Include that clock in
+  constructor, active/pending prepared damping gains and reset; do not change tap
+  arrival timing to conceal an attenuation-clock mismatch.
+- Preserve `audit_neutral_decay`'s independent f64 rings/dense matrix and neutral
+  exponential-weighting checks. It excludes modulation/limiting and does not
+  override the 208-row fit gate: an exactly weighted sparse response can fail r².
