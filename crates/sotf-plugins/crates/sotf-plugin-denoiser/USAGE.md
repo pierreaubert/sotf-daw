@@ -98,6 +98,12 @@ Learning runs for approximately one second regardless of sample rate or FFT mode
 requested before a profile exists, but monitoring reports it active only when captured data is
 actually available. Captured spectra are runtime state and are not stored in presets.
 
+Captured profiles apply to both resolutions when Multi-Resolution is enabled.
+Reset keeps the profile, and canceling a new capture keeps the previous one.
+Changing sample rate clears it: learn the noise again at the new rate. A stored
+profile takes effect during startup; the normal gain smoothing still applies.
+EOF padding never completes an unfinished capture.
+
 ## Demos
 
 ### Removing Background Hum

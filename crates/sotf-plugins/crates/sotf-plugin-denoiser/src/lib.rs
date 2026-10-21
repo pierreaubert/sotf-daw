@@ -13,6 +13,8 @@ mod reduction_curve;
 mod spectral_sub;
 mod wiener;
 
+#[cfg(test)]
+mod captured_profile_tests;
 #[path = "lib/denoiser_data.rs"]
 mod denoiser_data;
 #[path = "lib/denoiser_plugin.rs"]

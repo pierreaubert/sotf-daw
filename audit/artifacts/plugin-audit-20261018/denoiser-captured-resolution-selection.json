@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "captured_profile_tests",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 5 tests\nsmall_profile_oracle bins=12 maximum_scaled_power_error=0.00000009805452375358352 maximum_gain_error=0.000000014313048860709054\nprofile_first_frame low_latency=false maximum_gain=0.01\nprofile_first_frame low_latency=true maximum_gain=0.01\ntest captured_profile_tests::small_profile_matches_independent_periodograms_and_commits_new_gains_together ... ok\ntest captured_profile_tests::retained_profile_reduces_the_first_frame_while_live_estimation_bootstraps ... ok\nprofile_new_clock has_profile=false\ntest captured_profile_tests::captured_profile_is_retained_only_for_the_same_sample_clock ... ok\nprofile_small_fft rate=48000 low_latency=false retained_gain=0.999999906630476 noise_gain=0.012185094775704782\nprofile_selection rate=48000 low_latency=false live_gain=0.010947809507680985 restored_waveform_error=0\nprofile_capture_partition cases=6 exact_audio_and_both_grids=true eof_capture_frozen=true cancel_retains_profile=true clear_invalidates_both=true\ntest captured_profile_tests::profile_capture_is_partition_invariant_and_padding_does_not_measure_noise ... ok\nprofile_small_fft rate=96000 low_latency=false retained_gain=0.9999998915879401 noise_gain=0.012388042481613692\nprofile_selection rate=96000 low_latency=false live_gain=0.010904981648314577 restored_waveform_error=0\nprofile_small_fft rate=48000 low_latency=true retained_gain=0.9999999268812048 noise_gain=0.01703711344550622\nprofile_selection rate=48000 low_latency=true live_gain=0.013627641765990652 restored_waveform_error=0\nprofile_small_fft rate=96000 low_latency=true retained_gain=0.9999999283327482 noise_gain=0.016845954835643582\nprofile_selection rate=96000 low_latency=true live_gain=0.013459724776510123 restored_waveform_error=0\ntest captured_profile_tests::captured_silence_does_not_learn_wanted_audio_in_the_small_fft_arm ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 77 filtered out; finished in 0.10s\n\n",
+    "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 17.15s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-4696045e7779ff6d)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 1.42s\n"
+  }
+]

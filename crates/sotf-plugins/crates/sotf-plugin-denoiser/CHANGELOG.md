@@ -1,3 +1,17 @@
+## Unreleased captured-profile correction (2026-10-21)
+
+- Capture and use independent per-channel noise powers for the small FFT when
+  multi-resolution processing is enabled. Publish both grids together and use
+  fixed profiles during live-estimator bootstrap, including after reset.
+- Retain profiles through reset/same-clock init and canceled replacement capture;
+  invalidate both grids on clear or a changed clock. Freeze both captures at EOF.
+- Synchronize cached profile/learning parameter values after internal transitions
+  without allocating schema storage. Keep parameters, presets, FFT latency and
+  the main one-second capture policy unchanged; no profile serialization added.
+- Add independent periodogram/gain, partition, reset/cancel/clear/clock and zero-
+  heap lifecycle regressions. Blind onset/vowel loss and held-out quality remain
+  unresolved; this does not add or replace an ML model.
+
 ## Unreleased bootstrap-clock correction (2026-10-20)
 
 - Prepare the bootstrap observation count from sample rate and analysis hop,

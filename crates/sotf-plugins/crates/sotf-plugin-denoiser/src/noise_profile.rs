@@ -49,6 +49,19 @@ impl DenoiserPlugin {
             }
         }
 
+        let curve = if self.curve.curve.is_flat() {
+            None
+        } else {
+            Some(self.curve.scales_small.as_slice())
+        };
+        if let Some(mrs) = &mut self.multi_res.multi_res_state {
+            mrs.finalize_profile(
+                self.coeffs.reduction_linear,
+                self.coeffs.floor_linear,
+                curve,
+            );
+        }
+
         self.noise_profile.has_noise_profile = true;
         self.noise_profile.use_captured_profile = true;
         self.noise_profile.is_learning = false;
@@ -58,6 +71,7 @@ impl DenoiserPlugin {
             self.noise_profile.learning_accumulator[ch].fill(0.0);
         }
         self.noise_profile.learning_frames_count = 0;
+        self.refresh_cached_parameter_values();
     }
 
     /// Start the noise learning process.
@@ -66,22 +80,33 @@ impl DenoiserPlugin {
     /// floor re-enters the bootstrap phase and converges on the current
     /// noise environment from scratch.
     pub(super) fn start_learning(&mut self) {
+        if let Some(mrs) = &mut self.multi_res.multi_res_state {
+            mrs.start_capture();
+        }
         self.noise_profile.is_learning = true;
         self.noise_profile.learning_frames_count = 0;
         for ch in 0..self.config.channels {
             self.noise_profile.learning_accumulator[ch].fill(0.0);
             self.reset_mcra(ch);
         }
+        self.refresh_cached_parameter_values();
     }
 
     /// Stop a pending capture without disturbing the previously captured profile.
     pub(super) fn cancel_learning(&mut self) {
+        if let Some(mrs) = &mut self.multi_res.multi_res_state {
+            mrs.cancel_capture();
+        }
         self.noise_profile.is_learning = false;
         self.noise_profile.learning_frames_count = 0;
+        self.refresh_cached_parameter_values();
     }
 
     /// Clear the captured noise profile
     pub(super) fn clear_noise_profile(&mut self) {
+        if let Some(mrs) = &mut self.multi_res.multi_res_state {
+            mrs.clear_profile();
+        }
         self.noise_profile.has_noise_profile = false;
         self.noise_profile.use_captured_profile = false;
         self.noise_profile.is_learning = false;
@@ -89,6 +114,7 @@ impl DenoiserPlugin {
         for ch in 0..self.config.channels {
             self.noise_profile.learning_accumulator[ch].fill(0.0);
         }
+        self.refresh_cached_parameter_values();
     }
 
     /// Get the effective noise power for a given bin.

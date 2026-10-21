@@ -141,12 +141,16 @@ fn multires_fft_failure_is_returned_and_state_is_resettable() {
     state.force_fft_error_for_test(true);
     let samples = vec![0.0; super::multi_resolution::SMALL_FFT_SIZE];
     assert_eq!(
-        state.feed_and_process(&samples, 1, 10.0, 0.1, None),
+        state.feed_and_process(&samples, 1, 10.0, 0.1, None, Default::default()),
         Err("small FFT forward failed")
     );
     state.reset();
     state.force_fft_error_for_test(false);
-    assert!(state.feed_and_process(&samples, 1, 10.0, 0.1, None).is_ok());
+    assert!(
+        state
+            .feed_and_process(&samples, 1, 10.0, 0.1, None, Default::default())
+            .is_ok()
+    );
 }
 
 #[test]

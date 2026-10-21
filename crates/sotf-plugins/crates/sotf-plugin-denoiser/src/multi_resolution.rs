@@ -39,6 +39,13 @@ const FLUX_LOW: f32 = 0.01;
 /// Bootstrap frames for the small-FFT IMCRA path (same logic as the main MCRA).
 const SMALL_BOOTSTRAP_FRAMES: usize = 5;
 
+/// Profile selection for this source boundary; EOF padding never captures.
+#[derive(Clone, Copy, Default)]
+pub(super) struct SmallProfileControl {
+    pub capture: bool,
+    pub use_captured: bool,
+}
+
 /// Per-channel small-FFT state.
 /// Only holds what is actively used during processing — no inverse FFT plan
 /// because the small-FFT path only computes gains; audio reconstruction uses
@@ -62,6 +69,10 @@ pub(super) struct SmallFftState {
     min_psd_b: Vec<f32>,
     speech_presence: Vec<f32>,
     frame_counter: usize,
+
+    // Captured periodograms use this FFT/window directly, not scaled main bins.
+    pub(super) captured_psd: Vec<f32>,
+    capture_accumulator: Vec<f32>,
 
     // Temporally-smoothed Wiener gains — used by `combine_gains()` [SMALL_FFT_SIZE / 2 + 1]
     pub smoothed_gain: Vec<f32>,
@@ -93,9 +104,45 @@ impl SmallFftState {
             min_psd_b: vec![1e-6_f32; spectrum_size],
             speech_presence: vec![0.0_f32; spectrum_size],
             frame_counter: 0,
+            captured_psd: vec![0.0; spectrum_size],
+            capture_accumulator: vec![0.0; spectrum_size],
             smoothed_gain: vec![1.0_f32; spectrum_size],
             prev_mag: vec![0.0_f32; spectrum_size],
             current_flux: 0.0,
+        }
+    }
+
+    fn calculate_gains(
+        &mut self,
+        reduction_linear: f32,
+        floor_linear: f32,
+        curve_small: Option<&[f32]>,
+        use_captured: bool,
+    ) {
+        const EPSILON: f32 = 1e-10;
+        // Wiener gain computation — no temporal smoothing here.
+        // The large-FFT path in calculate_wiener_gains() applies its own
+        // temporal smoother after combine_gains(); applying it here too
+        // would cause double-smoothing (~2 extra frames of attack/release lag).
+        if let Some(scales) = curve_small {
+            debug_assert!(scales.len() >= self.freq_domain.len());
+        }
+        for k in 0..self.freq_domain.len() {
+            let signal_power = self.freq_domain[k].norm_sqr();
+            let noise_power = if use_captured {
+                self.captured_psd[k]
+            } else {
+                self.noise_psd[k]
+            }
+            .max(EPSILON);
+            let snr = ((signal_power - noise_power).max(0.0)) / noise_power;
+            let gain = (snr / (snr + reduction_linear)).max(floor_linear);
+            // Shape with the curve scale so transient-dominated frames
+            // honor the same frequency weighting as the large path.
+            self.smoothed_gain[k] = match curve_small {
+                Some(scales) => super::reduction_curve::ReductionCurve::shape_gain(scales[k], gain),
+                None => gain,
+            };
         }
     }
 
@@ -132,6 +179,8 @@ pub(super) struct MultiResState {
 
     /// Smoothed flux weight [0, 1] — high = transient (use small-FFT gains).
     pub flux_weight: f32,
+    pub(super) has_captured_profile: bool,
+    pub(super) capture_frames: usize,
 
     // MCRA hyper-parameters (copied from the main plugin at creation time)
     mcra_alpha_s: f32,
@@ -168,6 +217,8 @@ impl MultiResState {
             input_buffer_fill: 0,
             temp_input_block,
             flux_weight: 0.0,
+            has_captured_profile: false,
+            capture_frames: 0,
             mcra_alpha_s,
             mcra_alpha_p,
             mcra_l,
@@ -177,7 +228,46 @@ impl MultiResState {
         }
     }
 
+    pub fn start_capture(&mut self) {
+        self.cancel_capture();
+    }
+
+    pub fn cancel_capture(&mut self) {
+        self.capture_frames = 0;
+        for channel in &mut self.channels {
+            channel.capture_accumulator.fill(0.0);
+        }
+    }
+
+    pub fn clear_profile(&mut self) {
+        self.has_captured_profile = false;
+        self.cancel_capture();
+    }
+
+    pub fn finalize_profile(&mut self, reduction: f32, floor: f32, curve: Option<&[f32]>) {
+        if self.capture_frames == 0 {
+            return;
+        }
+        let count = self.capture_frames as f32;
+        for channel in &mut self.channels {
+            for (stored, &sum) in channel
+                .captured_psd
+                .iter_mut()
+                .zip(&channel.capture_accumulator)
+            {
+                *stored = sum / count;
+            }
+            // Main capture finishes after the small frame has already run.
+            // Recompute its gains now so both grids adopt the new epoch together.
+            channel.calculate_gains(reduction, floor, curve, true);
+        }
+        self.has_captured_profile = true;
+        self.cancel_capture();
+    }
+
     pub fn reset(&mut self) {
+        // Retain the published profile; cancel only the incomplete capture.
+        self.cancel_capture();
         for ch in &mut self.channels {
             ch.reset();
         }
@@ -199,6 +289,7 @@ impl MultiResState {
         reduction_linear: f32,
         floor_linear: f32,
         curve_small: Option<&[f32]>,
+        profile: SmallProfileControl,
     ) -> Result<(), &'static str> {
         let block_samples = SMALL_FFT_SIZE * num_channels;
         let mut pos = 0;
@@ -218,6 +309,7 @@ impl MultiResState {
                     reduction_linear,
                     floor_linear,
                     curve_small,
+                    profile,
                 )?;
             }
         }
@@ -230,6 +322,7 @@ impl MultiResState {
         reduction_linear: f32,
         floor_linear: f32,
         curve_small: Option<&[f32]>,
+        profile: SmallProfileControl,
     ) -> Result<(), &'static str> {
         let small_fft_size = SMALL_FFT_SIZE;
         let hop_size = small_fft_size / 2;
@@ -271,8 +364,14 @@ impl MultiResState {
         let mut total_flux = 0.0_f32;
         let mut channels_with_flux: usize = 0;
 
+        let use_captured = profile.use_captured && self.has_captured_profile;
         for ch in 0..num_channels {
             let state = &mut self.channels[ch];
+            if profile.capture {
+                for (sum, bin) in state.capture_accumulator.iter_mut().zip(&state.freq_domain) {
+                    *sum += bin.norm_sqr();
+                }
+            }
 
             // Bootstrap phase: accumulate power, initialise IMCRA on completion
             if state.frame_counter < SMALL_BOOTSTRAP_FRAMES {
@@ -293,66 +392,49 @@ impl MultiResState {
                         state.speech_presence[k] = 0.0;
                     }
                 }
-                // Gains stay at 1.0 during bootstrap
-                continue;
-            }
-
-            // IMCRA noise estimation
-            let frame = state.frame_counter;
-            let half_l = mcra_l / 2;
-            let reset_a = frame.is_multiple_of(mcra_l);
-            let reset_b = frame % mcra_l == half_l;
-
-            for k in 0..spectrum_size {
-                let power = state.freq_domain[k].norm_sqr();
-
-                let s_tmp = mcra_alpha_s * state.smoothed_psd[k] + (1.0 - mcra_alpha_s) * power;
-                state.smoothed_psd[k] = s_tmp;
-
-                if reset_a {
-                    state.min_psd[k] = s_tmp;
-                } else {
-                    state.min_psd[k] = state.min_psd[k].min(s_tmp);
+                // A published fixed profile does not depend on live warm-up.
+                if !use_captured {
+                    continue;
                 }
-                if reset_b {
-                    state.min_psd_b[k] = s_tmp;
-                } else {
-                    state.min_psd_b[k] = state.min_psd_b[k].min(s_tmp);
-                }
+            } else {
+                // IMCRA noise estimation
+                let frame = state.frame_counter;
+                let half_l = mcra_l / 2;
+                let reset_a = frame.is_multiple_of(mcra_l);
+                let reset_b = frame % mcra_l == half_l;
 
-                let s_min = state.min_psd[k].min(state.min_psd_b[k]).max(EPSILON);
-                let s_r = s_tmp / s_min;
-                let indicator = if s_r > mcra_delta { 1.0_f32 } else { 0.0 };
+                for k in 0..spectrum_size {
+                    let power = state.freq_domain[k].norm_sqr();
 
-                let p = mcra_alpha_p * state.speech_presence[k] + (1.0 - mcra_alpha_p) * indicator;
-                state.speech_presence[k] = p;
+                    let s_tmp = mcra_alpha_s * state.smoothed_psd[k] + (1.0 - mcra_alpha_s) * power;
+                    state.smoothed_psd[k] = s_tmp;
 
-                let alpha_d = mcra_alpha_s + (1.0 - mcra_alpha_s) * p;
-                state.noise_psd[k] = alpha_d * state.noise_psd[k] + (1.0 - alpha_d) * power;
-            }
-            state.frame_counter += 1;
-
-            // Wiener gain computation — no temporal smoothing here.
-            // The large-FFT path in calculate_wiener_gains() applies its own
-            // temporal smoother after combine_gains(); applying it here too
-            // would cause double-smoothing (~2 extra frames of attack/release lag).
-            if let Some(scales) = curve_small {
-                debug_assert!(scales.len() >= spectrum_size);
-            }
-            for k in 0..spectrum_size {
-                let signal_power = state.freq_domain[k].norm_sqr();
-                let noise_power = state.noise_psd[k].max(EPSILON);
-                let snr = ((signal_power - noise_power).max(0.0)) / noise_power;
-                let gain = (snr / (snr + reduction_linear)).max(floor_linear);
-                // Shape with the curve scale so transient-dominated frames
-                // honor the same frequency weighting as the large path.
-                state.smoothed_gain[k] = match curve_small {
-                    Some(scales) => {
-                        super::reduction_curve::ReductionCurve::shape_gain(scales[k], gain)
+                    if reset_a {
+                        state.min_psd[k] = s_tmp;
+                    } else {
+                        state.min_psd[k] = state.min_psd[k].min(s_tmp);
                     }
-                    None => gain,
-                };
+                    if reset_b {
+                        state.min_psd_b[k] = s_tmp;
+                    } else {
+                        state.min_psd_b[k] = state.min_psd_b[k].min(s_tmp);
+                    }
+
+                    let s_min = state.min_psd[k].min(state.min_psd_b[k]).max(EPSILON);
+                    let s_r = s_tmp / s_min;
+                    let indicator = if s_r > mcra_delta { 1.0_f32 } else { 0.0 };
+
+                    let p =
+                        mcra_alpha_p * state.speech_presence[k] + (1.0 - mcra_alpha_p) * indicator;
+                    state.speech_presence[k] = p;
+
+                    let alpha_d = mcra_alpha_s + (1.0 - mcra_alpha_s) * p;
+                    state.noise_psd[k] = alpha_d * state.noise_psd[k] + (1.0 - alpha_d) * power;
+                }
+                state.frame_counter += 1;
             }
+
+            state.calculate_gains(reduction_linear, floor_linear, curve_small, use_captured);
 
             // Spectral flux: mean |magnitude_change| across bins
             let mut flux = 0.0_f32;
@@ -364,6 +446,10 @@ impl MultiResState {
             state.current_flux = flux / spectrum_size as f32;
             total_flux += state.current_flux;
             channels_with_flux += 1;
+        }
+
+        if profile.capture {
+            self.capture_frames += 1;
         }
 
         // Update smoothed flux weight

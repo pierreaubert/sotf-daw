@@ -438,3 +438,69 @@ fn harmonic_percussive_cold_thread_reset_allocates_and_frees_nothing() {
         }
     }
 }
+
+#[test]
+fn dual_profile_capture_commit_reset_cancel_and_clear_have_zero_heap() {
+    use sotf_host::{ParameterId, ParameterValue};
+    for low in [false, true] {
+        for rate in [44_100, 48_000, 96_000] {
+            let mut p = plugin(2, low, true, false, false);
+            p.initialize(f64::from(rate)).unwrap();
+            let latency = p.latency_samples();
+            let mut capture: Vec<f32> = (0..rate as usize * 3)
+                .map(|i| ((i * 23 % 127) as f32 - 63.0) / 4096.0)
+                .collect();
+            let mut signal = vec![0.01; rate as usize * 2];
+            let mut partial = vec![0.02; (latency + 137) * 2];
+            let mut tail = vec![0.0; p.drain_output_frames_max() * 2];
+            // Host identifiers are prepared outside the callback; cloning their
+            // retained Arc handles does not construct or free owned IDs on audio.
+            let learn_id = ParameterId::from("learn_noise");
+            let use_id = ParameterId::from("use_captured_profile");
+            let clear_id = ParameterId::from("clear_profile");
+            let counts = counted(|| {
+                p.parametric_set_parameter(learn_id.clone(), ParameterValue::Bool(true))
+                    .unwrap();
+                for chunk in capture.chunks_mut(137 * 2) {
+                    let n = chunk.len() / 2;
+                    p.process_in_place(chunk, &ProcessContext::new(rate, n))
+                        .unwrap();
+                }
+                p.reset();
+                for chunk in signal.chunks_mut(137 * 2) {
+                    let n = chunk.len() / 2;
+                    p.process_in_place(chunk, &ProcessContext::new(rate, n))
+                        .unwrap();
+                }
+                p.parametric_set_parameter(use_id.clone(), ParameterValue::Bool(false))
+                    .unwrap();
+                p.parametric_set_parameter(use_id.clone(), ParameterValue::Bool(true))
+                    .unwrap();
+                p.parametric_set_parameter(learn_id.clone(), ParameterValue::Bool(true))
+                    .unwrap();
+                p.process_in_place(&mut partial, &ProcessContext::new(rate, latency + 137))
+                    .unwrap();
+                for _ in 0..32 {
+                    if p.drain(&mut tail, &ProcessContext::new(rate, 0))
+                        .unwrap()
+                        .complete
+                    {
+                        break;
+                    }
+                }
+                p.reset();
+                p.parametric_set_parameter(learn_id.clone(), ParameterValue::Bool(true))
+                    .unwrap();
+                p.process_in_place(&mut partial, &ProcessContext::new(rate, latency + 137))
+                    .unwrap();
+                p.parametric_set_parameter(learn_id.clone(), ParameterValue::Bool(false))
+                    .unwrap();
+                p.parametric_set_parameter(clear_id.clone(), ParameterValue::Bool(true))
+                    .unwrap();
+            });
+            assert_eq!(counts, (0, 0), "rate={rate} low={low}");
+            assert_eq!(p.latency_samples(), latency);
+        }
+    }
+    println!("dual_profile_heap cases=6 allocations=0 frees=0 latency_unchanged=true");
+}

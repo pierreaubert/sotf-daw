@@ -38,6 +38,22 @@ the other. Latency-aligned error, first-100-ms clean projection and noise-only
 channel attenuation are measurements of this one speaker, not population,
 held-out-training, intelligibility or listening-quality acceptance.
 
+A captured profile applies to both FFT resolutions. Each grid captures its own
+windowed powers over the same source epoch; no main-to-small PSD scaling is
+assumed. Both grids publish together when the main capture completes. A valid
+profile is used from the first processed frame after reset, with the configured
+gain smoothing still applied. Reset and canceled replacement captures retain the
+published profile; clear and a real sample-rate change invalidate both grids.
+Same-clock reinitialization retains them, and rejected clocks change neither.
+Incomplete capture cannot advance or publish during EOF padding. Parameter
+getters reflect automatic capture completion/profile selection immediately.
+
+The fixed-profile audit uses controlled captured silence on one channel and
+seeded noise on another. It verifies profile ownership and reduction, not blind
+speech preservation: recorded later-vowel projections remain about 0.0946/0.1212
+in the two blind FFT modes. Held-out music/speech/noise and device-load deadline
+evidence remain open; optional learned models are separate work.
+
 Serialized percentage-like values are normalized fractions (`0.70` means 70%); UI scaling is
 presentation only. Noise-profile learning lasts approximately one second at every sample rate and
 in both FFT modes.

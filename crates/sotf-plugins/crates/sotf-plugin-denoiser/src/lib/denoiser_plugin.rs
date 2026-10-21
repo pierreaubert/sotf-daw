@@ -638,6 +638,19 @@ impl DenoiserPlugin {
         }
     }
 
+    /// Synchronize live parameter values without rebuilding metadata storage.
+    pub(super) fn refresh_cached_parameter_values(&mut self) {
+        for index in 0..self.ui.cached_parameters.len() {
+            if let Some(value) =
+                param_bridge::get_parameter(DN, &self.ui.cached_parameters[index].id, |i| {
+                    self.param_value(i)
+                })
+            {
+                self.ui.cached_parameters[index].default_value = value;
+            }
+        }
+    }
+
     /// Set the f64 value of parameter at PARAMS index.
     /// Order must match params::PARAMS exactly.
     /// Side effects are dispatched separately after param_bridge::set_parameter.
@@ -784,15 +797,7 @@ impl DenoiserPlugin {
         // Refresh primitive cached values in place. Profile triggers can also
         // change Learn/Use Profile, so update every value without replacing the
         // prepared schema or any of its owned metadata.
-        for index in 0..self.ui.cached_parameters.len() {
-            if let Some(value) =
-                param_bridge::get_parameter(DN, &self.ui.cached_parameters[index].id, |i| {
-                    self.param_value(i)
-                })
-            {
-                self.ui.cached_parameters[index].default_value = value;
-            }
-        }
+        self.refresh_cached_parameter_values();
         Ok(())
     }
 
@@ -1085,8 +1090,11 @@ impl DenoiserPlugin {
             self.accumulate_noise_frame();
         }
 
-        // Phase 3: Calculate Gains (skip during bootstrap — gains stay at 1.0)
-        if !bootstrapping {
+        // A captured profile is already prepared; live-estimator warm-up must
+        // not bypass its reduction after reset or during a replacement capture.
+        let fixed_profile =
+            self.noise_profile.use_captured_profile && self.noise_profile.has_noise_profile;
+        if !bootstrapping || fixed_profile {
             if self.params.polyphonic_detection {
                 self.calculate_polyphonic_gains();
             } else {
@@ -1324,6 +1332,11 @@ impl DenoiserPlugin {
                     self.coeffs.reduction_linear,
                     self.coeffs.floor_linear,
                     curve_small,
+                    super::multi_resolution::SmallProfileControl {
+                        capture: capture_noise && self.noise_profile.is_learning,
+                        use_captured: self.noise_profile.use_captured_profile
+                            && self.noise_profile.has_noise_profile,
+                    },
                 )
                 .map_err(str::to_string)?;
             }
@@ -1447,6 +1460,10 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("Denoiser sample rate must be finite and greater than zero".to_string());
         }
+        if self.config.sample_rate != sample_rate && self.noise_profile.has_noise_profile {
+            // FFT-bin powers cannot be reused at a different physical clock.
+            self.clear_noise_profile();
+        }
         self.config.sample_rate = sample_rate;
         self.mcra.bootstrap_frames = Self::bootstrap_frame_count(sample_rate, self.config.hop_size);
         self.noise_profile.learning_frames_target =
@@ -1542,6 +1559,7 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
 
         self.ui.avg_reduction_db = 0.0;
         self.ui.learning_active = true;
+        self.refresh_cached_parameter_values();
     }
 
     fn process_in_place(

@@ -1076,11 +1076,24 @@
             "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json"
           ],
           "result": "Recorded low-latency first-100ms projection rises 0.45946 -> 0.99700, while first-100ms independent noise gain becomes -0.0119 dB (nearly unattenuated) and 100-200ms noise gain -6.2777 dB versus prior -15.1887 dB. Quality-mode first-100ms projection/SDR retain 0.85246/0.82788 dB; low-latency full-clip SDR rises -0.53114 -> 1.08366 dB. Crucially, later-vowel projection remains only 0.09458/0.12125, so onset warm-up is not classified as speech preservation or quality completion. Single-speaker and synthetic-noise limitations retained."
+        },
+        {
+          "requirement": "Apply captured noise profiles consistently through both FFT grids, startup/reset and prepared-clock lifecycle.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/finite_stream.rs",
+            "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-validation.json"
+          ],
+          "result": "Captured noise profiles now govern both analysis resolutions. Each small FFT accumulates its own per-channel windowed periodograms during the same source capture epoch; completion publishes both grids and recomputes latest small gains before blending. Fixed profiles override live-estimator warm-up from the first processed frame; normal temporal smoothing remains. Reset/same-clock init and canceled replacement capture retain the published profile; clear or a real sample-rate change invalidates both, while invalid initialization remains transactional. EOF padding measures neither profile. Primitive cached parameter values now follow automatic profile/learning transitions without schema allocation. Red baseline: first-frame gain stayed 1 despite a valid profile, changed-clock data remained active, and a captured-silence channel was reduced to RMS 0.0109478 by the live small arm. Four final 48/96k/FFT-mode cases retain RMS 0.99999989-0.99999993 on that channel while independently captured noise stays at 0.01219-0.01704. Disabling/re-enabling the profile restores live reduction and then the exact original fixed-profile waveform. Independent f64 DFT/power and gain checks across 12 channel/bin probes have maximum scaled power error 9.80545e-8 (2e-6 gate), gain error 1.43131e-8 (1e-5). Six source-partition cases preserve exact audio/both grids and freeze pending capture at EOF; cancel/clear/clock ownership pass. Six lifecycle cases have zero allocations and frees with FFT latency unchanged. Full release 124 passed, four existing ignores; standard 48-row optional QA, strict all-target release Clippy and formatting pass. Twelve prior blind recorded/onset/noise rows are exactly unchanged, including weak later-vowel projections 0.09458/0.12125. These are fixed-profile correctness observations, not held-out quality or device deadline proof. No schema/preset/latency/dependency/ML change; optional small-profile payload adds 2056 bytes/channel excluding Vec headers. Overall remains 35/45, denoiser partial."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json",
-        "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json"
+        "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-validation.json"
       ],
       "remaining": [
         "Investigate speech already present during the nominal 106.6667 ms bootstrap and later vowel loss: the recorded 300-450ms clean projection is only 0.09458 quality/0.12125 low-latency. Longer low-latency warm-up improves the initial projection but passes more noise; assess across sources before estimator tuning.",
@@ -2892,6 +2905,15 @@
       ],
       "result": "Fixed an actual centered-phase defect found during FIR-M1 investigation: even-N FIR synthesis retained the unpaired lag -N/2 sample while reporting N/2 delay. Linear design now zeros that endpoint and averages representable pairs before f32 conversion. N taps, latency N/2+32 per stage, parameters/serialized settings and minimum-phase design stay unchanged. Independent streamed DTFT: 4112 non-grid probes from 20 Hz to 20 kHz, four rates 44.1/48/96/192 kHz and all lengths; maximum aligned phase error drops from 9.42126519e-4 to 2.68891455e-7 rad under unchanged 1e-4. Maximum aligned group-delay error 2.0151667e-4 samples under unchanged 0.5. Exact support/symmetry/latency hold in 240 legacy/ordered/auto-gain configurations. Full release crate 145 passed, two existing ignores retained; strict all-target QA Clippy/format pass and existing dynamic/convolution/heap/EOF coverage remains passing. FIR-M1 still fails its unchanged 0.05 dB bound: -0.2462965578 dB versus baseline -0.2457439959. Dense short-filter magnitude error is retained, up to 1.3314987 dB at 192 kHz/1024 taps. Static QA exits zero under its historical 4x jitter gate but records six physical misses; no deadline compliance claimed. Rectangular/log-weighted/reweighted whole-spectrum experiments were rejected and removed; the reweighted patch/raw results are retained. Overall remains 35/45, FIR entry partial.",
       "limitations": "Original magnitude target, full-load/native deadlines remain pending; phase correctness is not a substitute completion criterion. Overall 35/45; optional ML separate."
+    },
+    {
+      "name": "Denoiser coherent captured-profile ownership across resolutions and sample clocks",
+      "state": "verified_partial",
+      "plugin_ids": [
+        19
+      ],
+      "result": "Captured noise profiles now govern both analysis resolutions. Each small FFT accumulates its own per-channel windowed periodograms during the same source capture epoch; completion publishes both grids and recomputes latest small gains before blending. Fixed profiles override live-estimator warm-up from the first processed frame; normal temporal smoothing remains. Reset/same-clock init and canceled replacement capture retain the published profile; clear or a real sample-rate change invalidates both, while invalid initialization remains transactional. EOF padding measures neither profile. Primitive cached parameter values now follow automatic profile/learning transitions without schema allocation. Red baseline: first-frame gain stayed 1 despite a valid profile, changed-clock data remained active, and a captured-silence channel was reduced to RMS 0.0109478 by the live small arm. Four final 48/96k/FFT-mode cases retain RMS 0.99999989-0.99999993 on that channel while independently captured noise stays at 0.01219-0.01704. Disabling/re-enabling the profile restores live reduction and then the exact original fixed-profile waveform. Independent f64 DFT/power and gain checks across 12 channel/bin probes have maximum scaled power error 9.80545e-8 (2e-6 gate), gain error 1.43131e-8 (1e-5). Six source-partition cases preserve exact audio/both grids and freeze pending capture at EOF; cancel/clear/clock ownership pass. Six lifecycle cases have zero allocations and frees with FFT latency unchanged. Full release 124 passed, four existing ignores; standard 48-row optional QA, strict all-target release Clippy and formatting pass. Twelve prior blind recorded/onset/noise rows are exactly unchanged, including weak later-vowel projections 0.09458/0.12125. These are fixed-profile correctness observations, not held-out quality or device deadline proof. No schema/preset/latency/dependency/ML change; optional small-profile payload adds 2056 bytes/channel excluding Vec headers. Overall remains 35/45, denoiser partial.",
+      "limitations": "Fixed-profile correctness does not resolve blind speech-at-start/vowel loss, held-out quality or native/device deadline evidence. Overall 35/45; optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "captured_profile_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 3 tests\nprofile_first_frame low_latency=false maximum_gain=1\nprofile_new_clock has_profile=true\ntest captured_profile_tests::retained_profile_reduces_the_first_frame_while_live_estimation_bootstraps ... FAILED\ntest captured_profile_tests::captured_profile_is_retained_only_for_the_same_sample_clock ... FAILED\nprofile_small_fft rate=48000 low_latency=false retained_gain=0.010947809507680985 noise_gain=0.010921280071522991\ntest captured_profile_tests::captured_silence_does_not_learn_wanted_audio_in_the_small_fft_arm ... FAILED\n\nfailures:\n\nfailures:\n    captured_profile_tests::captured_profile_is_retained_only_for_the_same_sample_clock\n    captured_profile_tests::captured_silence_does_not_learn_wanted_audio_in_the_small_fft_arm\n    captured_profile_tests::retained_profile_reduces_the_first_frame_while_live_estimation_bootstraps\n\ntest result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 77 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 9.10s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-4696045e7779ff6d)\n\nthread 'captured_profile_tests::retained_profile_reduces_the_first_frame_while_live_estimation_bootstraps' (334069280) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs:75:9:\nvalid profile must override warm-up bypass\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'captured_profile_tests::captured_profile_is_retained_only_for_the_same_sample_clock' (334069278) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs:102:5:\na binned profile belongs to its captured clock\n\nthread 'captured_profile_tests::captured_silence_does_not_learn_wanted_audio_in_the_small_fft_arm' (334069279) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs:146:13:\ncaptured silence must not be replaced by live wanted-audio learning\nerror: test failed, to rerun pass `-p sotf-plugin-denoiser --lib`\n"
+}
