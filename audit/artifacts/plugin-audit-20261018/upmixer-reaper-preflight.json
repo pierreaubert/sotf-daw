@@ -1,0 +1,90 @@
+{
+  "command": [
+    "/Applications/REAPER.app/Contents/MacOS/REAPER",
+    "-newinst",
+    "-cfgfile",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/reaper.ini",
+    "-nosplash",
+    "-ignoreerrors",
+    "-new",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/harnesses/upmixer_reaper_probe.lua"
+  ],
+  "pid": 59206,
+  "resource_directory": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198",
+  "report_file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/probe.txt",
+  "status": "preflight_incomplete_no_pdc_evidence",
+  "observed_after_ui_inspection": {
+    "original_pid_live": false,
+    "report_exists": false,
+    "ui_error": "cgWindowNotFound",
+    "ui_tool_wall_seconds": 13346.7564
+  },
+  "retries": [
+    {
+      "command": [
+        "/Applications/REAPER.app/Contents/MacOS/REAPER",
+        "-newinst",
+        "-cfgfile",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/reaper.ini",
+        "-nosplash",
+        "-ignoreerrors",
+        "-new",
+        "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/harnesses/upmixer_reaper_probe.lua"
+      ],
+      "pid": 78258,
+      "status": "still_running",
+      "report_file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/probe-retry.txt",
+      "cleanup_status": "not_signalled_no_verified_test_process",
+      "report_exists": false,
+      "forked_process_cleanup": []
+    },
+    {
+      "command": [
+        "/Applications/REAPER.app/Contents/MacOS/REAPER",
+        "-newinst",
+        "-cfgfile",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/reaper.ini",
+        "-nosplash",
+        "-ignoreerrors",
+        "-new",
+        "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/harnesses/upmixer_reaper_probe.lua"
+      ],
+      "pid": 86971,
+      "status": "launch_wait_expired",
+      "report_file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-reaper-f4fd198/upmixer-probe.txt",
+      "guard": "resource marker; no launch environment dependency"
+    }
+  ],
+  "result": "Three launches of the isolated REAPER 7.71 resource configuration produced no script report, including a marker-guarded script that does not depend on environment forwarding. Launch PIDs forked. Current children were stopped only by matching the unique task cfg path; unrelated instances were left untouched. The UI inspection tool returned cgWindowNotFound after a prolonged tool delay. This establishes no external DAW latency, restart or compensation result.",
+  "script_sha256": "d0729438f50fccb335c5d9d793a3cefdf8e686d658974f9678f12cacd41e92ed",
+  "api_reference": "https://www.reaper.fm/sdk/reascript/reascripthelp.html",
+  "isolated_cfg_process_cleanup": [
+    {
+      "pid": 81000,
+      "verified_unique_task_cfg": true,
+      "newinst_preserved": false,
+      "probe_script_preserved": false,
+      "terminal": true
+    }
+  ],
+  "marker_retry_cleanup": [],
+  "intermediate_reaper_process_observation": [
+    {
+      "pid": 76252,
+      "ppid": 1,
+      "elapsed": "05:03",
+      "is_isolated_command": false,
+      "original_probe_pid": false,
+      "retry_pid": false
+    },
+    {
+      "pid": 81000,
+      "ppid": 1,
+      "elapsed": "01:30",
+      "is_isolated_command": true,
+      "original_probe_pid": false,
+      "retry_pid": false
+    }
+  ],
+  "verified_task_cfg_processes_remaining": []
+}

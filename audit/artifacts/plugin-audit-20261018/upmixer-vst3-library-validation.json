@@ -1,0 +1,418 @@
+{
+  "base_commit": "f4fd19883118ef9d40095590d75c0a61d2b9d137",
+  "initial_commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nwarning: unused import: `CStr`\n  --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:14:20\n   |\n14 |     use std::ffi::{CStr, CString, c_char, c_int, c_void};\n   |                    ^^^^\n   |\n   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default\n\nwarning: trailing semicolon in macro used in expression position\n  --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:95:5\n   |\n95 |     #[VST3(implements(IComponentHandler))]\n   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n   |\n   = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!\n   = note: for more information, see issue #79813 <https://github.com/rust-lang/rust/issues/79813>\n   = note: `#[warn(semicolon_in_expressions_from_non_local_macros)]` (part of `#[warn(future_incompatible)]`) on by default\n   = note: this warning originates in the macro `vst3_com::vtable` which comes from the expansion of the attribute macro `VST3` (in Nightly builds, run with -Z macro-backtrace for more info)\n\nwarning: trailing semicolon in macro used in expression position\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:118:5\n    |\n118 |     #[VST3(implements(IBStream))]\n    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |\n    = warning: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!\n    = note: for more information, see issue #79813 <https://github.com/rust-lang/rust/issues/79813>\n    = note: this warning originates in the macro `vst3_com::vtable` which comes from the expansion of the attribute macro `VST3` (in Nightly builds, run with -Z macro-backtrace for more info)\n\nerror[E0308]: mismatched types\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:259:38\n    |\n259 |                 assert_eq!(info.cid, *b\"SotfUpmixer00001\");\n    |                                      ^^^^^^^^^^^^^^^^^^^^ expected `GUID`, found `[u8; 16]`\n    |\nhelp: try wrapping the expression in `nih_plug::wrapper::vst3::vst3_sys::sys::GUID`\n    |\n259 |                 assert_eq!(info.cid, nih_plug::wrapper::vst3::vst3_sys::sys::GUID { data: *b\"SotfUpmixer00001\" });\n    |                                      ++++++++++++++++++++++++++++++++++++++++++++++++++++                      +\n\nerror[E0502]: cannot borrow `bytes` as immutable because it is also borrowed as mutable\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:165:34\n    |\n165 |             bytes.resize(end.max(bytes.len()), 0);\n    |             ----- ------         ^^^^^ immutable borrow occurs here\n    |             |     |\n    |             |     mutable borrow later used by call\n    |             mutable borrow occurs here\n\nSome errors have detailed explanations: E0308, E0502.\nFor more information about an error, try `rustc --explain E0308`.\nwarning: `plugins-nih` (example \"upmixer_vst3_host\") generated 3 warnings\nerror: could not compile `plugins-nih` (example \"upmixer_vst3_host\") due to 2 previous errors; 3 warnings emitted\nwarning: build failed, waiting for other jobs to finish...\n"
+    }
+  ],
+  "preliminary_commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nwarning: constant in pattern `kIBSeekSet` should have an upper case name\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:197:17\n    |\n197 |                 kIBSeekSet => 0_i128,\n    |                 ^^^^^^^^^^ help: convert the identifier to upper case: `K_IBSEEK_SET`\n    |\n    = note: `#[warn(non_upper_case_globals)]` (part of `#[warn(nonstandard_style)]`) on by default\n\nwarning: constant in pattern `kIBSeekCur` should have an upper case name\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:198:17\n    |\n198 |                 kIBSeekCur => self.cursor.get() as i128,\n    |                 ^^^^^^^^^^ help: convert the identifier to upper case: `K_IBSEEK_CUR`\n\nwarning: constant in pattern `kIBSeekEnd` should have an upper case name\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:199:17\n    |\n199 |                 kIBSeekEnd => self.bytes.borrow().len() as i128,\n    |                 ^^^^^^^^^^ help: convert the identifier to upper case: `K_IBSEEK_END`\n\nwarning: `plugins-nih` (example \"upmixer_vst3_host\") generated 3 warnings\n    Finished `release` profile [optimized] target(s) in 21.24s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/examples/upmixer_vst3_host",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/libplugins_nih.dylib"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "\nthread 'main' (329457477) panicked at crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:433:17:\nassertion failed: (observed - plain).abs() < 1e-6\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    }
+  ],
+  "harness_corrections": "Initial GUID/buffer compile errors corrected. First native scalar probe incorrectly used controller-only writes while processing; use real IParameterChanges/IParamValueQueue events at callback offset zero, as required by VST3.",
+  "additional_initial_commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:126:23\n    |\n126 |     #[VST3(implements(IParamValueQueue))]\n    |                       ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:131:10\n    |\n131 |     impl IParamValueQueue for ScalarQueue {\n    |          ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:153:23\n    |\n153 |     #[VST3(implements(IParameterChanges))]\n    |                       ^^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:155:27\n    |\n155 |         queue: VstPtr<dyn IParamValueQueue>,\n    |                           ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:157:10\n    |\n157 |     impl IParameterChanges for ScalarChanges {\n    |          ^^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:161:77\n    |\n161 |         unsafe fn get_parameter_data(&self, index: i32) -> StaticVstPtr<dyn IParamValueQueue> {\n    |                                                                             ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:176:31\n    |\n176 |         ) -> StaticVstPtr<dyn IParamValueQueue> {\n    |                               ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:505:34\n    |\n505 |                     VstPtr::<dyn IParamValueQueue>::owned(Box::into_raw(queue).cast()).unwrap()\n    |                                  ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:510:34\n    |\n510 |                     VstPtr::<dyn IParameterChanges>::owned(Box::into_raw(changes).cast()).unwrap()\n    |                                  ^^^^^^^^^^^^^^^^^ not found in this scope\n\nFor more information about this error, try `rustc --explain E0405`.\nerror: could not compile `plugins-nih` (example \"upmixer_vst3_host\") due to 9 previous errors\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:126:23\n    |\n126 |     #[VST3(implements(IParamValueQueue))]\n    |                       ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:131:10\n    |\n131 |     impl IParamValueQueue for ScalarQueue {\n    |          ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:153:23\n    |\n153 |     #[VST3(implements(IParameterChanges))]\n    |                       ^^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:155:27\n    |\n155 |         queue: VstPtr<dyn IParamValueQueue>,\n    |                           ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:157:10\n    |\n157 |     impl IParameterChanges for ScalarChanges {\n    |          ^^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:161:77\n    |\n161 |         unsafe fn get_parameter_data(&self, index: i32) -> StaticVstPtr<dyn IParamValueQueue> {\n    |                                                                             ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:176:31\n    |\n176 |         ) -> StaticVstPtr<dyn IParamValueQueue> {\n    |                               ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParamValueQueue` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:505:34\n    |\n505 |                     VstPtr::<dyn IParamValueQueue>::owned(Box::into_raw(queue).cast()).unwrap()\n    |                                  ^^^^^^^^^^^^^^^^ not found in this scope\n\nerror[E0405]: cannot find trait `IParameterChanges` in this scope\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:510:34\n    |\n510 |                     VstPtr::<dyn IParameterChanges>::owned(Box::into_raw(changes).cast()).unwrap()\n    |                                  ^^^^^^^^^^^^^^^^^ not found in this scope\n\nFor more information about this error, try `rustc --explain E0405`.\nerror: could not compile `plugins-nih` (example \"upmixer_vst3_host\") due to 9 previous errors\n"
+    }
+  ],
+  "metrics": {
+    "malformed_stream_cases": 4,
+    "os_main_thread": true,
+    "refused_loads": [
+      {
+        "exact_inactive_retry_latency": 0,
+        "history_error": 0.0,
+        "processing": false,
+        "snapshot_shapes": 4
+      },
+      {
+        "exact_inactive_retry_latency": 0,
+        "history_error": 0.0,
+        "processing": true,
+        "snapshot_shapes": 4
+      }
+    ],
+    "scalar_automation": {
+      "latency": 2048,
+      "maximum_change_from_unautomated": 0.005286157131195068,
+      "maximum_reference_error": 0.0
+    },
+    "waveforms": [
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 2048,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 44100
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 1024,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 44100
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 44100
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 44100
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 2048,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 48000
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 1024,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 48000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 48000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 48000
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 2048,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 96000
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 1024,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 96000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 96000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 96000
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 2048,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 192000
+      },
+      {
+        "bypass": false,
+        "frames": 12291,
+        "latency": 1024,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 192000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": false,
+        "maximum_error": 0.0,
+        "rate": 192000
+      },
+      {
+        "bypass": true,
+        "frames": 12291,
+        "latency": 0,
+        "low_latency": true,
+        "maximum_error": 0.0,
+        "rate": 192000
+      }
+    ]
+  },
+  "preliminary_clippy": {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "plugins-nih",
+      "--release",
+      "--features",
+      "upmixer",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 101,
+    "stdout": "",
+    "stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Checking plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\nerror: transmute used without annotations\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:167:31\n    |\n167 |                     std::mem::transmute(self.queue.as_ptr())\n    |                               ^^^^^^^^^ help: consider adding missing annotations: `transmute::<*mut *mut nih_plug::wrapper::vst3::vst3_sys::vst::IParamValueQueueVTable, nih_plug::wrapper::vst3::vst3_sys::utils::StaticVstPtr<dyn nih_plug::wrapper::vst3::vst3_sys::vst::IParamValueQueue>>`\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#missing_transmute_annotations\n    = note: `-D clippy::missing-transmute-annotations` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::missing_transmute_annotations)]`\n\nerror: transmute used without annotations\n   --> crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs:544:63\n    |\n544 |                 data.input_param_changes = unsafe { std::mem::transmute(changes.as_ptr()) };\n    |                                                               ^^^^^^^^^ help: consider adding missing annotations: `transmute::<*mut *mut nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChangesVTable, nih_plug::wrapper::vst3::vst3_sys::utils::StaticVstPtr<dyn nih_plug::wrapper::vst3::vst3_sys::vst::IParameterChanges>>`\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#missing_transmute_annotations\n\nerror: could not compile `plugins-nih` (example \"upmixer_vst3_host\") due to 2 previous errors\n"
+  },
+  "prior_successful_commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 29.01s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/examples/upmixer_vst3_host",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/libplugins_nih.dylib"
+      ],
+      "exit_code": 0,
+      "stdout": "SOTF_VST3_RESULT {\"malformed_stream_cases\":4,\"os_main_thread\":true,\"refused_loads\":[{\"exact_inactive_retry_latency\":0,\"history_error\":0.0,\"processing\":false,\"snapshot_shapes\":4},{\"exact_inactive_retry_latency\":0,\"history_error\":0.0,\"processing\":true,\"snapshot_shapes\":4}],\"scalar_automation\":{\"latency\":2048,\"maximum_change_from_unautomated\":0.005286157131195068,\"maximum_reference_error\":0.0},\"waveforms\":[{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":192000}]}\n",
+      "stderr": ""
+    }
+  ],
+  "commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "build",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "--example",
+        "upmixer_vst3_host"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 34.69s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/examples/upmixer_vst3_host",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/libplugins_nih.dylib"
+      ],
+      "exit_code": 0,
+      "stdout": "SOTF_VST3_RESULT {\"malformed_stream_cases\":4,\"os_main_thread\":true,\"refused_loads\":[{\"exact_inactive_retry_latency\":0,\"history_error\":0.0,\"processing\":false,\"snapshot_shapes\":4},{\"exact_inactive_retry_latency\":0,\"history_error\":0.0,\"processing\":true,\"snapshot_shapes\":4}],\"scalar_automation\":{\"latency\":2048,\"maximum_change_from_unautomated\":0.005286157131195068,\"maximum_reference_error\":0.0},\"waveforms\":[{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":44100},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":48000},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":96000},{\"bypass\":false,\"frames\":12291,\"latency\":2048,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":false,\"frames\":12291,\"latency\":1024,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":false,\"maximum_error\":0.0,\"rate\":192000},{\"bypass\":true,\"frames\":12291,\"latency\":0,\"low_latency\":true,\"maximum_error\":0.0,\"rate\":192000}]}\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "plugins-nih",
+        "--release",
+        "--features",
+        "upmixer",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "    Checking plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 0.88s\n"
+    }
+  ],
+  "status": "passed",
+  "tested_source_sha256": {
+    "crates/sotf-plugins/crates/plugins-nih/Cargo.toml": "7f353eaf12cf0bdffef212165267c2f0047f4a9835bb5ac3670e189cce69d6d1",
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs": "cf0f9c359f3c5abb97f323db63761d6dced6760043b057bc849ae34dccedec55",
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs": "953a8dfcffdc414e12fcf17c722fa99b0809f68be2112e2401de77bb4aecb899",
+    "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs": "a5b2bdb64c09654dcfaad3c0b020a46be5803d2f39afb281844ce56c8f70e7b8",
+    "crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs": "23c29256007e5747df7a0affff4c6fb9a09da74ffaf6508e0b1dc082ba1c2212",
+    "crates/sotf-plugins/crates/plugins-nih/Justfile": "99a62022a0247990b70c93a085f274e5c777976108cd6f4604814cd41b4b7ece"
+  },
+  "library_sha256": "8790f927a4894724e8aadb920b8760e74579ce5cf5744a68acd827f48221c930",
+  "library_bytes": 19054256,
+  "host_executable_sha256": "93fa5841dc06bfd44c45e85f17d482395ca83b3c5aff71adecc8a4954cb55d6f",
+  "host_executable_bytes": 17364704,
+  "validation_limits": [
+    "macOS arm64 dynamic library and main-thread test host only; other platforms not validated.",
+    "Does not itself prove external DAW PDC, real audio-device deadlines or perceptual quality.",
+    "Scalar VST3 event delivered at callback offset zero; no sample-accurate Upmixer automation claim.",
+    "Malformed/truncated/short-read streams are tested; this is not a complete ABI fuzz audit.",
+    "Optional ML work remains separate."
+  ],
+  "formatting": {
+    "command": [
+      "rtk",
+      "proxy",
+      "rustfmt",
+      "--check",
+      "--edition",
+      "2024",
+      "crates/sotf-plugins/crates/plugins-nih/examples/upmixer_vst3_host.rs"
+    ],
+    "exit_code": 0
+  }
+}

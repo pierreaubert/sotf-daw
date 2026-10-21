@@ -74,3 +74,7 @@ log = { workspace = true }
 crossbeam = { workspace = true }
 parking_lot = { workspace = true }
 assert_no_alloc = { version = "1.1.2",  package = "sotf-assert_no_alloc",  git = "https://github.com/pierreaubert/sotf-3rdparties", features = ["backtrace", "log"] }
+
+[[example]]
+name = "upmixer_vst3_host"
+required-features = ["upmixer"]

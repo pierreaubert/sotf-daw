@@ -97,8 +97,21 @@ FFT states report 0/1024/2048 frames before audio, with fixed stereo input/5.1
 output. Separately constructed DSP references cover irregular callbacks and zero
 continuation at 44.1/48/96/192 kHz. Earlier generated-wrapper CLAP/VST3 context
 tests cover initialization and direct pending-parameter changes; they do not
-exercise native state loading. Exported VST3 and external DAW restart/PDC behavior
-still need validation.
+exercise native state loading.
+
+On macOS, `upmixer_vst3_host` loads the built library through the platform loader
+and exported `GetPluginFactory`, then exercises the COM state, bus, latency and
+audio interfaces on the OS main thread. Sixteen saved-state waveform cases match
+separate DSP references exactly. Active-load refusal preserves audio history;
+inactive retry succeeds. Live scalar events use VST3 parameter queues and retain
+prepared latency. The packaged VST3 also passes pluginval 1.0.4 strictness 5 with
+editor tests enabled across four rates and five block sizes. External DAW PDC,
+CLAP artifact loading and non-macOS native validation remain separate.
+
+```bash
+cargo build -p plugins-nih --release --features upmixer --lib --example upmixer_vst3_host
+target/release/examples/upmixer_vst3_host target/release/libplugins_nih.dylib
+```
 
 Saturation includes saved mode and oversampling choices. Native wrappers apply
 the plugin's requested 2x/4x oversampling before initialization and report the

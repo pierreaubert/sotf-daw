@@ -6,7 +6,10 @@
   history and published latency until the host deactivates, loads and reactivates.
   Exported CLAP tests cover factory/state streams, inactive retry and independent
   waveform references. Earlier CLAP/VST3-context tests cover direct wrapper
-  initialization; native VST3/external DAW validation remains open.
+  initialization. A macOS executable host now validates the actual VST3 library,
+  exported factory, state streams, main-thread notifications and live parameter
+  queues against independent DSP audio. The packaged plugin passes pluginval
+  strictness 5 including enabled editor tests; external DAW PDC remains open.
 
 - Correct CLAP surround capability advertisement for Ambisonics and Crossover; keep the reserved legacy BandSplit VST3 output bus silent when active.
 - Reuse prepared Convolution resources when reactivating unchanged geometry and configuration, allowing reset after the original IR file has been removed.

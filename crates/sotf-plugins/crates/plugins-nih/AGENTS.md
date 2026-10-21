@@ -52,4 +52,7 @@ eq, compressor, limiter, gate, gain, delay, expander, crossfeed, saturation, den
 
 - Upmixer state snapshots are inactive/control-thread only. Both `DynamicParams::validate_state` and the macro's `state_restore_allows_audio_thread` gate are required: NIH can otherwise rebuild active FFT state and change latency before host restart.
 - Reject all active snapshots before mutation, including identical/scalar/sparse states; ordinary scalar automation stays live. Retry by deactivating, loading and reactivating.
-- `native_upmixer_clap_tests` uses the exported CLAP entry/factory and real state/audio callbacks. Generated wrapper-context tests alone do not validate native state loading. Exported VST3/external DAW coverage remains separate.
+- `native_upmixer_clap_tests` uses the exported CLAP entry/factory and real state/audio callbacks. Generated wrapper-context tests alone do not validate native state loading.
+- The macOS `upmixer_vst3_host` example loads the actual dylib and invokes exported factory/COM callbacks on the OS main thread. Keep all COM references inside the loaded library's lifetime. Only C-compatible pointers, planar audio and serialized bytes cross this boundary.
+- During VST3 processing, controller-only writes are not audio automation: send `IParameterChanges`/`IParamValueQueue` events through `ProcessData`. The harness compares those events against direct DSP updates.
+- Pluginval strictness 5 and the native executable have different scopes. External DAW PDC, CLAP artifact loading and other-platform validation still need independent evidence.
