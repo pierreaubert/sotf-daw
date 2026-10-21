@@ -30,6 +30,11 @@ required-features = ["qa"]
 name = "qa-aae-validation"
 path = "bin/qa_aae_validation.rs"
 
+[[bin]]
+name = "qa-aae-decay"
+path = "bin/qa_aae_decay.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 log = { workspace = true }

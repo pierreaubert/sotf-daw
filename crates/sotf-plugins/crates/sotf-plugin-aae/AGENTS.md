@@ -68,3 +68,8 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   and clear its pending slot, including zero-delay targets.
 - Public predelay request values may lead the audible fade by up to the remaining
   fade plus one 10 ms fade. Keep direct graph latency and delay capacity unchanged.
+
+- `qa-aae-decay` is an explicit offline 208-row corner diagnostic, separate from
+  callback timing and existing acoustic QA. Preserve the full matrix, raw failed
+  rows, 10% neutral target and r² > 0.98 checks; do not trim sparse failing cases.
+  Band fits are frequency-region observations, not endpoint-ratio guarantees.

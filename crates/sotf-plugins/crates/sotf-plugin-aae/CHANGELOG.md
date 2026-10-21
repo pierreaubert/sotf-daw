@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add explicit offline `qa-aae-decay` parameter-corner measurements for static,
+  modulated, impulse and sustained high-level operation, with bandwise fits and
+  residual-energy reporting. Preserve all failed rows and nonzero failure exit;
+  sparse large-room/short-decay limits remain open.
+
 - Preserve active predelay fades under retargeting, coalescing one latest target
   without replacing audible read heads. Reset/initialize install the latest
   requested delay and cancel pending work. Add noncorrelated public-plugin

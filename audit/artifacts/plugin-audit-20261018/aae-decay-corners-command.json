@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "--release",
+    "-p",
+    "sotf-plugin-aae",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-aae-decay",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 1,
+  "elapsed_seconds": 23.66515366686508,
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 3.43s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-decay`\n",
+  "stdout_artifact": "audit/artifacts/plugin-audit-20261018/aae-decay-corners.jsonl"
+}

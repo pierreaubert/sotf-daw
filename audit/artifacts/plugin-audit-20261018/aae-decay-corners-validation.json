@@ -1,0 +1,46 @@
+{
+  "status": "measured_failures_retained",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/Cargo.toml": "fae1bd8cf26108512a30edcc2090e5080de7838a8b6908f08eec8dffe17d99e5",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_decay.rs": "f013e9d1fd7980fac66c388703a13ff6c50b00e1de49054ceb13fe91fa1ce4c1",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "a1caa46f7346830171a1e8ba405156ba2b5691abde83271d97ee0b47a3069d5d",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "9b5ef14f86ca7a092f4d696c1b3ff531bfcab8ddb71de3ec72d837eaccfc602b",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "fa36f732f718e680332acf8b0a43f5dbda9b2068b02a2728f33992acdc5d1698"
+  },
+  "coverage": {
+    "rows": 208,
+    "neutral_controls": 16,
+    "impulse_corners": 128,
+    "sustained_corners": 64,
+    "failed": 16,
+    "passed": 192,
+    "neutral_failures": 4,
+    "fit_quality_failures": 12,
+    "endpoint_envelope_failures": 4,
+    "sustained_failures": 0,
+    "all_finite": true,
+    "max_late_energy_ratio": 7.94848710446394e-14,
+    "minimum_wideband_r2": 0.9728202098589973,
+    "max_fdn_tap_peak": 1.449951410293579,
+    "initial_144_observations_exactly_preserved": true
+  },
+  "measurement_test_passed": true,
+  "strict_all_target_clippy_passed": true,
+  "matrix_exit_code": 1,
+  "raw_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners.jsonl",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-command.json",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-expanded.jsonl",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-expanded-command.json",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-coverage.json",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-measurement-check.json",
+    "audit/artifacts/plugin-audit-20261018/aae-decay-corners-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/verify-aae-decay-corners.py"
+  ],
+  "limitations": [
+    "16 maximum-room/minimum-RT60 impulse cases fail unchanged T30 fit/target criteria; no universal decay accuracy claim.",
+    "Octave-band T30 is not the DC/Nyquist endpoint ratio.",
+    "Offline decaying residual energy does not establish finite recursive support, host EOF policy, listening quality or deadline compliance.",
+    "Only validation code/manifest/docs changed; production renderer untouched."
+  ]
+}

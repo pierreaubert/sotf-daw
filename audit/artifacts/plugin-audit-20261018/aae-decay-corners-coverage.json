@@ -1,0 +1,771 @@
+{
+  "rows": 208,
+  "neutral_controls": 16,
+  "impulse_corners": 128,
+  "sustained_corners": 64,
+  "failed": 16,
+  "passed": 192,
+  "neutral_failures": 4,
+  "fit_quality_failures": 12,
+  "endpoint_envelope_failures": 4,
+  "sustained_failures": 0,
+  "all_finite": true,
+  "max_late_energy_ratio": 7.94848710446394e-14,
+  "minimum_wideband_r2": 0.9728202098589973,
+  "max_fdn_tap_peak": 1.449951410293579,
+  "initial_144_observations_exactly_preserved": true,
+  "failed_rows": [
+    {
+      "bass": 1.0,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 6934,
+          "r2": 0.9728202098589973,
+          "rt60_s": 0.3222317485822694
+        },
+        {
+          "points": 6952,
+          "r2": 0.9814492562813345,
+          "rt60_s": 0.3200992316651265
+        },
+        {
+          "points": 6936,
+          "r2": 0.9740763982223901,
+          "rt60_s": 0.32193541679833404
+        },
+        {
+          "points": 6936,
+          "r2": 0.973021117316798,
+          "rt60_s": 0.32216253013884966
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 5.59604869848021e-17,
+      "modulation": 0.0,
+      "neutral_control": true,
+      "passed": false,
+      "peak": 3.782945350394584e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": true,
+      "fits": [
+        {
+          "points": 6413,
+          "r2": 0.9972005769205835,
+          "rt60_s": 0.27004339663891935
+        },
+        {
+          "points": 5786,
+          "r2": 0.97881530021806,
+          "rt60_s": 0.2430741603816507
+        },
+        {
+          "points": 6004,
+          "r2": 0.9617797366872977,
+          "rt60_s": 0.24599828172373567
+        },
+        {
+          "points": 6012,
+          "r2": 0.9587197770483097,
+          "rt60_s": 0.24616547737923938
+        }
+      ],
+      "frames": 46081,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 7.893602350997941e-14,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 2.1619785073312414e-08,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": false,
+      "treble": 0.20000000298023224
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": true,
+      "fits": [
+        {
+          "points": 6413,
+          "r2": 0.9972005694668435,
+          "rt60_s": 0.2700433895236338
+        },
+        {
+          "points": 5786,
+          "r2": 0.9788153113408689,
+          "rt60_s": 0.24307416034216592
+        },
+        {
+          "points": 6004,
+          "r2": 0.961779736429684,
+          "rt60_s": 0.24599827506294014
+        },
+        {
+          "points": 6012,
+          "r2": 0.9587197759335607,
+          "rt60_s": 0.24616547384311038
+        }
+      ],
+      "frames": 46081,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 7.893613275290385e-14,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 5.961120768915862e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": false,
+      "treble": 0.20000000298023224
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 7343,
+          "r2": 0.975801383125102,
+          "rt60_s": 0.2904667332972726
+        },
+        {
+          "points": 5965,
+          "r2": 0.9726665465493862,
+          "rt60_s": 0.25570978662732524
+        },
+        {
+          "points": 6008,
+          "r2": 0.9622769176953055,
+          "rt60_s": 0.26036262545345484
+        },
+        {
+          "points": 6781,
+          "r2": 0.9711412643254222,
+          "rt60_s": 0.26507468868253414
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.941504945863523e-18,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 2.7527721613296308e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 7343,
+          "r2": 0.9758013838785143,
+          "rt60_s": 0.29046672550330943
+        },
+        {
+          "points": 5965,
+          "r2": 0.9726665486345023,
+          "rt60_s": 0.2557097832283445
+        },
+        {
+          "points": 6008,
+          "r2": 0.9622769194382887,
+          "rt60_s": 0.26036262130932125
+        },
+        {
+          "points": 6781,
+          "r2": 0.9711412647624506,
+          "rt60_s": 0.2650746869305784
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.941504416238687e-18,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 0.07590088248252869,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 1.0,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 6943,
+          "r2": 0.9730541247995174,
+          "rt60_s": 0.3213741968834255
+        },
+        {
+          "points": 6960,
+          "r2": 0.9815465789646942,
+          "rt60_s": 0.3194121287043951
+        },
+        {
+          "points": 6944,
+          "r2": 0.9742150892702236,
+          "rt60_s": 0.32126672892561703
+        },
+        {
+          "points": 6944,
+          "r2": 0.9731499352643797,
+          "rt60_s": 0.3214469364588917
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 5.563666070949048e-17,
+      "modulation": 1.0,
+      "neutral_control": true,
+      "passed": false,
+      "peak": 2.871655669878237e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": true,
+      "fits": [
+        {
+          "points": 6406,
+          "r2": 0.9972564218610613,
+          "rt60_s": 0.2696179311962205
+        },
+        {
+          "points": 5779,
+          "r2": 0.9789398908504586,
+          "rt60_s": 0.24260732562319448
+        },
+        {
+          "points": 5997,
+          "r2": 0.9618913956793747,
+          "rt60_s": 0.2455318669252938
+        },
+        {
+          "points": 6005,
+          "r2": 0.9588397100440111,
+          "rt60_s": 0.24568685894629466
+        }
+      ],
+      "frames": 46081,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 7.948477167536696e-14,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 2.2590874948491546e-08,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": false,
+      "treble": 0.20000000298023224
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": true,
+      "fits": [
+        {
+          "points": 6406,
+          "r2": 0.9972563808873183,
+          "rt60_s": 0.26961801442441247
+        },
+        {
+          "points": 5779,
+          "r2": 0.9789398879555795,
+          "rt60_s": 0.24260736222084836
+        },
+        {
+          "points": 5997,
+          "r2": 0.9618913930588616,
+          "rt60_s": 0.2455318790241842
+        },
+        {
+          "points": 6005,
+          "r2": 0.9588397105825791,
+          "rt60_s": 0.2456868549957398
+        }
+      ],
+      "frames": 46081,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 7.94848710446394e-14,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 6.22887528152205e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": false,
+      "treble": 0.20000000298023224
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 7333,
+          "r2": 0.9758888754177965,
+          "rt60_s": 0.2899325368694302
+        },
+        {
+          "points": 5957,
+          "r2": 0.9727252761492344,
+          "rt60_s": 0.2552483616985941
+        },
+        {
+          "points": 6000,
+          "r2": 0.9623143257951254,
+          "rt60_s": 0.2599375545948348
+        },
+        {
+          "points": 6796,
+          "r2": 0.9713456760735322,
+          "rt60_s": 0.26471121802851916
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.312120655296204e-18,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 1.7215130355907604e-05,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 7333,
+          "r2": 0.975888875084832,
+          "rt60_s": 0.28993253808503855
+        },
+        {
+          "points": 5957,
+          "r2": 0.9727252767219089,
+          "rt60_s": 0.2552483598727306
+        },
+        {
+          "points": 6000,
+          "r2": 0.9623143263210595,
+          "rt60_s": 0.2599375525422749
+        },
+        {
+          "points": 6796,
+          "r2": 0.9713456770742854,
+          "rt60_s": 0.26471121690034843
+        }
+      ],
+      "frames": 57601,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.312120770835641e-18,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 0.0474664568901062,
+      "rate": 48000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 1.0,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 27733,
+          "r2": 0.972821485985384,
+          "rt60_s": 0.3222218046431741
+        },
+        {
+          "points": 27806,
+          "r2": 0.9814306427049818,
+          "rt60_s": 0.32009674409937566
+        },
+        {
+          "points": 27742,
+          "r2": 0.9740521802402315,
+          "rt60_s": 0.3219272599200179
+        },
+        {
+          "points": 27735,
+          "r2": 0.9729859873806312,
+          "rt60_s": 0.3221776117137038
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 5.602182028465987e-17,
+      "modulation": 0.0,
+      "neutral_control": true,
+      "passed": false,
+      "peak": 3.782945350394584e-05,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 29375,
+          "r2": 0.9757656508818,
+          "rt60_s": 0.2904518789640003
+        },
+        {
+          "points": 23856,
+          "r2": 0.972645087607754,
+          "rt60_s": 0.2555966607963042
+        },
+        {
+          "points": 24025,
+          "r2": 0.9622163661708313,
+          "rt60_s": 0.2593400063323333
+        },
+        {
+          "points": 24046,
+          "r2": 0.9608169944076945,
+          "rt60_s": 0.26226868097703887
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.952341361739349e-18,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 2.7527721613296308e-05,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 29375,
+          "r2": 0.9757656516356378,
+          "rt60_s": 0.29045187116963045
+        },
+        {
+          "points": 23856,
+          "r2": 0.9726450894779447,
+          "rt60_s": 0.25559665725562414
+        },
+        {
+          "points": 24025,
+          "r2": 0.9622163680322561,
+          "rt60_s": 0.2593400016458549
+        },
+        {
+          "points": 24046,
+          "r2": 0.960816995837554,
+          "rt60_s": 0.2622686773788385
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.95234069264876e-18,
+      "modulation": 0.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 0.07590088248252869,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 1.0,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 27742,
+          "r2": 0.9728797936369269,
+          "rt60_s": 0.3219836137999993
+        },
+        {
+          "points": 27814,
+          "r2": 0.9814559363452979,
+          "rt60_s": 0.3199077103221014
+        },
+        {
+          "points": 27750,
+          "r2": 0.9740880719619011,
+          "rt60_s": 0.32174229407217253
+        },
+        {
+          "points": 27742,
+          "r2": 0.9730209644504488,
+          "rt60_s": 0.32199187400009344
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 5.503043291388689e-17,
+      "modulation": 1.0,
+      "neutral_control": true,
+      "passed": false,
+      "peak": 2.87266266241204e-05,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 0.0010000000474974513,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 29365,
+          "r2": 0.9757908742013616,
+          "rt60_s": 0.29031589889301196
+        },
+        {
+          "points": 23848,
+          "r2": 0.9726639021654413,
+          "rt60_s": 0.25547933009949214
+        },
+        {
+          "points": 24017,
+          "r2": 0.9622307117670775,
+          "rt60_s": 0.2592320317664308
+        },
+        {
+          "points": 24039,
+          "r2": 0.9608321556053546,
+          "rt60_s": 0.26216401499676517
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.814555920340379e-18,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 1.7226524505531415e-05,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    },
+    {
+      "bass": 0.800000011920929,
+      "drive_frames": 0,
+      "excitation": 4.0,
+      "finite": true,
+      "fit_ok": false,
+      "fits": [
+        {
+          "points": 29365,
+          "r2": 0.9757908743896749,
+          "rt60_s": 0.29031590094287985
+        },
+        {
+          "points": 23848,
+          "r2": 0.9726639017397299,
+          "rt60_s": 0.25547933264699363
+        },
+        {
+          "points": 24017,
+          "r2": 0.9622307116914272,
+          "rt60_s": 0.2592320339478276
+        },
+        {
+          "points": 24039,
+          "r2": 0.9608321556622453,
+          "rt60_s": 0.2621640177389399
+        }
+      ],
+      "frames": 230401,
+      "kind": "decay",
+      "last_to_first_quarter_energy": 9.814556297760035e-18,
+      "modulation": 1.0,
+      "neutral_control": false,
+      "passed": false,
+      "peak": 0.04749787971377373,
+      "rate": 192000,
+      "room": 3.0,
+      "rt60": 0.30000001192092896,
+      "t30_order": [
+        "wide",
+        "125Hz",
+        "1000Hz",
+        "8000Hz"
+      ],
+      "target_ok": true,
+      "treble": 1.0
+    }
+  ]
+}

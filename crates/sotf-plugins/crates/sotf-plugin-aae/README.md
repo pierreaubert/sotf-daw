@@ -85,3 +85,19 @@ install the latest requested delay and clear pending fades. Public regression
 renders compare 31- and 257-frame partitions, including the maximum 100 ms
 predelay and noncorrelated excitation;
 these sample-exact checks do not establish audible acceptance.
+
+Run `cargo run --release -p sotf-plugin-aae --features qa --bin qa-aae-decay`
+for the explicit offline corner diagnostic. It renders neutral
+controls plus every min/max combination of room size, RT60, bass/treble ratio,
+modulation and impulse level at 48/192 kHz; high-level corners also use a
+250 ms deterministic noise burst followed by silence. Each observation retains
+four times the longest endpoint RT60, integrates tap energies without pressure
+cancellation, and reports wideband and 125/1000/8000 Hz T30 fits. Octave-band
+measurements are not exact DC/Nyquist endpoint RT60s.
+
+The diagnostic preserves 10% neutral target accuracy and r² > 0.98, checks
+corner decay against the endpoint-time envelope and residual-energy decay,
+retains every row, and exits nonzero on any failure. It is separate from the
+existing acoustic-quality runner and device deadline gates. Sparse maximum-room,
+minimum-RT60 cases have known fit/endpoint-bound failures; a decaying tail does
+not establish one exponential RT60 or finite recursive support.
