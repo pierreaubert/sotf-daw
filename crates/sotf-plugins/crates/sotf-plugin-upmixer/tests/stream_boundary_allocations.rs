@@ -348,3 +348,63 @@ fn resource_controls_are_structural_and_scalar_controls_remain_realtime() {
         );
     }
 }
+
+#[test]
+fn hot_safety_automation_with_autogain_and_partial_eof_has_no_heap_activity() {
+    for rate in [48_000, 192_000] {
+        for fft in [2, 512, 4096] {
+            for binaural in [false, true] {
+                let params = serde_json::from_value(serde_json::json!({
+                    "fft_size":fft,"speaker_config":"9.1.6","enable_hr_direct":true,
+                    "auto_gain_enabled":true,"binaural_preview":binaural
+                }))
+                .unwrap();
+                let mut p = UpmixerPlugin::from_params(params);
+                p.initialize(f64::from(rate)).unwrap();
+                p.set_parameter(
+                    "safety_cap_db".into(),
+                    sotf_host::ParameterValue::Float(0.0),
+                )
+                .unwrap();
+                let input = vec![4.0; 8193 * 2];
+                let ch = p.output_channels();
+                let mut output = vec![0.0; 8193 * ch];
+                let mut tail = vec![0.0; p.drain_output_frames_max() * ch];
+                let counts = std::thread::spawn(move || {
+                    let (_, counts) = measure_heap(|| {
+                        for _ in 0..2 {
+                            assert_eq!(
+                                p.process(&input, &mut output, &ProcessContext::new(rate, 8193))
+                                    .unwrap(),
+                                8193
+                            );
+                            assert!(output.iter().all(|s| s.is_finite() && s.abs() <= 1.413));
+                            let bound = p.drain_call_bound().unwrap().get();
+                            let mut complete = false;
+                            for _ in 0..bound {
+                                let result =
+                                    p.drain(&mut tail, &ProcessContext::new(rate, 0)).unwrap();
+                                assert!(
+                                    tail[..result.frames * ch]
+                                        .iter()
+                                        .all(|s| s.is_finite() && s.abs() <= 1.413)
+                                );
+                                if result.complete {
+                                    complete = true;
+                                    break;
+                                }
+                            }
+                            assert!(complete);
+                            p.reset();
+                        }
+                    });
+                    counts
+                })
+                .join()
+                .unwrap();
+                println!("safety_heap rate={rate} fft={fft} binaural={binaural} counts={counts:?}");
+                assert_eq!(counts, (0, 0));
+            }
+        }
+    }
+}

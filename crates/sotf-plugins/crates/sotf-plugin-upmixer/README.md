@@ -37,9 +37,8 @@ rebuild at grid boundaries.
 Each table control has a measured nonzero rendering effect and matches exactly
 across large/irregular callbacks versus one-frame calls, including recorded
 speech/violin and full tails. These cases establish timing, not perceptual
-separation quality. `safety_cap_db` automation and active final output capping
-still remain callback-dependent. These guarantees do not imply host PDC
-synchronization on raw-bypass latency changes.
+separation quality. These guarantees do not imply host PDC synchronization on
+raw-bypass latency changes.
 
 
 ### AutoGain reference and timing
@@ -48,7 +47,8 @@ AutoGain compares the raw output with stereo source delayed by the declared FFT 
 
 The target updates every `sample_rate / 10` enabled frames and first affects the following frame, using the existing scalar smoothing. Disable/enable pauses/resumes meter, gain and clock state; reset starts fresh. During native drain the reference and meter advance once per generated tail frame, including the final partial block, and not when cached frames are copied to a smaller destination. Scratch is bounded even for callbacks above 8192 frames.
 
-The raw renderer and final safety-cap behavior are unchanged. An active final cap still measures a whole callback and can make final output depend on callback size; the AutoGain timing guarantee does not remove that separate limitation. Processing immediately after prepared enable remains allocation-free.
+Final safety protection runs after AutoGain on each generated output frame.
+Processing immediately after prepared enable remains allocation-free.
 
 
 ### Realtime scalar updates
@@ -64,4 +64,48 @@ is structural because enabling it can start inference resources. Optional ML
 models and backends are tracked separately and are not validated by these tests.
 Parameter enumeration and invalid-input error construction are control-thread
 operations. Zero-heap setters do not establish a device deadline guarantee or
-resolve the safety-cap and PDC timing limitations above.
+establish host PDC synchronization or perceptual quality.
+
+
+### Safety-cap control and release
+
+The earlier per-FFT bed-channel protection and HR headroom floor keep their
+existing equations, coefficients and height-channel exclusion. Their
+`safety_cap_db` control advances on the common
+source analysis grid, with separate pending time flushed before a changed
+safety target and during reset/reinitialization. Gain/table events and identical
+snapshots do not observe that pending time.
+
+The final cap measures each generated output frame after AutoGain, overlap-add,
+HR mixing and binaural folding. It applies one gain to all channels, attacks
+immediately and releases in physical time. Release retains the former 0.02 step
+at 1024 frames/48 kHz (about a 1.056 s time constant). Future frame peaks cannot
+attenuate an earlier quiet prefix. No lookahead or latency is added.
+
+The final stage has an independent 50 ms cap-control trajectory, starting from
+the configured preset value. Accepted targets affect subsequent output frames;
+its elapsed time cannot be replaced by the analysis clock, which may already
+have consumed more source within a large callback. Both stages retain the
+0.001 dB cache threshold; the final cache also commits an exact snapped target.
+Final control and release state use f64 to avoid high-rate convergence stalls.
+
+Raw bypass remains uncapped and advances both control clocks; leaving bypass
+keeps the established reset/latency behavior. Reset clears the final gain but
+retains the current control value. Reinitialization commits pending analysis
+time using the old rate before updating coefficients. Empty/invalid calls do
+not advance controls. Native EOF processes generated tail-cache frames once;
+copying them into smaller drain buffers does not advance the cap again.
+
+Tests cover causality, linked ratios, an independent release law through
+384 kHz, interrupted/lifecycle clocks, hot-signal rate/FFT/HR/AutoGain/binaural
+routes, exact callback/tail partitions, strict configured-zero-dB bounds and
+zero-heap processing/reset/EOF. They do not establish recorded-material
+perceptual quality or worst-layout/device deadline compliance.
+
+
+The historical AUD132 HR archive fixtures retain their original bytes, digests
+and full-vector error limits. Their fixture controller explicitly replays the
+archived callback-based cap-control trace, which also affected the HR headroom
+floor below clipping. This isolates the HR routing oracle from the intentional
+cap-clock change; no legacy safety mode exists in production. Current production
+clocks are exercised separately by `tests/audit_safety_clock.rs`.

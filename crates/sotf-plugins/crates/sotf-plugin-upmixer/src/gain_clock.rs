@@ -17,11 +17,13 @@ impl UpmixerPlugin {
             let step = frames.min(quantum - self.gains.clock_phase);
             self.gains.pending_frames += step;
             self.param_smoothers.table_pending_frames += step;
+            self.param_smoothers.safety_pending_frames += step;
             self.gains.clock_phase += step;
             frames -= step;
             if self.gains.clock_phase == quantum {
                 self.flush_gain_clock();
                 self.flush_table_clock();
+                self.flush_safety_clock();
                 self.gains.clock_phase = 0;
             }
         }

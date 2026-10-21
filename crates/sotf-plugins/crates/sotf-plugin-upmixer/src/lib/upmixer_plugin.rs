@@ -100,6 +100,8 @@ pub(super) struct UpmixerParams {
 pub(super) struct UpmixerParamSmoothers {
     /// Accepted source frames not yet committed to the frequency-table smoothers.
     pub(super) table_pending_frames: usize,
+    /// Accepted source frames not yet committed to the per-FFT safety-cap control.
+    pub(super) safety_pending_frames: usize,
     /// Smoother for lfe_cutoff_hz to prevent clicks when changing crossover frequency
     pub(super) lfe_cutoff_hz_smoother: Smoother,
     /// Smoother for bandpass_hz to prevent clicks when changing upmix crossover
@@ -116,7 +118,13 @@ pub(super) struct UpmixerSafety {
     /// Previous safety scale for smoothing between blocks
     pub(super) prev_safety_scale: f32,
     /// Final post-OLA safety scale for the actual emitted samples
-    pub(super) final_safety_scale: f32,
+    pub(super) final_safety_scale: f64,
+    /// Post-render control state follows emitted frames, independently of analysis.
+    pub(super) final_cap_db: f64,
+    pub(super) final_cap_cached_db: f64,
+    pub(super) final_cap_linear: f32,
+    pub(super) final_cap_retention: f64,
+    pub(super) final_release_alpha: f64,
     // Auto-gain compensation: stereo input monitor vs stereo fold-down of
     // the rendered output, with gain applied to all output channels.
     pub(super) auto_gain_enabled: bool,
@@ -523,7 +531,7 @@ impl UpmixerPlugin {
             safety_scale: self
                 .safety
                 .prev_safety_scale
-                .min(self.safety.final_safety_scale),
+                .min(self.safety.final_safety_scale as f32),
             output_accumulator_fill: self.output.output_accumulator_fill,
             height_gain: control_stats(&self.height.height_band_gains),
             height_flux_gate: control_stats(&self.height.height_flux_gate),
@@ -711,6 +719,7 @@ impl UpmixerPlugin {
 
         let param_smoothers = UpmixerParamSmoothers {
             table_pending_frames: 0,
+            safety_pending_frames: 0,
             lfe_cutoff_hz_smoother: Smoother::new(lfe_cutoff_hz, 5.0, sample_rate),
 
             bandpass_hz_smoother: Smoother::new(bandpass_hz, 5.0, sample_rate),
@@ -726,6 +735,11 @@ impl UpmixerPlugin {
             prev_safety_scale: 1.0,
 
             final_safety_scale: 1.0,
+            final_cap_db: f64::from(default_safety_cap_db()),
+            final_cap_cached_db: f64::from(default_safety_cap_db()),
+            final_cap_linear: fast_pow10(default_safety_cap_db() / 20.0),
+            final_cap_retention: super::output::safety_clock_coefficients(sample_rate).0,
+            final_release_alpha: super::output::safety_clock_coefficients(sample_rate).1,
 
             auto_gain_enabled: false,
 
@@ -1484,6 +1498,11 @@ impl UpmixerPlugin {
             // position before a sub-hop retarget. Repeated snapshots do nothing.
             self.flush_gain_clock();
         }
+        if index == 34
+            && self.param_value(index) != Some(f64::from(UP[index].clamp_f64(value) as f32))
+        {
+            self.flush_safety_clock();
+        }
         if Self::is_table_clock_parameter(index)
             && self.param_value(index) != Some(f64::from(UP[index].clamp_f64(value) as f32))
         {
@@ -1671,6 +1690,9 @@ impl UpmixerPlugin {
             .safety_cap_db_smoother
             .set_target(params.core.safety_cap_db.max(0.0));
         plugin.update_safety_cap_cache();
+        plugin.safety.final_cap_db = f64::from(plugin.safety.safety_cap_db);
+        plugin.safety.final_cap_cached_db = plugin.safety.final_cap_db;
+        plugin.safety.final_cap_linear = plugin.safety.safety_cap_linear;
         plugin.decorrelation.decorrelation_mode = params.decorrelation.decorrelation_mode;
 
         // Sub-harmonic synthesis parameters
@@ -2163,6 +2185,7 @@ impl Plugin for UpmixerPlugin {
 
         self.flush_gain_clock();
         self.flush_table_clock();
+        self.flush_safety_clock();
         self.core.sample_rate = sample_rate;
 
         // Calculate ERB bands
@@ -2265,6 +2288,11 @@ impl Plugin for UpmixerPlugin {
             .safety_cap_db_smoother
             .set_time(time_ms, sample_rate);
 
+        (
+            self.safety.final_cap_retention,
+            self.safety.final_release_alpha,
+        ) = super::output::safety_clock_coefficients(sample_rate);
+
         if let Some(auto_gain) = &mut self.safety.auto_gain {
             auto_gain.set_sample_rate(sample_rate)?;
         } else {
@@ -2307,6 +2335,7 @@ impl Plugin for UpmixerPlugin {
     fn reset(&mut self) {
         self.flush_gain_clock();
         self.flush_table_clock();
+        self.flush_safety_clock();
         self.gains.clock_phase = 0;
         self.drain.reset();
         // Clear buffers
@@ -2527,19 +2556,13 @@ impl UpmixerPlugin {
             return Ok(0);
         }
 
-        // Safety-cap automation still uses the existing callback clock. Frequency
-        // tables advance separately on the common source analysis grid.
-        let new_sc = self.param_smoothers.safety_cap_db_smoother.next_n(n);
-        if (new_sc - self.safety.safety_cap_db).abs() > 0.001 {
-            self.safety.safety_cap_db = new_sc;
-            self.update_safety_cap_cache();
-        }
-
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
             self.advance_analysis_clock(n);
             let num_frames = context.num_frames;
             for i in 0..num_frames {
+                // Raw bypass is uncapped, but control time still passes.
+                self.advance_final_safety_control();
                 let left = input[i * 2];
                 let right = input[i * 2 + 1];
 

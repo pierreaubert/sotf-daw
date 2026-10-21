@@ -1,0 +1,54 @@
+{
+  "base_commit": "2dca3bae87d6b3719f04761e6c26655cc03cc88a",
+  "records": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "sotf-plugin-upmixer",
+        "--release",
+        "--features",
+        "qa",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--lib",
+        "audit_safety_tests",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "stdout": "\nrunning 2 tests\nsafety_release rate=44100 scale=0.36606106 expected=0.41157167053600263 error=0.04551060891529035\nsafety_prefix whole=[0.07062471, 0.035312355] isolated=[0.2, 0.1]\ntest output::audit_safety_tests::final_cap_release_has_physical_time_and_linked_channel_ratios ... FAILED\ntest output::audit_safety_tests::final_cap_does_not_use_future_frame_peaks ... FAILED\n\nfailures:\n\nfailures:\n    output::audit_safety_tests::final_cap_does_not_use_future_frame_peaks\n    output::audit_safety_tests::final_cap_release_has_physical_time_and_linked_channel_ratios\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 147 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 6.55s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_upmixer-b107dca13ac89746)\n\nthread 'output::audit_safety_tests::final_cap_release_has_physical_time_and_linked_channel_ratios' (328171217) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/src/output.rs:176:13:\nassertion failed: error < 2e-6\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'output::audit_safety_tests::final_cap_does_not_use_future_frame_peaks' (328171216) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/src/output.rs:158:9:\nassertion `left == right` failed\n  left: [0.07062471, 0.035312355]\n right: [0.2, 0.1]\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --lib`\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "sotf-plugin-upmixer",
+        "--release",
+        "--features",
+        "qa",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--test",
+        "audit_safety_clock",
+        "safety_cap_clock_matches",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 101,
+      "stdout": "\nrunning 1 test\nsafety_clock automate=false pattern=[8192] error=2.6075006e-1\nsafety_clock automate=false pattern=[7, 31, 257, 1024] error=2.2405517e-1\nsafety_clock automate=true pattern=[8192] error=3.250757e-1\nsafety_clock automate=true pattern=[7, 31, 257, 1024] error=3.198653e-1\ntest safety_cap_clock_matches_callback_partitions ... FAILED\n\nfailures:\n\nfailures:\n    safety_cap_clock_matches_callback_partitions\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.05s\n\n",
+      "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 7.48s\n     Running tests/audit_safety_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_safety_clock-33d3be308bb168cb)\n\nthread 'safety_cap_clock_matches_callback_partitions' (328178096) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_safety_clock.rs:138:5:\n[0.26075006, 0.22405517, 0.3250757, 0.3198653]\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --test audit_safety_clock`\n"
+    }
+  ]
+}

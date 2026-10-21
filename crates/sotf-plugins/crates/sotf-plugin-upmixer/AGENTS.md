@@ -73,8 +73,17 @@ from the workspace root). The generator uses fixed seeds, so output is byte-stab
   through the same fixed quanta. Frequency tables share that grid through
   `table_clock.rs`, with separate pending frames. Gain events must not flush
   table time. Flush changed table targets and lifecycle transitions using the
-  old clock; preserve table thresholds and prepared storage. Safety-cap control
-  and final output safety still have separate callback-timing limitations.
+  old clock; preserve table thresholds and prepared storage.
+- Per-FFT safety control has separate pending source time on the analysis grid.
+  Final safety control and linked gain advance per generated output frame after
+  AutoGain/HR/binaural mixing, including tail-cache generation but not copying.
+  Preserve causal peak detection, physical release and uncapped raw bypass.
+  Reset clears final gain while retaining control value; new rates retain old
+  elapsed source time. Do not reuse analysis state for final output control.
+- Historical AUD132 archive comparisons replay their recorded cap-control trace
+  only in the fixture controller, since it affects HR headroom below clipping.
+  Preserve archive bytes/digests/error limits and keep production clock/limiter
+  tests separate; do not add a legacy safety mode to production.
 - Realtime scalar setters refresh only their indexed cached value using the
   canonical DSP getter. Preserve PARAMS/cache order, coercions and clamping;
   never rebuild the metadata vector in a realtime setter. Resource controls,

@@ -2130,6 +2130,77 @@ fn aud132_nonstationary_hr_gain_stays_with_its_source_frame() {
     }
 }
 
+// The archived AUD132 vectors include the old safety-control trajectory. That
+// control also sets the HR headroom floor, even when the final limiter is idle.
+// Replay those control inputs explicitly to isolate HR routing compatibility;
+// do not restore the old clock in production or regenerate the archived vectors.
+fn render_archived_cap_trace(
+    plugin: &mut UpmixerPlugin,
+    input: &[f32],
+    partitions: &[usize],
+    tail_capacity: usize,
+) -> Vec<f32> {
+    let mut trace = plugin.param_smoothers.safety_cap_db_smoother;
+    let observe =
+        |plugin: &mut UpmixerPlugin, trace: &mut sotf_host::smoothing::Smoother, frames| {
+            let value = trace.next_n(frames);
+            plugin.param_smoothers.safety_cap_db_smoother.reset(value);
+            if (value - plugin.safety.safety_cap_db).abs() > 0.001 {
+                plugin.safety.safety_cap_db = value;
+                plugin.update_safety_cap_cache();
+            }
+        };
+    let channels = plugin.output_channels();
+    assert_eq!(channels, 2);
+    let mut output = Vec::new();
+    let (mut offset, mut call) = (0, 0);
+    while offset < input.len() / 2 {
+        let frames = partitions[call % partitions.len()].min(input.len() / 2 - offset);
+        observe(plugin, &mut trace, frames);
+        let mut block = vec![f32::NAN; frames * channels];
+        assert_eq!(
+            plugin
+                .process(
+                    &input[offset * 2..(offset + frames) * 2],
+                    &mut block,
+                    &ProcessContext::new(48_000, frames)
+                )
+                .unwrap(),
+            frames
+        );
+        output.extend(block);
+        offset += frames;
+        call += 1;
+    }
+    // These archived fixtures always consume each prepared tail hop completely.
+    // Partial-cache behavior is covered by the production safety-clock tests.
+    assert!(tail_capacity >= plugin.drain_output_frames_max());
+    let bound = plugin.drain_call_bound().unwrap().get();
+    let mut tail = vec![f32::NAN; tail_capacity * channels];
+    for _ in 0..bound {
+        let frames = plugin
+            .drain
+            .remaining
+            .unwrap_or_else(|| plugin.drain_tail_frames())
+            .min(plugin.drain_output_frames_max());
+        if frames > 0 {
+            observe(plugin, &mut trace, frames);
+        }
+        let result = plugin
+            .drain(&mut tail, &ProcessContext::new(48_000, 0))
+            .unwrap();
+        output.extend_from_slice(&tail[..result.frames * channels]);
+        if result.complete {
+            // Archive amplitudes stay below unity, so final-cap redesign cannot
+            // conceal a routing difference in this independent full-vector gate.
+            assert!(output.iter().all(|s| s.abs() < 1.0));
+            assert_eq!(plugin.safety.final_safety_scale, 1.0);
+            return output;
+        }
+    }
+    panic!("archived-cap trace drain did not complete")
+}
+
 #[test]
 fn aud132_tagged_hr_impulse_hits_source_latency_and_compares_legacy_samples() {
     const INPUT_FRAMES: usize = 8_192;
@@ -2190,12 +2261,12 @@ fn aud132_tagged_hr_impulse_hits_source_latency_and_compares_legacy_samples() {
             let mut legacy = make_plugin(true, true);
             let mut main_only = make_plugin(false, false);
 
-            let mut tagged_output = render(&mut tagged, &input, callback_sizes);
-            tagged_output.extend(finish_with_capacity(&mut tagged, fft_size));
-            let mut legacy_output = render(&mut legacy, &input, callback_sizes);
-            legacy_output.extend(finish_with_capacity(&mut legacy, fft_size));
-            let mut main_output = render(&mut main_only, &input, callback_sizes);
-            main_output.extend(finish_with_capacity(&mut main_only, fft_size));
+            let tagged_output =
+                render_archived_cap_trace(&mut tagged, &input, callback_sizes, fft_size);
+            let legacy_output =
+                render_archived_cap_trace(&mut legacy, &input, callback_sizes, fft_size);
+            let main_output =
+                render_archived_cap_trace(&mut main_only, &input, callback_sizes, fft_size);
             assert_eq!(tagged_output.len(), legacy_output.len());
             assert_eq!(tagged_output.len(), main_output.len());
             assert_eq!(
@@ -2602,8 +2673,7 @@ fn aud132_preserves_small_fft_and_512_pre_edit_full_output_controls() {
             plugin.hr_state.prev_hr_scale = if hr_enabled { gain } else { 0.0 };
             plugin.output.hr_test_gain_sequence = vec![if hr_enabled { gain } else { 0.0 }; 128];
 
-            let mut output = render(&mut plugin, &input, &[17, 137, 256]);
-            output.extend(finish_with_capacity(&mut plugin, 512));
+            let output = render_archived_cap_trace(&mut plugin, &input, &[17, 137, 256], 512);
             assert!(output.iter().all(|sample| sample.is_finite()));
             assert_eq!(plugin.latency_samples(), fft_size.max(512));
 

@@ -2,13 +2,22 @@
 
 ## Unreleased
 
+- Replace final whole-callback limiting with channel-linked per-output-frame
+  instantaneous attack and physical-time release, anchored to the former 0.02
+  step per 1024 frames at 48 kHz. Remove future-peak attenuation of quiet prefixes.
+- Clock per-FFT safety-cap automation on source analysis time and final cap control
+  on generated output time, including cached EOF. Preserve the earlier per-FFT
+  protection, schema, latency and raw bypass contract; use f64 final control/gain
+  state for high rates. Configured final cap values apply from startup.
+- Add causal/analytic release, interrupted/lifecycle, hot route/EOF partition,
+  configured-zero-dB bound and active safety automation heap regressions.
+
 - Clock LFE/upmix crossovers and height HF tables on the common main/HR source
   analysis grid. Preserve interrupted old-target time separately from gains,
   including no-op snapshots, reset, reinitialization, raw bypass and EOF.
   Retain frequency responses, table thresholds, parameter policies and latency.
 - Add all-three-table waveform, recorded-input, one-pole/lifecycle and active
-  table-rebuild heap regressions. Safety-cap automation and final capping still
-  require their separate output-clock remediation.
+  table-rebuild heap regressions.
 
 - Refresh realtime scalar parameter values in place from canonical DSP state,
   removing 143 metadata allocations/frees per public update. Preserve typed,
@@ -21,8 +30,7 @@
   sub-hop targets, no-op snapshots, raw bypass and reset/reinitialization clocks
   while retaining the 50 ms law, parameters and latency contracts.
 - Add all-control, rate/FFT/HR-route, recorded-input and cold partial-hop heap
-  regressions. Crossover/table controls and active final safety capping retain
-  their documented callback dependence and need separate remediation.
+  regressions. Frequency-table and safety clocks are covered separately above.
 - New `generate-upmixer-golden` binary (moved from the retired `sotf-tools`
   crate): regenerates the golden WAVs consumed by
   `tests/upmixer_audio_regression.rs` via `just generate-upmixer-golden`.

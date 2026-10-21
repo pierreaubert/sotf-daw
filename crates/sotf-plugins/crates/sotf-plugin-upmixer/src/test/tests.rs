@@ -2159,6 +2159,10 @@ mod upmixer_tests {
 
         // Set safety_cap_db to 0.0 (strictest cap: 0 dBFS = unity)
         plugin.safety.safety_cap_db = 0.0;
+        // This steady-cap fixture must prepare both analysis and emitted-frame clocks.
+        plugin.safety.final_cap_db = 0.0;
+        plugin.safety.final_cap_cached_db = 0.0;
+        plugin.safety.final_cap_linear = 1.0;
         plugin
             .param_smoothers
             .safety_cap_db_smoother
@@ -2245,6 +2249,10 @@ mod upmixer_tests {
             );
             plugin.initialize(44100.0).unwrap();
             plugin.safety.safety_cap_db = 0.0;
+            // This steady-cap fixture must prepare both analysis and emitted-frame clocks.
+            plugin.safety.final_cap_db = 0.0;
+            plugin.safety.final_cap_cached_db = 0.0;
+            plugin.safety.final_cap_linear = 1.0;
             plugin
                 .param_smoothers
                 .safety_cap_db_smoother
