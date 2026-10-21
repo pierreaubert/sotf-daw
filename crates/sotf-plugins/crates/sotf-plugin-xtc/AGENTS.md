@@ -72,3 +72,13 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - Room reflection support via two methods: image source (synthetic, from geometry) or IR-based (from measured impulse responses loaded via Symphonia).
 - Uses a geometry cache (`compute_geometry_cache`) to avoid redundant trigonometric calculations when parameters haven't changed.
 - FFT size 2048 by default, 75% overlap (hop size 512) for overlap-add processing.
+
+## Cancellation diagnostics
+
+- Keep `predict_analytic_cancellation` labeled as shared-model filter prediction. Evaluate the plant at the selected FFT bin and configured FFT size; preserve both input cues and asymmetric matrix columns.
+- Use `evaluate_cancellation` for supplied independent plant/filter matrices. Rows are ears/speakers for the plant and speakers/intended inputs for the filter; entries are `[real, imaginary]`. Preserve negative/infinite/undefined values instead of clipping them to a display range.
+- Always retain intended gain and normalized separation alongside raw attenuation. Muting is not successful separation. No measured provenance is implied by accepting an external matrix.
+- Resource-dependent HRTF/RoomEQ/room configurations need an actual resource snapshot, not a silent analytical fallback. Default 8 kHz ILD mismatch remains open; report-structure/stability tests do not certify it.
+- `tests/audit_cancellation.rs` measures actual Rust plugin speaker outputs against controlled point-source/echo fields. It does not certify native ABI, measured human HRTFs, device deadlines or listener quality.
+
+- Prediction helpers allocate filter arrays; keep them on the control/analysis thread. The pure supplied-matrix evaluator is separate from the rendering hot path.

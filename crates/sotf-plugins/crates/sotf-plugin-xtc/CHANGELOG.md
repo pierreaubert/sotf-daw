@@ -1,3 +1,18 @@
+# Unreleased signed diagnostic audit (2026-10-21)
+
+- Preserve negative and uncapped analytical cancellation predictions, align plant
+  and filter frequency bins, honor configured FFT/head/yaw/shadow/pinna/LF modes,
+  and report both input cues. Reject invalid/unsupported resource predictions.
+- Add independent complex-matrix metrics for raw attenuation, intended gain and
+  normalized separation; common attenuation or muting is not separation evidence.
+- Measure actual rendered speaker transfers through controlled displacement/echo
+  plants. Retain all 360 signed cases, including 134 degraded normalized cases
+  and a worst -5.01044 dB result. No inverse-filter or audio-processing change.
+- Clarify model/report tests and remove the old display-ceiling assumption.
+  Minimum diagnostic thresholds remain unchanged. The nominal report still fails
+  8 kHz ILD and the 100 Hz request/93.75 Hz-bin cancellation minimum (15/17 pass);
+  no physical HRTF calibration or real-device claim.
+
 # Unreleased analytical continuity audit (2026-10-20)
 
 - Remove the default head-shadow magnitude discontinuity at ka=2. Blend the

@@ -1,12 +1,9 @@
-/// Target cancellation depths based on implementation performance.
+/// Nominal analytical-filter regression thresholds, not acoustic guarantees.
 ///
-/// These targets reflect the actual measured performance of the XTC implementation
-/// using the Woodworth spherical head model with frequency-dependent ITD and pinna effects.
-///
-/// Format: (frequency_hz, min_depth_db, _optimal_depth_db)
-///
-/// The implementation achieves 25-40 dB cancellation across the audible spectrum,
-/// which is consistent with optimal XTC systems from the literature.
+/// Historical minima are retained unchanged while the diagnostics now report
+/// uncapped signed values. Shared design-model cancellation is not evidence of
+/// listener robustness, measured-room performance or published HRTF accuracy.
+/// Format: `(frequency_hz, minimum_depth_db, historical_display_target_db)`.
 pub const CANCELLATION_DEPTH_TARGETS: &[(f32, f32, f32)] = &[
     (100.0, 5.0, 35.0),   // DC-edge blend and row-power constraint dominate
     (200.0, 20.0, 35.0),  // Low-mid: measured ~29dB
@@ -17,7 +14,7 @@ pub const CANCELLATION_DEPTH_TARGETS: &[(f32, f32, f32)] = &[
     (8000.0, 20.0, 40.0), // High-frequency row-power constraint trades depth for stability
 ];
 
-/// Reference ILD values for validation.
+/// Historical approximate ILD targets; no measured-corpus provenance is implied.
 pub const REFERENCE_ILD_POINTS: &[(f32, f32)] = &[
     (250.0, 0.5),
     (500.0, 1.5),

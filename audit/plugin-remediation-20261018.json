@@ -2285,15 +2285,32 @@
             "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json"
           ],
           "result": "324 independent f64 geometric-plant/Cholesky comparisons versus production f32 explicit inverse: maximum complex error 1.651192e-5 under 2e-4. 360 signed ear residual rows retained for fixed nominal inverse across lateral displacement, yaw and one-echo mismatch. Filter coefficients remain below configured gain 4 (observed max 2.495644), but 106 cases worsen crosstalk, worst -12.577155 dB; best 76.114321 dB. These are controlled core inverse measurements, not native-file or end-to-end rendered acoustic evidence."
+        },
+        {
+          "requirement": "Provide signed, bin-aligned two-input cancellation diagnostics and independent rendered speaker-output matrix metrics.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/measure.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/matrix.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/run.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/diagnostic_audit_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/audit_cancellation.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json"
+          ],
+          "result": "Red baseline: worsening filter reported 0 dB, same-bin requests differed 32.85819 vs 31.437492 dB, and -1 Hz returned 0.2969317 dB. Analytical predictions now use the configured FFT/bin, selected implemented head model/yaw/shadow/pinna/LF mode and both input cues, with signed uncapped values; invalid or unsupported active-resource predictions fail explicitly. New standard-type 2x2 complex-matrix API evaluates supplied independent plants/filters and retains raw depth, intended gain and normalized separation; muting/common attenuation cannot masquerade as useful separation. Ninety independent f64 implemented-model arithmetic cases agree within 0.011037 dB (0.02 dB gate). Actual Rust Plugin::process speaker transfers across fixed/irregular callbacks have zero partition error; all 360 controlled point-source/echo rows are retained, including 134 degraded normalized cases and worst -5.010439 dB. This is neither measured HRTF nor native ABI/device evidence. Obsolete test-only display-depth bounds were replaced with actual all-column coefficient-gain checks across nine gain/yaw settings and independent arithmetic, preserving every historical minimum target. Full release suite 233 passed/one existing ignored, new doctest, strict all-target QA Clippy, formatting and standard processing QA pass. Nominal report still fails 8 kHz ILD (36.124 vs 12 dB, tolerance 20) and 100 Hz request/93.75 Hz bin cancellation (4.986 vs 5 dB), passing only 15/17 comparisons. No renderer/inverse/parameter/schema/latency or optional ML changes."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json",
-        "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json"
+        "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json"
       ],
       "remaining": [
-        "Extend the new controlled signed transfer-matrix evidence to measured HRTF/native rendering and a robust design across head displacement/room mismatch; nominal inverse worsens 106/360 controlled ear cases, worst -12.5772 dB. Current public cancellation diagnostic still shares the design model and clamps negative degradation.",
-        "Resolve or explicitly constrain default 8 kHz ILD physical-model discrepancy: existing report shows 36.124 dB versus reference 12 dB with 20 dB tolerance despite the enclosing Rust test passing.",
+        "Extend the supplied-matrix API and rendered speaker-output evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Controlled rendered checks still degrade normalized separation in 134/360 cases (worst -5.01044 dB); prior core-inverse raw-depth results are a different measurement and remain retained.",
+        "Calibrate or explicitly constrain the default 8 kHz head-shadow discrepancy: nominal report still fails at 36.124 dB versus 12 dB with 20 dB tolerance. Report-structure/stability test success does not establish acoustic conformance.",
+        "Resolve the retained nominal 100 Hz cancellation target: its explicitly reported selected bin is 93.75 Hz, with 4.986 dB versus the unchanged 5 dB minimum. Do not widen the target to hide the corrected measurement.",
         "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
         "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality."
       ]
@@ -2821,6 +2838,15 @@
       ],
       "result": "A separate macOS executable loads the built library through dlopen, bundleEntry and GetPluginFactory; only C-compatible audio, serialized bytes and COM pointers cross the boundary, and COM references are released before unload. Real VST3 ports report stereo/5.1 masks. All 16 rate/bypass/FFT waveform cases at 44.1/48/96/192 kHz match separately constructed DSP exactly, with 0/1024/2048 frames reported before audio and main-thread latency notifications. Eight active/stopped snapshot refusals preserve state, notifications and exact subsequent audio; exact inactive retry succeeds. Four malformed/truncated/short-read streams preserve state. A real IParameterChanges/IParamValueQueue scalar event matches direct DSP exactly and measurably changes audio without latency change. Strict all-target release Clippy and formatting pass. Identical binary packaged with the repository macOS bundle layout passes pluginval 1.0.4 strictness 5 with editor tests enabled, four rates and five block sizes. Steinberg validator was not configured. External DAW compensation, CLAP artifact loading, other-platform native validation and device/perceptual work remain open.",
       "limitations": "External DAW PDC, CLAP dynamic loading, other-platform native coverage, recorded-material quality and real-device deadlines remain open. REAPER preflight has no compensation evidence. Overall stays 35/45; optional ML remains separate."
+    },
+    {
+      "name": "XTC signed analytical and rendered cancellation diagnostics",
+      "state": "verified_partial",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Red baseline: worsening filter reported 0 dB, same-bin requests differed 32.85819 vs 31.437492 dB, and -1 Hz returned 0.2969317 dB. Analytical predictions now use the configured FFT/bin, selected implemented head model/yaw/shadow/pinna/LF mode and both input cues, with signed uncapped values; invalid or unsupported active-resource predictions fail explicitly. New standard-type 2x2 complex-matrix API evaluates supplied independent plants/filters and retains raw depth, intended gain and normalized separation; muting/common attenuation cannot masquerade as useful separation. Ninety independent f64 implemented-model arithmetic cases agree within 0.011037 dB (0.02 dB gate). Actual Rust Plugin::process speaker transfers across fixed/irregular callbacks have zero partition error; all 360 controlled point-source/echo rows are retained, including 134 degraded normalized cases and worst -5.010439 dB. This is neither measured HRTF nor native ABI/device evidence. Obsolete test-only display-depth bounds were replaced with actual all-column coefficient-gain checks across nine gain/yaw settings and independent arithmetic, preserving every historical minimum target. Full release suite 233 passed/one existing ignored, new doctest, strict all-target QA Clippy, formatting and standard processing QA pass. Nominal report still fails 8 kHz ILD (36.124 vs 12 dB, tolerance 20) and 100 Hz request/93.75 Hz bin cancellation (4.986 vs 5 dB), passing only 15/17 comparisons. No renderer/inverse/parameter/schema/latency or optional ML changes.",
+      "limitations": "Nominal acoustic report is 15/17, not fully passing. Controlled synthetic plants are not measured human/room data. Robust inverse design, native/device/true-peak and perceptual work remain open. Overall remains 35/45; optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

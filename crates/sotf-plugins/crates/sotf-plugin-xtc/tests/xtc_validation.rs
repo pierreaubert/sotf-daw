@@ -1,10 +1,12 @@
 #![allow(clippy::field_reassign_with_default)]
 //! XTC Plugin Validation Integration Tests
 //!
-//! These tests verify the XTC implementation against acoustic physics formulas.
+//! These tests cover diagnostic behavior and simple analytical conventions.
+//! Individual physical-model comparisons can fail inside the returned report;
+//! the report-structure/stability tests do not certify those failed metrics.
 //!
 //! Run with:
-//!   cargo test -p plugins --no-default-features xtc_validation -- --nocapture
+//!   cargo test -p sotf-plugin-xtc --features qa --test xtc_validation -- --nocapture
 
 use sotf_plugin_xtc::XtcPluginParams;
 use sotf_plugin_xtc::validation::{
@@ -158,8 +160,8 @@ fn cancellation_depth_at_mid_frequencies() {
             depth
         );
         assert!(
-            depth < 50.0,
-            "Cancellation at {}Hz should be reasonable, got {}dB",
+            depth.is_finite(),
+            "Analytical prediction at {}Hz should be finite, got {}dB",
             freq,
             depth
         );
@@ -187,7 +189,7 @@ fn cancellation_depth_varies_with_frequency() {
 // ============================================================================
 
 #[test]
-fn full_validation_default_params() {
+fn default_report_stability_and_symmetry() {
     let params = XtcPluginParams::default();
     let report = run_validation(&params, 48000);
 
@@ -283,23 +285,25 @@ fn validation_report_output() {
 
 #[test]
 fn filter_magnitude_bounds() {
-    let params = XtcPluginParams::default();
-
-    for &freq in [100.0, 500.0, 1000.0, 2000.0, 4000.0, 8000.0].iter() {
-        let depth = measure_cancellation_depth_db(&params, 48000, freq);
-
-        // Cancellation depth should be finite and reasonable
-        assert!(
-            depth.is_finite(),
-            "Cancellation depth at {}Hz is not finite",
-            freq
-        );
-        assert!(
-            (0.0..=60.0).contains(&depth),
-            "Cancellation depth at {}Hz is out of bounds: {}dB",
-            freq,
-            depth
-        );
+    // A cancellation-depth display range is not a filter-gain bound. Inspect
+    // every coefficient through the report's actual configured-gain check.
+    for head_yaw_deg in [-20.0, 0.0, 20.0] {
+        for max_gain_db in [0.0_f32, 6.0, 12.0] {
+            let params = XtcPluginParams {
+                head_yaw_deg,
+                max_gain_db,
+                ..Default::default()
+            };
+            let report = run_validation(&params, 48_000);
+            let gain = report
+                .results
+                .iter()
+                .find(|r| r.metric_name == "Filter Gain Limit")
+                .unwrap();
+            let limit = 10.0_f32.powf(max_gain_db / 20.0);
+            assert!(gain.passed, "{gain}");
+            assert!(gain.measured.is_finite() && gain.measured <= limit);
+        }
     }
 }
 

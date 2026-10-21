@@ -62,7 +62,46 @@ Independent inverse tests use f64 point-source geometry and a Cholesky solve
 against the production f32 determinant solver. They include lateral head
 displacement, yaw and a single reflected path, plus signed residuals when a
 fixed design is evaluated in a changed scene. These are controlled numerical
-plants, not measured head/room or end-to-end audio validation.
+plants, not measured head/room validation. A separate rendered-output test now
+projects actual `Plugin::process` speaker outputs at six coherent tones after
+startup, using 48 kHz/FFT2048, quiet linear operation and fixed/irregular callbacks.
+Those measured filter transfers are evaluated against independent displaced-head
+point-source and one-echo plants. Of 360 controlled cases, 134 worsen normalized
+separation; the worst is -5.01044 dB. This is not a human-HRTF, hardware or listening
+result, and it is not directly comparable with the earlier core-inverse raw-depth
+matrix because the filter source and normalization differ.
+
+`validation::predict_analytic_cancellation` reports the actual selected FFT bin,
+left/right cue raw attenuation, intended-ear gain and normalized separation.
+It honors the selected analytical head model, yaw, shadow/pinna tuning and LF
+delay mode. It is a shared-model filter prediction, not a measurement of the
+rendered plugin. Unsupported active resource modes return `None`; compatibility
+scalar helpers return `NaN`. They do not load HRTF/RoomEQ/room resources and claim
+an analytical fallback as the requested response.
+
+`validation::evaluate_cancellation` instead accepts independent complex plant
+and filter matrices, computes `T = H * W`, and preserves signed, uncapped values.
+Raw crosstalk attenuation must be read alongside intended gain: reducing both
+ears equally does not improve separation, and a muted cue has undefined separation.
+Matrix entries use `[real, imaginary]` values with a coherent timing reference;
+rows/columns are ears/speakers for `H` and speakers/intended inputs for `W`.
+The caller must establish measurement provenance and calibration.
+
+The legacy `measure_cancellation_depth_db` name now returns the worse signed raw
+prediction across both inputs, using the configured FFT size. Its former 0..40 dB
+clamp and arbitrary-frequency plant evaluation could hide degradation and create
+false bin-dependent differences. Obsolete test-only display-depth bounds were replaced by actual coefficient-gain,
+finite-value and independent arithmetic checks; historical
+minimum thresholds and the failed 8 kHz ILD tolerance are unchanged.
+
+The corrected default nominal report passes 15 of 17 comparisons. It still reports
+8 kHz ILD at 36.124 dB versus 12 dB (20 dB tolerance), and the 100 Hz request maps
+to a 93.75 Hz bin whose 4.986 dB raw cancellation misses the retained 5 dB minimum.
+Passing the Rust tests, stability checks or standard processing QA does not clear
+these model/reference failures.
+
+Prediction helpers allocate filter arrays and belong on a control/analysis thread,
+not in `process()`. Matrix evaluation operates only on supplied values.
 
 Stereo AutoGain ingests every frame. It compares the original input delayed by
 N frames with the uncompensated wet output, then refreshes its target every
