@@ -408,3 +408,47 @@ fn hot_safety_automation_with_autogain_and_partial_eof_has_no_heap_activity() {
         }
     }
 }
+
+#[test]
+fn prepared_host_scalar_queue_and_first_audio_have_no_heap_activity() {
+    for rate in [48_000, 192_000] {
+        for fft in [512, 4096] {
+            let params =
+                serde_json::from_value(serde_json::json!({"fft_size":fft,"speaker_config":"2.0"}))
+                    .unwrap();
+            let mut host = sotf_host::host::DawHost::new(2, rate);
+            host.set_parallel_enabled(false).unwrap();
+            let node = host
+                .add_node(
+                    "upmixer".into(),
+                    Box::new(UpmixerPlugin::from_params(params)),
+                )
+                .unwrap();
+            host.build().unwrap();
+            let owner: sotf_host::ParameterId = "gain_front_direct".into();
+            let input = vec![0.02; 514];
+            let mut output = vec![0.0; 514];
+            let counts = std::thread::spawn(move || {
+                let (_, counts) = measure_heap(|| {
+                    host.queue_node_parameter_at(
+                        node,
+                        owner.clone(),
+                        sotf_host::ParameterValue::Float(0.3),
+                        17,
+                    )
+                    .unwrap();
+                    assert_eq!(host.process(&input, &mut output).unwrap(), 257);
+                });
+                assert_eq!(
+                    host.get_plugin(0).unwrap().get_parameter(&owner),
+                    Some(sotf_host::ParameterValue::Float(0.3))
+                );
+                counts
+            })
+            .join()
+            .unwrap();
+            println!("host_queue_heap rate={rate} fft={fft} counts={counts:?}");
+            assert_eq!(counts, (0, 0));
+        }
+    }
+}

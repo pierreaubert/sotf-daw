@@ -1,0 +1,25 @@
+{
+  "base_commit": "35b305767555456a5cac6ae599ddca8eb2f3eeb9",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_host_latency",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nqueued=Ok(()) processed=Ok(17) actual_latency=0 host_latency=512 first_output=0.125\ntest queued_upmixer_bypass_cannot_invalidate_prepared_host_latency ... FAILED\n\nfailures:\n\nfailures:\n    queued_upmixer_bypass_cannot_invalidate_prepared_host_latency\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\nwarning: unused import: `Host`\n --> crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_host_latency.rs:4:32\n  |\n4 | use sotf_host::host::{DawHost, Host};\n  |                                ^^^^\n  |\n  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default\n\nwarning: unused import: `Plugin`\n --> crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_host_latency.rs:5:33\n  |\n5 | use sotf_host::{ParameterValue, Plugin};\n  |                                 ^^^^^^\n\nwarning: `sotf-plugin-upmixer` (test \"audit_host_latency\") generated 2 warnings\n    Finished `release` profile [optimized] target(s) in 2.86s\n     Running tests/audit_host_latency.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_host_latency-cc7a10f1c9e5cba3)\n\nthread 'queued_upmixer_bypass_cannot_invalidate_prepared_host_latency' (328436471) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_host_latency.rs:33:5:\nstructural bypass entered the realtime queue\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --test audit_host_latency`\n"
+}

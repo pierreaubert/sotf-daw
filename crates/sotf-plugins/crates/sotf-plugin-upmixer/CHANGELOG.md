@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Close a host queue admission gap that allowed structural raw bypass to change
+  Upmixer latency without refreshing PDC. Add all-structural-route rejection,
+  actual parallel compensation, bypass/reset/channel/FFT reconstruction and
+  prepared scalar queue heap regressions, plus native activation latency tests.
+
 - Replace final whole-callback limiting with channel-linked per-output-frame
   instantaneous attack and physical-time release, anchored to the former 0.02
   step per 1024 frames at 48 kHz. Remove future-peak attenuation of quiet prefixes.

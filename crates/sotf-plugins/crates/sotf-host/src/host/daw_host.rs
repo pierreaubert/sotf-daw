@@ -41,6 +41,7 @@ use crate::automation::{ParameterAutomation, automation_utils};
 use crate::external_plugin_isolated::IsolatedExternalPlugin;
 #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
 use crate::external_plugin_process::ExternalPluginProcessEvent;
+use crate::param_specs::UpdateMode;
 use crate::parameters::{ParameterId, ParameterValue};
 use crate::plugin::{
     Plugin, PluginCompiledOp, PluginCostClass, PluginDrainResult, ProcessContext,
@@ -717,8 +718,9 @@ pub struct DawHost {
     pub(super) cached_output_frame_ratios: Vec<(NodeId, f64)>,
     /// Indices of plugins in chain_nodes that have analyzer data (get_data() returns Some)
     pub(super) analyzer_indices: Vec<usize>,
-    /// Control-prepared owners keep queued scalar event IDs alive after delivery.
-    parameter_id_owners: Vec<Vec<ParameterId>>,
+    /// Prepared ID owners and admission modes keep scalar events allocation-free
+    /// and prevent construction-sized changes from invalidating cached geometry/PDC.
+    parameter_id_owners: Vec<Vec<(ParameterId, UpdateMode)>>,
     /// Cached total latency in samples, computed during build() and invalidated on graph changes
     pub(super) cached_latency: Option<usize>,
     pub(super) compiled_plan: CompiledRenderPlan,
@@ -1510,11 +1512,13 @@ impl DawHost {
                                 .parameters()
                                 .into_iter()
                                 .map(|p| {
-                                    self.parameter_id_owners
+                                    let owner = self
+                                        .parameter_id_owners
                                         .get(id)
-                                        .and_then(|ids| ids.iter().find(|old| **old == p.id))
-                                        .cloned()
-                                        .unwrap_or(p.id)
+                                        .and_then(|ids| ids.iter().find(|(old, _)| *old == p.id))
+                                        .map(|(old, _)| old.clone())
+                                        .unwrap_or(p.id);
+                                    (owner, p.update_mode)
                                 })
                                 .collect()
                         }))
@@ -3504,8 +3508,16 @@ impl DawHost {
         self.queue_node_parameter_at(node_id, param_id, value, 0)
     }
 
-    /// Queue a parameter change for audio-thread application at `sample_offset`
-    /// frames into the next `process()` call.
+    /// Queue a parameter change for audio-thread application at `sample_offset`.
+    ///
+    /// Offsets are relative to the next `process()` call. Structural controls
+    /// require graph preparation and cannot enter this live queue. Admission
+    /// uses prepared metadata; before build, metadata probes run on the caller's
+    /// control thread.
+    ///
+    /// # Errors
+    /// Returns an error for structural controls, missing nodes, a full queue,
+    /// a detached producer, or a panicking pre-build metadata probe.
     pub fn queue_node_parameter_at(
         &mut self,
         node_id: NodeId,
@@ -3521,12 +3533,36 @@ impl DawHost {
         // Caller-created IDs otherwise become last owners in the callback and
         // free their Arc allocation when the plugin consumes the event. Retain
         // only declared IDs, bounded by the prepared graph's parameter schema.
-        let param_id = self
+        let prepared = self
             .parameter_id_owners
             .get(node_id)
-            .and_then(|ids| ids.iter().find(|id| **id == param_id))
-            .cloned()
-            .unwrap_or(param_id);
+            .and_then(|ids| ids.iter().find(|(id, _)| *id == param_id));
+        let structural = if let Some((_, mode)) = prepared {
+            *mode == UpdateMode::Structural
+        } else if !self.built {
+            // Before first preparation (or after adding a new node), admission
+            // is a control-thread metadata probe. Prepared scalar updates never
+            // enumerate or clone parameter metadata.
+            let plugin = self
+                .plugins
+                .get(node_id)
+                .and_then(Option::as_ref)
+                .ok_or("Plugin not found")?;
+            catch_unwind(AssertUnwindSafe(|| plugin.parameters()))
+                .map_err(|_| format!("Plugin at node {node_id} panicked while listing parameters"))?
+                .iter()
+                .any(|parameter| {
+                    parameter.id == param_id && parameter.update_mode == UpdateMode::Structural
+                })
+        } else {
+            false
+        };
+        if structural {
+            return Err(format!(
+                "Parameter {param_id} requires rebuilding the plugin chain"
+            ));
+        }
+        let param_id = prepared.map(|(id, _)| id.clone()).unwrap_or(param_id);
         let event = ParameterEvent::new(node_id, param_id, value, sample_offset);
         let producer = self.queues.parameter_event_tx.as_mut().ok_or_else(|| {
             "parameter event sender has been taken; use the returned ParameterEventSender"
@@ -3564,7 +3600,8 @@ impl DawHost {
                         .ok()?;
                 if let Some(owners) = self.parameter_id_owners.get(node_id) {
                     for parameter in &mut parameters {
-                        if let Some(owner) = owners.iter().find(|id| **id == parameter.id) {
+                        if let Some((owner, _)) = owners.iter().find(|(id, _)| *id == parameter.id)
+                        {
                             parameter.id = owner.clone();
                         }
                     }

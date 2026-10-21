@@ -1762,3 +1762,137 @@ fn ambisonics_standalone_init_resolves_8_target_identity_for_high_slots() {
         );
     }
 }
+
+mod upmixer_latency_tests {
+    use super::*;
+
+    struct Context {
+        api: PluginApi,
+        latency: std::cell::Cell<u32>,
+        notifications: std::cell::Cell<usize>,
+    }
+    impl InitContext<UpmixerWrapper> for Context {
+        fn plugin_api(&self) -> PluginApi {
+            self.api
+        }
+        fn execute(&self, _: ()) {}
+        fn set_latency_samples(&self, samples: u32) {
+            self.latency.set(samples);
+            self.notifications.set(self.notifications.get() + 1);
+        }
+        fn set_current_voice_capacity(&self, _: u32) {}
+    }
+    fn config() -> BufferConfig {
+        BufferConfig {
+            sample_rate: 48_000.0,
+            min_buffer_size: Some(1),
+            max_buffer_size: 257,
+            process_mode: ProcessMode::Realtime,
+        }
+    }
+
+    #[test]
+    fn upmixer_restored_bypass_and_fft_state_report_prepared_latency_before_audio() {
+        for api in [PluginApi::Clap, PluginApi::Vst3] {
+            for bypass in [false, true] {
+                for low_latency in [false, true] {
+                    let mut wrapper = UpmixerWrapper {
+                        params: restored_params(
+                            "Upmixer",
+                            &[
+                                ("bypass_all_processing", f64::from(bypass)),
+                                ("low_latency", f64::from(low_latency)),
+                            ],
+                        ),
+                        ..Default::default()
+                    };
+                    let mut context = Context {
+                        api,
+                        latency: std::cell::Cell::new(u32::MAX),
+                        notifications: std::cell::Cell::new(0),
+                    };
+                    assert!(wrapper.initialize(
+                        &UpmixerWrapper::AUDIO_IO_LAYOUTS[0],
+                        &config(),
+                        &mut context
+                    ));
+                    let expected = if bypass {
+                        0
+                    } else if low_latency {
+                        1024
+                    } else {
+                        2048
+                    };
+                    assert_eq!(context.latency.get(), expected);
+                    assert_eq!(context.notifications.get(), 1);
+                    assert_eq!(
+                        wrapper.inner.as_ref().unwrap().latency_samples(),
+                        expected as usize
+                    );
+                    let params = wrapper.params.clone();
+                    check_routing(&mut wrapper, "Upmixer", &params);
+                    println!(
+                        "native_upmixer_latency api={api:?} bypass={bypass} low_latency={low_latency} reported={expected}"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn upmixer_active_structural_restore_fails_closed_until_latency_reactivation() {
+        let mut wrapper = UpmixerWrapper::default();
+        let mut context = Context {
+            api: PluginApi::Clap,
+            latency: std::cell::Cell::new(u32::MAX),
+            notifications: std::cell::Cell::new(0),
+        };
+        assert!(wrapper.initialize(
+            &UpmixerWrapper::AUDIO_IO_LAYOUTS[0],
+            &config(),
+            &mut context
+        ));
+        assert_eq!(context.latency.get(), 2048);
+        // Model a state restored while active; native structural values must
+        // not silently alter the already-reported prepared instance.
+        wrapper.params = restored_params("Upmixer", &[("bypass_all_processing", 1.0)]);
+        let mut audio = vec![vec![0.03; 17]; 6];
+        let mut buffer = Buffer::default();
+        // SAFETY: all six disjoint channel vectors contain 17 samples and live
+        // through the synchronous callback; the buffer is dropped before its backing vectors.
+        unsafe {
+            buffer.set_slices(17, |slices| {
+                slices.extend(audio.iter_mut().map(Vec::as_mut_slice))
+            });
+        }
+        let mut aux = AuxiliaryBuffers {
+            inputs: &mut [],
+            outputs: &mut [],
+        };
+        let status = wrapper.process_without_transport(&mut buffer, &mut aux, &mut TestContext);
+        assert!(matches!(
+            status,
+            ProcessStatus::Error("Structural parameter state changed; reactivate plugin")
+        ));
+        assert!(
+            buffer
+                .as_slice_immutable()
+                .iter()
+                .flat_map(|samples| samples.iter())
+                .all(|sample| *sample == 0.0)
+        );
+        assert_eq!(wrapper.inner.as_ref().unwrap().latency_samples(), 2048);
+        assert_eq!(context.latency.get(), 2048);
+        assert_eq!(context.notifications.get(), 1);
+        assert!(wrapper.initialize(
+            &UpmixerWrapper::AUDIO_IO_LAYOUTS[0],
+            &config(),
+            &mut context
+        ));
+        assert_eq!(context.latency.get(), 0);
+        assert_eq!(context.notifications.get(), 2);
+        assert_eq!(wrapper.inner.as_ref().unwrap().latency_samples(), 0);
+        let params = wrapper.params.clone();
+        check_routing(&mut wrapper, "Upmixer", &params);
+    }
+}

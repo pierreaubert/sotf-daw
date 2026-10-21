@@ -83,6 +83,12 @@ active, processing returns an error and silence until the host deactivates
 and reactivates the plugin. Automatic host reactivation is not implemented.
 Ordinary realtime parameter automation continues without reconstruction.
 
+Upmixer activation tests cover saved raw bypass and low-latency FFT state for
+CLAP and VST3 contexts. The wrapper reports 0/1024/2048 frames to the host before
+audio; an active structural restore retains the old DSP and reported latency,
+returns error/silence, then publishes the new latency only on reactivation.
+The packaged Upmixer bus geometry remains fixed at stereo input/5.1 output.
+
 Saturation includes saved mode and oversampling choices. Native wrappers apply
 the plugin's requested 2x/4x oversampling before initialization and report the
 resulting filter latency to the DAW. Continuous saturation controls use direct

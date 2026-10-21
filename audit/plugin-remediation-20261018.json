@@ -2166,6 +2166,19 @@
             "audit/artifacts/plugin-audit-20261018/upmixer-safety-clock-validation.json"
           ],
           "result": "Baseline attenuated quiet prefix [0.2,0.1] to [0.07062471,0.035312355] due to a future peak and reproduced public waveform error up to 0.3250757. Per-FFT cap control now uses separate pending source-analysis time, preserving its equations/coefficients and HR headroom-floor law. Final post-AutoGain/HR/binaural limiting uses each generated frame peak with channel-linked instantaneous attack and physical release anchored to old 0.02 per 1024 frames/48k, with independent f64 50ms output control. Configured final cap applies from startup. All 54 waveform/tail comparisons are exact, including 48 rate/FFT/HR/AutoGain/binaural cases; 12 configured-zero-dB routes remain strictly bounded through EOF and 12 hot processing/reset/drain routes are zero-heap. Analytic release through 384k, source/output interruption independence, empty/invalid calls, reset/reinitialization and uncapped bypass pass. 221 release tests, strict Clippy and standard QA pass (representative 5s steady audio 19.09ms). Two archive failures were retained and corrected by explicit historical cap-trace replay only in their fixture controller, retaining archive bytes/digests and numeric gates. Existing missing WAV comparisons and ignored candidates remain unchanged."
+        },
+        {
+          "requirement": "Prevent live structural Upmixer edits from invalidating host latency/PDC and verify prepared host/native activation geometry.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_host_latency.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/stream_boundary_allocations.rs",
+            "crates/sotf-plugins/crates/plugins-nih/src/wrapper_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json"
+          ],
+          "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; active structural restore retains old DSP until explicit reactivation. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
         }
       ],
       "evidence": [
@@ -2192,10 +2205,15 @@
           "kind": "validated_safety_clocks",
           "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-safety-clock-validation.json",
           "finding": "Cap-control and final limiter callback dependence fixed with causal linked output protection and physical release. Historical HR archive controller replays its original cap trace; full production clock matrix is separate. PDC, recorded-material quality and worst/device deadlines remain open."
+        },
+        {
+          "kind": "validated_host_structural_admission",
+          "artifact": "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json",
+          "finding": "Concrete queued bypass/stale PDC gap fixed. Actual built-in graph compensation and native activation context contracts validated; exported ABI/external DAW and device/perceptual work remain separate."
         }
       ],
       "remaining": [
-        "Validate latency/PDC synchronization on bypass or structural changes; structural preparation remains outside realtime setters.",
+        "Validate exported native CLAP/VST3 restart/PDC behavior in external DAWs; built-in host admission/compensation and generated-wrapper activation contexts are verified, with explicit reactivation required.",
         "Extend real recorded speech/music center leakage, mono/downmix compatibility and onset/perceptual quality; current recorded automation probes do not establish separation or localization quality.",
         "Measure worst-layout and frequent-control-update deadline distribution under device load; representative standard steady QA is insufficient."
       ]
@@ -2304,6 +2322,19 @@
       {
         "task": "Complete remaining spectrum, loudness conformance, AutoGain, native fixture and cross-wrapper audit recommendations",
         "status": "pending"
+      },
+      {
+        "requirement": "Prevent live structural Upmixer edits from invalidating host latency/PDC and verify prepared host/native activation geometry.",
+        "status": "implemented_and_verified",
+        "evidence": [
+          "crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs",
+          "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/audit_host_latency.rs",
+          "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/stream_boundary_allocations.rs",
+          "crates/sotf-plugins/crates/plugins-nih/src/wrapper_tests.rs",
+          "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-baseline.json",
+          "audit/artifacts/plugin-audit-20261018/upmixer-host-latency-validation.json"
+        ],
+        "result": "Reproduced basic host queue accepting raw bypass: first output 0.125 and actual latency 0 while cached host PDC remained 512. Prepared queue admission now rejects structural controls using cached modes with retained IDs; pre-build admission fails closed through control-thread metadata probing. All 156 checks (13 controls, 6 routes, prepared/unprepared), 36 exact real-Upmixer parallel compensation comparisons, graph bypass/reset and channel/FFT reconstruction pass. Four scalar queue/first-audio routes are zero-heap. Eight native CLAP/VST3 activation-context saved states report 0/1024/2048 before matching audio; active structural restore retains old DSP until explicit reactivation. Host 710 unit + 194 integration tests, Upmixer 227 release tests, three targeted native tests and strict Clippy across all three packages pass. Exported ABI/external-DAW restart/PDC behavior remains unverified."
       }
     ],
     "evidence": [
@@ -2707,6 +2738,15 @@
       ],
       "result": "Fixes future-peak prefix attenuation and up to 0.3250757 callback waveform error. 54 exact comparisons, physical release through 384k, 12 strict configured-cap and 12 zero-heap hot EOF routes. 221 release tests, strict Clippy and standard QA pass. Overall stays 35/45.",
       "limitations": "PDC, recorded separation/limiting perception and worst-layout/device deadlines remain open. Historical archive vectors use explicit old control trace with unchanged bytes/gates; four absent WAV comparisons and existing ignored candidates remain disclosed."
+    },
+    {
+      "name": "Upmixer structural queue admission and prepared PDC",
+      "state": "verified_partial",
+      "plugin_ids": [
+        43
+      ],
+      "result": "Fixes admitted raw bypass changing DSP latency 512 -> 0 while host stayed at 512. 156 admission checks, 36 exact real-plugin compensation cases, geometry/reset and native activation tests. 904 host, 227 Upmixer and three targeted native tests pass; strict Clippy passes. Overall stays 35/45.",
+      "limitations": "Exported ABI/external-DAW reactivation/PDC and device deadlines/perceptual material remain open. Native checks are generated-wrapper context tests; automatic host reactivation is not implemented."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

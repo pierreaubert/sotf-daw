@@ -68,3 +68,28 @@ is lower. NaN contamination remains visible until measurement reset. Loudness is
 reported in LUFS; the hour-long retention/heap checks do not establish true-peak
 conformance at their fallback test rate. Independent gating and LRA vectors,
 true-peak vectors and retained-reader tests cover those separate contracts.
+
+
+## Prepared parameter admission
+
+All `DawHost` live parameter queue entry points reject `Structural` controls
+before enqueueing them. Sample-offset/indexed setters, immediate setters and
+detached `ParameterEventSender` handles enforce the same boundary; explicitly
+opted-in momentary controls retain their separate immediate control route.
+Structural controls must be applied while preparing a detached plugin/graph,
+then `build()` prepares geometry, cached latency and compensation together.
+Prepare graphs on the control thread before entering realtime processing.
+
+The built host retains parameter ID owners together with update modes, so
+ordinary scalar queue updates do not enumerate metadata or allocate. Before a
+node has been prepared, admission probes its metadata on the control thread and
+fails closed on a metadata panic. Existing queued-event value validation and
+unknown-ID behavior are unchanged.
+
+Real Upmixer integration tests cover all 13 structural controls over six live
+entry points before/after preparation, actual parallel dry-path compensation,
+graph bypass/rebuild/reset and channel/FFT reconstruction. Prepared scalar
+queue plus first processing does not allocate or free heap memory with retained
+ID owners.
+Native wrapper tests additionally check activation-time latency publication for
+bypass/FFT state; external DAWs still perform their own reactivation/PDC work.

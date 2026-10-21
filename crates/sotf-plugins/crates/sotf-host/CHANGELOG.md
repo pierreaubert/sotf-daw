@@ -2,6 +2,11 @@
 
 ## Changes
 
+- Reject structural changes at host-owned parameter queue admission, closing a
+  path where queued Upmixer bypass changed runtime latency while cached host
+  PDC stayed stale. Retain update modes with prepared ID owners so scalar queues
+  stay allocation-free; validate unprepared nodes on the control thread.
+
 - Own bounded rolling integrated-loudness history across built-in and explicit
   layouts, and disable unused backend integrated history. Quiet audio ages out
   earlier observations; whole-program exhaustion remains explicit, and long

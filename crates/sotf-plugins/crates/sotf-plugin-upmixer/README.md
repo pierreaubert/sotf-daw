@@ -37,8 +37,8 @@ rebuild at grid boundaries.
 Each table control has a measured nonzero rendering effect and matches exactly
 across large/irregular callbacks versus one-frame calls, including recorded
 speech/violin and full tails. These cases establish timing, not perceptual
-separation quality. These guarantees do not imply host PDC synchronization on
-raw-bypass latency changes.
+separation quality. Latency-changing controls use the structural host admission
+and preparation contract described below.
 
 
 ### AutoGain reference and timing
@@ -64,7 +64,7 @@ is structural because enabling it can start inference resources. Optional ML
 models and backends are tracked separately and are not validated by these tests.
 Parameter enumeration and invalid-input error construction are control-thread
 operations. Zero-heap setters do not establish a device deadline guarantee or
-establish host PDC synchronization or perceptual quality.
+establish perceptual quality or device deadline compliance.
 
 
 ### Safety-cap control and release
@@ -109,3 +109,27 @@ archived callback-based cap-control trace, which also affected the HR headroom
 floor below clipping. This isolates the HR routing oracle from the intentional
 cap-clock change; no legacy safety mode exists in production. Current production
 clocks are exercised separately by `tests/audit_safety_clock.rs`.
+
+
+### Host latency and PDC preparation
+
+Upmixer structural controls are rejected by every `DawHost` live queue route,
+including the host-owned queue that previously allowed raw bypass to change
+runtime latency without refreshing cached PDC. Low-level structural setters
+remain available to prepare a detached plugin on the control thread. Build the
+replacement graph before audio so channel geometry, latency and compensation
+are prepared together; reset establishes a new stream boundary.
+
+The real-plugin host tests verify 156 structural admissions and 36 parallel
+upmixer/dry cases at 44.1/48/192 kHz, FFT2/512/4096 and raw bypass. The compensated
+dry branch plus standalone filtered upmixer exactly matches the host graph.
+Graph bypass/rebuild/reset and stereo-to-9.1.6-to-binaural reconstruction also
+refresh latency correctly. Steady frequency-domain crossover pre-ringing is
+part of the unchanged filtered response, not a pure-delay arrival oracle.
+
+Native CLAP/VST3 wrapper activation tests verify saved raw bypass and low-latency
+FFT states report 0/1024/2048 frames before audio. An active structural state
+change returns error/silence while retaining the prepared DSP latency; the host
+must deactivate/reactivate before the new latency is published. Automatic host
+reactivation is not implemented. Packaged native bus-layout restrictions remain
+unchanged. These are host integration checks, not an external DAW/device test.

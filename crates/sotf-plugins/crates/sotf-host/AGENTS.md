@@ -64,6 +64,11 @@ cargo check -p sotf-host && cargo clippy -p sotf-host
 
 ## Important Notes
 
+- Cache live parameter admission modes alongside retained ID owners in `DawHost`.
+  Reject structural values at every queue producer before a callback can mutate
+  geometry or latency. Prepared scalar admission must not enumerate metadata;
+  unprepared-node control admission may probe metadata and must catch panics.
+  Preserve ID owners across rebuilds and detached-sender snapshots.
 - DSP plugins need params in 3 places: `rebuild_cached_parameters` + `set_parameter` + `get_parameter`. Missing `cached_parameters` causes silent rejection.
 - STFT plugins must return `context.num_frames` (not actual draining count) to prevent ring buffer underruns
 - Channel count can change between plugins (e.g., upmixer: 2ch → 5ch)
