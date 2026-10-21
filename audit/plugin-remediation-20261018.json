@@ -1565,6 +1565,16 @@
             "audit/artifacts/plugin-audit-20261018/hal-output-native-broker-validation.json"
           ],
           "result": "Native stale-ready regression reproduced explicit service reporting success while replacement engine_ready stayed false: cached old driver_ready prevented remapping. All three explicit control paths (service, prepared recovery, reprepare) now reopen current transport regardless of cached readiness; native reconnect retires old engine_ready and gates the newly attached region. Logical pending FIFO remains owned, validation/priming precede Ready, no callback filesystem/key work. A connected controlled-transport regression verifies reopening. Isolated native 32-case matrix (1-16 channels,48/96k) passes real ring saturation, exact older FIFO order,17 drop-newest frames per case, ownership conservation, service/prepared pending delivery across stale-ready region replacement, native reprepare 64->128 frames/latency128->256, encrypted key mismatch/recovery, notified format latch and readiness on Drop. Successful native callbacks allocate nothing. Core80 release tests (including existing 40960-event/heap model) and strict native all-target QA Clippy/format pass. Stable before/after dirty driver/Cargo.lock snapshots recorded; no live default transport or clean-driver/Swift/device claim. Initial harness used an unnotified raw rate setter and wrote data at changed clock; this gap is retained, final notification test explicitly follows owner protocol. Same-size reprepare refusal retained then corrected to intended resize contract. No tolerance/policy/counter/schema/normal callback arithmetic change; explicit unnotified-format/race/liveness/deadline requirements remain open."
+        },
+        {
+          "requirement": "Block settled unnotified transport geometry before callback writes and terminal admission.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs",
+            "audit/artifacts/plugin-audit-20261018/hal-output-format-probe-validation.json"
+          ],
+          "result": "Private allocation-free callback_format observations now gate direct process, pending EOF drain and TerminalSink preflight against prepared rate/channel/buffer fields, independent of owner config_changed. Native implementation reads atomic getters without Result/String formatting, filesystem or key operations; fake callback observations are separate from scripted control metadata queries. Mismatch/unavailable geometry latches ConfigurationChanged. Successful direct input stays owned in bounded FIFO; terminal preflight refuses before upstream consumption. Restored fields alone do not clear the latch; explicit control recovery is required. Red controlled baseline accepted mismatched terminal geometry, and previous native diagnostic wrote data at an unnotified changed clock. All 256 controlled cases (16 layouts,48/96k,rate/channel/buffer/unavailable) assert no writes, exact ownership/latch/recovery and zero allocations/frees; 128 specifically begin with pending drain before a format change. Native32 matrix repeats rate changes with owner notification deliberately omitted and passes, with key/reprepare/FIFO checks retained and zero callback allocations. Core82 release and strict native all-target QA Clippy/format pass; existing40960-event FIFO model remains passing. Dirty driver snapshot stable; no live transport opened. Signal latency, queue policy/telemetry fields, parameters/presets and valid-format rendering unchanged. These are pre-write observations, not a coherent epoch fence; callback-time/ABA/key races, liveness and device timing stay open."
         }
       ],
       "evidence": [
@@ -1573,10 +1583,11 @@
         "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-baseline.json",
         "audit/artifacts/plugin-audit-20261018/hal-output-config-latch-baseline.json",
         "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-validation.json",
-        "audit/artifacts/plugin-audit-20261018/hal-output-native-broker-validation.json"
+        "audit/artifacts/plugin-audit-20261018/hal-output-native-broker-validation.json",
+        "audit/artifacts/plugin-audit-20261018/hal-output-format-probe-validation.json"
       ],
       "remaining": [
-        "Detect/fence unnotified and callback-time format/key transitions; native diagnostic observed writes at changed clock without config_changed publication.",
+        "Establish coherent epoch fencing for format/key changes during a write and ABA transitions; settled unnotified rate/channel/buffer changes are now gated and verified.",
         "Automatic liveness supervision, cross-process clock drift and committed-driver/Swift/device/deadline/audibility evidence remain open."
       ]
     },
@@ -3148,6 +3159,15 @@
       ],
       "result": "Native stale-ready regression reproduced explicit service reporting success while replacement engine_ready stayed false: cached old driver_ready prevented remapping. All three explicit control paths (service, prepared recovery, reprepare) now reopen current transport regardless of cached readiness; native reconnect retires old engine_ready and gates the newly attached region. Logical pending FIFO remains owned, validation/priming precede Ready, no callback filesystem/key work. A connected controlled-transport regression verifies reopening. Isolated native 32-case matrix (1-16 channels,48/96k) passes real ring saturation, exact older FIFO order,17 drop-newest frames per case, ownership conservation, service/prepared pending delivery across stale-ready region replacement, native reprepare 64->128 frames/latency128->256, encrypted key mismatch/recovery, notified format latch and readiness on Drop. Successful native callbacks allocate nothing. Core80 release tests (including existing 40960-event/heap model) and strict native all-target QA Clippy/format pass. Stable before/after dirty driver/Cargo.lock snapshots recorded; no live default transport or clean-driver/Swift/device claim. Initial harness used an unnotified raw rate setter and wrote data at changed clock; this gap is retained, final notification test explicitly follows owner protocol. Same-size reprepare refusal retained then corrected to intended resize contract. No tolerance/policy/counter/schema/normal callback arithmetic change; explicit unnotified-format/race/liveness/deadline requirements remain open.",
       "limitations": "Native mapped tests pass, but unnotified format/race/liveness and clean driver/Swift/device timing remain. Overall 35/45 complete; optional ML separate."
+    },
+    {
+      "name": "HAL output allocation-free callback geometry probes",
+      "state": "verified_partial",
+      "plugin_ids": [
+        27
+      ],
+      "result": "Private allocation-free callback_format observations now gate direct process, pending EOF drain and TerminalSink preflight against prepared rate/channel/buffer fields, independent of owner config_changed. Native implementation reads atomic getters without Result/String formatting, filesystem or key operations; fake callback observations are separate from scripted control metadata queries. Mismatch/unavailable geometry latches ConfigurationChanged. Successful direct input stays owned in bounded FIFO; terminal preflight refuses before upstream consumption. Restored fields alone do not clear the latch; explicit control recovery is required. Red controlled baseline accepted mismatched terminal geometry, and previous native diagnostic wrote data at an unnotified changed clock. All 256 controlled cases (16 layouts,48/96k,rate/channel/buffer/unavailable) assert no writes, exact ownership/latch/recovery and zero allocations/frees; 128 specifically begin with pending drain before a format change. Native32 matrix repeats rate changes with owner notification deliberately omitted and passes, with key/reprepare/FIFO checks retained and zero callback allocations. Core82 release and strict native all-target QA Clippy/format pass; existing40960-event FIFO model remains passing. Dirty driver snapshot stable; no live transport opened. Signal latency, queue policy/telemetry fields, parameters/presets and valid-format rendering unchanged. These are pre-write observations, not a coherent epoch fence; callback-time/ABA/key races, liveness and device timing stay open.",
+      "limitations": "Per-callback observation is not atomic epoch fencing. Cross-process liveness/drift and clean driver/Swift/device/deadline evidence remain; overall35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

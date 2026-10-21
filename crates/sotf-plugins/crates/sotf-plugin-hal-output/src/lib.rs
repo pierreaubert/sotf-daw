@@ -53,6 +53,8 @@ trait HalWriter: Send {
     fn is_connected(&self) -> bool;
     fn write(&mut self, buffer: &[f32]) -> usize;
     fn current_format(&self) -> Result<(u32, u32, u32), String>;
+    /// Observe atomic format fields without allocation or control-side work.
+    fn callback_format(&self) -> Option<(u32, u32, u32)>;
     fn config_changed(&self) -> bool;
     fn clear_config_changed(&self);
     fn set_engine_ready(&self, ready: bool);
@@ -75,6 +77,15 @@ impl HalWriter for HalOutputWriter {
 
     fn current_format(&self) -> Result<(u32, u32, u32), String> {
         HalOutputWriter::current_format(self).map_err(|error| error.to_string())
+    }
+
+    fn callback_format(&self) -> Option<(u32, u32, u32)> {
+        let format = (
+            HalOutputWriter::sample_rate(self),
+            HalOutputWriter::channel_count(self),
+            HalOutputWriter::buffer_frames(self),
+        );
+        (format.0 != 0 && format.1 != 0 && format.2 != 0).then_some(format)
     }
 
     fn config_changed(&self) -> bool {
@@ -799,6 +810,17 @@ impl HalOutputPlugin {
         self.pending.clear();
     }
 
+    fn callback_format_matches(
+        writer: &dyn HalWriter,
+        rate: u32,
+        channels: usize,
+        buffer_frames: usize,
+    ) -> bool {
+        writer.callback_format().is_some_and(|format| {
+            format.0 == rate && format.1 as usize == channels && format.2 as usize == buffer_frames
+        })
+    }
+
     fn check_transport_format(&self, sample_rate: u32) -> Result<(u32, u32, u32), String> {
         let writer = self
             .writer
@@ -1159,7 +1181,14 @@ impl Plugin for HalOutputPlugin {
             });
         }
 
-        if writer.config_changed() {
+        if writer.config_changed()
+            || !Self::callback_format_matches(
+                writer.as_ref(),
+                self.sample_rate,
+                self.channels,
+                self.buffer_capacity,
+            )
+        {
             self.state = HalOutputTransportState::ConfigurationChanged;
             self.is_backpressured = true;
             return Ok(PluginDrainResult {
@@ -1259,11 +1288,15 @@ impl Plugin for HalOutputPlugin {
             return Ok(context.num_frames);
         }
 
-        if self
-            .writer
-            .as_ref()
-            .is_some_and(|writer| writer.config_changed())
-        {
+        if self.writer.as_ref().is_some_and(|writer| {
+            writer.config_changed()
+                || !Self::callback_format_matches(
+                    writer.as_ref(),
+                    self.sample_rate,
+                    self.channels,
+                    self.buffer_capacity,
+                )
+        }) {
             self.state = HalOutputTransportState::ConfigurationChanged;
             self.is_backpressured = true;
             self.enqueue_input_request(input);
@@ -1412,10 +1445,15 @@ impl TerminalSink for HalOutputPlugin {
                     | HalOutputTransportState::FormatError
                     | HalOutputTransportState::PrimingFailed
             )
-            || self
-                .writer
-                .as_ref()
-                .is_some_and(|writer| writer.config_changed())
+            || self.writer.as_ref().is_some_and(|writer| {
+                writer.config_changed()
+                    || !Self::callback_format_matches(
+                        writer.as_ref(),
+                        self.sample_rate,
+                        self.channels,
+                        self.buffer_capacity,
+                    )
+            })
         {
             return Err(SinkTailPreflightError::InvalidGeometry);
         }
@@ -1780,6 +1818,13 @@ mod tests {
                 return Err("fake transport format unavailable".to_string());
             }
             Ok(state.transport_format.unwrap_or(self.format))
+        }
+
+        fn callback_format(&self) -> Option<(u32, u32, u32)> {
+            // Scripted format_reads model control observations only. The RT
+            // observation reads current state without control-query mutations.
+            let state = self.state.lock().unwrap();
+            (!state.format_error).then_some(state.transport_format.unwrap_or(self.format))
         }
 
         fn config_changed(&self) -> bool {
@@ -5550,6 +5595,120 @@ mod tests {
     }
 
     #[test]
+    fn unnotified_formats_preserve_input_and_gate_all_audio_writes() {
+        let mut cases = 0;
+        for rate in [48_000, 96_000] {
+            for channels in 1..=16 {
+                for mutation in 0..4 {
+                    let format = (rate, channels as u32, 8);
+                    let (mut p, state) = make_plugin_with_writer(channels, format, vec![]);
+                    p.initialize(f64::from(rate)).unwrap();
+                    {
+                        let mut state = state.lock().unwrap();
+                        match mutation {
+                            0 => state.transport_format = Some((rate + 1, channels as u32, 8)),
+                            1 => state.transport_format = Some((rate, channels as u32 + 1, 8)),
+                            2 => state.transport_format = Some((rate, channels as u32, 16)),
+                            _ => state.format_error = true,
+                        }
+                    }
+                    let before = state.lock().unwrap().writer_attempts;
+                    let input = vec![0.125; 3 * channels];
+                    let context = ProcessContext::new(rate, 3);
+                    assert_eq!(
+                        p.preflight_append(3, &context),
+                        Err(SinkTailPreflightError::InvalidGeometry)
+                    );
+                    assert_no_heap_activity("unnotified format callback", || {
+                        assert_eq!(p.process(&input, &mut [], &context), Ok(3));
+                    });
+                    assert_eq!(p.telemetry().queued_frames, 3);
+                    assert_eq!(p.telemetry().written_frames, 0);
+                    let blocked =
+                        Plugin::drain(&mut p, &mut [], &ProcessContext::new(rate, 0)).unwrap();
+                    assert!(!blocked.complete);
+                    let attempts = state.lock().unwrap().writer_attempts;
+                    assert_eq!(attempts, before);
+                    {
+                        let mut state = state.lock().unwrap();
+                        state.transport_format = Some(format);
+                        state.format_error = false;
+                    }
+                    assert_no_heap_activity("restored format stays latched", || {
+                        assert_eq!(p.process(&input, &mut [], &context), Ok(3));
+                    });
+                    let attempts = state.lock().unwrap().writer_attempts;
+                    assert_eq!(attempts, before);
+                    assert_eq!(p.telemetry().queued_frames, 6);
+                    p.service_transport().unwrap();
+                    assert_eq!(
+                        p.process(&[], &mut [], &ProcessContext::new(rate, 0)),
+                        Ok(0)
+                    );
+                    assert_eq!(p.telemetry().queued_frames, 0);
+                    assert_eq!(p.telemetry().written_frames, 6);
+                    assert_eq!(p.telemetry().requested_frames, 6);
+                    cases += 1;
+                }
+            }
+        }
+        println!("unnotified_output_format cases={cases} callback_allocations=0 callback_frees=0");
+    }
+
+    #[test]
+    fn pending_drain_observes_unnotified_formats_before_its_first_write() {
+        let mut cases = 0;
+        for rate in [48_000, 96_000] {
+            for channels in 1..=16 {
+                for mutation in 0..4 {
+                    let format = (rate, channels as u32, 8);
+                    let (mut p, state) = make_plugin_with_writer(channels, format, vec![0, 3]);
+                    p.initialize(f64::from(rate)).unwrap();
+                    let input = vec![0.25; 3 * channels];
+                    p.process(&input, &mut [], &ProcessContext::new(rate, 3))
+                        .unwrap();
+                    assert_eq!(p.telemetry().queued_frames, 3);
+                    {
+                        let mut state = state.lock().unwrap();
+                        match mutation {
+                            0 => state.transport_format = Some((rate + 1, channels as u32, 8)),
+                            1 => state.transport_format = Some((rate, channels as u32 + 1, 8)),
+                            2 => state.transport_format = Some((rate, channels as u32, 16)),
+                            _ => state.format_error = true,
+                        }
+                    }
+                    let before = state.lock().unwrap().writer_attempts;
+                    assert_no_heap_activity("unnotified pending drain", || {
+                        assert!(
+                            !Plugin::drain(&mut p, &mut [], &ProcessContext::new(rate, 0))
+                                .unwrap()
+                                .complete
+                        );
+                    });
+                    let after = state.lock().unwrap().writer_attempts;
+                    assert_eq!(after, before);
+                    assert_eq!(p.telemetry().queued_frames, 3);
+                    assert_eq!(p.telemetry().written_frames, 0);
+                    {
+                        let mut state = state.lock().unwrap();
+                        state.transport_format = Some(format);
+                        state.format_error = false;
+                    }
+                    p.service_transport().unwrap();
+                    assert!(
+                        Plugin::drain(&mut p, &mut [], &ProcessContext::new(rate, 0))
+                            .unwrap()
+                            .complete
+                    );
+                    assert_eq!(p.telemetry().written_frames, 3);
+                    cases += 1;
+                }
+            }
+        }
+        println!("unnotified_output_drain cases={cases} callback_allocations=0 callback_frees=0");
+    }
+
+    #[test]
     fn explicit_control_recovery_reopens_even_a_connected_transport() {
         let (mut plugin, state) = make_plugin_with_writer(2, (48_000, 2, 8), vec![]);
         plugin.initialize(48_000.0).unwrap();
@@ -5730,6 +5889,10 @@ mod tests {
             fn current_format(&self) -> Result<(u32, u32, u32), String> {
                 Ok((48_000, 16, 8))
             }
+            fn callback_format(&self) -> Option<(u32, u32, u32)> {
+                Some((48_000, 16, 8))
+            }
+
             fn config_changed(&self) -> bool {
                 false
             }
@@ -5801,6 +5964,9 @@ mod tests {
 
             fn current_format(&self) -> Result<(u32, u32, u32), String> {
                 Ok((48_000, 16, 8))
+            }
+            fn callback_format(&self) -> Option<(u32, u32, u32)> {
+                Some((48_000, 16, 8))
             }
 
             fn config_changed(&self) -> bool {

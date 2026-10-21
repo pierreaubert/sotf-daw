@@ -51,4 +51,10 @@ cargo test -p sotf-plugin-hal-output
   suite, whose other constructors may open live default transport.
 - Preserve dirty dependency provenance and distinguish mapped-ring checks from
   Swift/device/deadline certification. A raw rate setter alone does not publish
-  config_changed; unnotified format/race detection remains an explicit gap.
+  config_changed. Callback probes now gate settled unnotified geometry changes;
+  concurrent changes during a write still require an atomic epoch fence.
+
+- Private callback_format probes must be allocation-free and separate from
+  control metadata queries. Gate process, pending drain and sink preflight on
+  mismatched/unavailable prepared geometry; preserve ownership and sticky state.
+  Never describe separately observed atomic fields as a coherent epoch snapshot.

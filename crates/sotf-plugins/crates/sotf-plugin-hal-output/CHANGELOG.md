@@ -1,3 +1,12 @@
+# Unreleased callback format audit
+
+- Observe prepared rate/channel/buffer geometry before process/drain writes and
+  terminal admission. Settled unnotified changes now queue owned input and latch
+  recovery rather than writing at the changed clock. Callback probes perform no
+  allocation, filesystem or key work; concurrent epoch fencing remains open.
+- Add 256 controlled process/drain/heap cases and repeat all 32 isolated native
+  cases with rate-change notification deliberately omitted.
+
 # Unreleased native recovery audit
 
 - Re-open the current mapping on every explicit service, prepared recovery and

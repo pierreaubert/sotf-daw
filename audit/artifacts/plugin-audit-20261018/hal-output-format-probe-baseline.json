@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--features",
+    "sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "unnotified_formats",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest tests::unnotified_formats_preserve_input_and_gate_all_audio_writes ... FAILED\n\nfailures:\n\nfailures:\n    tests::unnotified_formats_preserve_input_and_gate_all_audio_writes\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 80 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 5.70s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\n\nthread 'tests::unnotified_formats_preserve_input_and_gate_all_audio_writes' (335205399) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs:5573:21:\nassertion `left == right` failed\n  left: Ok(())\n right: Err(InvalidGeometry)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-hal-output --lib`\n"
+}

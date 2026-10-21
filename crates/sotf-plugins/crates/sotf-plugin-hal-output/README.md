@@ -77,8 +77,18 @@ and readiness on Drop. Successful callbacks assert zero allocations. Dependency
 hashes identify the current uncommitted driver worktree; these are not clean-driver,
 Swift callback, device audibility or deadline results.
 
-Configuration changes require owner publication of `config_changed`; raw geometry
-setters do not publish that flag. The diagnostic retains an initial unnotified
-rate-change observation in which data was written at the changed transport clock.
-Automatic unnotified-format/race detection remains open; the validated format
-scenario uses the owner notification contract and tests its sticky local latch.
+Direct processing, EOF drain with pending audio, and terminal-sink admission
+observe atomic transport rate/channel/buffer fields before writing. A mismatch
+or unavailable geometry gates writes and latches `ConfigurationChanged`, even
+without `config_changed` publication. Successful direct input remains owned by
+the bounded FIFO; terminal admission rejects before upstream work is consumed.
+Restoring the fields alone does not clear the latch: explicit control recovery
+must validate the transport. The callback probe allocates no error strings and
+performs no filesystem or key work.
+
+The initial unnotified-rate diagnostic is retained as a red observation; the
+native matrix now repeats it without the owner flag and verifies preservation
+through recovery. Owner notifications remain useful for session/configuration
+changes, but settled geometry mismatches no longer rely on them. These separate
+atomic field observations are not a coherent epoch fence: changes during a write,
+including ABA transitions and concurrent key changes, remain unproven.

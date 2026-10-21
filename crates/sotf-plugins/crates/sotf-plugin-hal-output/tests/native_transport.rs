@@ -236,8 +236,8 @@ fn native_cases(runtime: &Path) {
             conservation(&p);
             let other = if rate == 48_000 { 96_000 } else { 48_000 };
             current.set_sample_rate(other);
-            // Geometry mutation and notification are separate owner operations.
-            current.header().config_changed.store(1, Ordering::Release);
+            // Deliberately omit notification: callback metadata must still gate
+            // the changed clock before any payload is written.
             let first = data(ch, 5, 60_000);
             process(&mut p, &first, rate, ch);
             current.clear_config_changed();
@@ -254,7 +254,7 @@ fn native_cases(runtime: &Path) {
             assert_eq!(encrypted_take(&current, ch, 10, &b), expected);
             conservation(&p);
             println!(
-                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true callback_allocations=0"
+                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true unnotified_rate=true callback_allocations=0"
             );
             drop(p);
             assert!(!current.engine_ready());
