@@ -1690,6 +1690,20 @@
             "audit/artifacts/plugin-audit-20261018/fir-centered-phase-validation.json"
           ],
           "result": "Fixed an actual centered-phase defect found during FIR-M1 investigation: even-N FIR synthesis retained the unpaired lag -N/2 sample while reporting N/2 delay. Linear design now zeros that endpoint and averages representable pairs before f32 conversion. N taps, latency N/2+32 per stage, parameters/serialized settings and minimum-phase design stay unchanged. Independent streamed DTFT: 4112 non-grid probes from 20 Hz to 20 kHz, four rates 44.1/48/96/192 kHz and all lengths; maximum aligned phase error drops from 9.42126519e-4 to 2.68891455e-7 rad under unchanged 1e-4. Maximum aligned group-delay error 2.0151667e-4 samples under unchanged 0.5. Exact support/symmetry/latency hold in 240 legacy/ordered/auto-gain configurations. Full release crate 145 passed, two existing ignores retained; strict all-target QA Clippy/format pass and existing dynamic/convolution/heap/EOF coverage remains passing. FIR-M1 still fails its unchanged 0.05 dB bound: -0.2462965578 dB versus baseline -0.2457439959. Dense short-filter magnitude error is retained, up to 1.3314987 dB at 192 kHz/1024 taps. Static QA exits zero under its historical 4x jitter gate but records six physical misses; no deadline compliance claimed. Rectangular/log-weighted/reweighted whole-spectrum experiments were rejected and removed; the reweighted patch/raw results are retained. Overall remains 35/45, FIR entry partial."
+        },
+        {
+          "task": "Distinguish solver convergence from fixed-support full-spectrum feasibility for FIR-M1",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-experiment.json",
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-extended-experiment.json",
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-witness-experiment.json",
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-witness-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-fir-m1-lawson-witness.py",
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-rejected.patch.json",
+            "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-validation.json"
+          ],
+          "result": "Cumulative relative-error reweighting was evaluated on the complete target spectrum with unchanged support/latency and diagnostic. 48 outer/128 CG iterations improve the 96k/1024/500Hz error only to -0.2164496413 dB; 96 outer/1024 CG gives -0.2173627069 dB, both fail the unchanged 0.05 dB gate. A full-spectrum numerical annihilating-functional witness was then generated and independently checked using Python scalar analog prototypes and cosine sums (no production biquads, fitter or FFT). For 4097 grid points the 96k/1024 centered-support relative-error lower bound is 0.02461391375, conservatively 0.2112049817 dB; the 0.05 dB contract permits at most 0.005773063. Largest annihilated representable cosine moment 7.44788e-19; target agreement 2.86473e-12 relative; finite moment leakage explicitly included. At 48k the corresponding lower bound is only 0.015149499 dB. This floating-point numerical witness establishes a strong fixed-support/full-spectrum limitation, not an interval-arithmetic proof or impossibility at the four isolated ignored-test probes. Rejected solver removed; production source exactly restored. Further whole-spectrum solver tuning cannot reasonably close the 96k short-support contract; FIR-M1 and any support/phase/latency policy decision remain open."
         }
       ],
       "evidence": [
@@ -2990,6 +3004,15 @@
       ],
       "result": "Five red regressions now pass: stale output on format query failure; mid-read fault prefix publication; omitted disconnected/key missing frames; reader invocation on empty callbacks; failed initialization changing active-clock diagnostics. One bounded read with pre/post observations now rejects untrusted full callbacks, requests control recovery, counts successful replacement silence and preserves startup underrun arming. 7680 independent controlled-reader events across 16 layouts and four rates verify exact output and generations; 128 successful/readiness-silence callbacks allocate/free nothing. Full release 36 passed, no ignored tests; core/native all-target strict Clippy and native check pass. Native checks use current dirty user driver dependencies and execute no native runtime tests.",
       "limitations": "All 45 plugins now reviewed: 35 complete and 10 partial. Real transport/device and other recorded plugin requirements remain; optional ML separate."
+    },
+    {
+      "name": "FIR-M1 fixed-support numerical feasibility investigation",
+      "state": "verified_partial",
+      "plugin_ids": [
+        30
+      ],
+      "result": "Cumulative relative-error reweighting was evaluated on the complete target spectrum with unchanged support/latency and diagnostic. 48 outer/128 CG iterations improve the 96k/1024/500Hz error only to -0.2164496413 dB; 96 outer/1024 CG gives -0.2173627069 dB, both fail the unchanged 0.05 dB gate. A full-spectrum numerical annihilating-functional witness was then generated and independently checked using Python scalar analog prototypes and cosine sums (no production biquads, fitter or FFT). For 4097 grid points the 96k/1024 centered-support relative-error lower bound is 0.02461391375, conservatively 0.2112049817 dB; the 0.05 dB contract permits at most 0.005773063. Largest annihilated representable cosine moment 7.44788e-19; target agreement 2.86473e-12 relative; finite moment leakage explicitly included. At 48k the corresponding lower bound is only 0.015149499 dB. This floating-point numerical witness establishes a strong fixed-support/full-spectrum limitation, not an interval-arithmetic proof or impossibility at the four isolated ignored-test probes. Rejected solver removed; production source exactly restored. Further whole-spectrum solver tuning cannot reasonably close the 96k short-support contract; FIR-M1 and any support/phase/latency policy decision remain open.",
+      "limitations": "No production solver shipped or gate weakened. FIR-M1 remains failing, native/deadline work remains pending; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

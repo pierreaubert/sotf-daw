@@ -29,3 +29,17 @@ Tracking: [stabilization issue](continuation-2026-10-01/release-stabilization/IS
 - [AB conservative checkpoint](continuation-2026-10-01/release-stabilization/ab-result.md).
 - [Denoiser checkpoint](continuation-2026-10-01/release-stabilization/denoiser-result.md) and [parked profile restoration](continuation-2026-10-01/denoiser-feature-continuation-r1/parked-profile-r6/RESTORE.md).
 - [Merge handoff and limitations](continuation-2026-10-01/release-stabilization/MERGE-HANDOFF.md).
+
+## FIR-M1 fixed-support investigation (2026-10-21)
+
+Cumulative relative-error fitting still fails the unchanged FIR-M1 gate
+(−0.21736 dB at 96 kHz/1024 taps/500 Hz). An independent scalar check of a
+4097-point annihilating-functional witness gives a conservative 0.21120 dB
+full-spectrum error lower bound for that centered support. This numerical bound
+includes finite moment leakage and matches the independent target to 2.87e−12
+relative. It concerns the full sampled target, not just the four isolated
+FIR-M1 probes, and is not interval-arithmetic certification. The solver was
+removed and production source restored; no completion or changed contract is
+claimed. Reproduction and raw evidence:
+[validation](artifacts/plugin-audit-20261018/fir-m1-lawson-validation.json),
+[scalar verifier](artifacts/plugin-audit-20261018/verify-fir-m1-lawson-witness.py).

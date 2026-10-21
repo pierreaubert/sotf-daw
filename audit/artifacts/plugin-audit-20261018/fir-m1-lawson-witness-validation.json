@@ -1,0 +1,27 @@
+{
+  "method": "Independent scalar prototype and cosine sums; floating point numerical witness, not interval arithmetic proof",
+  "rows": [
+    {
+      "rate": 48000,
+      "taps": 1024,
+      "grid_points": 4097,
+      "max_target_relative_difference": 9.904879729148913e-13,
+      "max_annihilated_moment": 1.4639859032649725e-18,
+      "leakage_allowance": 3.3141469440927427e-16,
+      "relative_error_lower_bound": 0.001745672440572202,
+      "conservative_db_error_lower_bound": 0.015149498975423028,
+      "required_relative_bound_for_005_db": 0.005773063001738299
+    },
+    {
+      "rate": 96000,
+      "taps": 1024,
+      "grid_points": 4097,
+      "max_target_relative_difference": 2.864728268418779e-12,
+      "max_annihilated_moment": 7.447880842982183e-19,
+      "leakage_allowance": 1.588072048468285e-16,
+      "relative_error_lower_bound": 0.0246139137519432,
+      "conservative_db_error_lower_bound": 0.2112049817075412,
+      "required_relative_bound_for_005_db": 0.005773063001738299
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "production_source_unchanged": true,
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs": "6674367156b151c511e1a3781f4f6cc6b565c847c0653c46b4d6e5e8967c548e",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs": "64ce44959461cdaf16d668628b304aa0792eaa95a6616d3b184938b31fb87c4a",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs": "9b641d775622ea0a544a4e86a90ffe6350064e51b8e3e3ab906ebba38f4e594f"
+  },
+  "solver_rejected": true,
+  "restored_release_response_suite": {
+    "passed": 5,
+    "ignored": 1,
+    "artifact": "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-restored-validation.json"
+  },
+  "witness_verifier_command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-fir-m1-lawson-witness.py"
+  ],
+  "witness": {
+    "method": "Independent scalar prototype and cosine sums; floating point numerical witness, not interval arithmetic proof",
+    "rows": [
+      {
+        "rate": 48000,
+        "taps": 1024,
+        "grid_points": 4097,
+        "max_target_relative_difference": 9.904879729148913e-13,
+        "max_annihilated_moment": 1.4639859032649725e-18,
+        "leakage_allowance": 3.3141469440927427e-16,
+        "relative_error_lower_bound": 0.001745672440572202,
+        "conservative_db_error_lower_bound": 0.015149498975423028,
+        "required_relative_bound_for_005_db": 0.005773063001738299
+      },
+      {
+        "rate": 96000,
+        "taps": 1024,
+        "grid_points": 4097,
+        "max_target_relative_difference": 2.864728268418779e-12,
+        "max_annihilated_moment": 7.447880842982183e-19,
+        "leakage_allowance": 1.588072048468285e-16,
+        "relative_error_lower_bound": 0.0246139137519432,
+        "conservative_db_error_lower_bound": 0.2112049817075412,
+        "required_relative_bound_for_005_db": 0.005773063001738299
+      }
+    ]
+  },
+  "limitations": [
+    "Floating-point numerical lower bound; no interval arithmetic certification.",
+    "The witness concerns all 4097 target samples and existing centered support, not infeasibility at four isolated ignored-test probes.",
+    "No magnitude tolerance, latency, FIR length, production design or completion status changed."
+  ]
+}

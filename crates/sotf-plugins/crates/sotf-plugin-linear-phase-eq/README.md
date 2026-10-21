@@ -264,3 +264,13 @@ creation resolve it: 40 parallel suites and the final combined shared/FIR/
 Convolution/Crossover run pass (366 passed, eight existing ignored). Historical
 failures are preserved; see `convolution-fixture-isolation.json`. FIR load
 deadline and response limitations above remain open.
+
+The full-spectrum short-support limitation has additional numerical evidence in
+[`fir-m1-lawson-validation.json`](../../../../audit/artifacts/plugin-audit-20261018/fir-m1-lawson-validation.json).
+An independently checked annihilating-functional witness on 4097 frequency
+samples gives a conservative 0.2112 dB lower bound for the 96 kHz, centered
+1024-tap multiband target. It rules against solving the full-spectrum 0.05 dB
+requirement merely by tuning the tested fitter. This is floating-point numerical
+evidence, not interval-arithmetic certification, and does not establish that the
+four isolated FIR-M1 probes are infeasible. Both cumulative-fit candidates were
+rejected; the production design, tap count, latency and diagnostic remain intact.

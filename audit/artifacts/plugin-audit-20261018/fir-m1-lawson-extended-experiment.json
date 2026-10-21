@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "analytic_response",
+    "multiband_response_matches_on_every_tap_count_and_phase",
+    "--",
+    "--ignored",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest multiband_response_matches_on_every_tap_count_and_phase ... FAILED\n\nfailures:\n\nfailures:\n    multiband_response_matches_on_every_tap_count_and_phase\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 5 filtered out; finished in 1.79s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 14.57s\n     Running tests/analytic_response.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/analytic_response-68b4e0b2f64c2bc7)\nlawson_fit taps=1024 max_relative_error=0.0017628408547847928\nlawson_fit taps=2048 max_relative_error=0.000007845476446551781\nlawson_fit taps=4096 max_relative_error=0.0000007332385914275932\nlawson_fit taps=8192 max_relative_error=0.0000007741892015239053\nlawson_fit taps=1024 max_relative_error=0.025081681083807168\n\nthread 'multiband_response_matches_on_every_tap_count_and_phase' (334708468) panicked at crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs:307:25:\nrate=96000 taps=1024 phase=0 frequency=500: magnitude error -0.21736270685279285 dB\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-linear-phase-eq --test analytic_response`\n"
+}
