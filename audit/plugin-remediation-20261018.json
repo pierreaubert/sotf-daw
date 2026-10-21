@@ -1446,9 +1446,48 @@
       "id": 27,
       "plugin": "HAL output",
       "audit_text": "[`hal-output/src/lib.rs`](crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs):1212\u20131390 implements a terminal sink with bounded pending storage, priming/service/format/key/disconnect states and separate requested/written counters. `process` can accept frames into pending storage even while nothing reaches the device; return value is not proof of audibility. Dynamic queue occupancy is distinct from the advertised target/device/safety latency.\n\nInline fake-writer/host tests exercise backpressure and finite-tail handoff. Extend real shared-memory saturation, control recovery, partial writes, drop accounting and reconnect with a changed format/key. Assert `requested = written + pending + explicitly dropped` over lifecycle changes. Prefer explicit bounded transport and clock accounting; ML has no role here.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Flush process-time complete frames across physical FIFO wraps with bounded prepared work and trusted-prefix accounting.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/hal-output-config-latch-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-validation.json"
+          ],
+          "result": "Process and EOF now share a bounded complete-frame pending-FIFO flush. Frame-aligned storage remains direct; a frame split by physical VecDeque wrap uses prepared staging. Each valid older write is counted immediately, even if a later batch has an invalid report. Current input on Err remains caller-owned; successful calls count queued, written and explicit drop-newest frames. Writer-contract faults enter FormatError until control recovery. Observed ConfigurationChanged also stays latched when another consumer clears the shared flag; explicit control validation/recovery is required. Red baseline: three-channel process left two frames stranded; later writer failure reported requested 34/written 31/queued 1 instead of owned 33/written 32/queued 1; failed new overreport request was counted despite no accepted ownership. Separate format-latch baseline resumed Ready and made two writes at an unadmitted clock after the shared flag cleared. All reproduced cases now pass. Independent FIFO/conservation reference covers 40960 events, 27360 process calls and 4640 drains across 1-16 channels, 44.1/96 kHz and five fake transport geometries (1/2/3/8/17 frames), including partial writes, backpressure, disconnect/key/config gates, recovery, reset, successful initialization/wrong-format preflight rejection and exact sample ordering. Writer calls remain bounded to two per queued flush/drain and at most three per process. Sixteen wrapped-layout callback/service/reset checks have zero allocations/frees and retain prepared capacities. Full release 79 tests pass, no ignores; strict all-target release Clippy passes with and without native hal, and native all-target check/formatting pass. Native validation is compile-only against the current dirty driver worktree; no live HAL output was opened. Queue policy, limits, telemetry version/fields, parameters and fixed target/device latency are unchanged. Recovery documentation now correctly states that pending FIFO audio is retained; reset/successful initialize count canceled pending frames as drops. Real shared-memory/device/key/restart/clock-drift/timing evidence remains outstanding; overall 35/45 complete and HAL output partial."
+        },
+        {
+          "requirement": "Retain observed configuration-change faults until explicit control-side format admission, even when the shared notification is cleared.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/hal-output-config-latch-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-validation.json"
+          ],
+          "result": "Old state resumed Ready and made two data writes after an external shared-flag clear; local latch now retains both frames with zero data writes until explicit matching-format recovery."
+        },
+        {
+          "requirement": "Validate real shared-memory saturation, restart/key rotation/reconnect and format/clock transitions under native runtime load.",
+          "status": "pending",
+          "evidence": "Core tests use controlled writers. Native binding compiles/lints with the current user driver worktree; no native runtime, physical device or cross-process timing proof is claimed."
+        }
+      ],
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/hal-output-config-latch-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-validation.json"
+      ],
+      "remaining": [
+        "Exercise actual shared-memory saturation/partial writes and daemon disappearance/reconnect/key rotation using isolated native transport resources.",
+        "Verify changed geometry and format changes during a callback under the real transport protocol; observed local config latching is verified separately.",
+        "Measure native cross-process clock drift and callback/device-load deadline distribution; bridge acknowledgements are not audibility evidence."
+      ]
     },
     {
       "id": 28,
@@ -2914,6 +2953,15 @@
       ],
       "result": "Captured noise profiles now govern both analysis resolutions. Each small FFT accumulates its own per-channel windowed periodograms during the same source capture epoch; completion publishes both grids and recomputes latest small gains before blending. Fixed profiles override live-estimator warm-up from the first processed frame; normal temporal smoothing remains. Reset/same-clock init and canceled replacement capture retain the published profile; clear or a real sample-rate change invalidates both, while invalid initialization remains transactional. EOF padding measures neither profile. Primitive cached parameter values now follow automatic profile/learning transitions without schema allocation. Red baseline: first-frame gain stayed 1 despite a valid profile, changed-clock data remained active, and a captured-silence channel was reduced to RMS 0.0109478 by the live small arm. Four final 48/96k/FFT-mode cases retain RMS 0.99999989-0.99999993 on that channel while independently captured noise stays at 0.01219-0.01704. Disabling/re-enabling the profile restores live reduction and then the exact original fixed-profile waveform. Independent f64 DFT/power and gain checks across 12 channel/bin probes have maximum scaled power error 9.80545e-8 (2e-6 gate), gain error 1.43131e-8 (1e-5). Six source-partition cases preserve exact audio/both grids and freeze pending capture at EOF; cancel/clear/clock ownership pass. Six lifecycle cases have zero allocations and frees with FFT latency unchanged. Full release 124 passed, four existing ignores; standard 48-row optional QA, strict all-target release Clippy and formatting pass. Twelve prior blind recorded/onset/noise rows are exactly unchanged, including weak later-vowel projections 0.09458/0.12125. These are fixed-profile correctness observations, not held-out quality or device deadline proof. No schema/preset/latency/dependency/ML change; optional small-profile payload adds 2056 bytes/channel excluding Vec headers. Overall remains 35/45, denoiser partial.",
       "limitations": "Fixed-profile correctness does not resolve blind speech-at-start/vowel loss, held-out quality or native/device deadline evidence. Overall 35/45; optional ML separate."
+    },
+    {
+      "name": "HAL output complete-frame process FIFO and transport ownership audit",
+      "state": "verified_partial",
+      "plugin_ids": [
+        27
+      ],
+      "result": "Process and EOF now share a bounded complete-frame pending-FIFO flush. Frame-aligned storage remains direct; a frame split by physical VecDeque wrap uses prepared staging. Each valid older write is counted immediately, even if a later batch has an invalid report. Current input on Err remains caller-owned; successful calls count queued, written and explicit drop-newest frames. Writer-contract faults enter FormatError until control recovery. Observed ConfigurationChanged also stays latched when another consumer clears the shared flag; explicit control validation/recovery is required. Red baseline: three-channel process left two frames stranded; later writer failure reported requested 34/written 31/queued 1 instead of owned 33/written 32/queued 1; failed new overreport request was counted despite no accepted ownership. Separate format-latch baseline resumed Ready and made two writes at an unadmitted clock after the shared flag cleared. All reproduced cases now pass. Independent FIFO/conservation reference covers 40960 events, 27360 process calls and 4640 drains across 1-16 channels, 44.1/96 kHz and five fake transport geometries (1/2/3/8/17 frames), including partial writes, backpressure, disconnect/key/config gates, recovery, reset, successful initialization/wrong-format preflight rejection and exact sample ordering. Writer calls remain bounded to two per queued flush/drain and at most three per process. Sixteen wrapped-layout callback/service/reset checks have zero allocations/frees and retain prepared capacities. Full release 79 tests pass, no ignores; strict all-target release Clippy passes with and without native hal, and native all-target check/formatting pass. Native validation is compile-only against the current dirty driver worktree; no live HAL output was opened. Queue policy, limits, telemetry version/fields, parameters and fixed target/device latency are unchanged. Recovery documentation now correctly states that pending FIFO audio is retained; reset/successful initialize count canceled pending frames as drops. Real shared-memory/device/key/restart/clock-drift/timing evidence remains outstanding; overall 35/45 complete and HAL output partial.",
+      "limitations": "HAL output moves from not_reviewed to partial. Real transport/device evidence remains pending; overall 35/45 complete, optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

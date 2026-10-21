@@ -154,6 +154,8 @@ pub enum HalOutputTransportState {
 pub struct HalOutputTelemetry {
     pub version: u32,
     pub state: HalOutputTransportState,
+    /// Input frames consumed by successful process/append calls, including explicit drops.
+    /// Failed current requests remain caller-owned; trusted older writes still count.
     pub requested_frames: u64,
     pub written_frames: u64,
     pub dropped_frames: u64,
@@ -906,6 +908,13 @@ impl HalOutputPlugin {
         result
     }
 
+    fn enqueue_input_request(&mut self, samples: &[f32]) {
+        self.requested_frames = self
+            .requested_frames
+            .saturating_add((samples.len() / self.channels) as u64);
+        self.append_pending(samples);
+    }
+
     fn append_pending(&mut self, samples: &[f32]) -> usize {
         debug_assert_eq!(samples.len() % self.channels, 0);
         let available = self
@@ -918,76 +927,64 @@ impl HalOutputPlugin {
         dropped_frames
     }
 
+    /// Flush at most two complete-frame batches and commit each trusted prefix.
     fn flush_pending(
-        pending: &mut VecDeque<f32>,
-        writer: &mut dyn HalWriter,
-        channels: usize,
-    ) -> Result<usize, String> {
-        let mut total_written = 0;
-        for _ in 0..2 {
-            let requested_samples = {
-                let (front, _) = pending.as_slices();
-                front.len() / channels * channels
-            };
-            if requested_samples == 0 {
-                break;
-            }
-            let written = {
-                let (front, _) = pending.as_slices();
-                Self::write_frames(writer, &front[..requested_samples], channels)?
-            };
-            pending.drain(..written * channels);
-            total_written += written;
-            if written * channels < requested_samples {
-                break;
-            }
-        }
-        Ok(total_written)
-    }
-
-    fn flush_pending_for_drain(
         pending: &mut VecDeque<f32>,
         staging: &mut Vec<f32>,
         writer: &mut dyn HalWriter,
         channels: usize,
         written_total: &mut u64,
     ) -> Result<usize, String> {
+        debug_assert_eq!(pending.len() % channels, 0);
         staging.clear();
         let (front, back) = pending.as_slices();
-        staging.extend_from_slice(front);
-        staging.extend_from_slice(back);
-        debug_assert_eq!(staging.len() % channels, 0);
-
-        let (front, _) = pending.as_slices();
+        let split_frame = !front.len().is_multiple_of(channels);
         let first_request_samples = (front.len() / channels * channels).max(channels);
+        if split_frame {
+            // A frame crossing the physical wrap cannot be passed as either
+            // raw slice. Use prepared storage, preserving the two-write bound.
+            // Frame-aligned queues keep the direct, zero-copy path.
+            staging.extend_from_slice(front);
+            staging.extend_from_slice(back);
+        }
         let mut total_written = 0;
         let mut offset_samples = 0;
-
         for attempt in 0..2 {
-            let remaining_samples = staging.len().saturating_sub(offset_samples);
-            if remaining_samples == 0 {
-                break;
-            }
-            let requested_samples = if attempt == 0 {
-                first_request_samples.min(remaining_samples)
+            let (requested_samples, written_frames) = if split_frame {
+                let remaining = staging.len().saturating_sub(offset_samples);
+                if remaining == 0 {
+                    break;
+                }
+                let requested = if attempt == 0 {
+                    first_request_samples.min(remaining)
+                } else {
+                    remaining
+                };
+                (
+                    requested,
+                    Self::write_frames(
+                        writer,
+                        &staging[offset_samples..offset_samples + requested],
+                        channels,
+                    )?,
+                )
             } else {
-                remaining_samples
+                let (front, _) = pending.as_slices();
+                if front.is_empty() {
+                    break;
+                }
+                (front.len(), Self::write_frames(writer, front, channels)?)
             };
-            let written_frames = Self::write_frames(
-                writer,
-                &staging[offset_samples..offset_samples + requested_samples],
-                channels,
-            )?;
             let written_samples = written_frames * channels;
             pending.drain(..written_samples);
             total_written += written_frames;
             offset_samples += written_samples;
+            // A later bad writer report must not erase this committed prefix.
             *written_total = written_total.saturating_add(written_frames as u64);
             if written_samples < requested_samples {
                 break;
             }
         }
-
         Ok(total_written)
     }
 
@@ -1181,7 +1178,7 @@ impl Plugin for HalOutputPlugin {
             });
         }
 
-        let written = Self::flush_pending_for_drain(
+        let written = Self::flush_pending(
             &mut self.pending,
             &mut self.drain_staging,
             writer.as_mut(),
@@ -1243,15 +1240,14 @@ impl Plugin for HalOutputPlugin {
             ));
         }
 
-        self.requested_frames = self
-            .requested_frames
-            .saturating_add(context.num_frames as u64);
-
+        // A cleared shared notification is not control-side validation of a
+        // format change this output has already observed.
         if self.state == HalOutputTransportState::Servicing
             || self.state == HalOutputTransportState::PrimingFailed
             || self.state == HalOutputTransportState::FormatError
+            || self.state == HalOutputTransportState::ConfigurationChanged
         {
-            self.append_pending(input);
+            self.enqueue_input_request(input);
             self.is_backpressured = true;
             return Ok(context.num_frames);
         }
@@ -1263,15 +1259,18 @@ impl Plugin for HalOutputPlugin {
         {
             self.state = HalOutputTransportState::ConfigurationChanged;
             self.is_backpressured = true;
-            self.append_pending(input);
+            self.enqueue_input_request(input);
             return Ok(context.num_frames);
         }
 
         let key_ready = {
-            let writer = self
-                .writer
-                .as_ref()
-                .ok_or_else(|| ERR_HAL_WRITER_NOT_AVAILABLE.to_string())?;
+            let Some(writer) = self.writer.as_ref() else {
+                self.is_connected = false;
+                self.is_backpressured = true;
+                self.write_success_ratio = 0.0;
+                self.state = HalOutputTransportState::Disconnected;
+                return Err(ERR_HAL_WRITER_NOT_AVAILABLE.to_string());
+            };
             self.is_connected = writer.is_connected();
             writer.encryption_key_ready()
         };
@@ -1283,7 +1282,7 @@ impl Plugin for HalOutputPlugin {
         if self.state == HalOutputTransportState::Disconnected
             || self.state == HalOutputTransportState::KeyMismatch
         {
-            self.append_pending(input);
+            self.enqueue_input_request(input);
             self.is_backpressured = true;
             return Ok(context.num_frames);
         }
@@ -1293,11 +1292,20 @@ impl Plugin for HalOutputPlugin {
             .ok_or_else(|| ERR_HAL_WRITER_NOT_AVAILABLE.to_string())?;
 
         if !self.pending.is_empty() {
-            let written_frames =
-                Self::flush_pending(&mut self.pending, writer.as_mut(), self.channels)?;
-            self.written_frames = self.written_frames.saturating_add(written_frames as u64);
+            if let Err(error) = Self::flush_pending(
+                &mut self.pending,
+                &mut self.drain_staging,
+                writer.as_mut(),
+                self.channels,
+                &mut self.written_frames,
+            ) {
+                self.state = HalOutputTransportState::FormatError;
+                self.is_backpressured = true;
+                self.write_success_ratio = 0.0;
+                return Err(error);
+            }
             if !self.pending.is_empty() {
-                self.append_pending(input);
+                self.enqueue_input_request(input);
                 self.write_success_ratio = 0.0;
                 self.is_backpressured = true;
                 self.underrun_counter.fetch_add(1, Ordering::Relaxed);
@@ -1306,7 +1314,20 @@ impl Plugin for HalOutputPlugin {
             }
         }
 
-        let written_frames = Self::write_frames(writer.as_mut(), input, self.channels)?;
+        let written_frames = match Self::write_frames(writer.as_mut(), input, self.channels) {
+            Ok(written) => written,
+            Err(error) => {
+                self.state = HalOutputTransportState::FormatError;
+                self.is_backpressured = true;
+                self.write_success_ratio = 0.0;
+                return Err(error);
+            }
+        };
+        // Only a successful process call owns the current input. Earlier
+        // trusted queued writes remain accounted even if this request fails.
+        self.requested_frames = self
+            .requested_frames
+            .saturating_add(context.num_frames as u64);
         self.written_frames = self.written_frames.saturating_add(written_frames as u64);
         self.write_success_ratio = if context.num_frames == 0 {
             100.0
@@ -1621,6 +1642,9 @@ mod tests {
         }
     }
 
+    #[path = "audit_transport_tests.rs"]
+    mod audit_transport_tests;
+
     #[derive(Clone, Copy, Debug)]
     enum FakePrimeMutation {
         ChangeFormat((u32, u32, u32)),
@@ -1637,6 +1661,7 @@ mod tests {
         capture_audio: bool,
         capture_accepted_samples: bool,
         writer_attempts: usize,
+        maximum_write_frames: Option<usize>,
         ready: Vec<bool>,
         clear_count: usize,
         reconnect_count: usize,
@@ -1681,6 +1706,13 @@ mod tests {
                 } else {
                     state.scheduled_writes.remove(0)
                 }
+            };
+            let frames = if was_priming {
+                frames
+            } else {
+                state
+                    .maximum_write_frames
+                    .map_or(frames, |limit| frames.min(limit))
             };
             let physically_written_frames = if was_priming {
                 state.prime_actual_write.take().unwrap_or(frames)

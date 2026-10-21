@@ -23,3 +23,22 @@ cargo test -p sotf-plugin-hal-output
 
 - macOS only — requires CoreAudio HAL driver (sotf-macos-hal)
 - Plugin trait (not ParametricInPlacePlugin) — consumes input without producing output
+
+- Process and drain share one bounded complete-frame flush. Preserve the direct
+  path for frame-aligned slices; use prepared staging when a frame crosses the
+  VecDeque wrap. Never let a short physical front fragment starve logical audio.
+- Count each validated queued-write prefix before attempting the next batch.
+  Failed current process input stays caller-owned and does not increment the
+  request counter. Success counts all owned input, including explicit overflow
+  drops. Keep requested = written + pending + dropped with saturating totals.
+- Writer-contract errors enter FormatError and gate further writes until control
+  recovery. Never remove or count a batch on an invalid report. Control recovery
+  quiesces transport before retry; physical delivery of that batch remains unknown.
+- Control recovery preserves pending FIFO data; reset/successful initialize
+  explicitly cancel it. Priming silence is outside input ownership counters.
+- Keep frame-order/conservation, split-wrap layouts, partial-error prefixes,
+  recovery and allocation/free tests. Do not infer native device safety from a
+  fake transport; native-feature checks compile without opening the live device.
+- ConfigurationChanged is a local latch, like FormatError. Clearing the shared
+  notification from another consumer does not validate this output's format or
+  authorize writes. Require explicit control-side format validation/recovery.

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--features",
+    "sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "audit_transport_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 3 tests\npartial_write_error requested=34 written=31 queued=1\nwriter_failure missing=false requested=1 written=0 queued=0\nprocess_wrap channels=1 queued=0 written=66 requested=66\nprocess_wrap channels=2 queued=0 written=34 requested=34\nprocess_wrap channels=3 queued=2 written=21 requested=23\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... FAILED\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... FAILED\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... FAILED\n\nfailures:\n\nfailures:\n    tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership\n    tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request\n    tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap\n\ntest result: FAILED. 0 passed; 3 failed; 0 ignored; 0 measured; 72 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 16.13s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\n\nthread 'tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership' (334438864) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs:99:5:\nassertion `left == right` failed: trusted prefix was committed before the later error\n  left: 31\n right: 32\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request' (334438865) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs:129:9:\nassertion `left == right` failed\n  left: 1\n right: 0\n\nthread 'tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap' (334438866) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs:71:9:\nassertion `left == right` failed: writer accepted all complete frames; queue must progress\n  left: 2\n right: 0\nerror: test failed, to rerun pass `-p sotf-plugin-hal-output --lib`\n"
+}

@@ -1,3 +1,19 @@
+# Unreleased process-queue audit (2026-10-21)
+
+- Share a bounded complete-frame FIFO flush between process and EOF drain.
+  Queue storage that wraps inside a multichannel frame no longer stalls;
+  aligned queues keep their direct path and split frames use prepared staging.
+- Account valid older writes immediately when a later writer report fails.
+  Failed current input remains caller-owned. Gate writer-contract faults until
+  control recovery and retain the existing bounded drop-newest policy.
+- Retain an observed configuration-change latch until explicit control recovery;
+  another consumer clearing the shared flag cannot authorize stale-format writes.
+- Add frame-order, ownership/conservation, 1-16 channel/ring-geometry lifecycle,
+  and no-heap regressions. Correct recovery documentation: pending FIFO data is
+  retained; reset/successful initialization count canceled frames as drops.
+- Keep telemetry version/fields, parameter schema, queue limits and fixed latency.
+  Real shared-memory/device restart/key/timing evidence remains outstanding.
+
 # 0.6.0 (unreleased)
 
 ## Changes

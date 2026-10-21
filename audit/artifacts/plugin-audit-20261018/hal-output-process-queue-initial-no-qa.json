@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "audit_transport_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "",
+  "stderr": "   Compiling either v1.19.0\n   Compiling rayon v1.12.0\n   Compiling ndarray v0.17.2\n   Compiling math-iir-fir v0.5.27 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-iir-fir)\n   Compiling oxiblas-ndarray v0.2.2\n   Compiling math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\nerror[E0432]: unresolved imports `sotf_host::CountingAlloc`, `sotf_host::assert_no_allocs`\n    --> crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs:1484:21\n     |\n1484 |     use sotf_host::{CountingAlloc, DawHost, GraphEdge, assert_no_allocs};\n     |                     ^^^^^^^^^^^^^                      ^^^^^^^^^^^^^^^^ no `assert_no_allocs` in the root\n     |                     |\n     |                     no `CountingAlloc` in the root\n     |\nnote: found an item that was configured out\n    --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n     |\n 168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n     |          ---------------------------------------- the item is gated here\n 169 | pub use test_utils::{\n 170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n     |                       ^^^^^^^^^^^^^\nnote: found an item that was configured out\n    --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:70\n     |\n 168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n     |          ---------------------------------------- the item is gated here\n 169 | pub use test_utils::{\n 170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n     |                                                                      ^^^^^^^^^^^^^^^^\n\nFor more information about this error, try `rustc --explain E0432`.\nerror: could not compile `sotf-plugin-hal-output` (lib test) due to 1 previous error\n"
+}

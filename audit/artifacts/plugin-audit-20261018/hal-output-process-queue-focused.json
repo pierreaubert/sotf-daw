@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--features",
+    "sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "audit_transport_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 3 tests\nprocess_wrap channels=1 queued=0 written=66 requested=66\nwriter_failure missing=false requested=0 written=0 queued=0\npartial_write_error requested=33 written=32 queued=1\nprocess_wrap channels=2 queued=0 written=34 requested=34\nwriter_failure missing=true requested=0 written=0 queued=0\nprocess_wrap channels=3 queued=0 written=23 requested=23\nprocess_wrap channels=4 queued=0 written=18 requested=18\nprocess_wrap channels=5 queued=0 written=14 requested=14\nprocess_wrap channels=6 queued=0 written=12 requested=12\nprocess_wrap channels=7 queued=0 written=11 requested=11\nprocess_wrap channels=8 queued=0 written=10 requested=10\nprocess_wrap channels=9 queued=0 written=9 requested=9\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... process_wrap channels=10 queued=0 written=8 requested=8\nprocess_wrap channels=11 queued=0 written=7 requested=7\nprocess_wrap channels=12 queued=0 written=7 requested=7\nok\nprocess_wrap channels=13 queued=0 written=6 requested=6\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... ok\nprocess_wrap channels=14 queued=0 written=6 requested=6\nprocess_wrap channels=15 queued=0 written=6 requested=6\nprocess_wrap channels=16 queued=0 written=6 requested=6\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 72 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 4.37s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\n"
+}

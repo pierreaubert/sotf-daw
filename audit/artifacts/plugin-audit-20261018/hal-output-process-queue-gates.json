@@ -1,0 +1,96 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--lib",
+      "audit_transport_tests",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 6 tests\nwriter_failure missing=false requested=0 written=0 queued=0\npartial_write_error requested=33 written=32 queued=1\nprocess_wrap channels=1 queued=0 written=66 requested=66\nwriter_failure missing=true requested=0 written=0 queued=0\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... ok\nprocess_wrap channels=2 queued=0 written=34 requested=34\ntest tests::audit_transport_tests::writer_contract_fault_gates_following_writes_until_control_recovery ... ok\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... ok\nprocess_wrap channels=3 queued=0 written=23 requested=23\nprocess_wrap channels=4 queued=0 written=18 requested=18\nprocess_wrap channels=5 queued=0 written=14 requested=14\nprocess_wrap channels=6 queued=0 written=12 requested=12\nprocess_wrap channels=7 queued=0 written=11 requested=11\nprocess_wrap channels=8 queued=0 written=10 requested=10\nprocess_wrap channels=9 queued=0 written=9 requested=9\nprocess_wrap channels=10 queued=0 written=8 requested=8\nprocess_wrap channels=11 queued=0 written=7 requested=7\nprocess_wrap channels=12 queued=0 written=7 requested=7\nprocess_wrap channels=13 queued=0 written=6 requested=6\nprocess_wrap_heap layouts=16 allocations=0 frees=0 retained_capacity=true\nprocess_wrap channels=14 queued=0 written=6 requested=6\nprocess_wrap channels=15 queued=0 written=6 requested=6\nprocess_wrap channels=16 queued=0 written=6 requested=6\ntest tests::audit_transport_tests::wrapped_process_service_and_reset_use_only_prepared_storage ... ok\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... ok\ntransport_conservation events=40960 process_calls=27360 drain_calls=4640 layouts=16 rates=2 ring_sizes=5 exact_fifo=true bounded_writer_calls=true\ntest tests::audit_transport_tests::conservation_and_fifo_order_hold_across_transport_lifecycle_sequences ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 72 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 5.95s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 0.77s\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "check",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "hal,sotf-host/qa",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking inout v0.2.4\n    Checking crypto-common v0.2.2\n    Checking zeroize v1.9.1\n    Checking cmov v0.5.4\n   Compiling rustix v1.1.5\n    Checking driver-common v0.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-common)\n    Checking hex v0.4.3\n    Checking ctutils v0.4.3\n    Checking cipher v0.5.2\n    Checking digest v0.11.3\n    Checking universal-hash v0.6.1\n    Checking aead v0.6.1\n    Checking poly1305 v0.9.1\n    Checking sha2 v0.11.1\n    Checking chacha20 v0.10.2\n    Checking rand v0.10.3\n    Checking chacha20poly1305 v0.11.0\n    Checking math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n    Checking driver-hal v0.1.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-hal)\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 4.91s\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "hal,sotf-host/qa",
+      "--all-targets",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking driver-common v0.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-common)\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking driver-hal v0.1.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-hal)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 2.83s\n"
+  }
+]

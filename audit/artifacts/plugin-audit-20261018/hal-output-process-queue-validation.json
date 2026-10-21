@@ -1,0 +1,160 @@
+{
+  "base_commit": "81ebb4d",
+  "status": "verified_partial",
+  "logical_fifo_and_ownership_verified": true,
+  "native_runtime_verified": false,
+  "hardware_audibility_proven": false,
+  "result": "Process and EOF now share a bounded complete-frame pending-FIFO flush. Frame-aligned storage remains direct; a frame split by physical VecDeque wrap uses prepared staging. Each valid older write is counted immediately, even if a later batch has an invalid report. Current input on Err remains caller-owned; successful calls count queued, written and explicit drop-newest frames. Writer-contract faults enter FormatError until control recovery. Observed ConfigurationChanged also stays latched when another consumer clears the shared flag; explicit control validation/recovery is required. Red baseline: three-channel process left two frames stranded; later writer failure reported requested 34/written 31/queued 1 instead of owned 33/written 32/queued 1; failed new overreport request was counted despite no accepted ownership. Separate format-latch baseline resumed Ready and made two writes at an unadmitted clock after the shared flag cleared. All reproduced cases now pass. Independent FIFO/conservation reference covers 40960 events, 27360 process calls and 4640 drains across 1-16 channels, 44.1/96 kHz and five fake transport geometries (1/2/3/8/17 frames), including partial writes, backpressure, disconnect/key/config gates, recovery, reset, successful initialization/wrong-format preflight rejection and exact sample ordering. Writer calls remain bounded to two per queued flush/drain and at most three per process. Sixteen wrapped-layout callback/service/reset checks have zero allocations/frees and retain prepared capacities. Full release 79 tests pass, no ignores; strict all-target release Clippy passes with and without native hal, and native all-target check/formatting pass. Native validation is compile-only against the current dirty driver worktree; no live HAL output was opened. Queue policy, limits, telemetry version/fields, parameters and fixed target/device latency are unchanged. Recovery documentation now correctly states that pending FIFO audio is retained; reset/successful initialize count canceled pending frames as drops. Real shared-memory/device/key/restart/clock-drift/timing evidence remains outstanding; overall 35/45 complete and HAL output partial.",
+  "commands": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "test",
+        "-p",
+        "sotf-plugin-hal-output",
+        "--release",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--features",
+        "sotf-host/qa",
+        "--",
+        "--nocapture"
+      ],
+      "exit_code": 0,
+      "stdout": "\nrunning 79 tests\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::param_value_always_none ... ok\ntest params::tests::deserialize_old_preset_migrates_output_channels ... ok\ntest params::tests::params_is_empty ... ok\ntest params::tests::roundtrip_serde ... ok\ntest tests::aud138_control_recovery_preserves_pending_audio_and_drains_exact_suffix ... ok\ntest tests::aud138_post_reservation_config_change_keeps_the_whole_admitted_block ... ok\ntest tests::aud138_unbuilt_sink_eof_refuses_without_building_or_calling_plugins ... ok\ntest tests::aud138_host_input_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_adjacent_graph_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_unknown_or_infinite_final_tail_is_refused_before_source_drain ... ok\ntest tests::aud138_unknown_or_infinite_upstream_tail_is_refused_before_source_drain ... ok\npartial_write_error requested=33 written=32 queued=1\nwriter_failure missing=false requested=0 written=0 queued=0\nwriter_failure missing=true requested=0 written=0 queued=0\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... ok\nformat_latch state=ConfigurationChanged writer_attempts=0 queued=2\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... ok\ntest tests::aud138_reprepare_preflight_refuses_invalid_geometry_and_lifecycles ... ok\nprocess_wrap channels=1 queued=0 written=66 requested=66\nprocess_wrap channels=2 queued=0 written=34 requested=34\nprocess_wrap channels=3 queued=0 written=23 requested=23\nprocess_wrap channels=4 queued=0 written=18 requested=18\nprocess_wrap channels=5 queued=0 written=14 requested=14\nprocess_wrap channels=6 queued=0 written=12 requested=12\nprocess_wrap channels=7 queued=0 written=11 requested=11\ntest tests::audit_transport_tests::observed_format_change_stays_latched_after_the_shared_flag_is_cleared ... ok\nprocess_wrap channels=8 queued=0 written=10 requested=10\nprocess_wrap channels=9 queued=0 written=9 requested=9\nprocess_wrap channels=10 queued=0 written=8 requested=8\nprocess_wrap channels=11 queued=0 written=7 requested=7\nprocess_wrap channels=12 queued=0 written=7 requested=7\nprocess_wrap channels=13 queued=0 written=6 requested=6\nprocess_wrap channels=14 queued=0 written=6 requested=6\nprocess_wrap_heap layouts=16 allocations=0 frees=0 retained_capacity=true\nprocess_wrap channels=15 queued=0 written=6 requested=6\nprocess_wrap channels=16 queued=0 written=6 requested=6\ntest tests::audit_transport_tests::writer_contract_fault_gates_following_writes_until_control_recovery ... ok\ntest tests::audit_transport_tests::wrapped_process_service_and_reset_use_only_prepared_storage ... ok\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... ok\ntest tests::bounded_queue_drops_newest_complete_frames_and_preserves_oldest_order ... ok\ntest tests::config_change_is_quiesced_until_control_thread_service ... ok\ntest tests::control_thread_service_reconnects_reloads_key_and_reasserts_readiness ... ok\ntest tests::diagnostics_are_not_automatable_parameters ... ok\ntest tests::drain_errors_leave_unaccepted_frames_queued ... ok\ntest tests::drain_gates_and_control_recovery_preserve_pending_samples ... ok\ntest tests::drain_orders_new_input_around_an_incomplete_and_completed_eof ... ok\ntest tests::drain_validation_errors_preserve_pending_and_destination ... ok\ntest tests::drain_wraps_frames_across_vecdeque_storage_with_two_writes ... ok\ntest tests::blocked_sink_waits_without_advancing_tail_and_later_hands_off_once ... ok\ntest tests::eof_drain_flushes_the_final_partial_write_to_the_writer ... ok\ntest tests::eof_drain_reports_backpressure_and_retries_without_new_input ... ok\ntest tests::failed_priming_is_transactional_and_keeps_transport_quiesced ... ok\ntest tests::failed_recovery_format_preparation_retains_pending_for_later_service ... ok\ntest tests::aud138_reprepare_priming_failure_preserves_local_stream_for_retry ... ok\ntest tests::failed_reservice_cannot_publish_or_write_partial_prime ... ok\ntest tests::aud138_reprepare_shrink_keeps_pending_queue_larger_than_physical_ring ... ok\ntest tests::aud138_large_reprepare_keeps_following_process_and_drain_allocation_free ... ok\ntest tests::hal_output_reset_cancels_pending_samples_and_counts_drops_without_transport_io ... ok\ntest tests::initialization_primes_negotiated_fill_and_reports_v2_boundary_latency ... ok\ntest tests::full_multichannel_writes_are_counted_in_frames ... ok\ntest tests::first_blocked_retry_and_terminal_drains_allocate_nothing_or_shrink_storage ... ok\ntest tests::initialize_rejects_transport_rate_and_channel_mismatch ... ok\ntest tests::invalid_transport_frame_count_is_rejected_without_losing_writer ... ok\ntest tests::new_rejects_zero_channels ... ok\ntest tests::ordinary_process_rejects_terminal_sink_before_audio_side_effects ... ok\ntest tests::latency_samples_reports_cached_buffer_capacity ... ok\ntest tests::aud138_reprepare_growth_preserves_pending_frames_and_full_finite_stream ... ok\ntest tests::maximum_channel_full_and_backpressured_callbacks_allocate_nothing ... ok\ntest tests::new_rejects_invalid_channel_count_with_static_error ... ok\ntest tests::new_rejects_too_many_channels ... ok\ntest tests::partial_write_retries_tail_before_new_audio ... ok\ntest tests::aud138_reprepare_writer_error_cleans_partial_prime_and_retries ... ok\ntest tests::process_rejects_mismatched_buffer ... ok\ntest tests::process_validates_initialization_context_overflow_and_sink_output ... ok\ntransport_conservation events=40960 process_calls=27360 drain_calls=4640 layouts=16 rates=2 ring_sizes=5 exact_fifo=true bounded_writer_calls=true\ntest tests::public_daw_host_reset_does_not_replay_pre_reset_pending_samples ... ok\ntest tests::audit_transport_tests::conservation_and_fifo_order_hold_across_transport_lifecycle_sequences ... ok\ntest tests::public_sink_input_refuses_over_capacity_before_advancing_source ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_unfinished_multichunk_tail ... ok\ntest tests::producer_and_append_failures_require_reset_without_replaying_tail ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_an_already_started_drain ... ok\ntest tests::public_sink_service_only_preserves_controls_clocks_and_requested_telemetry ... ok\ntest tests::public_sink_parameter_subblocks_share_one_bounded_service_phase ... ok\ntest tests::public_sink_input_waits_for_pending_capacity_then_retries_distinct_block_once ... ok\ntest tests::public_daw_host_sink_drain_preflights_tail_before_any_source_consumption ... ok\ntest tests::public_sink_preflight_does_not_adopt_changed_transport_configuration ... ok\ntest tests::reinitialize_cancels_pending_only_after_successful_preflight_and_counts_it ... ok\ntest tests::reservice_preserves_pending_and_reestablishes_target_fill ... ok\ntest tests::ring_capacity_is_not_reported_as_latency ... ok\ntest tests::set_parameter_returns_static_no_adjustable_params_error ... ok\ntest tests::telemetry_preserves_counters_past_i32_range ... ok\ntest tests::public_sink_input_service_retry_and_terminal_calls_do_not_touch_the_heap ... ok\ntest tests::sink_mode_owns_commands_and_requires_reset_after_completion ... ok\ntest tests::public_sink_transport_availability_flip_retains_admitted_audio_without_recovery_io ... ok\ntest tests::public_sink_settlement_repairs_after_partial_graph_error_without_replaying_input ... ok\ntest tests::public_sink_settlement_services_then_applies_queued_edit_without_replay ... ok\ntest tests::aud138_reprepare_staging_failure_preserves_old_state_and_retries ... ok\ntest tests::public_sink_post_admission_failures_are_not_replayable ... ok\ntest tests::aud138_reprepare_rejects_plan_observation_mutations_before_quiesce ... ok\ntest tests::aud138_reprepare_rejects_stale_plan_and_lost_readiness_then_retries ... ok\n\ntest result: ok. 79 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 5.57s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\noversized sink admission: consumed=None, writer_calls=0, source_before=FiniteDelayObservation { begin_drain_calls: 0, drain_calls: 0, drain_cursor_frames: 0, total_drain_call_bound: 1, remaining_drain_calls: 0, delay_line: [0.0, 0.0, 0.0, 0.0], write_frame: 0, has_input: false, drained: false }, source_after=FiniteDelayObservation { begin_drain_calls: 0, drain_calls: 0, drain_cursor_frames: 0, total_drain_call_bound: 1, remaining_drain_calls: 0, delay_line: [0.0, 0.0, 0.0, 0.0], write_frame: 0, has_input: false, drained: false }\nfull-queue retry: consumed=0, writer_calls=2, source_before=FiniteDelayObservation { begin_drain_calls: 0, drain_calls: 0, drain_cursor_frames: 0, total_drain_call_bound: 1, remaining_drain_calls: 1, delay_line: [0.125, -0.25, 0.625, -0.75], write_frame: 0, has_input: true, drained: false }, source_after=FiniteDelayObservation { begin_drain_calls: 0, drain_calls: 0, drain_cursor_frames: 0, total_drain_call_bound: 1, remaining_drain_calls: 1, delay_line: [0.125, -0.25, 0.625, -0.75], write_frame: 0, has_input: true, drained: false }\n\nthread 'tests::public_sink_post_admission_failures_are_not_replayable' (334556357) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs:2445:17:\ninjected source panic after processing\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n   Doc-tests sotf_plugin_hal_output\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "sotf-plugin-hal-output",
+        "--release",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--features",
+        "sotf-host/qa",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 0.75s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "clippy",
+        "-p",
+        "sotf-plugin-hal-output",
+        "--release",
+        "--offline",
+        "--locked",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+        "--features",
+        "hal,sotf-host/qa",
+        "--all-targets",
+        "--no-deps",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 0.60s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "rustfmt",
+        "--check",
+        "--edition",
+        "2024",
+        "--config",
+        "skip_children=true",
+        "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "earlier_green_artifacts": [
+    "hal-output-process-queue-focused.json",
+    "hal-output-process-queue-suite.json",
+    "hal-output-process-queue-gates.json"
+  ],
+  "red_artifacts": [
+    "hal-output-process-queue-baseline.json",
+    "hal-output-config-latch-baseline.json"
+  ],
+  "initial_attempts": [
+    {
+      "artifact": "hal-output-process-queue-initial-no-qa.json",
+      "result": "Existing release tests require host allocation utilities behind sotf-host/qa. Enabled that existing dependency feature; no manifest/feature/API change."
+    },
+    {
+      "artifact": "hal-output-config-latch-initial-mutex-assert.json",
+      "result": "The negative assertion held a fake-writer MutexGuard, poisoning the mock and causing a destructor panic during failure cleanup. Snapshot values outside guards; clean red regression retained separately. This was test harness behavior, not a native HAL execution."
+    }
+  ],
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs": "790fa1d38d155566b26372187e89556839abb771642088bfafc877653010494b",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/tests/audit_transport_tests.rs": "ad5a5209a5a9d6b306d16ba7beee91f9ef2b0b175d02f0831c6bc95d50d925ed"
+  },
+  "native_compile_context": {
+    "driver_sources_have_existing_user_changes": true,
+    "dependency_current_source_sha256": {
+      "Cargo.lock": "4d54151024fc4b6a346a3d3f859037a547fdd8cbe1b2aa876765ff7d1e3e10e4",
+      "crates/driver-common/src/lib.rs": "defc348b63842bf97530388c6eed7df7623768bfdc4eefb2f65c7a737557ded0",
+      "crates/driver-hal/CHANGELOG.md": "59a997d82442a009e50201677f9434b17fe24f367edc87d69e6ac59dbf9690df",
+      "crates/driver-hal/Cargo.toml": "bf012ee8eff9fc0046109a3a609d3a60c0dd101b6312792af254fc3e39c8e7cf",
+      "crates/driver-hal/README.md": "c4a255941d3c9b3223a2020eb6b6b1b54696d2354fd796031be2e80222e00755",
+      "crates/driver-hal/shared_memory_layout.json": "70f728ea132a6c57653d13668395ce352f7a42c8a04bcdb4a92de70cdf466dc8",
+      "crates/driver-hal/src/bin/hal_capture_stress.rs": "51d9e877856ab3fdc52f4429d5141956282b0bec337deb0bc6dec278310f56a9",
+      "crates/driver-hal/src/bin/hal_capture_stress/metrics.rs": "065f2905266287f65338fa6873c53b62b8db93e177d0c1a5be15822b224e8397",
+      "crates/driver-hal/src/bin/hal_transport_worker.rs": "f7a2a963621657adf22ed5c8bf131663b55a56b2174fa44981eecf00143530f9",
+      "crates/driver-hal/src/driver/hal_driver.rs": "df210631190a58f186595ddb6a33855826a8e0f9a8d994f72dde1736c8ff569b",
+      "crates/driver-hal/src/driver/tests.rs": "faf79d6802a3ccf2d5d9e4feb82a69ae9e69dbfa60f49be7cfd62bb0eac2ea7a",
+      "crates/driver-hal/src/reader_state.rs": "90dd05fc75f0f5dd571c9076c207dac9e4dfff6977b8a7ddf8f481ef75665cca",
+      "crates/driver-hal/src/shared_memory.rs": "d799e0b7603d57b4ae1b753d8854638efcd498788f3157c336895f5775c32537",
+      "crates/driver-hal/src/shared_memory/backing.rs": "4d32231efae03bb23c887d291c373f48d19e45034c5f00a9cb8f2c745b88f56f",
+      "crates/driver-hal/src/shared_memory/consts.rs": "eae45c7bdb4c02fbbbe2da2d4dcbdea8f5b6fdbb014f1c6f658005d1e101c9f2",
+      "crates/driver-hal/src/shared_memory/control.rs": "a53a0b71587db7428797aa66aba48ef085347de0005fc5ffe3de8dff72ef33a2",
+      "crates/driver-hal/src/shared_memory/hal_input_reader.rs": "16d0e98e4e8f90eff764a226bb8ad694edc4775c0e97f19e7872a85d73b717af",
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "10f77afebd77518d829261bb5a3c9bf1a970f2094854d422ea5d07cc9e870c85",
+      "crates/driver-hal/src/shared_memory/tests.rs": "f6b72dbfe461d29373581c545bd2a7696811700ef5e0d6ab66e038d93e8cb7f4",
+      "crates/driver-hal/src/shared_memory/tests/misc.rs": "91a7f505bd32a75fa4cb3a232f2607ae99169baa16171a69f8e7aaa629c6d2ea",
+      "crates/driver-hal/src/shared_memory/validate.rs": "22dd3488feb40bcfa79422f6777d71698ef40909fa4cd9fb4b52ad8884e9a05c",
+      "crates/driver-hal/tests/hal_passthrough_tests.rs": "70ce1bd12d324f88685e3c2d6671522a32a29bdba7e897aa0b8b6806dda1aa15",
+      "crates/driver-hal/tests/hal_passthrough_tests/misc.rs": "03224822e65f5785a998ac2d7d54585cdb6c2afeb66e05b472e602bc452d65c0",
+      "crates/driver-hal/tests/hal_passthrough_tests/types.rs": "8d29bb70070679b3d2e72c7e896856b97443a4c2c50f00572b61ba0400233df9"
+    },
+    "native_interface_source_sha256": "f04309d13605e116cfdf2cf279aa7a77ed1fa30dc25de7b8bcf713f098a09b93",
+    "exercised": "cargo check / clippy only; no native-feature runtime tests or live device constructors",
+    "untouched_by_this_change": true
+  },
+  "limits": [
+    "Controlled fake writers prove logical queue/ownership behavior, not physical shared-memory saturation or device consumption.",
+    "Written counters mean validated bridge acknowledgements; priming is excluded. Malformed writer reports leave physical delivery of that batch unknown. Errors can follow valid older queued writes while new input remains caller-owned.",
+    "Native feature checking uses the current uncommitted driver/Cargo.lock worktree snapshot above. Those user changes are neither changed nor included in the plugin commit.",
+    "Real restart/key rotation/reconnect with changed geometry, mid-write format transitions and cross-process clock drift remain to be exercised against the native transport.",
+    "No device-load deadline, hardware audibility or external host restart guarantee is established; no ML work."
+  ]
+}
