@@ -1,5 +1,10 @@
 # Unreleased
 
+- Add an explicitly isolated native HAL input integration target spanning all
+  supported channel counts at 48/96 kHz, encrypted/plain reads, staged key changes,
+  failed refresh, format rejection, mapping restart and abrupt producer-process
+  death. Preserve actual liveness limitations and dirty-driver provenance.
+
 - Validate readiness and stream format around the HAL read; discard the complete
   callback on an observed mid-read disconnect, key fault or format change.
 - Clear output on unavailable format and invalid count errors; request control

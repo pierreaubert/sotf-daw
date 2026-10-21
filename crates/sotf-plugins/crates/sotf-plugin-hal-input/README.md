@@ -34,6 +34,34 @@ fault history. A healthy idle observation does not close pending recovery.
 
 Controlled-reader release tests cover 1–16 channels at 44.1/48/96/192 kHz,
 mid-read faults, exact output/counter transitions and callback heap activity.
-Native `hal` checks are compile-only; actual driver restart/key rotation,
-cross-process epoch changes, source-clock drift and device deadlines still need
-isolated transport/device validation.
+Routine native `hal` checks are compile-only. The explicit isolated integration
+target below additionally exercises real mapped transport and writer processes;
+Swift/HAL callback races, source-clock drift and device deadlines remain separate.
+
+The ignored `native_transport` target requires an explicit fresh owned fixture
+root. It spawns a bounded child with shared-memory, key and runtime paths all
+redirected before any plugin constructor runs. Invoke only this target, rather
+than the full native suite whose other constructors may use live defaults:
+
+```bash
+SOTF_HAL_AUDIT_FIXTURE_ROOT=/absolute/fresh/private-dir cargo test \
+  -p sotf-plugin-hal-input --release --features hal,sotf-host/qa \
+  --test native_transport -- --ignored --nocapture --test-threads=1
+```
+
+Native worktree evidence covers 1–16 channels at 48/96 kHz, actual plain and
+encrypted reads, partial records, key rotation with old staged plaintext,
+transactional failed refresh, format refusal and exact first frames after
+mapping replacement. A separate writer process is killed abruptly: the retained
+immutable mapping remains readable, queued frames stay exact, empty reads become
+counted silence, and explicit refresh attaches the new writer's first frame.
+These callbacks assert zero allocations. The evidence records the current
+uncommitted driver dependency hashes; it does not certify a clean-driver build
+or real Swift/device operation.
+
+`connected` observes shared `driver_ready`; it is not broker-process liveness.
+After abrupt writer death with that flag still set, missing frames and underruns
+advance but automatic control recovery is not requested. A control supervisor
+must detect producer/session changes and call `refresh_transport`. Hardware
+clock drift, callback-time format races and automatic liveness supervision remain
+outstanding.

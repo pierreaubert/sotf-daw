@@ -32,3 +32,12 @@ cargo test -p sotf-plugin-hal-input
 - Use `--features sotf-host/qa` for the allocation assertions. Native `hal`
   compile checks do not establish runtime transport correctness; constructors
   can access live shared memory, so use an isolated fixture for native tests.
+
+- `native_transport` is an ignored, explicit isolated target. Require a fresh
+  owned SOTF_HAL_AUDIT_FIXTURE_ROOT; spawn child overrides for shared mapping,
+  key and runtime paths before calling production constructors. Never run the
+  full native test suite as a substitute for this isolated target.
+- The native evidence uses a dirty driver dependency snapshot. Keep its hashes
+  and do not claim clean-driver, Swift callback or hardware timing validation.
+- Shared driver_ready is not process liveness. Abrupt writer death can leave
+  connected=true with counted silence; automatic supervisor recovery is open.

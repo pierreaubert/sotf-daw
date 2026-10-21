@@ -1506,11 +1506,21 @@
           "requirement": "Certify actual reconnect first frame, driver/key restart, cross-process format mutation, writer disappearance and source-clock drift.",
           "status": "pending",
           "evidence": [],
-          "result": "Controlled reader observations prove local logic only. Isolated native shared-memory and real device evidence remains required; no atomic epoch fencing, transport rollback, clock-recovery or deadline claim."
+          "result": "Isolated native mapped transport now verifies key rotation, staged old-key discard, explicit reconnect/mapping replacement first frames and actual writer-process death using a stable dirty dependency snapshot. Remaining: automatic producer-liveness recovery, concurrent callback-time format/key races, source-clock drift, clean committed driver/Swift/device/deadline evidence. No atomic epoch or rollback claim from plugin observations alone."
+        },
+        {
+          "requirement": "Exercise actual isolated mapped transport and writer-process lifecycle through production HAL input.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hal-input/tests/native_transport.rs",
+            "audit/artifacts/plugin-audit-20261018/hal-input-native-broker-validation.json"
+          ],
+          "result": "New separately ignored native_transport integration target spawns only explicitly redirected private fixtures; shared mapping, key and runtime paths are verified before native constructors. Production brokered shared-memory/readers pass 32 cases: 1-16 channels at 48/96k, plain partial/empty reads, disconnect/reconnect exact first frames, encrypted records, key rotation while old plaintext is staged, failed refresh retaining the active reader, sample-rate refusal/restoration and exact first frames after region replacement. A distinct writer process is killed abruptly: immutable retained mapping and its queued frames remain valid, starvation is counted, and explicit refresh reads replacement first frame exactly. The observed automatic-recovery flag remains false while stale driver_ready remains set: liveness supervision stays open. All native successful callbacks assert zero allocations (not independently frees); core36 tests and native strict all-target QA Clippy/format pass. Current dirty driver/Cargo.lock hashes are stable before/after each run and recorded. Final harness uses public method names already present in committed driver source; this is not a clean-driver compile/runtime claim. Initial harness source using two uncommitted method names retained separately, then replaced with stable compatibility calls. No live default transport, actual Swift producer, callback race, source-clock drift or device timing claim; no driver/engine edits."
         }
       ],
       "evidence": [
-        "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-validation.json"
+        "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-validation.json",
+        "audit/artifacts/plugin-audit-20261018/hal-input-native-broker-validation.json"
       ]
     },
     {
@@ -3110,6 +3120,15 @@
       ],
       "result": "AAE previously inherited Unknown tail/default immediate-complete drain, and direct processing could accept non-finite input or advance recursive state/output before wrong-clock AutoGain rejection. Checked geometry, finite input and prepared clock now preflight before mutation; original AAE size error wording retained. Accepted excitation explicitly yields Infinite until reset/successful initialize; empty/only-zero-input state is Finite(0), state-independent support remains None. Bypass/muted sends/silence do not infer finite support. Active begin_drain/drain reject without advancing audio or output, preserving continuation; identity frame geometry and envelope now advertised. Three red baseline tests reproduced all defects. Eight populated nonfinite/wrong-clock twin cases retain exact future audio and sentinel output; cold malformed/overflow/nonfinite blocks cannot arm a tail. Direct and actual DawHost EOF refusal retain sample-exact future reverb. Empty/reset/init/bypass/mute metadata and all-size frame envelope checks pass. Two cold successful render/query/reset/empty EOF heap cases have zero allocations/frees. Full release 118 passed; final five focused tests, strict all-target QA Clippy/format and acoustic quality pass with printed quality unchanged. Initial wording mismatch and redundant conversion lint attempts retained; no test weakening. No fabricated finite tail, signal latency, serialized parameter or valid-render arithmetic change. Finite offline rendering still needs an explicit truncation/fade policy.",
       "limitations": "Infinite EOF remains unsupported for finite host rendering. Sparse decay failures and external listening/native evidence remain; overall 35/45 complete."
+    },
+    {
+      "name": "HAL input isolated native broker and producer lifecycle validation",
+      "state": "verified_partial",
+      "plugin_ids": [
+        26
+      ],
+      "result": "New separately ignored native_transport integration target spawns only explicitly redirected private fixtures; shared mapping, key and runtime paths are verified before native constructors. Production brokered shared-memory/readers pass 32 cases: 1-16 channels at 48/96k, plain partial/empty reads, disconnect/reconnect exact first frames, encrypted records, key rotation while old plaintext is staged, failed refresh retaining the active reader, sample-rate refusal/restoration and exact first frames after region replacement. A distinct writer process is killed abruptly: immutable retained mapping and its queued frames remain valid, starvation is counted, and explicit refresh reads replacement first frame exactly. The observed automatic-recovery flag remains false while stale driver_ready remains set: liveness supervision stays open. All native successful callbacks assert zero allocations (not independently frees); core36 tests and native strict all-target QA Clippy/format pass. Current dirty driver/Cargo.lock hashes are stable before/after each run and recorded. Final harness uses public method names already present in committed driver source; this is not a clean-driver compile/runtime claim. Initial harness source using two uncommitted method names retained separately, then replaced with stable compatibility calls. No live default transport, actual Swift producer, callback race, source-clock drift or device timing claim; no driver/engine edits.",
+      "limitations": "HAL input remains partial for liveness supervision, concurrent races, clock drift and clean driver/Swift/device validation; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
