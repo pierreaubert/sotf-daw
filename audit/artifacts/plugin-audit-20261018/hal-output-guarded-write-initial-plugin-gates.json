@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--lib"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 82 tests\ntest params::tests::param_value_always_none ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::params_is_empty ... ok\ntest params::tests::roundtrip_serde ... ok\ntest params::tests::deserialize_old_preset_migrates_output_channels ... ok\ntest tests::aud138_control_recovery_preserves_pending_audio_and_drains_exact_suffix ... ok\ntest tests::aud138_post_reservation_config_change_keeps_the_whole_admitted_block ... ok\ntest tests::aud138_host_input_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_unbuilt_sink_eof_refuses_without_building_or_calling_plugins ... ok\ntest tests::aud138_adjacent_graph_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_reprepare_preflight_refuses_invalid_geometry_and_lifecycles ... ok\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... ok\ntest tests::aud138_unknown_or_infinite_final_tail_is_refused_before_source_drain ... ok\ntest tests::aud138_reprepare_growth_preserves_pending_frames_and_full_finite_stream ... ok\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... ok\ntest tests::audit_transport_tests::observed_format_change_stays_latched_after_the_shared_flag_is_cleared ... ok\ntest tests::aud138_unknown_or_infinite_upstream_tail_is_refused_before_source_drain ... ok\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... ok\ntest tests::audit_transport_tests::wrapped_process_service_and_reset_use_only_prepared_storage ... ok\ntest tests::audit_transport_tests::writer_contract_fault_gates_following_writes_until_control_recovery ... ok\ntest tests::bounded_queue_drops_newest_complete_frames_and_preserves_oldest_order ... ok\ntest tests::config_change_is_quiesced_until_control_thread_service ... ok\ntest tests::control_thread_service_reconnects_reloads_key_and_reasserts_readiness ... ok\ntest tests::blocked_sink_waits_without_advancing_tail_and_later_hands_off_once ... ok\ntest tests::diagnostics_are_not_automatable_parameters ... ok\ntest tests::drain_errors_leave_unaccepted_frames_queued ... ok\ntest tests::drain_gates_and_control_recovery_preserve_pending_samples ... ok\ntest tests::drain_orders_new_input_around_an_incomplete_and_completed_eof ... ok\ntest tests::drain_validation_errors_preserve_pending_and_destination ... ok\ntest tests::drain_wraps_frames_across_vecdeque_storage_with_two_writes ... ok\ntest tests::eof_drain_flushes_the_final_partial_write_to_the_writer ... ok\ntest tests::eof_drain_reports_backpressure_and_retries_without_new_input ... ok\ntest tests::explicit_control_recovery_reopens_even_a_connected_transport ... ok\ntest tests::failed_priming_is_transactional_and_keeps_transport_quiesced ... ok\ntest tests::failed_recovery_format_preparation_retains_pending_for_later_service ... ok\ntest tests::failed_reservice_cannot_publish_or_write_partial_prime ... ok\ntest tests::first_blocked_retry_and_terminal_drains_allocate_nothing_or_shrink_storage ... ok\ntest tests::full_multichannel_writes_are_counted_in_frames ... ok\ntest tests::hal_output_reset_cancels_pending_samples_and_counts_drops_without_transport_io ... ok\ntest tests::initialization_primes_negotiated_fill_and_reports_v2_boundary_latency ... ok\ntest tests::initialize_rejects_transport_rate_and_channel_mismatch ... ok\ntest tests::invalid_transport_frame_count_is_rejected_without_losing_writer ... ok\ntest tests::latency_samples_reports_cached_buffer_capacity ... ok\ntest tests::maximum_channel_full_and_backpressured_callbacks_allocate_nothing ... ok\ntest tests::new_rejects_invalid_channel_count_with_static_error ... ok\ntest tests::new_rejects_too_many_channels ... ok\ntest tests::new_rejects_zero_channels ... ok\ntest tests::aud138_reprepare_shrink_keeps_pending_queue_larger_than_physical_ring ... ok\ntest tests::partial_write_retries_tail_before_new_audio ... ok\ntest tests::pending_drain_observes_unnotified_formats_before_its_first_write ... ok\ntest tests::process_rejects_mismatched_buffer ... ok\ntest tests::process_validates_initialization_context_overflow_and_sink_output ... ok\ntest tests::aud138_reprepare_staging_failure_preserves_old_state_and_retries ... ok\ntest tests::ordinary_process_rejects_terminal_sink_before_audio_side_effects ... ok\ntest tests::aud138_reprepare_priming_failure_preserves_local_stream_for_retry ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_unfinished_multichunk_tail ... ok\ntest tests::public_daw_host_reset_does_not_replay_pre_reset_pending_samples ... ok\ntest tests::public_daw_host_sink_drain_preflights_tail_before_any_source_consumption ... ok\ntest tests::public_sink_input_refuses_over_capacity_before_advancing_source ... ok\ntest tests::public_sink_input_service_retry_and_terminal_calls_do_not_touch_the_heap ... ok\ntest tests::aud138_large_reprepare_keeps_following_process_and_drain_allocation_free ... ok\ntest tests::producer_and_append_failures_require_reset_without_replaying_tail ... ok\ntest tests::public_sink_parameter_subblocks_share_one_bounded_service_phase ... ok\ntest tests::public_sink_transport_availability_flip_retains_admitted_audio_without_recovery_io ... ok\ntest tests::reinitialize_cancels_pending_only_after_successful_preflight_and_counts_it ... ok\ntest tests::public_sink_preflight_does_not_adopt_changed_transport_configuration ... ok\ntest tests::public_sink_input_waits_for_pending_capacity_then_retries_distinct_block_once ... ok\ntest tests::reservice_preserves_pending_and_reestablishes_target_fill ... ok\ntest tests::ring_capacity_is_not_reported_as_latency ... ok\ntest tests::public_sink_service_only_preserves_controls_clocks_and_requested_telemetry ... ok\ntest tests::set_parameter_returns_static_no_adjustable_params_error ... ok\ntest tests::telemetry_preserves_counters_past_i32_range ... ok\ntest tests::unnotified_formats_preserve_input_and_gate_all_audio_writes ... ok\ntest tests::sink_mode_owns_commands_and_requires_reset_after_completion ... ok\ntest tests::public_sink_settlement_repairs_after_partial_graph_error_without_replaying_input ... ok\ntest tests::public_sink_settlement_services_then_applies_queued_edit_without_replay ... ok\ntest tests::public_sink_post_admission_failures_are_not_replayable ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_an_already_started_drain ... ok\ntest tests::aud138_reprepare_writer_error_cleans_partial_prime_and_retries ... ok\ntest tests::audit_transport_tests::conservation_and_fifo_order_hold_across_transport_lifecycle_sequences ... ok\ntest tests::aud138_reprepare_rejects_stale_plan_and_lost_readiness_then_retries ... ok\ntest tests::aud138_reprepare_rejects_plan_observation_mutations_before_quiesce ... ok\n\ntest result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n",
+    "stderr": "   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 5.68s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-a27c4aa13fe08c33)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "check",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "hal,sotf-host/qa",
+      "--all-targets"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking driver-hal v0.1.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-hal)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 0.96s\n"
+  }
+]

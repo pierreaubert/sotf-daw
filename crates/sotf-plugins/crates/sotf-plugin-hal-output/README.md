@@ -90,5 +90,24 @@ The initial unnotified-rate diagnostic is retained as a red observation; the
 native matrix now repeats it without the owner flag and verifies preservation
 through recovery. Owner notifications remain useful for session/configuration
 changes, but settled geometry mismatches no longer rely on them. These separate
-atomic field observations are not a coherent epoch fence: changes during a write,
-including ABA transitions and concurrent key changes, remain unproven.
+atomic field observations remain admission probes; the native write guard below
+closes the gap for owners using the quiesced write protocol.
+
+Every native data/FIFO/prime write passes its prepared rate, channel count and
+buffer size to `HalOutputWriter::write_with_format`. Reprepare priming uses the
+new plan format. The driver acquires its existing ring write commit before
+checking these fields and the cached encryption fingerprint, then retains it
+through encryption, copy and cursor publication. Refused writes return zero and
+retain logical FIFO ownership. No callback filesystem access or allocation is
+added. Geometry setters using quiesced publication cannot slip between check
+and copy.
+
+The clean-driver regression suite verifies geometry refusal, guard release and
+concurrent rate transitions. Clean compilation, core tests and strict library
+Clippy also pass with a recorded one-entry temporary lockfile repair. The native
+matrix additionally checks geometry/key refusals with zero callback allocations
+against the recorded dirty driver dependency. Concurrent key protection requires
+the owner to publish encryption fields through the same quiesced protocol; the
+committed base driver key setters do not provide that guarantee. Raw header
+stores, session-generation/ABA transitions, Swift callbacks, cross-process clock
+drift and device deadlines remain outside this evidence.

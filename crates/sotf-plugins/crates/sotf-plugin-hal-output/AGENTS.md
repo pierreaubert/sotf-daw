@@ -52,9 +52,15 @@ cargo test -p sotf-plugin-hal-output
 - Preserve dirty dependency provenance and distinguish mapped-ring checks from
   Swift/device/deadline certification. A raw rate setter alone does not publish
   config_changed. Callback probes now gate settled unnotified geometry changes;
-  concurrent changes during a write still require an atomic epoch fence.
+  prepared writes now fence geometry changes from quiesced owners. Session
+  generation/ABA and concurrent unquiesced key publication remain open.
 
 - Private callback_format probes must be allocation-free and separate from
   control metadata queries. Gate process, pending drain and sink preflight on
   mismatched/unavailable prepared geometry; preserve ownership and sticky state.
   Never describe separately observed atomic fields as a coherent epoch snapshot.
+
+- Native FIFO, direct and prime writes must pass prepared geometry to the driver
+  write commit. Reprepare prime must use the target plan geometry. Keep validation,
+  encryption and cursor publication in that commit; do not infer owner compliance
+  from raw atomic getters or key setters. Key fencing requires quiesced publication.

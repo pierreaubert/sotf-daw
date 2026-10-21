@@ -1575,6 +1575,18 @@
             "audit/artifacts/plugin-audit-20261018/hal-output-format-probe-validation.json"
           ],
           "result": "Private allocation-free callback_format observations now gate direct process, pending EOF drain and TerminalSink preflight against prepared rate/channel/buffer fields, independent of owner config_changed. Native implementation reads atomic getters without Result/String formatting, filesystem or key operations; fake callback observations are separate from scripted control metadata queries. Mismatch/unavailable geometry latches ConfigurationChanged. Successful direct input stays owned in bounded FIFO; terminal preflight refuses before upstream consumption. Restored fields alone do not clear the latch; explicit control recovery is required. Red controlled baseline accepted mismatched terminal geometry, and previous native diagnostic wrote data at an unnotified changed clock. All 256 controlled cases (16 layouts,48/96k,rate/channel/buffer/unavailable) assert no writes, exact ownership/latch/recovery and zero allocations/frees; 128 specifically begin with pending drain before a format change. Native32 matrix repeats rate changes with owner notification deliberately omitted and passes, with key/reprepare/FIFO checks retained and zero callback allocations. Core82 release and strict native all-target QA Clippy/format pass; existing40960-event FIFO model remains passing. Dirty driver snapshot stable; no live transport opened. Signal latency, queue policy/telemetry fields, parameters/presets and valid-format rendering unchanged. These are pre-write observations, not a coherent epoch fence; callback-time/ABA/key races, liveness and device timing stay open."
+        },
+        {
+          "requirement": "Check prepared output geometry and cached key inside the ring write commit, including initial/reprepare priming.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/hal-output-guarded-write-validation.json",
+            "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs",
+            "crates/driver-hal/src/shared_memory/hal_output_writer.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs"
+          ],
+          "result": "Every native process/FIFO/drain/prime write now supplies prepared rate/channel/buffer geometry to HalOutputWriter::write_with_format. The existing write commit encloses nonzero geometry equality, driver readiness and cached fingerprint validation through encryption, ring copy and cursor publication. Quiesced geometry owners cannot change format between check and copy; refusal returns zero without cursor advancement and retains logical FIFO ownership. Reprepare prime uses plan target format; initialization prime explicitly uses validated incoming clock before committing self.sample_rate. Initial native run exposed a zero-clock prime refusal; the fixed fake writer now enforces prepared geometry so core tests cover that integration. Clean driver base 172b78d plus exactly the staged source patch passes3 focused driver tests (20000 write/read observations and512 concurrent geometry requests),82 core release tests, native all-target check and strict driver/plugin library Clippy. Temporary clean-checkout lock repair adds only the missing engine rustix dependency, no registry upgrades; user lock untouched. Isolated current-driver native32 cases (1-16 channels,48/96k) pass geometry/key refusal without publication, FIFO/drop conservation, remapping, pending recovery,64->128 reprepare and zero callback allocations. Strict native plugin all-target Clippy passes. Dirty driver dependency snapshots remain stable. Sparse shared-file staging includes only the3-line module/re-export insertion; unrelated driver/engine/common/lock changes excluded. Key fencing requires owner encryption publication through the same quiesced protocol: committed base key setters do not provide it. Raw header stores, session-generation/ABA, automatic liveness, Swift/device/clock/deadline/audibility proof remain open; overall35/45 complete."
         }
       ],
       "evidence": [
@@ -1584,11 +1596,12 @@
         "audit/artifacts/plugin-audit-20261018/hal-output-config-latch-baseline.json",
         "audit/artifacts/plugin-audit-20261018/hal-output-process-queue-validation.json",
         "audit/artifacts/plugin-audit-20261018/hal-output-native-broker-validation.json",
-        "audit/artifacts/plugin-audit-20261018/hal-output-format-probe-validation.json"
+        "audit/artifacts/plugin-audit-20261018/hal-output-format-probe-validation.json",
+        "audit/artifacts/plugin-audit-20261018/hal-output-guarded-write-validation.json"
       ],
       "remaining": [
-        "Establish coherent epoch fencing for format/key changes during a write and ABA transitions; settled unnotified rate/channel/buffer changes are now gated and verified.",
-        "Automatic liveness supervision, cross-process clock drift and committed-driver/Swift/device/deadline/audibility evidence remain open."
+        "Establish session-generation/ABA fencing and owner compliance for concurrent encryption publication. Prepared geometry is now fenced through copy/cursor publication against quiesced control changes; committed base key setters remain unquiesced.",
+        "Automatic liveness supervision, cross-process clock drift and Swift/device/deadline/audibility evidence remain open. Clean driver guard/core/compile/lint evidence now exists with the recorded one-entry temporary lock repair."
       ]
     },
     {
@@ -3168,6 +3181,15 @@
       ],
       "result": "Private allocation-free callback_format observations now gate direct process, pending EOF drain and TerminalSink preflight against prepared rate/channel/buffer fields, independent of owner config_changed. Native implementation reads atomic getters without Result/String formatting, filesystem or key operations; fake callback observations are separate from scripted control metadata queries. Mismatch/unavailable geometry latches ConfigurationChanged. Successful direct input stays owned in bounded FIFO; terminal preflight refuses before upstream consumption. Restored fields alone do not clear the latch; explicit control recovery is required. Red controlled baseline accepted mismatched terminal geometry, and previous native diagnostic wrote data at an unnotified changed clock. All 256 controlled cases (16 layouts,48/96k,rate/channel/buffer/unavailable) assert no writes, exact ownership/latch/recovery and zero allocations/frees; 128 specifically begin with pending drain before a format change. Native32 matrix repeats rate changes with owner notification deliberately omitted and passes, with key/reprepare/FIFO checks retained and zero callback allocations. Core82 release and strict native all-target QA Clippy/format pass; existing40960-event FIFO model remains passing. Dirty driver snapshot stable; no live transport opened. Signal latency, queue policy/telemetry fields, parameters/presets and valid-format rendering unchanged. These are pre-write observations, not a coherent epoch fence; callback-time/ABA/key races, liveness and device timing stay open.",
       "limitations": "Per-callback observation is not atomic epoch fencing. Cross-process liveness/drift and clean driver/Swift/device/deadline evidence remain; overall35/45 complete."
+    },
+    {
+      "name": "HAL output prepared geometry ring write guard",
+      "state": "verified_partial",
+      "plugin_ids": [
+        27
+      ],
+      "result": "Every native process/FIFO/drain/prime write now supplies prepared rate/channel/buffer geometry to HalOutputWriter::write_with_format. The existing write commit encloses nonzero geometry equality, driver readiness and cached fingerprint validation through encryption, ring copy and cursor publication. Quiesced geometry owners cannot change format between check and copy; refusal returns zero without cursor advancement and retains logical FIFO ownership. Reprepare prime uses plan target format; initialization prime explicitly uses validated incoming clock before committing self.sample_rate. Initial native run exposed a zero-clock prime refusal; the fixed fake writer now enforces prepared geometry so core tests cover that integration. Clean driver base 172b78d plus exactly the staged source patch passes3 focused driver tests (20000 write/read observations and512 concurrent geometry requests),82 core release tests, native all-target check and strict driver/plugin library Clippy. Temporary clean-checkout lock repair adds only the missing engine rustix dependency, no registry upgrades; user lock untouched. Isolated current-driver native32 cases (1-16 channels,48/96k) pass geometry/key refusal without publication, FIFO/drop conservation, remapping, pending recovery,64->128 reprepare and zero callback allocations. Strict native plugin all-target Clippy passes. Dirty driver dependency snapshots remain stable. Sparse shared-file staging includes only the3-line module/re-export insertion; unrelated driver/engine/common/lock changes excluded. Key fencing requires owner encryption publication through the same quiesced protocol: committed base key setters do not provide it. Raw header stores, session-generation/ABA, automatic liveness, Swift/device/clock/deadline/audibility proof remain open; overall35/45 complete.",
+      "limitations": "Concurrent key fencing depends on quiesced owner publication; base key setters are not quiesced.; No session generation/ABA/raw-store/Swift/device/deadline/audibility guarantee.; Clean checkout uses one-entry temporary lock repair and current sibling dependency symlinks."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

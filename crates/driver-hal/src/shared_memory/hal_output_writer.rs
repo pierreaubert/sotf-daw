@@ -2,8 +2,8 @@ use super::consts::pre_alloc_capacity_samples;
 use super::encrypted::encrypted_record_slots;
 use super::encrypted::encrypted_record_total_bytes;
 use super::misc::fingerprints_equal;
-use super::shared_audio_buffer::SharedAudioBuffer;
 use super::shared_audio_buffer::load_initial_cipher;
+use super::shared_audio_buffer::{PreparedWriteRefusal, SharedAudioBuffer};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Writer adapter for HAL output.
@@ -144,6 +144,36 @@ impl HalOutputWriter {
             buf.write_audio_with_channel_count(buffer, expected_channel_count)
         } else {
             0
+        }
+    }
+
+    /// Write only under the caller's prepared stream geometry.
+    ///
+    /// `expected` is `(sample_rate, channel_count, buffer_frames)`. The format
+    /// and cached encryption key are checked under the same write commit as
+    /// the copy and cursor publication. A quiesced control transition cannot
+    /// slip between validation and the write. Encryption fencing requires the
+    /// owner to publish key fields through that quiesced protocol too; raw
+    /// atomic stores are not fenced. Returns zero on refusal or full
+    /// transport. Uses prepared staging without filesystem access or allocation.
+    /// This does not establish a session-generation or ABA identity contract.
+    pub fn write_with_format(&mut self, samples: &[f32], expected: (u32, u32, u32)) -> usize {
+        let Some(buffer) = self.buffer.as_mut() else {
+            return 0;
+        };
+        match buffer.write_prepared(
+            samples,
+            expected,
+            self.cipher.as_ref(),
+            &mut self.ciphertext_buf,
+            &mut self.encrypted_buf,
+        ) {
+            Ok(frames) => frames,
+            Err(PreparedWriteRefusal::KeyMismatch) => {
+                self.key_mismatch_count.fetch_add(1, Ordering::Relaxed);
+                0
+            }
+            Err(_) => 0,
         }
     }
 

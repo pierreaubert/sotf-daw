@@ -1,0 +1,101 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "driver-hal",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "prepared_write",
+      "--",
+      "--nocapture"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw",
+    "exit_code": 0,
+    "elapsed_seconds": 21.522469208110124,
+    "stdout": "\nrunning 3 tests\ntest shared_memory::shared_audio_buffer::prepared_write::tests::prepared_geometry_and_key_refusals_do_not_publish_or_retain_the_guard ... ok\nprepared_write_control observations=20000 control_requests=512 rate96_empty_observations=578\ntest shared_memory::shared_audio_buffer::prepared_write::tests::concurrent_control_never_receives_prepared_48k_audio_in_a_96k_epoch ... ok\ntest shared_memory::shared_audio_buffer::prepared_write::tests::prepared_write_guard_excludes_quiesced_geometry_publication ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 116 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling math-iir-fir v0.5.27 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-iir-fir)\n   Compiling math-dsp v0.5.35 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-dsp)\n   Compiling math-rir v0.5.13 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-rir)\n   Compiling sotf-host v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling math-analog v0.5.5 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-analog)\n   Compiling plugins-denoiser v0.5.14 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-analog-common v0.5.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-common)\n   Compiling sotf-plugin-resampler v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler)\n   Compiling sotf-plugin-limiter v0.5.14 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter)\n   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)\n   Compiling sotf-plugin-gain v0.5.9 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain)\n   Compiling sotf-plugin-channel-mute-solo v0.5.66 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo)\n   Compiling sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)\n   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)\n   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n   Compiling sotf-plugin-delay v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-delay)\n   Compiling sotf-plugin-downmix v0.5.28 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)\n   Compiling sotf-plugin-analog-eq v0.5.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-eq)\n   Compiling sotf-plugin-matrix v0.5.93 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix)\n   Compiling sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)\n   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)\n   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n   Compiling sotf-plugin-ab-compare v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare)\n   Compiling sotf-plugin-ambisonics v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n   Compiling sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)\n   Compiling sotf-plugin-analog-compressor v0.5.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-compressor)\n   Compiling sotf-plugin-declick v0.5.7 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n   Compiling sotf-plugin-crossover v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n   Compiling sotf-plugin-stereo-imager v0.5.6 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager)\n   Compiling sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)\n   Compiling sotf-plugin-dither v0.5.13 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dither)\n   Compiling sotf-plugin-crossfeed v0.5.14 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n   Compiling sotf-plugin-band-split v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split)\n   Compiling sotf-plugin-mono-to-stereo v0.5.8 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo)\n   Compiling sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)\n   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n   Compiling sotf-plugin-spectral-compressor v0.5.25 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor)\n   Compiling sotf-plugin-band-merge v0.5.7 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-merge)\n   Compiling sotf-plugin-dynamic-eq v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)\n   Compiling sotf-plugin-aec v0.5.7 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)\n   Compiling sotf-plugin-de-esser v0.5.11 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-de-esser)\n   Compiling sotf-plugin-transient-shaper v0.5.9 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper)\n   Compiling sotf-plugin-saturation v0.5.12 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation)\n   Compiling sotf-plugin-loudness-compensation v0.5.5 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation)\n   Compiling sotf-plugins v0.8.2 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins)\n   Compiling driver-hal v0.1.13 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/driver-hal)\n    Finished `release` profile [optimized] target(s) in 21.40s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/driver_hal-5386c9e1e033ba88)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--lib"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw",
+    "exit_code": 0,
+    "elapsed_seconds": 14.113532249815762,
+    "stdout": "\nrunning 82 tests\ntest params::tests::params_is_empty ... ok\ntest params::tests::deserialize_empty_json_uses_defaults ... ok\ntest params::tests::deserialize_old_preset_migrates_output_channels ... ok\ntest params::tests::param_value_always_none ... ok\ntest params::tests::roundtrip_serde ... ok\ntest tests::aud138_control_recovery_preserves_pending_audio_and_drains_exact_suffix ... ok\ntest tests::aud138_post_reservation_config_change_keeps_the_whole_admitted_block ... ok\ntest tests::aud138_unbuilt_sink_eof_refuses_without_building_or_calling_plugins ... ok\ntest tests::aud138_adjacent_graph_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_host_input_width_mismatch_is_refused_before_process_or_eof ... ok\ntest tests::aud138_unknown_or_infinite_final_tail_is_refused_before_source_drain ... ok\ntest tests::aud138_unknown_or_infinite_upstream_tail_is_refused_before_source_drain ... ok\ntest tests::aud138_reprepare_preflight_refuses_invalid_geometry_and_lifecycles ... ok\ntest tests::audit_transport_tests::failed_second_write_keeps_committed_prefix_and_refuses_new_input_ownership ... ok\ntest tests::audit_transport_tests::missing_or_overreporting_writer_does_not_own_a_failed_input_request ... ok\ntest tests::audit_transport_tests::observed_format_change_stays_latched_after_the_shared_flag_is_cleared ... ok\ntest tests::aud138_reprepare_growth_preserves_pending_frames_and_full_finite_stream ... ok\ntest tests::audit_transport_tests::process_flushes_frames_crossing_physical_fifo_wrap ... ok\ntest tests::audit_transport_tests::wrapped_process_service_and_reset_use_only_prepared_storage ... ok\ntest tests::audit_transport_tests::writer_contract_fault_gates_following_writes_until_control_recovery ... ok\ntest tests::bounded_queue_drops_newest_complete_frames_and_preserves_oldest_order ... ok\ntest tests::config_change_is_quiesced_until_control_thread_service ... ok\ntest tests::control_thread_service_reconnects_reloads_key_and_reasserts_readiness ... ok\ntest tests::diagnostics_are_not_automatable_parameters ... ok\ntest tests::drain_errors_leave_unaccepted_frames_queued ... ok\ntest tests::drain_gates_and_control_recovery_preserve_pending_samples ... ok\ntest tests::drain_orders_new_input_around_an_incomplete_and_completed_eof ... ok\ntest tests::drain_validation_errors_preserve_pending_and_destination ... ok\ntest tests::drain_wraps_frames_across_vecdeque_storage_with_two_writes ... ok\ntest tests::eof_drain_flushes_the_final_partial_write_to_the_writer ... ok\ntest tests::eof_drain_reports_backpressure_and_retries_without_new_input ... ok\ntest tests::explicit_control_recovery_reopens_even_a_connected_transport ... ok\ntest tests::failed_priming_is_transactional_and_keeps_transport_quiesced ... ok\ntest tests::failed_recovery_format_preparation_retains_pending_for_later_service ... ok\ntest tests::failed_reservice_cannot_publish_or_write_partial_prime ... ok\ntest tests::first_blocked_retry_and_terminal_drains_allocate_nothing_or_shrink_storage ... ok\ntest tests::full_multichannel_writes_are_counted_in_frames ... ok\ntest tests::blocked_sink_waits_without_advancing_tail_and_later_hands_off_once ... ok\ntest tests::hal_output_reset_cancels_pending_samples_and_counts_drops_without_transport_io ... ok\ntest tests::initialization_primes_negotiated_fill_and_reports_v2_boundary_latency ... ok\ntest tests::initialize_rejects_transport_rate_and_channel_mismatch ... ok\ntest tests::invalid_transport_frame_count_is_rejected_without_losing_writer ... ok\ntest tests::latency_samples_reports_cached_buffer_capacity ... ok\ntest tests::maximum_channel_full_and_backpressured_callbacks_allocate_nothing ... ok\ntest tests::new_rejects_invalid_channel_count_with_static_error ... ok\ntest tests::new_rejects_too_many_channels ... ok\ntest tests::new_rejects_zero_channels ... ok\ntest tests::partial_write_retries_tail_before_new_audio ... ok\ntest tests::aud138_reprepare_shrink_keeps_pending_queue_larger_than_physical_ring ... ok\ntest tests::process_rejects_mismatched_buffer ... ok\ntest tests::process_validates_initialization_context_overflow_and_sink_output ... ok\ntest tests::pending_drain_observes_unnotified_formats_before_its_first_write ... ok\ntest tests::aud138_reprepare_staging_failure_preserves_old_state_and_retries ... ok\ntest tests::public_daw_host_reset_does_not_replay_pre_reset_pending_samples ... ok\ntest tests::aud138_large_reprepare_keeps_following_process_and_drain_allocation_free ... ok\ntest tests::public_sink_input_refuses_over_capacity_before_advancing_source ... ok\ntest tests::ordinary_process_rejects_terminal_sink_before_audio_side_effects ... ok\ntest tests::aud138_reprepare_writer_error_cleans_partial_prime_and_retries ... ok\ntest tests::public_sink_input_waits_for_pending_capacity_then_retries_distinct_block_once ... ok\ntest tests::public_sink_input_service_retry_and_terminal_calls_do_not_touch_the_heap ... ok\ntest tests::public_sink_parameter_subblocks_share_one_bounded_service_phase ... ok\ntest tests::producer_and_append_failures_require_reset_without_replaying_tail ... ok\ntest tests::public_sink_preflight_does_not_adopt_changed_transport_configuration ... ok\ntest tests::public_daw_host_sink_drain_preflights_tail_before_any_source_consumption ... ok\ntest tests::aud138_reprepare_priming_failure_preserves_local_stream_for_retry ... ok\ntest tests::reinitialize_cancels_pending_only_after_successful_preflight_and_counts_it ... ok\ntest tests::audit_transport_tests::conservation_and_fifo_order_hold_across_transport_lifecycle_sequences ... ok\ntest tests::public_sink_service_only_preserves_controls_clocks_and_requested_telemetry ... ok\ntest tests::reservice_preserves_pending_and_reestablishes_target_fill ... ok\ntest tests::set_parameter_returns_static_no_adjustable_params_error ... ok\ntest tests::ring_capacity_is_not_reported_as_latency ... ok\ntest tests::telemetry_preserves_counters_past_i32_range ... ok\ntest tests::unnotified_formats_preserve_input_and_gate_all_audio_writes ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_unfinished_multichunk_tail ... ok\ntest tests::public_sink_transport_availability_flip_retains_admitted_audio_without_recovery_io ... ok\ntest tests::public_sink_settlement_repairs_after_partial_graph_error_without_replaying_input ... ok\ntest tests::sink_mode_owns_commands_and_requires_reset_after_completion ... ok\ntest tests::public_sink_settlement_services_then_applies_queued_edit_without_replay ... ok\ntest tests::public_sink_post_admission_failures_are_not_replayable ... ok\ntest tests::aud138_reprepare_growth_and_shrink_preserve_an_already_started_drain ... ok\ntest tests::aud138_reprepare_rejects_stale_plan_and_lost_readiness_then_retries ... ok\ntest tests::aud138_reprepare_rejects_plan_observation_mutations_before_quiesce ... ok\n\ntest result: ok. 82 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n",
+    "stderr": "   Compiling math-iir-fir v0.5.27 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-iir-fir)\n   Compiling math-dsp v0.5.35 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-dsp)\n   Compiling sotf-host v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-hal-output v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 14.02s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_output-eb2dcf390112de5b)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "check",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "hal,sotf-host/qa",
+      "--all-targets"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw",
+    "exit_code": 0,
+    "elapsed_seconds": 4.6774881249293685,
+    "stdout": "",
+    "stderr": "    Checking math-iir-fir v0.5.27 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-iir-fir)\n    Checking driver-hal v0.1.13 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/driver-hal)\n    Checking math-dsp v0.5.35 (/Volumes/home_worktrees/issue9-pw-tsy356bc/math-audio/crates/math-dsp)\n    Checking sotf-host v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 4.63s\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "driver-hal",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "hal,sotf-host/qa",
+      "--lib",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw",
+    "exit_code": 0,
+    "elapsed_seconds": 2.737430457957089,
+    "stdout": "",
+    "stderr": "    Checking driver-hal v0.1.13 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/driver-hal)\n    Checking sotf-host v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 2.65s\n"
+  }
+]

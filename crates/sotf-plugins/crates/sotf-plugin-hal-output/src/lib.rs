@@ -52,6 +52,9 @@ use driver_hal::HalOutputWriter;
 trait HalWriter: Send {
     fn is_connected(&self) -> bool;
     fn write(&mut self, buffer: &[f32]) -> usize;
+    fn write_prepared(&mut self, buffer: &[f32], _expected: (u32, u32, u32)) -> usize {
+        self.write(buffer)
+    }
     fn current_format(&self) -> Result<(u32, u32, u32), String>;
     /// Observe atomic format fields without allocation or control-side work.
     fn callback_format(&self) -> Option<(u32, u32, u32)>;
@@ -73,6 +76,10 @@ impl HalWriter for HalOutputWriter {
 
     fn write(&mut self, buffer: &[f32]) -> usize {
         HalOutputWriter::write(self, buffer)
+    }
+
+    fn write_prepared(&mut self, buffer: &[f32], expected: (u32, u32, u32)) -> usize {
+        HalOutputWriter::write_with_format(self, buffer, expected)
     }
 
     fn current_format(&self) -> Result<(u32, u32, u32), String> {
@@ -354,7 +361,7 @@ impl HalOutputPlugin {
             writer.reload_cipher()?;
         }
         self.validate_transport_format(self.sample_rate)?;
-        self.prime_target_fill()?;
+        self.prime_target_fill(self.sample_rate)?;
         let writer = self
             .writer
             .as_ref()
@@ -462,7 +469,7 @@ impl HalOutputPlugin {
 
         self.quiesce_transport()
             .map_err(SinkTransportRecoveryError::Transport)?;
-        self.prime_target_fill()
+        self.prime_target_fill(self.sample_rate)
             .map_err(SinkTransportRecoveryError::Transport)?;
 
         let Some(actual_after_prime) = self.current_transport_format_for_recovery() else {
@@ -699,8 +706,16 @@ impl HalOutputPlugin {
             let writer = self.writer.as_mut().ok_or_else(|| {
                 SinkTransportRecoveryError::Transport(ERR_HAL_WRITER_NOT_AVAILABLE.into())
             })?;
-            let written = Self::write_frames(writer.as_mut(), &staged_prefill, self.channels)
-                .map_err(SinkTransportRecoveryError::Transport)?;
+            let written = Self::write_frames(
+                writer.as_mut(),
+                &staged_prefill,
+                (
+                    plan.target_format.sample_rate,
+                    plan.target_format.channels as u32,
+                    plan.target_format.buffer_frames as u32,
+                ),
+            )
+            .map_err(SinkTransportRecoveryError::Transport)?;
             let observed = writer.available_read_frames();
             if written == plan.target_format.buffer_frames && observed == written {
                 Ok(())
@@ -903,7 +918,7 @@ impl HalOutputPlugin {
         Ok(())
     }
 
-    fn prime_target_fill(&mut self) -> Result<(), String> {
+    fn prime_target_fill(&mut self, sample_rate: u32) -> Result<(), String> {
         let result = (|| -> Result<(), String> {
             let samples = self
                 .target_fill_frames
@@ -917,7 +932,15 @@ impl HalOutputPlugin {
                 .writer
                 .as_mut()
                 .ok_or_else(|| ERR_HAL_WRITER_NOT_AVAILABLE.to_string())?;
-            let written = Self::write_frames(writer.as_mut(), silence, self.channels)?;
+            let written = Self::write_frames(
+                writer.as_mut(),
+                silence,
+                (
+                    sample_rate,
+                    self.channels as u32,
+                    self.buffer_capacity as u32,
+                ),
+            )?;
             let observed = writer.available_read_frames();
             if written == self.target_fill_frames && observed == self.target_fill_frames {
                 Ok(())
@@ -961,9 +984,10 @@ impl HalOutputPlugin {
         pending: &mut VecDeque<f32>,
         staging: &mut Vec<f32>,
         writer: &mut dyn HalWriter,
-        channels: usize,
+        expected: (u32, u32, u32),
         written_total: &mut u64,
     ) -> Result<usize, String> {
+        let channels = expected.1 as usize;
         debug_assert_eq!(pending.len() % channels, 0);
         staging.clear();
         let (front, back) = pending.as_slices();
@@ -994,7 +1018,7 @@ impl HalOutputPlugin {
                     Self::write_frames(
                         writer,
                         &staging[offset_samples..offset_samples + requested],
-                        channels,
+                        expected,
                     )?,
                 )
             } else {
@@ -1002,7 +1026,7 @@ impl HalOutputPlugin {
                 if front.is_empty() {
                     break;
                 }
-                (front.len(), Self::write_frames(writer, front, channels)?)
+                (front.len(), Self::write_frames(writer, front, expected)?)
             };
             let written_samples = written_frames * channels;
             pending.drain(..written_samples);
@@ -1020,10 +1044,11 @@ impl HalOutputPlugin {
     fn write_frames(
         writer: &mut dyn HalWriter,
         samples: &[f32],
-        channels: usize,
+        expected: (u32, u32, u32),
     ) -> Result<usize, String> {
+        let channels = expected.1 as usize;
         let requested_frames = samples.len() / channels;
-        let written_frames = writer.write(samples);
+        let written_frames = writer.write_prepared(samples, expected);
         if written_frames > requested_frames {
             return Err(format!(
                 "HAL output writer returned {written_frames} frames for {requested_frames}-frame request"
@@ -1099,7 +1124,7 @@ impl Plugin for HalOutputPlugin {
         self.check_transport_format(sample_rate)?;
         self.quiesce_transport()?;
         self.validate_transport_format(sample_rate)?;
-        self.prime_target_fill()?;
+        self.prime_target_fill(sample_rate)?;
         self.cancel_pending_for_reinitialize();
         self.sample_rate = sample_rate;
         if let Some(writer) = self.writer.as_ref() {
@@ -1218,7 +1243,11 @@ impl Plugin for HalOutputPlugin {
             &mut self.pending,
             &mut self.drain_staging,
             writer.as_mut(),
-            self.channels,
+            (
+                self.sample_rate,
+                self.channels as u32,
+                self.buffer_capacity as u32,
+            ),
             &mut self.written_frames,
         );
         if let Err(error) = written {
@@ -1336,7 +1365,11 @@ impl Plugin for HalOutputPlugin {
                 &mut self.pending,
                 &mut self.drain_staging,
                 writer.as_mut(),
-                self.channels,
+                (
+                    self.sample_rate,
+                    self.channels as u32,
+                    self.buffer_capacity as u32,
+                ),
                 &mut self.written_frames,
             ) {
                 self.state = HalOutputTransportState::FormatError;
@@ -1354,7 +1387,15 @@ impl Plugin for HalOutputPlugin {
             }
         }
 
-        let written_frames = match Self::write_frames(writer.as_mut(), input, self.channels) {
+        let written_frames = match Self::write_frames(
+            writer.as_mut(),
+            input,
+            (
+                self.sample_rate,
+                self.channels as u32,
+                self.buffer_capacity as u32,
+            ),
+        ) {
             Ok(written) => written,
             Err(error) => {
                 self.state = HalOutputTransportState::FormatError;
@@ -1734,6 +1775,20 @@ mod tests {
     impl HalWriter for FakeWriter {
         fn is_connected(&self) -> bool {
             self.state.lock().unwrap().connected
+        }
+
+        fn write_prepared(&mut self, buffer: &[f32], expected: (u32, u32, u32)) -> usize {
+            // Match native format refusal, including initial and reprepare primes.
+            let actual = self
+                .state
+                .lock()
+                .unwrap()
+                .transport_format
+                .unwrap_or(self.format);
+            if actual != expected {
+                return 0;
+            }
+            self.write(buffer)
         }
 
         fn write(&mut self, buffer: &[f32]) -> usize {

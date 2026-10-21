@@ -1,0 +1,26 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "driver-hal",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "prepared_write",
+      "--",
+      "--nocapture"
+    ],
+    "cwd": "/Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw",
+    "exit_code": 101,
+    "elapsed_seconds": 0.2667725409846753,
+    "stdout": "",
+    "stderr": "error: cannot update the lock file /Volumes/home_worktrees/issue9-pw-tsy356bc/sotf-daw/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n"
+  }
+]

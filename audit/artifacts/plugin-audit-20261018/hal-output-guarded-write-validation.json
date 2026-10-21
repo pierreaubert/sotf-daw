@@ -1,0 +1,45 @@
+{
+  "result": "Every native process/FIFO/drain/prime write now supplies prepared rate/channel/buffer geometry to HalOutputWriter::write_with_format. The existing write commit encloses nonzero geometry equality, driver readiness and cached fingerprint validation through encryption, ring copy and cursor publication. Quiesced geometry owners cannot change format between check and copy; refusal returns zero without cursor advancement and retains logical FIFO ownership. Reprepare prime uses plan target format; initialization prime explicitly uses validated incoming clock before committing self.sample_rate. Initial native run exposed a zero-clock prime refusal; the fixed fake writer now enforces prepared geometry so core tests cover that integration. Clean driver base 172b78d plus exactly the staged source patch passes3 focused driver tests (20000 write/read observations and512 concurrent geometry requests),82 core release tests, native all-target check and strict driver/plugin library Clippy. Temporary clean-checkout lock repair adds only the missing engine rustix dependency, no registry upgrades; user lock untouched. Isolated current-driver native32 cases (1-16 channels,48/96k) pass geometry/key refusal without publication, FIFO/drop conservation, remapping, pending recovery,64->128 reprepare and zero callback allocations. Strict native plugin all-target Clippy passes. Dirty driver dependency snapshots remain stable. Sparse shared-file staging includes only the3-line module/re-export insertion; unrelated driver/engine/common/lock changes excluded. Key fencing requires owner encryption publication through the same quiesced protocol: committed base key setters do not provide it. Raw header stores, session-generation/ABA, automatic liveness, Swift/device/clock/deadline/audibility proof remain open; overall35/45 complete.",
+  "clean_base_commit": "172b78d464381442be7a9d6928de50e6bf24f688",
+  "code_patch_sha256": "be2d4d7146a3d7d9f2de7db62452d423a6b45e28c6c520c175f5908950bf305b",
+  "source_hashes": {
+    "crates/driver-hal/src/shared_memory/hal_output_writer.rs": {
+      "staged_clean_sha256": "b451d85302e39b28ef777438a5085cc141396663e8a2d376802980b842e48108",
+      "native_worktree_sha256": "b451d85302e39b28ef777438a5085cc141396663e8a2d376802980b842e48108"
+    },
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": {
+      "staged_clean_sha256": "31072a21ca2cd826ee1eb3d0ed53fdc367e5eb7727a466cdcba2d4321526e264",
+      "native_worktree_sha256": "a489283ee923906dfba91b175bdb94313cfe185fb04f5bb90f7628d9db8d0660"
+    },
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs": {
+      "staged_clean_sha256": "b45d294d73f8d170f0a46deaaf03afc62be01091338a1955dc43975b8c38f166",
+      "native_worktree_sha256": "b45d294d73f8d170f0a46deaaf03afc62be01091338a1955dc43975b8c38f166"
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs": {
+      "staged_clean_sha256": "0087a7a7ad33b63eac82f1f44b12fd5ae7e2a2859eea89e8cfcbffd86276e54f",
+      "native_worktree_sha256": "0087a7a7ad33b63eac82f1f44b12fd5ae7e2a2859eea89e8cfcbffd86276e54f"
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs": {
+      "staged_clean_sha256": "deb72e57c2c57fd71a97056490bc8429867d3700bb085b5d98ec7beb75ab2642",
+      "native_worktree_sha256": "deb72e57c2c57fd71a97056490bc8429867d3700bb085b5d98ec7beb75ab2642"
+    }
+  },
+  "clean_gates": "hal-output-guarded-write-clean-corrected-gates.json",
+  "clean_lock_repair": {
+    "lock_diff": "diff --git a/Cargo.lock b/Cargo.lock\nindex a45962e..61c7745 100644\n--- a/Cargo.lock\n+++ b/Cargo.lock\n@@ -7526,6 +7526,7 @@ dependencies = [\n  \"math-rir\",\n  \"rtrb\",\n  \"rustfft\",\n+ \"rustix\",\n  \"serde\",\n  \"serde_json\",\n  \"sha2\",\n"
+  },
+  "native_gates": "hal-output-guarded-write-native.json",
+  "native_cases": 32,
+  "core_release_passed": 82,
+  "driver_regressions_passed": 3,
+  "callback_allocations": 0,
+  "callback_frees": "not independently measured in native harness",
+  "dirty_dependency_snapshot_stable": true,
+  "initial_refusal": "hal-output-guarded-write-native-initial-refusal.json",
+  "rejected_lock_regeneration": "hal-output-guarded-write-clean-lock-resolution.json",
+  "limitations": [
+    "Concurrent key fencing depends on quiesced owner publication; base key setters are not quiesced.",
+    "No session generation/ABA/raw-store/Swift/device/deadline/audibility guarantee.",
+    "Clean checkout uses one-entry temporary lock repair and current sibling dependency symlinks."
+  ]
+}

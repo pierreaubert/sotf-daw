@@ -1,0 +1,535 @@
+diff --git a/crates/driver-hal/src/shared_memory/hal_output_writer.rs b/crates/driver-hal/src/shared_memory/hal_output_writer.rs
+index 8041316..d85170b 100644
+--- a/crates/driver-hal/src/shared_memory/hal_output_writer.rs
++++ b/crates/driver-hal/src/shared_memory/hal_output_writer.rs
+@@ -2,8 +2,8 @@ use super::consts::pre_alloc_capacity_samples;
+ use super::encrypted::encrypted_record_slots;
+ use super::encrypted::encrypted_record_total_bytes;
+ use super::misc::fingerprints_equal;
+-use super::shared_audio_buffer::SharedAudioBuffer;
+ use super::shared_audio_buffer::load_initial_cipher;
++use super::shared_audio_buffer::{PreparedWriteRefusal, SharedAudioBuffer};
+ use std::sync::atomic::{AtomicU64, Ordering};
+ 
+ /// Writer adapter for HAL output.
+@@ -147,6 +147,36 @@ impl HalOutputWriter {
+         }
+     }
+ 
++    /// Write only under the caller's prepared stream geometry.
++    ///
++    /// `expected` is `(sample_rate, channel_count, buffer_frames)`. The format
++    /// and cached encryption key are checked under the same write commit as
++    /// the copy and cursor publication. A quiesced control transition cannot
++    /// slip between validation and the write. Encryption fencing requires the
++    /// owner to publish key fields through that quiesced protocol too; raw
++    /// atomic stores are not fenced. Returns zero on refusal or full
++    /// transport. Uses prepared staging without filesystem access or allocation.
++    /// This does not establish a session-generation or ABA identity contract.
++    pub fn write_with_format(&mut self, samples: &[f32], expected: (u32, u32, u32)) -> usize {
++        let Some(buffer) = self.buffer.as_mut() else {
++            return 0;
++        };
++        match buffer.write_prepared(
++            samples,
++            expected,
++            self.cipher.as_ref(),
++            &mut self.ciphertext_buf,
++            &mut self.encrypted_buf,
++        ) {
++            Ok(frames) => frames,
++            Err(PreparedWriteRefusal::KeyMismatch) => {
++                self.key_mismatch_count.fetch_add(1, Ordering::Relaxed);
++                0
++            }
++            Err(_) => 0,
++        }
++    }
++
+     /// Number of writes suppressed because the cached session key did not
+     /// match the shared-memory fingerprint. Inspect from a control/diagnostic
+     /// thread; the audio path only performs a relaxed atomic increment.
+diff --git a/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs b/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
+index 9abb303..0884070 100644
+--- a/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
+@@ -1,3 +1,6 @@
++mod prepared_write;
++pub(super) use prepared_write::PreparedWriteRefusal;
++
+ use super::SharedAudioHeader;
+ use super::consts::ENCRYPTED_RECORD_HEADER_BYTES;
+ use super::consts::ENCRYPTED_RECORD_HEADER_SLOTS;
+diff --git a/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs b/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs
+new file mode 100644
+index 0000000..370a15f
+--- /dev/null
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs
+@@ -0,0 +1,210 @@
++//! Compare prepared geometry and key while owning the ring write transaction.
++
++use super::{CONFIGURING_WRITE_COMMIT, SharedAudioBuffer};
++use crate::encryption::AudioCipher;
++use crate::shared_memory::misc::fingerprints_equal;
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub(in crate::shared_memory) enum PreparedWriteRefusal {
++    Unavailable,
++    FormatChanged,
++    KeyMismatch,
++}
++
++struct WriteCommit<'a> {
++    shared: &'a mut SharedAudioBuffer,
++}
++impl Drop for WriteCommit<'_> {
++    fn drop(&mut self) {
++        self.shared.release_io_commit(CONFIGURING_WRITE_COMMIT);
++    }
++}
++
++impl SharedAudioBuffer {
++    pub(in crate::shared_memory) fn write_prepared(
++        &mut self,
++        samples: &[f32],
++        expected: (u32, u32, u32),
++        cipher: Option<&AudioCipher>,
++        ciphertext: &mut Vec<u8>,
++        encrypted: &mut Vec<f32>,
++    ) -> Result<usize, PreparedWriteRefusal> {
++        if !self.try_acquire_io_commit(CONFIGURING_WRITE_COMMIT) {
++            return Err(PreparedWriteRefusal::Unavailable);
++        }
++        let guard = WriteCommit { shared: self };
++        if !guard.shared.driver_ready() {
++            return Err(PreparedWriteRefusal::Unavailable);
++        }
++        let actual = (
++            guard.shared.sample_rate(),
++            guard.shared.channel_count(),
++            guard.shared.buffer_frames(),
++        );
++        if expected.0 == 0 || expected.1 == 0 || expected.2 == 0 || actual != expected {
++            return Err(PreparedWriteRefusal::FormatChanged);
++        }
++        // Owners using the quiesced protocol cannot change geometry or
++        // encryption while this commit is held. Keep key validation in the same
++        // section as encryption, the ring copy and cursor publication.
++        if guard.shared.is_encrypted() {
++            let cipher = cipher
++                .filter(|c| fingerprints_equal(c.fingerprint(), &guard.shared.key_fingerprint()))
++                .ok_or(PreparedWriteRefusal::KeyMismatch)?;
++            Ok(guard
++                .shared
++                .write_audio_encrypted_under_commit(samples, cipher, ciphertext, encrypted))
++        } else {
++            Ok(guard.shared.write_audio_under_commit(samples))
++        }
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use std::sync::atomic::Ordering;
++
++    fn fixture() -> (tempfile::TempDir, SharedAudioBuffer) {
++        let root = std::path::Path::new("/Volumes/home_tmp/tmp");
++        let root = if root.is_dir() {
++            root.to_path_buf()
++        } else {
++            std::env::temp_dir()
++        };
++        let directory = tempfile::tempdir_in(root).unwrap();
++        let buffer =
++            SharedAudioBuffer::create_or_open(directory.path().join("audio.shm"), 48_000, 64, 2)
++                .unwrap();
++        buffer.header().driver_ready.store(1, Ordering::Release);
++        (directory, buffer)
++    }
++    fn write(
++        buffer: &mut SharedAudioBuffer,
++        format: (u32, u32, u32),
++        cipher: Option<&AudioCipher>,
++    ) -> Result<usize, PreparedWriteRefusal> {
++        buffer.write_prepared(
++            &[0.125, 0.25],
++            format,
++            cipher,
++            &mut Vec::with_capacity(4096),
++            &mut Vec::with_capacity(1024),
++        )
++    }
++
++    #[test]
++    fn prepared_geometry_and_key_refusals_do_not_publish_or_retain_the_guard() {
++        let (_directory, mut buffer) = fixture();
++        for format in [
++            (96_000, 2, 64),
++            (48_000, 1, 64),
++            (48_000, 2, 128),
++            (0, 2, 64),
++        ] {
++            let before = buffer.header().write_position.load(Ordering::Acquire);
++            assert_eq!(
++                write(&mut buffer, format, None),
++                Err(PreparedWriteRefusal::FormatChanged)
++            );
++            assert_eq!(
++                buffer.header().write_position.load(Ordering::Acquire),
++                before
++            );
++            assert_eq!(
++                buffer.header().configuring.load(Ordering::Acquire) & CONFIGURING_WRITE_COMMIT,
++                0
++            );
++        }
++        let a = AudioCipher::new(&[0x11; 32]);
++        let b = AudioCipher::new(&[0x22; 32]);
++        buffer.set_encrypted(true);
++        buffer.set_key_fingerprint(*b.fingerprint());
++        let before = buffer.header().write_position.load(Ordering::Acquire);
++        assert_eq!(
++            write(&mut buffer, (48_000, 2, 64), Some(&a)),
++            Err(PreparedWriteRefusal::KeyMismatch)
++        );
++        assert_eq!(
++            buffer.header().write_position.load(Ordering::Acquire),
++            before
++        );
++        assert_eq!(write(&mut buffer, (48_000, 2, 64), Some(&b)), Ok(1));
++        buffer.set_encrypted(false);
++        buffer.flush_audio();
++        assert_eq!(write(&mut buffer, (48_000, 2, 64), None), Ok(1));
++        let mut out = [0.0; 2];
++        assert_eq!(buffer.read_audio(&mut out), 1);
++        assert_eq!(out, [0.125, 0.25]);
++    }
++
++    #[test]
++    fn prepared_write_guard_excludes_quiesced_geometry_publication() {
++        let (directory, mut buffer) = fixture();
++        let mut control = SharedAudioBuffer::open(directory.path().join("audio.shm")).unwrap();
++        assert!(buffer.try_acquire_io_commit(CONFIGURING_WRITE_COMMIT));
++        {
++            let guard = WriteCommit {
++                shared: &mut buffer,
++            };
++            control.set_sample_rate(96_000);
++            assert_eq!(guard.shared.sample_rate(), 48_000);
++        }
++        control.set_sample_rate(96_000);
++        assert_eq!(buffer.sample_rate(), 96_000);
++        assert_eq!(
++            write(&mut buffer, (48_000, 2, 64), None),
++            Err(PreparedWriteRefusal::FormatChanged)
++        );
++    }
++
++    #[test]
++    fn concurrent_control_never_receives_prepared_48k_audio_in_a_96k_epoch() {
++        let (directory, mut writer) = fixture();
++        let path = directory.path().join("audio.shm");
++        let reader = SharedAudioBuffer::open(&path).unwrap();
++        let mut control = SharedAudioBuffer::open(&path).unwrap();
++        control.set_sample_rate(96_000);
++        assert_eq!(
++            write(&mut writer, (48_000, 2, 64), None),
++            Err(PreparedWriteRefusal::FormatChanged)
++        );
++        let worker = std::thread::spawn(move || {
++            for index in 0..512 {
++                control.set_sample_rate(if index % 2 == 0 { 48_000 } else { 96_000 });
++                std::thread::yield_now();
++            }
++        });
++        let mut ciphertext = Vec::with_capacity(4096);
++        let mut encrypted = Vec::with_capacity(1024);
++        let mut observed_96k = 0;
++        for _ in 0..20_000 {
++            let _ = writer.write_prepared(
++                &[0.125, 0.25],
++                (48_000, 2, 64),
++                None,
++                &mut ciphertext,
++                &mut encrypted,
++            );
++            if let Some(mut commit) = reader.try_read_commit() {
++                let rate = commit.identity().sample_rate;
++                let mut out = [0.0; 256];
++                let frames = commit.read_audio(&mut out);
++                if rate == 96_000 {
++                    assert_eq!(frames, 0);
++                    observed_96k += 1;
++                } else {
++                    assert_eq!(rate, 48_000);
++                    for frame in out[..frames * 2].chunks_exact(2) {
++                        assert_eq!(frame, [0.125, 0.25]);
++                    }
++                }
++            }
++        }
++        worker.join().unwrap();
++        assert!(observed_96k > 0);
++        println!(
++            "prepared_write_control observations=20000 control_requests=512 rate96_empty_observations={observed_96k}"
++        );
++    }
++}
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs b/crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs
+index e2a6f70..693c21f 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs
+@@ -52,6 +52,9 @@ use driver_hal::HalOutputWriter;
+ trait HalWriter: Send {
+     fn is_connected(&self) -> bool;
+     fn write(&mut self, buffer: &[f32]) -> usize;
++    fn write_prepared(&mut self, buffer: &[f32], _expected: (u32, u32, u32)) -> usize {
++        self.write(buffer)
++    }
+     fn current_format(&self) -> Result<(u32, u32, u32), String>;
+     /// Observe atomic format fields without allocation or control-side work.
+     fn callback_format(&self) -> Option<(u32, u32, u32)>;
+@@ -75,6 +78,10 @@ impl HalWriter for HalOutputWriter {
+         HalOutputWriter::write(self, buffer)
+     }
+ 
++    fn write_prepared(&mut self, buffer: &[f32], expected: (u32, u32, u32)) -> usize {
++        HalOutputWriter::write_with_format(self, buffer, expected)
++    }
++
+     fn current_format(&self) -> Result<(u32, u32, u32), String> {
+         HalOutputWriter::current_format(self).map_err(|error| error.to_string())
+     }
+@@ -354,7 +361,7 @@ impl HalOutputPlugin {
+             writer.reload_cipher()?;
+         }
+         self.validate_transport_format(self.sample_rate)?;
+-        self.prime_target_fill()?;
++        self.prime_target_fill(self.sample_rate)?;
+         let writer = self
+             .writer
+             .as_ref()
+@@ -462,7 +469,7 @@ impl HalOutputPlugin {
+ 
+         self.quiesce_transport()
+             .map_err(SinkTransportRecoveryError::Transport)?;
+-        self.prime_target_fill()
++        self.prime_target_fill(self.sample_rate)
+             .map_err(SinkTransportRecoveryError::Transport)?;
+ 
+         let Some(actual_after_prime) = self.current_transport_format_for_recovery() else {
+@@ -699,8 +706,16 @@ impl HalOutputPlugin {
+             let writer = self.writer.as_mut().ok_or_else(|| {
+                 SinkTransportRecoveryError::Transport(ERR_HAL_WRITER_NOT_AVAILABLE.into())
+             })?;
+-            let written = Self::write_frames(writer.as_mut(), &staged_prefill, self.channels)
+-                .map_err(SinkTransportRecoveryError::Transport)?;
++            let written = Self::write_frames(
++                writer.as_mut(),
++                &staged_prefill,
++                (
++                    plan.target_format.sample_rate,
++                    plan.target_format.channels as u32,
++                    plan.target_format.buffer_frames as u32,
++                ),
++            )
++            .map_err(SinkTransportRecoveryError::Transport)?;
+             let observed = writer.available_read_frames();
+             if written == plan.target_format.buffer_frames && observed == written {
+                 Ok(())
+@@ -903,7 +918,7 @@ impl HalOutputPlugin {
+         Ok(())
+     }
+ 
+-    fn prime_target_fill(&mut self) -> Result<(), String> {
++    fn prime_target_fill(&mut self, sample_rate: u32) -> Result<(), String> {
+         let result = (|| -> Result<(), String> {
+             let samples = self
+                 .target_fill_frames
+@@ -917,7 +932,15 @@ impl HalOutputPlugin {
+                 .writer
+                 .as_mut()
+                 .ok_or_else(|| ERR_HAL_WRITER_NOT_AVAILABLE.to_string())?;
+-            let written = Self::write_frames(writer.as_mut(), silence, self.channels)?;
++            let written = Self::write_frames(
++                writer.as_mut(),
++                silence,
++                (
++                    sample_rate,
++                    self.channels as u32,
++                    self.buffer_capacity as u32,
++                ),
++            )?;
+             let observed = writer.available_read_frames();
+             if written == self.target_fill_frames && observed == self.target_fill_frames {
+                 Ok(())
+@@ -961,9 +984,10 @@ impl HalOutputPlugin {
+         pending: &mut VecDeque<f32>,
+         staging: &mut Vec<f32>,
+         writer: &mut dyn HalWriter,
+-        channels: usize,
++        expected: (u32, u32, u32),
+         written_total: &mut u64,
+     ) -> Result<usize, String> {
++        let channels = expected.1 as usize;
+         debug_assert_eq!(pending.len() % channels, 0);
+         staging.clear();
+         let (front, back) = pending.as_slices();
+@@ -994,7 +1018,7 @@ impl HalOutputPlugin {
+                     Self::write_frames(
+                         writer,
+                         &staging[offset_samples..offset_samples + requested],
+-                        channels,
++                        expected,
+                     )?,
+                 )
+             } else {
+@@ -1002,7 +1026,7 @@ impl HalOutputPlugin {
+                 if front.is_empty() {
+                     break;
+                 }
+-                (front.len(), Self::write_frames(writer, front, channels)?)
++                (front.len(), Self::write_frames(writer, front, expected)?)
+             };
+             let written_samples = written_frames * channels;
+             pending.drain(..written_samples);
+@@ -1020,10 +1044,11 @@ impl HalOutputPlugin {
+     fn write_frames(
+         writer: &mut dyn HalWriter,
+         samples: &[f32],
+-        channels: usize,
++        expected: (u32, u32, u32),
+     ) -> Result<usize, String> {
++        let channels = expected.1 as usize;
+         let requested_frames = samples.len() / channels;
+-        let written_frames = writer.write(samples);
++        let written_frames = writer.write_prepared(samples, expected);
+         if written_frames > requested_frames {
+             return Err(format!(
+                 "HAL output writer returned {written_frames} frames for {requested_frames}-frame request"
+@@ -1099,7 +1124,7 @@ impl Plugin for HalOutputPlugin {
+         self.check_transport_format(sample_rate)?;
+         self.quiesce_transport()?;
+         self.validate_transport_format(sample_rate)?;
+-        self.prime_target_fill()?;
++        self.prime_target_fill(sample_rate)?;
+         self.cancel_pending_for_reinitialize();
+         self.sample_rate = sample_rate;
+         if let Some(writer) = self.writer.as_ref() {
+@@ -1218,7 +1243,11 @@ impl Plugin for HalOutputPlugin {
+             &mut self.pending,
+             &mut self.drain_staging,
+             writer.as_mut(),
+-            self.channels,
++            (
++                self.sample_rate,
++                self.channels as u32,
++                self.buffer_capacity as u32,
++            ),
+             &mut self.written_frames,
+         );
+         if let Err(error) = written {
+@@ -1336,7 +1365,11 @@ impl Plugin for HalOutputPlugin {
+                 &mut self.pending,
+                 &mut self.drain_staging,
+                 writer.as_mut(),
+-                self.channels,
++                (
++                    self.sample_rate,
++                    self.channels as u32,
++                    self.buffer_capacity as u32,
++                ),
+                 &mut self.written_frames,
+             ) {
+                 self.state = HalOutputTransportState::FormatError;
+@@ -1354,7 +1387,15 @@ impl Plugin for HalOutputPlugin {
+             }
+         }
+ 
+-        let written_frames = match Self::write_frames(writer.as_mut(), input, self.channels) {
++        let written_frames = match Self::write_frames(
++            writer.as_mut(),
++            input,
++            (
++                self.sample_rate,
++                self.channels as u32,
++                self.buffer_capacity as u32,
++            ),
++        ) {
+             Ok(written) => written,
+             Err(error) => {
+                 self.state = HalOutputTransportState::FormatError;
+@@ -1736,6 +1777,20 @@ mod tests {
+             self.state.lock().unwrap().connected
+         }
+ 
++        fn write_prepared(&mut self, buffer: &[f32], expected: (u32, u32, u32)) -> usize {
++            // Match native format refusal, including initial and reprepare primes.
++            let actual = self
++                .state
++                .lock()
++                .unwrap()
++                .transport_format
++                .unwrap_or(self.format);
++            if actual != expected {
++                return 0;
++            }
++            self.write(buffer)
++        }
++
+         fn write(&mut self, buffer: &[f32]) -> usize {
+             let mut state = self.state.lock().unwrap();
+             let channel_count = state.transport_format.unwrap_or(self.format).1 as usize;
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs b/crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs
+index 744921a..d57be07 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs
+@@ -90,6 +90,23 @@ fn native_cases(runtime: &Path) {
+             p.initialize(f64::from(rate)).unwrap();
+             prime(&peer, ch);
+             assert_eq!(p.latency_samples(), 128);
++            let mut guarded = driver_hal::HalOutputWriter::new().unwrap();
++            let expected = (rate, ch as u32, 64);
++            for changed in 0..3 {
++                match changed {
++                    0 => peer.set_sample_rate(if rate == 48_000 { 96_000 } else { 48_000 }),
++                    1 => peer.set_channel_count(if ch == 16 { 15 } else { ch as u32 + 1 }),
++                    _ => peer.set_buffer_frames(128),
++                }
++                let before = peer.header().write_position.load(Ordering::Acquire);
++                let probe = data(ch, 1, 900_000);
++                sotf_host::assert_no_allocs("prepared native geometry refusal", || {
++                    assert_eq!(guarded.write_with_format(&probe, expected), 0);
++                });
++                assert_eq!(peer.header().write_position.load(Ordering::Acquire), before);
++                peer.reconfigure_quiesced(Some(rate), Some(64), Some(ch as u32));
++            }
++            drop(guarded);
+             // Saturate the physical ring before exercising the logical queue's policy.
+             let fill = vec![-1.0; 64 * ch];
+             let mut filled = 0;
+@@ -253,8 +270,22 @@ fn native_cases(runtime: &Path) {
+             expected.extend(second);
+             assert_eq!(encrypted_take(&current, ch, 10, &b), expected);
+             conservation(&p);
++            let mut guarded = driver_hal::HalOutputWriter::new().unwrap();
++            current.set_key_fingerprint(*a.fingerprint());
++            let before = current.header().write_position.load(Ordering::Acquire);
++            let probe = data(ch, 1, 900_000);
++            sotf_host::assert_no_allocs("prepared native key refusal", || {
++                assert_eq!(guarded.write_with_format(&probe, (rate, ch as u32, 128)), 0);
++            });
++            assert_eq!(guarded.key_mismatch_count(), 1);
++            assert_eq!(
++                current.header().write_position.load(Ordering::Acquire),
++                before
++            );
++            current.set_key_fingerprint(*b.fingerprint());
++            drop(guarded);
+             println!(
+-                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true unnotified_rate=true callback_allocations=0"
++                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true unnotified_rate=true guarded_geometry=true guarded_key=true callback_allocations=0"
+             );
+             drop(p);
+             assert!(!current.engine_ready());

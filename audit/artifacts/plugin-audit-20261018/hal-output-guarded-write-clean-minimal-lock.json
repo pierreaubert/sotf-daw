@@ -1,0 +1,3 @@
+{
+  "lock_diff": "diff --git a/Cargo.lock b/Cargo.lock\nindex a45962e..61c7745 100644\n--- a/Cargo.lock\n+++ b/Cargo.lock\n@@ -7526,6 +7526,7 @@ dependencies = [\n  \"math-rir\",\n  \"rtrb\",\n  \"rustfft\",\n+ \"rustix\",\n  \"serde\",\n  \"serde_json\",\n  \"sha2\",\n"
+}

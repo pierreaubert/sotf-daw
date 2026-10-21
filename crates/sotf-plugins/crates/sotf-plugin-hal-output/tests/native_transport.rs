@@ -90,6 +90,23 @@ fn native_cases(runtime: &Path) {
             p.initialize(f64::from(rate)).unwrap();
             prime(&peer, ch);
             assert_eq!(p.latency_samples(), 128);
+            let mut guarded = driver_hal::HalOutputWriter::new().unwrap();
+            let expected = (rate, ch as u32, 64);
+            for changed in 0..3 {
+                match changed {
+                    0 => peer.set_sample_rate(if rate == 48_000 { 96_000 } else { 48_000 }),
+                    1 => peer.set_channel_count(if ch == 16 { 15 } else { ch as u32 + 1 }),
+                    _ => peer.set_buffer_frames(128),
+                }
+                let before = peer.header().write_position.load(Ordering::Acquire);
+                let probe = data(ch, 1, 900_000);
+                sotf_host::assert_no_allocs("prepared native geometry refusal", || {
+                    assert_eq!(guarded.write_with_format(&probe, expected), 0);
+                });
+                assert_eq!(peer.header().write_position.load(Ordering::Acquire), before);
+                peer.reconfigure_quiesced(Some(rate), Some(64), Some(ch as u32));
+            }
+            drop(guarded);
             // Saturate the physical ring before exercising the logical queue's policy.
             let fill = vec![-1.0; 64 * ch];
             let mut filled = 0;
@@ -253,8 +270,22 @@ fn native_cases(runtime: &Path) {
             expected.extend(second);
             assert_eq!(encrypted_take(&current, ch, 10, &b), expected);
             conservation(&p);
+            let mut guarded = driver_hal::HalOutputWriter::new().unwrap();
+            current.set_key_fingerprint(*a.fingerprint());
+            let before = current.header().write_position.load(Ordering::Acquire);
+            let probe = data(ch, 1, 900_000);
+            sotf_host::assert_no_allocs("prepared native key refusal", || {
+                assert_eq!(guarded.write_with_format(&probe, (rate, ch as u32, 128)), 0);
+            });
+            assert_eq!(guarded.key_mismatch_count(), 1);
+            assert_eq!(
+                current.header().write_position.load(Ordering::Acquire),
+                before
+            );
+            current.set_key_fingerprint(*b.fingerprint());
+            drop(guarded);
             println!(
-                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true unnotified_rate=true callback_allocations=0"
+                "native_hal_output rate={rate} channels={ch} saturation_fifo_exact=true drop_newest=17 service_remap=true terminal_remap=true reprepare_remap=true retired_readiness_cleared=true key_recovery=true config_latch=true unnotified_rate=true guarded_geometry=true guarded_key=true callback_allocations=0"
             );
             drop(p);
             assert!(!current.engine_ready());

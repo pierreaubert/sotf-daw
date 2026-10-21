@@ -1,0 +1,22 @@
+{
+  "crates/driver-hal/src/shared_memory/hal_output_writer.rs": {
+    "staged_clean_sha256": "b451d85302e39b28ef777438a5085cc141396663e8a2d376802980b842e48108",
+    "native_worktree_sha256": "b451d85302e39b28ef777438a5085cc141396663e8a2d376802980b842e48108"
+  },
+  "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": {
+    "staged_clean_sha256": "31072a21ca2cd826ee1eb3d0ed53fdc367e5eb7727a466cdcba2d4321526e264",
+    "native_worktree_sha256": "a489283ee923906dfba91b175bdb94313cfe185fb04f5bb90f7628d9db8d0660"
+  },
+  "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs": {
+    "staged_clean_sha256": "b45d294d73f8d170f0a46deaaf03afc62be01091338a1955dc43975b8c38f166",
+    "native_worktree_sha256": "b45d294d73f8d170f0a46deaaf03afc62be01091338a1955dc43975b8c38f166"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-hal-output/src/lib.rs": {
+    "staged_clean_sha256": "0087a7a7ad33b63eac82f1f44b12fd5ae7e2a2859eea89e8cfcbffd86276e54f",
+    "native_worktree_sha256": "0087a7a7ad33b63eac82f1f44b12fd5ae7e2a2859eea89e8cfcbffd86276e54f"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-hal-output/tests/native_transport.rs": {
+    "staged_clean_sha256": "deb72e57c2c57fd71a97056490bc8429867d3700bb085b5d98ec7beb75ab2642",
+    "native_worktree_sha256": "deb72e57c2c57fd71a97056490bc8429867d3700bb085b5d98ec7beb75ab2642"
+  }
+}

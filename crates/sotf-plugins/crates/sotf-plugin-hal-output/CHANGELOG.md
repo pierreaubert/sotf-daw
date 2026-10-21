@@ -1,3 +1,13 @@
+# Unreleased prepared-format write guard
+
+- Pass prepared rate/channel/buffer geometry through every native FIFO/data/prime
+  write. Validate format and cached key under the ring write commit; refuse
+  incompatible writes without publishing frames. Reprepare uses its target format.
+- Add clean-driver geometry/refusal/concurrency regressions and extend the isolated
+  native matrix with allocation-free geometry/key refusals. Concurrent key fencing
+  requires quiesced owner publication; session generation, ABA and device proof
+  remain open.
+
 # Unreleased callback format audit
 
 - Observe prepared rate/channel/buffer geometry before process/drain writes and

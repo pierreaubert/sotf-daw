@@ -1,3 +1,6 @@
+mod prepared_write;
+pub(super) use prepared_write::PreparedWriteRefusal;
+
 use super::SharedAudioHeader;
 use super::consts::ENCRYPTED_RECORD_HEADER_BYTES;
 use super::consts::ENCRYPTED_RECORD_HEADER_SLOTS;
