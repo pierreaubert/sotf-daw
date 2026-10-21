@@ -198,66 +198,81 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
     for rate in [48_000, 96_000] {
         for yaw in [-20.0, 0.0, 20.0] {
             for x in [-0.04, 0.0, 0.04] {
-                let p = XtcPluginParams {
-                    head_model: 1,
-                    head_yaw_deg: yaw,
-                    head_offset_x: x,
-                    beta_base: 0.2,
-                    pinna_model_enabled: false,
-                    ..Default::default()
-                };
-                let filters = compute_xtc_filters_full(&p, rate, 1025);
-                let theta = f64::from(p.speaker_angle_deg).to_radians();
-                let yaw = f64::from(p.head_yaw_deg).to_radians();
-                let radius = f64::from(p.head_radius_m);
-                let d = f64::from(p.distance_m + p.head_offset_z);
-                let distance = |angle: f64, offset: f64| {
-                    ((d * angle.sin() + offset).powi(2) + (d * angle.cos()).powi(2)).sqrt()
-                };
-                let dl = distance(theta + yaw, -f64::from(p.head_offset_x));
-                let dr = distance(theta - yaw, f64::from(p.head_offset_x));
-                for bin in [8, 40, 80, 180, 340] {
-                    let frequency = rate as f32 * bin as f32 / 2048.0;
-                    let cross = |angle: f64, ipsi: f64, contra_ipsi: f64| {
-                        let delta = radius * (angle.abs() + angle.abs().sin());
-                        let contra = contra_ipsi + delta;
-                        let mu = (std::f64::consts::TAU * f64::from(frequency) * radius / 343.0)
-                            .min(20.0);
-                        let alpha = (1.0 + mu * mu / 4.0).sqrt().recip();
-                        let incidence =
-                            (std::f64::consts::FRAC_PI_2 + angle.abs()).min(std::f64::consts::PI);
-                        let magnitude =
-                            (alpha + (1.0 - alpha) * (incidence / 2.0).cos()) * ipsi / contra;
-                        Complex::from_polar(
-                            magnitude,
-                            -std::f64::consts::TAU * f64::from(frequency) * (contra - ipsi) / 343.0,
-                        )
+                for mode in ["phase_only", "explicit_delay"] {
+                    let p = XtcPluginParams {
+                        head_model: 1,
+                        itd_modeling: mode.into(),
+                        head_yaw_deg: yaw,
+                        head_offset_x: x,
+                        beta_base: 0.2,
+                        pinna_model_enabled: false,
+                        ..Default::default()
                     };
-                    let (left, right) = if yaw == 0.0 {
-                        let c = cross(theta, dl, dl);
-                        (c, c)
-                    } else {
-                        (cross(theta - yaw, dl, dr), cross(theta + yaw, dr, dl))
+                    let filters = compute_xtc_filters_full(&p, rate, 1025);
+                    let theta = f64::from(p.speaker_angle_deg).to_radians();
+                    let yaw = f64::from(p.head_yaw_deg).to_radians();
+                    let radius = f64::from(p.head_radius_m);
+                    let d = f64::from(p.distance_m + p.head_offset_z);
+                    let distance = |angle: f64, offset: f64| {
+                        ((d * angle.sin() + offset).powi(2) + (d * angle.cos()).powi(2)).sqrt()
                     };
-                    let f64c = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
-                    let ll = f64c(filters.filter_ll[bin]);
-                    let lr = f64c(filters.filter_lr[bin]);
-                    let rl = f64c(filters.filter_rl.as_ref().unwrap_or(&filters.filter_lr)[bin]);
-                    let rr = f64c(filters.filter_rr.as_ref().unwrap_or(&filters.filter_ll)[bin]);
-                    let expected = [
-                        20.0 * (right.norm() / (right * ll + rl).norm()).log10(),
-                        20.0 * (left.norm() / (lr + left * rr).norm()).log10(),
-                    ];
-                    let actual = predict_analytic_cancellation(&p, rate, frequency).unwrap();
-                    for (a, e) in actual.metrics.raw_depth_db.iter().zip(expected) {
-                        let error = (a - e).abs();
-                        maximum_error = maximum_error.max(error);
-                        assert!(
-                            error < 0.02,
-                            "rate={rate} yaw={yaw} x={x} bin={bin} error={error} actual={a} expected={e}"
-                        );
+                    let dl = distance(theta + yaw, f64::from(p.head_offset_x));
+                    let dr = distance(theta - yaw, -f64::from(p.head_offset_x));
+                    for bin in [8, 40, 80, 180, 340] {
+                        let frequency = rate as f32 * bin as f32 / 2048.0;
+                        let cross = |angle: f64, ipsi: f64, contra_ipsi: f64| {
+                            let delta = radius * (angle.abs() + angle.abs().sin());
+                            let contra = contra_ipsi + delta;
+                            let mu = (std::f64::consts::TAU * f64::from(frequency) * radius
+                                / 343.0)
+                                .min(20.0);
+                            let alpha = (1.0 + mu * mu / 4.0).sqrt().recip();
+                            let incidence = (std::f64::consts::FRAC_PI_2 + angle.abs())
+                                .min(std::f64::consts::PI);
+                            let magnitude =
+                                (alpha + (1.0 - alpha) * (incidence / 2.0).cos()) * ipsi / contra;
+                            let path = Complex::from_polar(
+                                1.0,
+                                -std::f64::consts::TAU * f64::from(frequency) * (contra - ipsi)
+                                    / 343.0,
+                            );
+                            let shadowed = path * magnitude;
+                            if mode == "explicit_delay" {
+                                let blend =
+                                    1.0 / (1.0 + ((f64::from(frequency) - 300.0) / 50.0).exp());
+                                path * blend + shadowed * (1.0 - blend)
+                            } else {
+                                shadowed
+                            }
+                        };
+                        let (left, right) = if yaw == 0.0 && x == 0.0 {
+                            let c = cross(theta, dl, dl);
+                            (c, c)
+                        } else {
+                            (cross(theta - yaw, dl, dr), cross(theta + yaw, dr, dl))
+                        };
+                        let f64c = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
+                        let ll = f64c(filters.filter_ll[bin]);
+                        let lr = f64c(filters.filter_lr[bin]);
+                        let rl =
+                            f64c(filters.filter_rl.as_ref().unwrap_or(&filters.filter_lr)[bin]);
+                        let rr =
+                            f64c(filters.filter_rr.as_ref().unwrap_or(&filters.filter_ll)[bin]);
+                        let expected = [
+                            20.0 * (right.norm() / (right * ll + rl).norm()).log10(),
+                            20.0 * (left.norm() / (lr + left * rr).norm()).log10(),
+                        ];
+                        let actual = predict_analytic_cancellation(&p, rate, frequency).unwrap();
+                        for (a, e) in actual.metrics.raw_depth_db.iter().zip(expected) {
+                            let error = (a - e).abs();
+                            maximum_error = maximum_error.max(error);
+                            assert!(
+                                error < 0.02,
+                                "rate={rate} yaw={yaw} x={x} bin={bin} error={error} actual={a} expected={e}"
+                            );
+                        }
+                        cases += 1;
                     }
-                    cases += 1;
                 }
             }
         }

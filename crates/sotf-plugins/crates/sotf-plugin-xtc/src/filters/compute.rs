@@ -28,6 +28,10 @@ use std::sync::Arc;
 #[path = "transfer_audit_tests.rs"]
 mod transfer_audit_tests;
 
+#[cfg(test)]
+#[path = "lateral_pose_tests.rs"]
+mod lateral_pose_tests;
+
 /// Return the head-shadow magnitude used by the plant model.
 ///
 /// Geometric path length supplies the relative delay for every analytical
@@ -68,6 +72,39 @@ pub(crate) fn head_shadowing_for_plant(
     base * correction
 }
 
+/// Build the relative contralateral transfer before pinna shaping.
+///
+/// Both geometry paths use the same LF mode and single geometric delay.
+#[inline]
+pub(crate) fn contralateral_transfer(
+    params: &XtcPluginParams,
+    freq: f32,
+    angle: f32,
+    radius: f32,
+    amplitude: f32,
+    delay: f32,
+) -> Complex<f32> {
+    let shadow = head_shadowing_for_plant(
+        freq,
+        angle,
+        radius,
+        params.head_model,
+        params.head_shadow_cutoff_hz,
+        params.head_shadow_slope_db_per_octave,
+    ) * amplitude;
+    let phase = -2.0 * PI * freq * delay;
+    let path = Complex::new(phase.cos(), phase.sin());
+    let phase_only = shadow * path;
+    if params.itd_modeling == "explicit_delay" {
+        // Preserve the historical unity-amplitude LF approximation and its
+        // 300 Hz crossover / 50 Hz width for every analytical geometry.
+        let blend = 1.0 / (1.0 + ((freq - 300.0) / 50.0).exp());
+        path * blend + phase_only * (1.0 - blend)
+    } else {
+        phase_only
+    }
+}
+
 /// Compute geometry cache for the given parameters.
 ///
 /// Pre-computes all path lengths, angles, and ratios that don't change per bin.
@@ -101,14 +138,15 @@ pub(crate) fn compute_geometry_cache(
         contra_angle,
     };
 
-    // Asymmetric geometry (only compute if yaw != 0)
+    // Any lateral displacement or yaw requires the full two-ear matrix.
     let yaw_rad = params.head_yaw_deg * PI / 180.0;
-    let asymmetric = if yaw_rad.abs() >= 0.001 {
+    let asymmetric = if params.head_yaw_deg != 0.0 || x_offset != 0.0 {
         let theta_left = theta_rad + yaw_rad;
         let theta_right = theta_rad - yaw_rad;
 
-        let l_left_ipsi = compute_path_length(d, theta_left, -x_offset);
-        let l_left_contra_ipsi = compute_path_length(d, theta_right, x_offset); // distance from right speaker to right ear
+        // Positive X points toward the right speaker, matching room reflections.
+        let l_left_ipsi = compute_path_length(d, theta_left, x_offset);
+        let l_left_contra_ipsi = compute_path_length(d, theta_right, -x_offset); // distance from right speaker to right ear
         let diffraction_left = woodworth_diffraction_path(theta_right.abs(), a);
         let l_left_contra_full = l_left_contra_ipsi + diffraction_left;
         let amplitude_ratio_left = l_left_ipsi / l_left_contra_full;
@@ -116,8 +154,8 @@ pub(crate) fn compute_geometry_cache(
         let delay_left_contra = l_left_contra_full / SPEED_OF_SOUND;
         let angle_left_contra = contralateral_shadow_angle(theta_right.abs());
 
-        let l_right_ipsi = compute_path_length(d, theta_right, x_offset);
-        let l_right_contra_ipsi = compute_path_length(d, theta_left, -x_offset); // distance from left speaker to left ear
+        let l_right_ipsi = compute_path_length(d, theta_right, -x_offset);
+        let l_right_contra_ipsi = compute_path_length(d, theta_left, x_offset); // distance from left speaker to left ear
         let diffraction_right = woodworth_diffraction_path(theta_left.abs(), a);
         let l_right_contra_full = l_right_contra_ipsi + diffraction_right;
         let amplitude_ratio_right = l_right_ipsi / l_right_contra_full;
@@ -326,20 +364,14 @@ fn compute_xtc_filters_asymmetric_with_cache(
         let h_ll_ipsi = Complex::new(1.0, 0.0) * pinna_ipsi;
         let pinna_left_contra = pinna_left_contra_lut.as_deref().map_or(1.0, |lut| lut[bin]);
         let delta_t_left = delay_left_contra - delay_left_ipsi;
-        // Brown–Duda already models the contralateral ITD.  The geometric
-        // path phase below is the single plant delay owner, so use only its
-        // magnitude here; otherwise the same ITD is applied twice.
-        let shadow_ll = head_shadowing_for_plant(
+        let h_ll_contra = contralateral_transfer(
+            params,
             freq,
             asym.angle_left_contra,
             a,
-            params.head_model,
-            params.head_shadow_cutoff_hz,
-            params.head_shadow_slope_db_per_octave,
-        ) * asym.amplitude_ratio_left;
-        let phase_ll_contra = -2.0 * PI * freq * delta_t_left;
-        let path_ll = Complex::new(phase_ll_contra.cos(), phase_ll_contra.sin());
-        let h_ll_contra = shadow_ll * path_ll * pinna_left_contra;
+            asym.amplitude_ratio_left,
+            delta_t_left,
+        ) * pinna_left_contra;
 
         // Right ear: ipsi speaker is right speaker, contra is left speaker
         let h_rr_ipsi = Complex::new(1.0, 0.0) * pinna_ipsi;
@@ -347,17 +379,14 @@ fn compute_xtc_filters_asymmetric_with_cache(
             .as_deref()
             .map_or(1.0, |lut| lut[bin]);
         let delta_t_right = delay_right_contra - delay_right_ipsi;
-        let shadow_rr = head_shadowing_for_plant(
+        let h_rr_contra = contralateral_transfer(
+            params,
             freq,
             asym.angle_right_contra,
             a,
-            params.head_model,
-            params.head_shadow_cutoff_hz,
-            params.head_shadow_slope_db_per_octave,
-        ) * asym.amplitude_ratio_right;
-        let phase_rr_contra = -2.0 * PI * freq * delta_t_right;
-        let path_rr = Complex::new(phase_rr_contra.cos(), phase_rr_contra.sin());
-        let h_rr_contra = shadow_rr * path_rr * pinna_right_contra;
+            asym.amplitude_ratio_right,
+            delta_t_right,
+        ) * pinna_right_contra;
 
         // Integrate room reflections: add reflection contributions to transfer functions
         let (h_ll_ipsi_final, h_ll_contra_final, h_rr_ipsi_final, h_rr_contra_final) =
@@ -641,13 +670,6 @@ fn compute_xtc_filters_symmetric_with_cache(
         None
     };
 
-    // Explicit ITD delay: ITD = delay_contra - delay_ipsi (seconds).
-    // In the frequency domain, a pure time delay of Δt is e^{-j*2π*f*Δt}.
-    // Below ~300 Hz the Woodworth implicit phase is numerically inaccurate
-    // (wavelength >> head size), so we substitute an explicit delay.
-    let itd = sym.delay_contra - sym.delay_ipsi;
-    let use_explicit_delay = params.itd_modeling == "explicit_delay";
-
     for bin in 0..num_bins {
         let freq = bin as f32 * cache.freq_per_bin;
 
@@ -655,44 +677,14 @@ fn compute_xtc_filters_symmetric_with_cache(
         let h_ipsi = Complex::new(1.0, 0.0);
 
         // Contralateral path is relative to ipsilateral.
-        let delta_t = sym.delay_contra - sym.delay_ipsi;
-        let shadow = head_shadowing_for_plant(
+        let h_contra = contralateral_transfer(
+            params,
             freq,
             sym.contra_angle,
             a,
-            params.head_model,
-            params.head_shadow_cutoff_hz,
-            params.head_shadow_slope_db_per_octave,
-        ) * sym.amplitude_ratio;
-        let phase_contra = -2.0 * PI * freq * delta_t;
-        let path_phase = Complex::new(phase_contra.cos(), phase_contra.sin());
-        let h_contra_phase_only = shadow * path_phase;
-
-        let h_contra = if use_explicit_delay {
-            // Explicit delay mode: model the contralateral path at LF as a pure
-            // fractional-sample delay with amplitude 1.0 (no head shadowing).
-            //
-            // Rationale: at low frequencies (wavelength >> head radius) the head is
-            // acoustically transparent — there is no interaural level difference (ILD),
-            // only an interaural time difference (ITD). The Woodworth head-shadowing
-            // factor `g` drops to ~1.0 at LF anyway, but the explicit-delay model makes
-            // this physically exact by always using unity amplitude for the delay phasor:
-            //   h_contra_explicit = e^{-j*2π*f*itd}   (amplitude = 1, pure delay)
-            //
-            // Sigmoid crossover: blend = 1 at LF (use explicit), 0 at HF (use phase-only).
-            // Crossover at 300 Hz, transition width 50 Hz.
-            // sigmoid(x) = 1/(1 + exp((x - x0) / w)) where x = freq, x0 = 300, w = 50.
-            let explicit_phase = -2.0 * PI * freq * itd;
-            // Unit-amplitude phasor: no head-shadowing amplitude factor at LF.
-            let h_contra_explicit = Complex::new(explicit_phase.cos(), explicit_phase.sin());
-
-            let crossover_hz = 300.0_f32;
-            let blend = 1.0 / (1.0 + ((freq - crossover_hz) / 50.0).exp());
-
-            h_contra_explicit * blend + h_contra_phase_only * (1.0 - blend)
-        } else {
-            h_contra_phase_only
-        };
+            sym.amplitude_ratio,
+            sym.delay_contra - sym.delay_ipsi,
+        );
 
         // Pinna resonance shaping: use pre-computed LUTs (Optimization 5)
         let pinna_ipsi = pinna_ipsi_lut.as_deref().map_or(1.0, |lut| lut[bin]);

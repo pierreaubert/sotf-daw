@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "lateral_pose_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 5 tests\npositive_x left_distance=2.0719175 right_distance=1.9764798\ntest filters::compute::lateral_pose_tests::tiny_yaw_has_no_artificial_geometry_deadband ... ok\ntest filters::compute::lateral_pose_tests::positive_x_moves_toward_the_right_speaker ... ok\nlateral_pose x=-0.1 asymmetric=true symmetric_filters=false\ntest filters::compute::lateral_pose_tests::centered_default_coefficients_match_baseline ... ok\nlateral_pose x=0.1 asymmetric=true symmetric_filters=false\ntest filters::compute::lateral_pose_tests::lateral_only_pose_requires_distinct_left_and_right_filters ... ok\nasymmetric_lf_mode difference=0.2531083\ntest filters::compute::lateral_pose_tests::asymmetric_pose_honors_explicit_lf_delay_mode ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 177 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 6.92s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+}

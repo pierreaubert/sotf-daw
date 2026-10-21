@@ -1,3 +1,15 @@
+# Unreleased lateral pose audit (2026-10-21)
+
+- Select full asymmetric filters for lateral-only displacement and arbitrarily
+  small nonzero yaw. Align positive lateral offset with the rightward room
+  coordinate and honor explicit LF delay mode in both analytical matrix paths.
+- Share contralateral transfer construction with analytical predictions; preserve
+  the centered default coefficients. Parameter IDs/ranges/defaults and latency
+  stay unchanged; existing noncentered presets intentionally change behavior.
+- Add independent path arithmetic, mirrored/near-center coefficients, rendered
+  routing, callback/reset and zero-heap coverage. These checks do not establish
+  measured HRTF calibration, physical head-tracking accuracy or robust cancellation.
+
 # Unreleased signed diagnostic audit (2026-10-21)
 
 - Preserve negative and uncapped analytical cancellation predictions, align plant

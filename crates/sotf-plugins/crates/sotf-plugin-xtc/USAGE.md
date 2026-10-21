@@ -20,13 +20,18 @@ Physical setup parameters that model the listener/speaker relationship. These mu
 
 ### Head Tracking
 
+Any nonzero lateral offset or yaw uses the full left/right filter matrix.
+Both matrix paths honor the selected LF ITD mode. These analytical updates do
+not establish measured head-tracking accuracy or room-mismatch robustness.
+
+
 For head-tracking-enabled setups, adjusts the cancellation filters in real-time based on head position and orientation.
 
 **Parameters:**
 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
-| Head Offset X | -0.5 to 0.5 | 0 | m | Lateral head offset from sweet spot |
+| Head Offset X | -0.5 to 0.5 | 0 | m | Lateral head offset from sweet spot; positive toward the right speaker |
 | Head Offset Z | -0.5 to 0.5 | 0 | m | Depth offset from sweet spot |
 | Head Yaw | -90 to 90 | 0 | ° | Head rotation angle |
 | Head Tracking Smooth | 0 to 1.0 | 0.1 | s | Smoothing time for head tracking updates |

@@ -7,6 +7,14 @@ use sotf_plugin_xtc::{XtcPlugin, XtcPluginParams};
 use std::f64::consts::TAU;
 
 fn measured_filter(bin: usize, chunks: &[usize]) -> ComplexTransferMatrix {
+    measured_pose_filter(bin, chunks, &XtcPluginParams::default())
+}
+
+fn measured_pose_filter(
+    bin: usize,
+    chunks: &[usize],
+    params: &XtcPluginParams,
+) -> ComplexTransferMatrix {
     const FFT: usize = 2048;
     const TOTAL: usize = FFT * 12;
     const START: usize = FFT * 8;
@@ -18,7 +26,7 @@ fn measured_filter(bin: usize, chunks: &[usize]) -> ComplexTransferMatrix {
                 fft_size: FFT,
                 auto_gain_enabled: false,
                 spectral_normalization: false,
-                ..Default::default()
+                ..params.clone()
             },
             48_000,
         )
@@ -161,5 +169,53 @@ fn rendered_cancellation_retains_signed_mismatch_and_intended_gain() {
     );
     println!(
         "rendered_xtc_summary cases={cases} degraded={degraded} worst_normalized_db={worst} maximum_partition_error={maximum_partition_error}"
+    );
+}
+
+#[test]
+fn rendered_pose_mirrors_both_columns_and_keeps_callback_partition_invariance() {
+    let mut maximum_mirror_error = 0.0_f64;
+    let mut maximum_partition_error = 0.0_f64;
+    let mut cases = 0;
+    for model in [0, 1] {
+        for mode in ["phase_only", "explicit_delay"] {
+            for (x, yaw) in [(0.1, 0.0), (0.04, 20.0)] {
+                let params = XtcPluginParams {
+                    head_offset_x: x,
+                    head_yaw_deg: yaw,
+                    head_model: model,
+                    itd_modeling: mode.into(),
+                    ..Default::default()
+                };
+                let mirrored = XtcPluginParams {
+                    head_offset_x: -x,
+                    head_yaw_deg: -yaw,
+                    ..params.clone()
+                };
+                for bin in [8, 85, 341] {
+                    let a = measured_pose_filter(bin, &[512], &params);
+                    let b = measured_pose_filter(bin, &[1, 17, 257, 63, 137], &params);
+                    let mirror = measured_pose_filter(bin, &[1, 17, 257, 63, 137], &mirrored);
+                    for row in 0..2 {
+                        for col in 0..2 {
+                            for part in 0..2 {
+                                let partition_error = (a[row][col][part] - b[row][col][part]).abs();
+                                let mirror_error =
+                                    (a[row][col][part] - mirror[1 - row][1 - col][part]).abs();
+                                maximum_partition_error =
+                                    maximum_partition_error.max(partition_error);
+                                maximum_mirror_error = maximum_mirror_error.max(mirror_error);
+                                assert!(partition_error < 2e-6);
+                                assert!(mirror_error < 2e-6);
+                            }
+                        }
+                    }
+                    cases += 1;
+                }
+            }
+        }
+    }
+    println!(
+        "rendered_pose cases={cases} maximum_mirror_error={maximum_mirror_error} maximum_partition_error={maximum_partition_error}"
     );
 }

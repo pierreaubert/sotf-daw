@@ -63,7 +63,7 @@ pub struct XtcPluginParams {
     #[serde(default, deserialize_with = "deserialize_head_model")]
     pub head_model: usize,
 
-    /// Head tracking: lateral offset in meters (default: 0.0)
+    /// Head tracking: lateral offset in meters, positive right (default: 0.0)
     #[serde(default)]
     pub head_offset_x: f32,
 

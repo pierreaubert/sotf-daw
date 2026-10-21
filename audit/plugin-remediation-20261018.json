@@ -2299,20 +2299,35 @@
             "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json"
           ],
           "result": "Red baseline: worsening filter reported 0 dB, same-bin requests differed 32.85819 vs 31.437492 dB, and -1 Hz returned 0.2969317 dB. Analytical predictions now use the configured FFT/bin, selected implemented head model/yaw/shadow/pinna/LF mode and both input cues, with signed uncapped values; invalid or unsupported active-resource predictions fail explicitly. New standard-type 2x2 complex-matrix API evaluates supplied independent plants/filters and retains raw depth, intended gain and normalized separation; muting/common attenuation cannot masquerade as useful separation. Ninety independent f64 implemented-model arithmetic cases agree within 0.011037 dB (0.02 dB gate). Actual Rust Plugin::process speaker transfers across fixed/irregular callbacks have zero partition error; all 360 controlled point-source/echo rows are retained, including 134 degraded normalized cases and worst -5.010439 dB. This is neither measured HRTF nor native ABI/device evidence. Obsolete test-only display-depth bounds were replaced with actual all-column coefficient-gain checks across nine gain/yaw settings and independent arithmetic, preserving every historical minimum target. Full release suite 233 passed/one existing ignored, new doctest, strict all-target QA Clippy, formatting and standard processing QA pass. Nominal report still fails 8 kHz ILD (36.124 vs 12 dB, tolerance 20) and 100 Hz request/93.75 Hz bin cancellation (4.986 vs 5 dB), passing only 15/17 comparisons. No renderer/inverse/parameter/schema/latency or optional ML changes."
+        },
+        {
+          "requirement": "Honor lateral head displacement and LF-delay mode in the full analytical matrix with a coherent X coordinate and no artificial yaw deadband.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/audit_cancellation.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/stream_clock.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-validation.json"
+          ],
+          "result": "Lateral-only displacement and every nonzero yaw now select the full two-ear matrix; positive X points right consistently with room reflections. Asymmetric filters now honor the existing explicit LF-delay blend through one shared contralateral transfer helper also used by analytical diagnostics. Centered default matches all 4100 recorded coefficient words exactly locally (portable fixture tolerance 2e-6). Twenty-four independent f64 path cases have maximum error 1.0176653e-7; 72 mirrored filter cases are exact; 240 near-center cases retain raw finite-pose variation and have midpoint residual at most 1.884145e-4 under the 2e-4 numerical gate. Independent Brown-Duda prediction coverage expands to 180 phase/LF-mode cases with maximum 0.0110524 dB error under unchanged 0.02 dB gate. Twenty-four rendered pose matrices mirror and partition exactly; 18 cold/reset cases preserve exact waveforms, zero allocations/frees and latency 2048. Full release suite passes 243 tests with one existing timing ignore; standard QA, strict all-target release Clippy and formatting pass. Existing 360 nominal-filter mismatch rows remain identical (134 degraded, worst normalized -5.010439 dB); nominal acoustic report remains 15/17 with both previous failures retained. Parameter IDs/ranges/defaults unchanged; noncentered presets intentionally change behavior."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/xtc-linked-limiter-validation.json",
         "audit/artifacts/plugin-audit-20261018/xtc-head-shadow-validation.json",
         "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json"
+        "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-validation.json"
       ],
       "remaining": [
         "Extend the supplied-matrix API and rendered speaker-output evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Controlled rendered checks still degrade normalized separation in 134/360 cases (worst -5.01044 dB); prior core-inverse raw-depth results are a different measurement and remain retained.",
         "Calibrate or explicitly constrain the default 8 kHz head-shadow discrepancy: nominal report still fails at 36.124 dB versus 12 dB with 20 dB tolerance. Report-structure/stability test success does not establish acoustic conformance.",
         "Resolve the retained nominal 100 Hz cancellation target: its explicitly reported selected bin is 93.75 Hz, with 4.986 dB versus the unchanged 5 dB minimum. Do not widen the target to hide the corrected measurement.",
         "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
-        "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality."
+        "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality.",
+        "Analytical geometry still uses its existing depth-distance/yaw approximation. Review depth-offset sign, translation-dependent incidence and large-yaw source/ear classification against full Cartesian coordinates."
       ]
     },
     {
@@ -2847,6 +2862,15 @@
       ],
       "result": "Red baseline: worsening filter reported 0 dB, same-bin requests differed 32.85819 vs 31.437492 dB, and -1 Hz returned 0.2969317 dB. Analytical predictions now use the configured FFT/bin, selected implemented head model/yaw/shadow/pinna/LF mode and both input cues, with signed uncapped values; invalid or unsupported active-resource predictions fail explicitly. New standard-type 2x2 complex-matrix API evaluates supplied independent plants/filters and retains raw depth, intended gain and normalized separation; muting/common attenuation cannot masquerade as useful separation. Ninety independent f64 implemented-model arithmetic cases agree within 0.011037 dB (0.02 dB gate). Actual Rust Plugin::process speaker transfers across fixed/irregular callbacks have zero partition error; all 360 controlled point-source/echo rows are retained, including 134 degraded normalized cases and worst -5.010439 dB. This is neither measured HRTF nor native ABI/device evidence. Obsolete test-only display-depth bounds were replaced with actual all-column coefficient-gain checks across nine gain/yaw settings and independent arithmetic, preserving every historical minimum target. Full release suite 233 passed/one existing ignored, new doctest, strict all-target QA Clippy, formatting and standard processing QA pass. Nominal report still fails 8 kHz ILD (36.124 vs 12 dB, tolerance 20) and 100 Hz request/93.75 Hz bin cancellation (4.986 vs 5 dB), passing only 15/17 comparisons. No renderer/inverse/parameter/schema/latency or optional ML changes.",
       "limitations": "Nominal acoustic report is 15/17, not fully passing. Controlled synthetic plants are not measured human/room data. Robust inverse design, native/device/true-peak and perceptual work remain open. Overall remains 35/45; optional ML separate."
+    },
+    {
+      "name": "XTC lateral pose and asymmetric LF mode",
+      "state": "verified_partial",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Lateral-only displacement and every nonzero yaw now select the full two-ear matrix; positive X points right consistently with room reflections. Asymmetric filters now honor the existing explicit LF-delay blend through one shared contralateral transfer helper also used by analytical diagnostics. Centered default matches all 4100 recorded coefficient words exactly locally (portable fixture tolerance 2e-6). Twenty-four independent f64 path cases have maximum error 1.0176653e-7; 72 mirrored filter cases are exact; 240 near-center cases retain raw finite-pose variation and have midpoint residual at most 1.884145e-4 under the 2e-4 numerical gate. Independent Brown-Duda prediction coverage expands to 180 phase/LF-mode cases with maximum 0.0110524 dB error under unchanged 0.02 dB gate. Twenty-four rendered pose matrices mirror and partition exactly; 18 cold/reset cases preserve exact waveforms, zero allocations/frees and latency 2048. Full release suite passes 243 tests with one existing timing ignore; standard QA, strict all-target release Clippy and formatting pass. Existing 360 nominal-filter mismatch rows remain identical (134 degraded, worst normalized -5.010439 dB); nominal acoustic report remains 15/17 with both previous failures retained. Parameter IDs/ranges/defaults unchanged; noncentered presets intentionally change behavior.",
+      "limitations": "XTC and overall goal remain partial: 35/45 complete; physical model, measured robustness and real head-tracking validation remain open. Optional ML remains separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

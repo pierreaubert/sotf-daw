@@ -48,7 +48,7 @@ pub const PARAMS: &[ParamSpec] = &[
         "m",
         "Head Tracking",
     )
-    .doc("Lateral head position offset"),
+    .doc("Lateral head position offset; positive toward the right speaker"),
     ParamSpec::float(
         "Head Offset Z",
         "head_offset_z",

@@ -4,11 +4,10 @@
 use super::super::config::XtcPluginParams;
 use super::super::filters::{
     GeometryCache, XtcFilters, compute_geometry_cache, compute_xtc_filters_full,
-    head_shadowing_for_plant, pinna_resonance, pinna_resonance_contra,
+    contralateral_transfer, pinna_resonance, pinna_resonance_contra,
 };
 use super::matrix::{CancellationMetrics, ComplexTransferMatrix, evaluate_cancellation};
 use rustfft::num_complex::Complex;
-use std::f32::consts::PI;
 
 /// An analytical cancellation prediction at one selected RFFT bin.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -88,21 +87,13 @@ fn analytical_plant(
         1.0
     };
     let cross = |angle: f32, radius: f32, amplitude: f32, delay: f32, pinna_angle: f32| {
-        let shadow = head_shadowing_for_plant(
-            freq,
-            angle,
-            radius,
-            params.head_model,
-            params.head_shadow_cutoff_hz,
-            params.head_shadow_slope_db_per_octave,
-        );
-        let path = Complex::from_polar(1.0, -2.0 * PI * freq * delay);
+        let transfer = contralateral_transfer(params, freq, angle, radius, amplitude, delay);
         let pinna = if params.pinna_model_enabled {
             pinna_resonance_contra(freq, pinna_angle)
         } else {
             1.0
         };
-        (shadow * amplitude * path, pinna)
+        (transfer, pinna)
     };
     if let Some(asym) = &cache.asymmetric {
         let (left, left_pinna) = cross(
@@ -126,20 +117,13 @@ fn analytical_plant(
     } else {
         let sym = &cache.symmetric;
         let delay = sym.delay_contra - sym.delay_ipsi;
-        let (mut contra, pinna) = cross(
+        let (contra, pinna) = cross(
             sym.contra_angle,
             sym.a,
             sym.amplitude_ratio,
             delay,
             params.speaker_angle_deg,
         );
-        if params.itd_modeling == "explicit_delay" {
-            // Match the existing analytical design's LF blend, including its
-            // unit-amplitude explicit path. This is model consistency, not calibration.
-            let blend = 1.0 / (1.0 + ((freq - 300.0) / 50.0).exp());
-            let explicit = Complex::from_polar(1.0, -2.0 * PI * freq * delay);
-            contra = explicit * blend + contra * (1.0 - blend);
-        }
         let contra = contra * pinna;
         [
             [Complex::new(ipsi, 0.0), contra],

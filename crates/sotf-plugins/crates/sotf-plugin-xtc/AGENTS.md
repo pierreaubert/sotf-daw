@@ -82,3 +82,18 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - `tests/audit_cancellation.rs` measures actual Rust plugin speaker outputs against controlled point-source/echo fields. It does not certify native ABI, measured human HRTFs, device deadlines or listener quality.
 
 - Prediction helpers allocate filter arrays; keep them on the control/analysis thread. The pure supplied-matrix evaluator is separate from the rendering hot path.
+
+## Analytical pose invariants
+
+- Any nonzero lateral offset or yaw selects the asymmetric matrix. Positive X
+  points right, matching the room-reflection coordinates. Exact centered/yaw-zero
+  geometry retains the optimized symmetric path.
+- Share the contralateral transfer/LF blend between both geometry paths and
+  diagnostics. Pinna shaping follows the blend; geometric delay owns ITD once.
+- Keep mirror, near-center, independent arithmetic, rendered two-column routing,
+  callback partition, reset, latency and zero-heap regressions. A finite pose
+  change legitimately changes coefficients: distinguish that first-order response
+  from the symmetric/full-branch limit and retain the raw differences.
+- This approximation still needs measured calibration and a full Cartesian pose
+  review, including depth-offset sign, translation-dependent incidence and large
+  yaw. Coordinate routing tests do not resolve those physical-model limitations.

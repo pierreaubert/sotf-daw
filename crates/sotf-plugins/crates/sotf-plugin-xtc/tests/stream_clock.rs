@@ -290,3 +290,69 @@ fn cold_default_and_neutral_clocks_reset_without_allocating_or_freeing() {
         }
     }
 }
+
+#[test]
+fn lateral_pose_cold_process_and_reset_keep_latency_and_zero_heap() {
+    let mut cases = 0;
+    for rate in [44_100, 48_000, 96_000] {
+        for (x, yaw) in [(-0.1, 0.0), (0.1, 0.0), (0.04, 20.0)] {
+            for mode in ["phase_only", "explicit_delay"] {
+                let mut plugin = XtcPlugin::new(
+                    XtcPluginParams {
+                        head_offset_x: x,
+                        head_yaw_deg: yaw,
+                        itd_modeling: mode.into(),
+                        ..Default::default()
+                    },
+                    rate,
+                )
+                .unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
+                assert_eq!(plugin.latency_samples(), 2048);
+                let frames = 20_003;
+                let input: Vec<f32> = (0..frames * 2)
+                    .map(|i| ((i * 23 % 127) as f32 - 63.0) / 512.0)
+                    .collect();
+                let mut large = vec![f32::NAN; input.len()];
+                let mut irregular = vec![f32::NAN; input.len()];
+                let counts = std::thread::spawn(move || {
+                    let counts = heap::measure(|| {
+                        plugin
+                            .process(&input, &mut large, &ProcessContext::new(rate, frames))
+                            .unwrap();
+                        plugin.reset();
+                        let mut frame = 0;
+                        for &requested in [1, 17, 257, 63, 137].iter().cycle() {
+                            let n = requested.min(frames - frame);
+                            plugin
+                                .process(
+                                    &input[frame * 2..(frame + n) * 2],
+                                    &mut irregular[frame * 2..(frame + n) * 2],
+                                    &ProcessContext::new(rate, n),
+                                )
+                                .unwrap();
+                            frame += n;
+                            if frame == frames {
+                                break;
+                            }
+                        }
+                    });
+                    assert_eq!(
+                        large, irregular,
+                        "reset and partition must preserve the waveform"
+                    );
+                    assert!(large.iter().all(|v| v.is_finite()));
+                    assert_eq!(plugin.latency_samples(), 2048);
+                    counts
+                })
+                .join()
+                .unwrap();
+                assert_eq!(counts, (0, 0), "rate={rate} x={x} yaw={yaw} mode={mode}");
+                cases += 1;
+            }
+        }
+    }
+    println!(
+        "lateral_pose_heap cases={cases} allocations=0 frees=0 latency_samples=2048 reset_partition_error=0"
+    );
+}

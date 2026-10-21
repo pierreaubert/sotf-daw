@@ -1,0 +1,72 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "centered_default_coefficients_match_baseline",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 1 test\ncentered_baseline coefficient_words=4100 bit_differences=0\ntest filters::compute::lateral_pose_tests::centered_default_coefficients_match_baseline ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 184 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 6.51s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "run",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--bin",
+      "qa-xtc"
+    ],
+    "exit_code": 0,
+    "stdout": "=== QA: Xtc Plugin ===\n\n[Test 1] Mono Stability (L=R) with AutoGain\n  Energy Ratio (Out/In): 0.9790\n  Mono Stability: PASS\n\n[Test 2] Latency Reporting\n  Reported Latency: 2048 samples\n  Latency: PASS\n\n[Test 3] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 4] Performance Benchmark\n  Processed 5.0s of audio in 11.28ms\n  Estimated CPU Usage: 0.23%\n  Performance: PASS\n\n=== QA: Xtc aligned dry bypass ===\n\n[Test 2] Latency Reporting\n  Reported Latency: 2048 samples\n  Latency: PASS\n\n[Test 3] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 4] Performance Benchmark\n  Processed 5.0s of audio in 11.20ms\n  Estimated CPU Usage: 0.22%\n  Performance: PASS\n\n[ALL PASS] Xtc QA Complete.\n",
+    "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 7.98s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-xtc`\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--features",
+      "qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 1.09s\n"
+  }
+]
