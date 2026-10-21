@@ -120,48 +120,66 @@ fn matrix(filters: &XtcFilters, bin: usize) -> [[Complex<f32>; 2]; 2] {
 fn pose_paths_match_independent_f64_geometry() {
     let mut cases = 0;
     let mut maximum_error = 0.0_f64;
+    let mut failures = 0;
     for x in [-0.5, -0.1, 0.0, 0.1, 0.5] {
-        for yaw in [-60.0, -15.0, 0.0, 15.0, 60.0] {
-            if x == 0.0 && yaw == 0.0 {
-                continue;
+        for z in [-0.5, 0.0, 0.5] {
+            for yaw in [-60.0, -15.0, 0.0, 15.0, 60.0] {
+                if x == 0.0 && yaw == 0.0 {
+                    continue;
+                }
+                let params = XtcPluginParams {
+                    head_offset_x: x,
+                    head_offset_z: z,
+                    head_yaw_deg: yaw,
+                    ..Default::default()
+                };
+                let cache = compute_geometry_cache(&params, 48_000, 1025);
+                let g = cache.asymmetric.unwrap();
+                // Independent world-coordinate subtraction followed by a passive
+                // rotation into the head frame. Yaw cannot move the head center.
+                let theta = f64::from(params.speaker_angle_deg).to_radians();
+                let yaw = f64::from(yaw).to_radians();
+                let d = f64::from(params.distance_m);
+                let forward = d * theta.cos() - f64::from(z);
+                let left_x = -d * theta.sin() - f64::from(x);
+                let right_x = d * theta.sin() - f64::from(x);
+                let incidence = |sx: f64| {
+                    let local_x = sx * yaw.cos() - forward * yaw.sin();
+                    let local_z = sx * yaw.sin() + forward * yaw.cos();
+                    local_x.atan2(local_z)
+                };
+                let left_angle = -incidence(left_x);
+                let right_angle = incidence(right_x);
+                let left = left_x.hypot(forward);
+                let right = right_x.hypot(forward);
+                // The legacy spherical-head diffraction approximation remains;
+                // this oracle independently checks its Cartesian input geometry.
+                let diffraction = |angle: f64| {
+                    let t = angle.abs().min(std::f64::consts::PI);
+                    f64::from(params.head_radius_m) * (t + t.sin())
+                };
+                let left_cross = right + diffraction(right_angle);
+                let right_cross = left + diffraction(left_angle);
+                for (actual, expected) in [
+                    (g.delay_left_ipsi, left / 343.0),
+                    (g.delay_right_ipsi, right / 343.0),
+                    (g.delay_left_contra, left_cross / 343.0),
+                    (g.delay_right_contra, right_cross / 343.0),
+                    (g.amplitude_ratio_left, left / left_cross),
+                    (g.amplitude_ratio_right, right / right_cross),
+                    (g.theta_left, left_angle),
+                    (g.theta_right, right_angle),
+                ] {
+                    let error = (f64::from(actual) - expected).abs();
+                    maximum_error = maximum_error.max(error);
+                    failures += usize::from(error >= 3e-7);
+                }
+                cases += 1;
             }
-            let params = XtcPluginParams {
-                head_offset_x: x,
-                head_yaw_deg: yaw,
-                ..Default::default()
-            };
-            let cache = compute_geometry_cache(&params, 48_000, 1025);
-            let g = cache.asymmetric.unwrap();
-            // Independent f64 evaluation of the documented analytical approximation.
-            // This checks coordinate/routing arithmetic, not human HRTF accuracy.
-            let theta = f64::from(params.speaker_angle_deg).to_radians();
-            let yaw = f64::from(yaw).to_radians();
-            let d = f64::from(params.distance_m + params.head_offset_z);
-            let distance = |angle: f64, offset: f64| {
-                ((d * angle.sin() + offset).powi(2) + (d * angle.cos()).powi(2)).sqrt()
-            };
-            let left = distance(theta + yaw, f64::from(x));
-            let right = distance(theta - yaw, -f64::from(x));
-            let diffraction =
-                |angle: f64| f64::from(params.head_radius_m) * (angle.abs() + angle.abs().sin());
-            let left_cross = right + diffraction(theta - yaw);
-            let right_cross = left + diffraction(theta + yaw);
-            for (actual, expected) in [
-                (g.delay_left_ipsi, left / 343.0),
-                (g.delay_right_ipsi, right / 343.0),
-                (g.delay_left_contra, left_cross / 343.0),
-                (g.delay_right_contra, right_cross / 343.0),
-                (g.amplitude_ratio_left, left / left_cross),
-                (g.amplitude_ratio_right, right / right_cross),
-            ] {
-                let error = (f64::from(actual) - expected).abs();
-                maximum_error = maximum_error.max(error);
-                assert!(error < 3e-7, "x={x} yaw={yaw} error={error}");
-            }
-            cases += 1;
         }
     }
-    println!("pose_geometry cases={cases} maximum_error={maximum_error}");
+    println!("pose_geometry cases={cases} maximum_error={maximum_error} failed_values={failures}");
+    assert_eq!(failures, 0);
 }
 
 #[test]
@@ -172,9 +190,17 @@ fn mirrored_pose_swaps_both_filter_rows_and_columns() {
         for model in [0, 1] {
             for pinna in [false, true] {
                 for mode in ["phase_only", "explicit_delay"] {
-                    for (x, yaw) in [(0.1, 0.0), (0.0, 15.0), (0.04, -20.0)] {
+                    for (x, yaw, z) in [
+                        (0.1, 0.0, 0.0),
+                        (0.0, 15.0, 0.0),
+                        (0.04, -20.0, 0.0),
+                        (0.1, 0.0, -0.5),
+                        (0.0, 15.0, 0.5),
+                        (0.04, -20.0, 0.5),
+                    ] {
                         let p = XtcPluginParams {
                             head_offset_x: x,
+                            head_offset_z: z,
                             head_yaw_deg: yaw,
                             head_model: model,
                             pinna_model_enabled: pinna,
@@ -220,69 +246,73 @@ fn full_matrix_converges_to_centered_path_without_a_deadband() {
         for model in [0, 1] {
             for pinna in [false, true] {
                 for mode in ["phase_only", "explicit_delay"] {
-                    let p = XtcPluginParams {
-                        head_model: model,
-                        pinna_model_enabled: pinna,
-                        itd_modeling: mode.into(),
-                        ..Default::default()
-                    };
-                    let center = compute_xtc_filters_full(&p, rate, 1025);
-                    for (x, yaw) in [
-                        (-1e-30, 0.0),
-                        (1e-30, 0.0),
-                        (-1e-6, 0.0),
-                        (1e-6, 0.0),
-                        (-1e-8, 0.0),
-                        (1e-8, 0.0),
-                        (0.0, -1e-4),
-                        (0.0, 1e-4),
-                        (0.0, -1e-6),
-                        (0.0, 1e-6),
-                    ] {
-                        let pose = XtcPluginParams {
-                            head_offset_x: x,
-                            head_yaw_deg: yaw,
-                            ..p.clone()
+                    for z in [-0.5, 0.0, 0.5] {
+                        let p = XtcPluginParams {
+                            head_model: model,
+                            head_offset_z: z,
+                            pinna_model_enabled: pinna,
+                            itd_modeling: mode.into(),
+                            ..Default::default()
                         };
-                        let full = compute_xtc_filters_full(&pose, rate, 1025);
-                        assert!(!full.is_symmetric);
-                        let opposite = XtcPluginParams {
-                            head_offset_x: -x,
-                            head_yaw_deg: -yaw,
-                            ..p.clone()
-                        };
-                        let opposite = compute_xtc_filters_full(&opposite, rate, 1025);
-                        let mut pose_error = 0.0_f32;
-                        for bin in 0..1025 {
-                            let a = matrix(&center, bin);
-                            let b = matrix(&full, bin);
-                            let c = matrix(&opposite, bin);
-                            for row in 0..2 {
-                                for col in 0..2 {
-                                    let error = (a[row][col] - b[row][col]).norm();
-                                    maximum_error = maximum_error.max(error);
-                                    pose_error = pose_error.max(error);
-                                    // A finite move changes the physical transfer to first
-                                    // order. Cancel that odd term rather than mislabeling
-                                    // the intended response as a branch discontinuity.
-                                    let midpoint_error =
-                                        ((b[row][col] + c[row][col]) * 0.5 - a[row][col]).norm();
-                                    maximum_midpoint_error =
-                                        maximum_midpoint_error.max(midpoint_error);
-                                    assert!(
-                                        midpoint_error < 2e-4,
-                                        "rate={rate} model={model} pinna={pinna} mode={mode} x={x} yaw={yaw} bin={bin} midpoint_error={midpoint_error}"
-                                    );
-                                    if x.abs() <= 1e-8 && yaw.abs() <= 1e-6 {
-                                        assert!(error < 2e-4);
+                        let center = compute_xtc_filters_full(&p, rate, 1025);
+                        for (x, yaw) in [
+                            (-1e-30, 0.0),
+                            (1e-30, 0.0),
+                            (-1e-6, 0.0),
+                            (1e-6, 0.0),
+                            (-1e-8, 0.0),
+                            (1e-8, 0.0),
+                            (0.0, -1e-4),
+                            (0.0, 1e-4),
+                            (0.0, -1e-6),
+                            (0.0, 1e-6),
+                        ] {
+                            let pose = XtcPluginParams {
+                                head_offset_x: x,
+                                head_yaw_deg: yaw,
+                                ..p.clone()
+                            };
+                            let full = compute_xtc_filters_full(&pose, rate, 1025);
+                            assert!(!full.is_symmetric);
+                            let opposite = XtcPluginParams {
+                                head_offset_x: -x,
+                                head_yaw_deg: -yaw,
+                                ..p.clone()
+                            };
+                            let opposite = compute_xtc_filters_full(&opposite, rate, 1025);
+                            let mut pose_error = 0.0_f32;
+                            for bin in 0..1025 {
+                                let a = matrix(&center, bin);
+                                let b = matrix(&full, bin);
+                                let c = matrix(&opposite, bin);
+                                for row in 0..2 {
+                                    for col in 0..2 {
+                                        let error = (a[row][col] - b[row][col]).norm();
+                                        maximum_error = maximum_error.max(error);
+                                        pose_error = pose_error.max(error);
+                                        // A finite move changes the physical transfer to first
+                                        // order. Cancel that odd term rather than mislabeling
+                                        // the intended response as a branch discontinuity.
+                                        let midpoint_error = ((b[row][col] + c[row][col]) * 0.5
+                                            - a[row][col])
+                                            .norm();
+                                        maximum_midpoint_error =
+                                            maximum_midpoint_error.max(midpoint_error);
+                                        assert!(
+                                            midpoint_error < 2e-4,
+                                            "rate={rate} model={model} pinna={pinna} mode={mode} x={x} yaw={yaw} bin={bin} midpoint_error={midpoint_error}"
+                                        );
+                                        if x.abs() <= 1e-8 && yaw.abs() <= 1e-6 {
+                                            assert!(error < 2e-4);
+                                        }
                                     }
                                 }
                             }
+                            println!(
+                                "continuity_detail rate={rate} model={model} pinna={pinna} mode={mode} x={x} yaw={yaw} maximum_error={pose_error}"
+                            );
+                            cases += 1;
                         }
-                        println!(
-                            "continuity_detail rate={rate} model={model} pinna={pinna} mode={mode} x={x} yaw={yaw} maximum_error={pose_error}"
-                        );
-                        cases += 1;
                     }
                 }
             }
@@ -290,4 +320,37 @@ fn full_matrix_converges_to_centered_path_without_a_deadband() {
     }
     println!("pose_center_continuity cases={cases} maximum_error={maximum_error}");
     println!("pose_center_midpoint maximum_error={maximum_midpoint_error}");
+}
+
+#[test]
+fn depth_translation_moves_toward_fixed_speakers_and_yaw_preserves_center_ranges() {
+    let center = compute_geometry_cache(&XtcPluginParams::default(), 48_000, 1025);
+    for z in [-0.5, 0.5] {
+        let params = XtcPluginParams {
+            head_offset_z: z,
+            ..Default::default()
+        };
+        let cache = compute_geometry_cache(&params, 48_000, 1025);
+        let g = &cache.symmetric;
+        assert_eq!(g.delay_ipsi < center.symmetric.delay_ipsi, z > 0.0);
+        assert_eq!(g.theta_rad > center.symmetric.theta_rad, z > 0.0);
+        let angle = f64::from(params.speaker_angle_deg).to_radians();
+        let x = f64::from(params.distance_m) * angle.sin();
+        let forward = f64::from(params.distance_m) * angle.cos() - f64::from(z);
+        assert!((f64::from(g.delay_ipsi) - x.hypot(forward) / 343.0).abs() < 2e-9);
+        assert!((f64::from(g.theta_rad) - x.atan2(forward)).abs() < 2e-7);
+        for x in [-0.5, 0.0, 0.5] {
+            let mut ranges = None;
+            for yaw in [-90.0, -60.0, -15.0, 15.0, 60.0, 90.0] {
+                let p = XtcPluginParams {
+                    head_offset_x: x,
+                    head_yaw_deg: yaw,
+                    ..params.clone()
+                };
+                let g = compute_geometry_cache(&p, 48_000, 1025).asymmetric.unwrap();
+                let current = (g.delay_left_ipsi.to_bits(), g.delay_right_ipsi.to_bits());
+                assert_eq!(*ranges.get_or_insert(current), current);
+            }
+        }
+    }
 }

@@ -94,6 +94,11 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
   callback partition, reset, latency and zero-heap regressions. A finite pose
   change legitimately changes coefficients: distinguish that first-order response
   from the symmetric/full-branch limit and retain the raw differences.
-- This approximation still needs measured calibration and a full Cartesian pose
-  review, including depth-offset sign, translation-dependent incidence and large
-  yaw. Coordinate routing tests do not resolve those physical-model limitations.
+- Fixed speaker Cartesian coordinates now subtract listener X/Z before deriving
+  head-center range and incidence. Positive Z points toward speakers; positive yaw
+  turns right and must not change center range. Keep effective symmetric depth
+  incidence shared by pinna shaping and diagnostics.
+- The legacy diffraction model still uses center ranges as path references and
+  fixed left/right ipsilateral assignments. Large-yaw ear reclassification,
+  ear-surface paths and measured calibration remain open. Cartesian arithmetic and
+  routing tests do not resolve those physical-model limitations.

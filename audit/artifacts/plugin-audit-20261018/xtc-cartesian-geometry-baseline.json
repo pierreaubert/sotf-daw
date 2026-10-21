@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "sotf-host/qa",
+    "--lib",
+    "pose_paths_match_independent_f64_geometry",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 6.719914166955277,
+  "test_source_sha256": "84791f1521039007835d40b90ab18ab869b435c17b2ac81bf6023d89a9176431",
+  "stdout": "\nrunning 1 test\npose_geometry cases=72 maximum_error=0.35956295305820296 failed_values=536\ntest filters::compute::lateral_pose_tests::pose_paths_match_independent_f64_geometry ... FAILED\n\nfailures:\n\nfailures:\n    filters::compute::lateral_pose_tests::pose_paths_match_independent_f64_geometry\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 184 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 6.67s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c4a8d400ec30aee)\n\nthread 'filters::compute::lateral_pose_tests::pose_paths_match_independent_f64_geometry' (338603193) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs:182:5:\nassertion `left == right` failed\n  left: 536\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+}

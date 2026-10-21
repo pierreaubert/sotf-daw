@@ -197,13 +197,21 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
     let mut cases = 0;
     for rate in [48_000, 96_000] {
         for yaw in [-20.0, 0.0, 20.0] {
-            for x in [-0.04, 0.0, 0.04] {
+            for (x, z) in [
+                (-0.04, 0.0),
+                (0.0, 0.0),
+                (0.04, 0.0),
+                (-0.04, -0.5),
+                (0.0, 0.5),
+                (0.04, 0.5),
+            ] {
                 for mode in ["phase_only", "explicit_delay"] {
                     let p = XtcPluginParams {
                         head_model: 1,
                         itd_modeling: mode.into(),
                         head_yaw_deg: yaw,
                         head_offset_x: x,
+                        head_offset_z: z,
                         beta_base: 0.2,
                         pinna_model_enabled: false,
                         ..Default::default()
@@ -212,12 +220,14 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
                     let theta = f64::from(p.speaker_angle_deg).to_radians();
                     let yaw = f64::from(p.head_yaw_deg).to_radians();
                     let radius = f64::from(p.head_radius_m);
-                    let d = f64::from(p.distance_m + p.head_offset_z);
-                    let distance = |angle: f64, offset: f64| {
-                        ((d * angle.sin() + offset).powi(2) + (d * angle.cos()).powi(2)).sqrt()
-                    };
-                    let dl = distance(theta + yaw, f64::from(p.head_offset_x));
-                    let dr = distance(theta - yaw, -f64::from(p.head_offset_x));
+                    let d = f64::from(p.distance_m);
+                    let forward = d * theta.cos() - f64::from(z);
+                    let lx = -d * theta.sin() - f64::from(x);
+                    let rx = d * theta.sin() - f64::from(x);
+                    let dl = lx.hypot(forward);
+                    let dr = rx.hypot(forward);
+                    let left_angle = -lx.atan2(forward) + yaw;
+                    let right_angle = rx.atan2(forward) - yaw;
                     for bin in [8, 40, 80, 180, 340] {
                         let frequency = rate as f32 * bin as f32 / 2048.0;
                         let cross = |angle: f64, ipsi: f64, contra_ipsi: f64| {
@@ -245,12 +255,8 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
                                 shadowed
                             }
                         };
-                        let (left, right) = if yaw == 0.0 && x == 0.0 {
-                            let c = cross(theta, dl, dl);
-                            (c, c)
-                        } else {
-                            (cross(theta - yaw, dl, dr), cross(theta + yaw, dr, dl))
-                        };
+                        let left = cross(right_angle, dl, dr);
+                        let right = cross(left_angle, dr, dl);
                         let f64c = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
                         let ll = f64c(filters.filter_ll[bin]);
                         let lr = f64c(filters.filter_lr[bin]);

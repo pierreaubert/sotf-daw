@@ -295,11 +295,19 @@ fn cold_default_and_neutral_clocks_reset_without_allocating_or_freeing() {
 fn lateral_pose_cold_process_and_reset_keep_latency_and_zero_heap() {
     let mut cases = 0;
     for rate in [44_100, 48_000, 96_000] {
-        for (x, yaw) in [(-0.1, 0.0), (0.1, 0.0), (0.04, 20.0)] {
+        for (x, yaw, z) in [
+            (-0.1, 0.0, 0.0),
+            (0.1, 0.0, 0.0),
+            (0.04, 20.0, 0.0),
+            (-0.1, 0.0, -0.5),
+            (0.0, 0.0, 0.5),
+            (0.04, 20.0, 0.5),
+        ] {
             for mode in ["phase_only", "explicit_delay"] {
                 let mut plugin = XtcPlugin::new(
                     XtcPluginParams {
                         head_offset_x: x,
+                        head_offset_z: z,
                         head_yaw_deg: yaw,
                         itd_modeling: mode.into(),
                         ..Default::default()
@@ -347,7 +355,11 @@ fn lateral_pose_cold_process_and_reset_keep_latency_and_zero_heap() {
                 })
                 .join()
                 .unwrap();
-                assert_eq!(counts, (0, 0), "rate={rate} x={x} yaw={yaw} mode={mode}");
+                assert_eq!(
+                    counts,
+                    (0, 0),
+                    "rate={rate} x={x} yaw={yaw} z={z} mode={mode}"
+                );
                 cases += 1;
             }
         }

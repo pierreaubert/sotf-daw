@@ -67,11 +67,11 @@ pub struct XtcPluginParams {
     #[serde(default)]
     pub head_offset_x: f32,
 
-    /// Head tracking: depth offset in meters (default: 0.0)
+    /// Head tracking: depth offset in meters, positive toward speakers (default: 0.0)
     #[serde(default)]
     pub head_offset_z: f32,
 
-    /// Head tracking: yaw angle in degrees (-90 to +90, 0 = facing forward)
+    /// Head tracking: yaw angle in degrees, positive right (-90 to +90, 0 = forward)
     #[serde(default)]
     pub head_yaw_deg: f32,
 

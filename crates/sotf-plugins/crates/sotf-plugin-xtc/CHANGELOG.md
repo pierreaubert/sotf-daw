@@ -1,3 +1,16 @@
+# Unreleased Cartesian source geometry audit (2026-10-21)
+
+- Keep speakers fixed in Cartesian world coordinates and subtract listener X/Z
+  before deriving source range and incidence. Positive Z now moves toward the
+  speakers, consistent with room reflections. Yaw rotates incidence without
+  changing source-to-head-center range. Translated presets intentionally change.
+- Use the effective centered-depth incidence for pinna shaping and shared-model
+  diagnostics. Preserve centered zero-offset coefficients and signal latency.
+- Extend f64 geometry, mirror/near-center, rendered callback-partition and complex
+  prediction regressions to depth translation. Keep spherical diffraction and
+  fixed ipsilateral/contralateral assignment explicit: large-yaw ear classification,
+  ear-surface geometry and measured HRTF/room robustness still need validation.
+
 # Unreleased lateral pose audit (2026-10-21)
 
 - Select full asymmetric filters for lateral-only displacement and arbitrarily

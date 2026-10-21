@@ -122,7 +122,7 @@ fn analytical_plant(
             sym.a,
             sym.amplitude_ratio,
             delay,
-            params.speaker_angle_deg,
+            sym.theta_rad.to_degrees(),
         );
         let contra = contra * pinna;
         [

@@ -34,6 +34,7 @@ pub(crate) struct GeometryCache {
 /// Geometry values for symmetric XTC (yaw ~= 0).
 pub(crate) struct SymmetricGeometry {
     pub a: f32,
+    pub theta_rad: f32,
     pub amplitude_ratio: f32,
     pub delay_ipsi: f32,
     pub delay_contra: f32,

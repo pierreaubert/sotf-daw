@@ -1,0 +1,80 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--test",
+      "audit_cancellation",
+      "rendered_pose_mirrors",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.7833066249731928,
+    "stdout": "\nrunning 1 test\nrendered_pose cases=72 maximum_mirror_error=0 maximum_partition_error=0\ntest rendered_pose_mirrors_both_columns_and_keeps_callback_partition_invariance ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.46s\n\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.27s\n     Running tests/audit_cancellation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_cancellation-4afedf5e7e1a948f)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--test",
+      "stream_clock",
+      "lateral_pose_cold",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 5.558789167087525,
+    "stdout": "\nrunning 1 test\nlateral_pose_heap cases=36 allocations=0 frees=0 latency_samples=2048 reset_partition_error=0\ntest lateral_pose_cold_process_and_reset_keep_latency_and_zero_heap ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.08s\n\n",
+    "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 5.43s\n     Running tests/stream_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/stream_clock-c0a24275c562e050)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-xtc",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "sotf-host/qa",
+      "--all-targets",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.459845291916281,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 0.37s\n"
+  }
+]

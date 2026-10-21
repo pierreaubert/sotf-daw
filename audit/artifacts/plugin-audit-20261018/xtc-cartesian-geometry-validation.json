@@ -1,0 +1,35 @@
+{
+  "result": "Correct fixed speaker-to-head-center geometry before the existing spherical diffraction model: source coordinates are (+/-d sin(theta),d cos(theta)); listener X/Z are subtracted, positive Z points toward speakers, positive yaw turns right. Yaw rotates incidence without changing source-center range. Symmetric depth pinna shaping and shared analytical diagnostics now use effective translated incidence. Previous oracle failed536/576 values over72 poses (max mixed-coordinate error0.35956295); corrected f64 Cartesian oracle has0failed values/maxerror1.2119493e-7. Centered default retains4100bit-identical coefficient words. Depth-aware regressions pass144mirror cases,720near-center continuity cases and360Brown-Duda complex predictions at unchanged0.02dB tolerance(max0.01729923dB). All185core tests pass with1existing ignored diagnostic; full lib/integration matrix243passes/1ignore. Rendered two-input/speaker matrix72cases has exact mirror/partition equality;36depth/lateral cold/reset heap cases have0allocations/frees,exact waveform partitioning and unchanged2048sample latency. Strict all-target release Clippy and formatting/diff checks pass. Initial core run exposed one old geometry oracle, retained as intermediate evidence then updated to independent world-coordinate subtraction; no tolerance widening. Translated/yawed preset responses intentionally change. Existing head-shadow/diffraction functions, fixed ipsilateral assignment, parameters/schema/defaults, inversion and callback path remain. Large-yaw ear reclassification, true ear-surface path geometry, measured HRTF/robustness,8kHzILD/93.75Hzcancellation conformance,truepeaks/native/device/listening remain open; XTCpartial and overall35/45complete.",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/AGENTS.md": "d10f95970d0a790ba64acee7475d4e67b220702e6d6687b799e86bfc72d0228a",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/CHANGELOG.md": "09d66b53a28b70f6051b7dc6ec5b706915b7775fbf4a4804f4ed31ba5231c7a4",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/USAGE.md": "6e9c298c0e616b6d7d622ee7b2839f13c94d790f8f4a637644459aecb4714a56",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/config.rs": "c92796188e1ee1d725d2208e8ccdad429a7c3ad6e3b6ea6f6f2cb458aea2156e",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": "085e87b96c4733724dbfb9de9ebfb4adbf94aecbeb624fa651cf4e79fc8faa4a",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs": "d593a3ff7b067b64e4b66df040e60ef6aadaa0cb7d045c68c945a9af73b5dcba",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/types.rs": "b5160d8980926b5dfe50c36d9b9e3d34ad1bc3985b13d2e2e6dc1255a34bd5bc",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/diagnostic_audit_tests.rs": "9f0edd34d5ed6e96b6f6802bf0ee66a6300a13b0a65179b5ac034e91d1cd1822",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/measure.rs": "71daa2af4bcca02c25327aa24cb111895bf07e032e171dba6b25b4b70042cd54",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/audit_cancellation.rs": "085f5aba3964a5e5ec49c8679880b92087547ccf75fca3193d84d8dcf4e8eeac",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/stream_clock.rs": "b3c8908dd17243d9be70b8b07fec37613f5d83558e6d226bc7c398131f6b9639"
+  },
+  "baseline": "xtc-cartesian-geometry-baseline.json",
+  "intermediate_core_observation": "xtc-cartesian-geometry-core.json",
+  "final_core_and_integration": "xtc-cartesian-geometry-gates.json",
+  "final_render_heap": "xtc-cartesian-geometry-render-heap.json",
+  "core_passed": 185,
+  "full_test_matrix_passed": 243,
+  "existing_ignored": 1,
+  "cartesian_poses": 72,
+  "mirror_cases": 144,
+  "near_center_cases": 720,
+  "independent_complex_predictions": 360,
+  "rendered_cases": 72,
+  "heap_cases": 36,
+  "latency_samples": 2048,
+  "limitations": [
+    "Center-range input correction retains approximate diffraction and fixed ipsilateral/contralateral assignment.",
+    "No measured HRTF/native/device/listener quality certification.",
+    "Existing nominal acoustic conformance failures remain; default coefficients bit-identical."
+  ]
+}

@@ -32,7 +32,7 @@ For head-tracking-enabled setups, adjusts the cancellation filters in real-time 
 | Parameter | Range | Default | Unit | Description |
 |-----------|-------|---------|------|-------------|
 | Head Offset X | -0.5 to 0.5 | 0 | m | Lateral head offset from sweet spot; positive toward the right speaker |
-| Head Offset Z | -0.5 to 0.5 | 0 | m | Depth offset from sweet spot |
+| Head Offset Z | -0.5 to 0.5 | 0 | m | Depth offset; positive toward speakers |
 | Head Yaw | -90 to 90 | 0 | ° | Head rotation angle |
 | Head Tracking Smooth | 0 to 1.0 | 0.1 | s | Smoothing time for head tracking updates |
 
@@ -263,3 +263,14 @@ Input (Stereo) → STFT (windowed FFT, 75% overlap)
                     ↓
               ISTFT → Overlap-Add → Auto Gain Compensation → Output (Stereo)
 ```
+
+### Analytical pose coordinates
+
+Speakers stay at `(+/-d sin(theta), d cos(theta))` in the horizontal X/Z plane.
+Listener offsets are subtracted from those positions; positive X is right and
+positive Z is toward the speakers. Positive yaw turns right. Translation changes
+source incidence and range; yaw changes incidence alone. The analytical model
+uses these center ranges as references for its spherical diffraction approximation,
+not exact speaker-to-ear-surface distances. Pinna shaping follows the translated
+incidence. Large-yaw ear classification and measured head/room calibration remain
+limitations; these coordinate checks do not certify cancellation at a real listener.

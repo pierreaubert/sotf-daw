@@ -179,9 +179,17 @@ fn rendered_pose_mirrors_both_columns_and_keeps_callback_partition_invariance() 
     let mut cases = 0;
     for model in [0, 1] {
         for mode in ["phase_only", "explicit_delay"] {
-            for (x, yaw) in [(0.1, 0.0), (0.04, 20.0)] {
+            for (x, yaw, z) in [
+                (0.1, 0.0, 0.0),
+                (0.04, 20.0, 0.0),
+                (0.0, 0.0, -0.5),
+                (0.0, 0.0, 0.5),
+                (0.1, 0.0, -0.5),
+                (0.04, 20.0, 0.5),
+            ] {
                 let params = XtcPluginParams {
                     head_offset_x: x,
+                    head_offset_z: z,
                     head_yaw_deg: yaw,
                     head_model: model,
                     itd_modeling: mode.into(),

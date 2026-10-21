@@ -2504,6 +2504,18 @@
             "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-validation.json"
           ],
           "result": "Lateral-only displacement and every nonzero yaw now select the full two-ear matrix; positive X points right consistently with room reflections. Asymmetric filters now honor the existing explicit LF-delay blend through one shared contralateral transfer helper also used by analytical diagnostics. Centered default matches all 4100 recorded coefficient words exactly locally (portable fixture tolerance 2e-6). Twenty-four independent f64 path cases have maximum error 1.0176653e-7; 72 mirrored filter cases are exact; 240 near-center cases retain raw finite-pose variation and have midpoint residual at most 1.884145e-4 under the 2e-4 numerical gate. Independent Brown-Duda prediction coverage expands to 180 phase/LF-mode cases with maximum 0.0110524 dB error under unchanged 0.02 dB gate. Twenty-four rendered pose matrices mirror and partition exactly; 18 cold/reset cases preserve exact waveforms, zero allocations/frees and latency 2048. Full release suite passes 243 tests with one existing timing ignore; standard QA, strict all-target release Clippy and formatting pass. Existing 360 nominal-filter mismatch rows remain identical (134 degraded, worst normalized -5.010439 dB); nominal acoustic report remains 15/17 with both previous failures retained. Parameter IDs/ranges/defaults unchanged; noncentered presets intentionally change behavior."
+        },
+        {
+          "requirement": "Correct fixed Cartesian speaker/head-center depth and translation geometry before deriving yaw-dependent incidence.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/audit_cancellation.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/stream_clock.rs",
+            "audit/artifacts/plugin-audit-20261018/xtc-cartesian-geometry-validation.json"
+          ],
+          "result": "Correct fixed speaker-to-head-center geometry before the existing spherical diffraction model: source coordinates are (+/-d sin(theta),d cos(theta)); listener X/Z are subtracted, positive Z points toward speakers, positive yaw turns right. Yaw rotates incidence without changing source-center range. Symmetric depth pinna shaping and shared analytical diagnostics now use effective translated incidence. Previous oracle failed536/576 values over72 poses (max mixed-coordinate error0.35956295); corrected f64 Cartesian oracle has0failed values/maxerror1.2119493e-7. Centered default retains4100bit-identical coefficient words. Depth-aware regressions pass144mirror cases,720near-center continuity cases and360Brown-Duda complex predictions at unchanged0.02dB tolerance(max0.01729923dB). All185core tests pass with1existing ignored diagnostic; full lib/integration matrix243passes/1ignore. Rendered two-input/speaker matrix72cases has exact mirror/partition equality;36depth/lateral cold/reset heap cases have0allocations/frees,exact waveform partitioning and unchanged2048sample latency. Strict all-target release Clippy and formatting/diff checks pass. Initial core run exposed one old geometry oracle, retained as intermediate evidence then updated to independent world-coordinate subtraction; no tolerance widening. Translated/yawed preset responses intentionally change. Existing head-shadow/diffraction functions, fixed ipsilateral assignment, parameters/schema/defaults, inversion and callback path remain. Large-yaw ear reclassification, true ear-surface path geometry, measured HRTF/robustness,8kHzILD/93.75Hzcancellation conformance,truepeaks/native/device/listening remain open; XTCpartial and overall35/45complete."
         }
       ],
       "evidence": [
@@ -2512,7 +2524,8 @@
         "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-baseline.json",
         "audit/artifacts/plugin-audit-20261018/xtc-diagnostic-validation.json",
         "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-validation.json"
+        "audit/artifacts/plugin-audit-20261018/xtc-lateral-pose-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-cartesian-geometry-validation.json"
       ],
       "remaining": [
         "Extend the supplied-matrix API and rendered speaker-output evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Controlled rendered checks still degrade normalized separation in 134/360 cases (worst -5.01044 dB); prior core-inverse raw-depth results are a different measurement and remain retained.",
@@ -2520,7 +2533,7 @@
         "Resolve the retained nominal 100 Hz cancellation target: its explicitly reported selected bin is 93.75 Hz, with 4.986 dB versus the unchanged 5 dB minimum. Do not widen the target to hide the corrected measurement.",
         "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
         "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality.",
-        "Analytical geometry still uses its existing depth-distance/yaw approximation. Review depth-offset sign, translation-dependent incidence and large-yaw source/ear classification against full Cartesian coordinates."
+        "Source/head-center Cartesian subtraction, depth sign and translation-dependent incidence are now corrected and verified. The legacy spherical diffraction and fixed ipsilateral/contralateral assignment still need full ear-surface geometry, large-yaw/source-side reclassification and measured calibration."
       ]
     },
     {
@@ -3190,6 +3203,15 @@
       ],
       "result": "Every native process/FIFO/drain/prime write now supplies prepared rate/channel/buffer geometry to HalOutputWriter::write_with_format. The existing write commit encloses nonzero geometry equality, driver readiness and cached fingerprint validation through encryption, ring copy and cursor publication. Quiesced geometry owners cannot change format between check and copy; refusal returns zero without cursor advancement and retains logical FIFO ownership. Reprepare prime uses plan target format; initialization prime explicitly uses validated incoming clock before committing self.sample_rate. Initial native run exposed a zero-clock prime refusal; the fixed fake writer now enforces prepared geometry so core tests cover that integration. Clean driver base 172b78d plus exactly the staged source patch passes3 focused driver tests (20000 write/read observations and512 concurrent geometry requests),82 core release tests, native all-target check and strict driver/plugin library Clippy. Temporary clean-checkout lock repair adds only the missing engine rustix dependency, no registry upgrades; user lock untouched. Isolated current-driver native32 cases (1-16 channels,48/96k) pass geometry/key refusal without publication, FIFO/drop conservation, remapping, pending recovery,64->128 reprepare and zero callback allocations. Strict native plugin all-target Clippy passes. Dirty driver dependency snapshots remain stable. Sparse shared-file staging includes only the3-line module/re-export insertion; unrelated driver/engine/common/lock changes excluded. Key fencing requires owner encryption publication through the same quiesced protocol: committed base key setters do not provide it. Raw header stores, session-generation/ABA, automatic liveness, Swift/device/clock/deadline/audibility proof remain open; overall35/45 complete.",
       "limitations": "Concurrent key fencing depends on quiesced owner publication; base key setters are not quiesced.; No session generation/ABA/raw-store/Swift/device/deadline/audibility guarantee.; Clean checkout uses one-entry temporary lock repair and current sibling dependency symlinks."
+    },
+    {
+      "name": "XTC Cartesian source-center translation and incidence",
+      "state": "verified_partial",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Correct fixed speaker-to-head-center geometry before the existing spherical diffraction model: source coordinates are (+/-d sin(theta),d cos(theta)); listener X/Z are subtracted, positive Z points toward speakers, positive yaw turns right. Yaw rotates incidence without changing source-center range. Symmetric depth pinna shaping and shared analytical diagnostics now use effective translated incidence. Previous oracle failed536/576 values over72 poses (max mixed-coordinate error0.35956295); corrected f64 Cartesian oracle has0failed values/maxerror1.2119493e-7. Centered default retains4100bit-identical coefficient words. Depth-aware regressions pass144mirror cases,720near-center continuity cases and360Brown-Duda complex predictions at unchanged0.02dB tolerance(max0.01729923dB). All185core tests pass with1existing ignored diagnostic; full lib/integration matrix243passes/1ignore. Rendered two-input/speaker matrix72cases has exact mirror/partition equality;36depth/lateral cold/reset heap cases have0allocations/frees,exact waveform partitioning and unchanged2048sample latency. Strict all-target release Clippy and formatting/diff checks pass. Initial core run exposed one old geometry oracle, retained as intermediate evidence then updated to independent world-coordinate subtraction; no tolerance widening. Translated/yawed preset responses intentionally change. Existing head-shadow/diffraction functions, fixed ipsilateral assignment, parameters/schema/defaults, inversion and callback path remain. Large-yaw ear reclassification, true ear-surface path geometry, measured HRTF/robustness,8kHzILD/93.75Hzcancellation conformance,truepeaks/native/device/listening remain open; XTCpartial and overall35/45complete.",
+      "limitations": "Center-range input correction retains approximate diffraction and fixed ipsilateral/contralateral assignment.; No measured HRTF/native/device/listener quality certification.; Existing nominal acoustic conformance failures remain; default coefficients bit-identical."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

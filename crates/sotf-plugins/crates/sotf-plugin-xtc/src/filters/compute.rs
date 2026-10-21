@@ -116,13 +116,27 @@ pub(crate) fn compute_geometry_cache(
     let sample_rate = sample_rate.into();
     let freq_per_bin = sample_rate as f32 / (2.0 * (num_bins - 1) as f32);
 
-    // Symmetric geometry
-    let d = params.distance_m + params.head_offset_z;
-    let theta_rad = params.speaker_angle_deg * PI / 180.0;
+    // Fixed world speakers at (+/-d*sin(theta), d*cos(theta)), matching
+    // reflections. Positive listener Z moves toward them. Translation changes
+    // source range/incidence; yaw rotates incidence without moving the center.
+    let d = params.distance_m;
+    let speaker_theta = params.speaker_angle_deg * PI / 180.0;
+    let speaker_x = d * speaker_theta.sin();
+    let forward = d * speaker_theta.cos() - params.head_offset_z;
     let a = params.head_radius_m;
     let x_offset = params.head_offset_x;
-
-    let l_ipsi = compute_path_length(d, theta_rad, -x_offset);
+    let theta_rad = if params.head_offset_z == 0.0 {
+        speaker_theta
+    } else {
+        speaker_x.atan2(forward)
+    };
+    // Preserve historical centered coefficients exactly. These symmetric values
+    // are used only when lateral offset and yaw are both zero.
+    let l_ipsi = if params.head_offset_z == 0.0 {
+        compute_path_length(d, speaker_theta, 0.0)
+    } else {
+        speaker_x.hypot(forward)
+    };
     let diffraction_extra = woodworth_diffraction_path(theta_rad, a);
     let l_contra_full = l_ipsi + diffraction_extra;
     let amplitude_ratio = l_ipsi / l_contra_full;
@@ -132,6 +146,7 @@ pub(crate) fn compute_geometry_cache(
 
     let symmetric = SymmetricGeometry {
         a,
+        theta_rad,
         amplitude_ratio,
         delay_ipsi,
         delay_contra,
@@ -141,12 +156,19 @@ pub(crate) fn compute_geometry_cache(
     // Any lateral displacement or yaw requires the full two-ear matrix.
     let yaw_rad = params.head_yaw_deg * PI / 180.0;
     let asymmetric = if params.head_yaw_deg != 0.0 || x_offset != 0.0 {
-        let theta_left = theta_rad + yaw_rad;
-        let theta_right = theta_rad - yaw_rad;
+        let left_x = -speaker_x - x_offset;
+        let right_x = speaker_x - x_offset;
+        let (sin_yaw, cos_yaw) = yaw_rad.sin_cos();
+        let incidence = |source_x: f32| {
+            let local_x = source_x * cos_yaw - forward * sin_yaw;
+            let local_z = source_x * sin_yaw + forward * cos_yaw;
+            local_x.atan2(local_z)
+        };
+        let theta_left = -incidence(left_x);
+        let theta_right = incidence(right_x);
 
-        // Positive X points toward the right speaker, matching room reflections.
-        let l_left_ipsi = compute_path_length(d, theta_left, x_offset);
-        let l_left_contra_ipsi = compute_path_length(d, theta_right, -x_offset); // distance from right speaker to right ear
+        let l_left_ipsi = left_x.hypot(forward);
+        let l_left_contra_ipsi = right_x.hypot(forward);
         let diffraction_left = woodworth_diffraction_path(theta_right.abs(), a);
         let l_left_contra_full = l_left_contra_ipsi + diffraction_left;
         let amplitude_ratio_left = l_left_ipsi / l_left_contra_full;
@@ -154,8 +176,8 @@ pub(crate) fn compute_geometry_cache(
         let delay_left_contra = l_left_contra_full / SPEED_OF_SOUND;
         let angle_left_contra = contralateral_shadow_angle(theta_right.abs());
 
-        let l_right_ipsi = compute_path_length(d, theta_right, -x_offset);
-        let l_right_contra_ipsi = compute_path_length(d, theta_left, x_offset); // distance from left speaker to left ear
+        let l_right_ipsi = l_left_contra_ipsi;
+        let l_right_contra_ipsi = l_left_ipsi;
         let diffraction_right = woodworth_diffraction_path(theta_left.abs(), a);
         let l_right_contra_full = l_right_contra_ipsi + diffraction_right;
         let amplitude_ratio_right = l_right_ipsi / l_right_contra_full;
@@ -664,7 +686,7 @@ fn compute_xtc_filters_symmetric_with_cache(
         Some(build_pinna_contra_lut(
             num_bins,
             cache.freq_per_bin,
-            params.speaker_angle_deg,
+            sym.theta_rad.to_degrees(),
         ))
     } else {
         None
