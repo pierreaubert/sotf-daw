@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\nerror: mismatched closing delimiter: `}`\n  --> crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_limiter.rs:19:44\n   |\n13 |         for room in [0.2, 3.0] {\n   |                                - closing delimiter possibly meant for this\n...\n19 |                 sotf_host::assert_no_allocs(\"recursive limiter render\", || {\n   |                                            ^ unclosed delimiter\n...\n43 |         }\n   |         ^ mismatched closing delimiter\n\nerror: this file contains an unclosed delimiter\n  --> crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_limiter.rs:46:3\n   |\n 9 | fn limiter_threshold_crossing_preserves_continuity_in_static_and_modulated_networks() {\n   |                                                                                       - unclosed delimiter\n...\n19 |                 sotf_host::assert_no_allocs(\"recursive limiter render\", || {\n   |                                                                            - this delimiter might not be properly closed...\n...\n42 |             }\n   |             - ...as it matches this but it has different indentation\n...\n46 | }\n   |  ^\n\nerror: could not compile `sotf-plugin-aae` (test \"audit_fdn_limiter\") due to 2 previous errors\nwarning: build failed, waiting for other jobs to finish...\n"
+}

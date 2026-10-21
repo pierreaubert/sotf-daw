@@ -1,0 +1,30 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "56886fdc68d2535600ddd7087df5d9a594ba4b2ecc2ce6c24be83499f8ddb54a",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_limiter.rs": "b9ef7d2bf462385a37e2bd2305d90c50643f0d2bda4465e49c71d3361102af8b",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "9b7114b7c74f2949e4e1245e1286c510b5033356ce484a864f4e242d1d7a7730",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "11707e9aa05d57930888f1d1bf7990c48ed60c68f5ade286421d38f5e0b70f55",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "456b192aedc291fbac0ce945adeb11b3189dc1e27aa2e0be53a08a97590cfd80"
+  },
+  "release_passed": 102,
+  "recursive_cases": 24,
+  "recursive_max_sample_difference": 8.165836e-06,
+  "baseline_recursive_sample_difference": 0.22968596,
+  "transfer_grid_probes": 131076,
+  "recursive_render_allocations": 0,
+  "quality_stdout_identical_to_prior": false,
+  "evidence": [
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-recursive-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-initial-harness-error.json",
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-suite.json",
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-clippy.json",
+    "audit/artifacts/plugin-audit-20261018/aae-limiter-quality.json"
+  ],
+  "limitations": [
+    "High-level transfer intentionally changes from half the configured feedback ceiling upward.",
+    "Three-second recursive renders and low-level stationary decay do not establish arbitrary modulated/nonlinear RT60 or finite recursive tails.",
+    "Real listening/corpus/native deadline evidence remains outstanding."
+  ],
+  "quality_changed_row": "limiter_activity final_gain 0.322765 -> 0.322770; all other printed acoustic/detector rows unchanged"
+}

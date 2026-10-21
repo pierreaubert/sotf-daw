@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_fdn_limiter",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nlimiter_tail rate=44100 room=0.2 modulation=0 difference=0.22968596 peak=0.9634721\ntest limiter_threshold_crossing_preserves_continuity_in_static_and_modulated_networks ... FAILED\n\nfailures:\n\nfailures:\n    limiter_threshold_crossing_preserves_continuity_in_static_and_modulated_networks\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 2.53s\n     Running tests/audit_fdn_limiter.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_fdn_limiter-c4c02b4c35d0a3d7)\n\nthread 'limiter_threshold_crossing_preserves_continuity_in_static_and_modulated_networks' (334757377) panicked at crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_limiter.rs:32:17:\nthreshold-adjacent excitation caused tail jump 0.22968596\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-aae --test audit_fdn_limiter`\n"
+}

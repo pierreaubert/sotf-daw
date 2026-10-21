@@ -39,6 +39,16 @@
             "audit/artifacts/plugin-audit-20261018/aae-fdn-transition-validation.json"
           ],
           "result": "18 stationary low-level summed-tap-energy T30 cases span 44.1/48/96 kHz, room sizes 0.2/1/3 and neutral RT60 0.5/2 seconds. Maximum target error 0.5805%, minimum r2 0.9919648, under 10% and above 0.98 bounds. Longer T30 fit was selected after sparse-room T20 quality limitation; both observations retained. Three high-band T20 damping checks shorten neutral ~1.204 s to ~0.837 s. Existing four-preset quality runner passes with normalized echo density 1.254-1.300, mixing times 0.267-0.298 s, spatial coherence 0.1445-0.5802. Preset matrix shares default late controls; no arbitrary preset RT60 claim."
+        },
+        {
+          "requirement": "Eliminate discontinuous nonlinear feedback at the safety threshold and validate recursive sensitivity.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_fdn_limiter.rs",
+            "audit/artifacts/plugin-audit-20261018/aae-limiter-validation.json"
+          ],
+          "result": "Feedback soft_clip previously used identity through the ceiling then ceiling*tanh(x/ceiling), producing a -0.23839164 normalized jump at threshold. Threshold-adjacent impulses reproduced 0.22968596 peak recursive sample difference. Continuous odd monotone C1 half-ceiling knee now preserves small-signal unity and remains bounded by the same configured ceiling. 131076 signed grid probes at four ceilings assert bounds, monotonicity, symmetry and low-level identity; knee slopes match unity. 24 three-second recursive renders span 44.1/48/96/192 kHz, room 0.2/3 and modulation 0/0.5/1; worst difference 8.165836e-06, no allocations. Full release 102 passed, strict all-target QA Clippy and offline quality diagnostic pass; only printed quality change is high-level limiter_activity final_gain 0.322765 -> 0.322770; all other acoustic/detector rows unchanged. Existing neutral T30/treble damping and interrupted room-change heap tests pass. High-level feedback tails intentionally change above half ceiling; delay, latency, parameters, presets and storage unchanged. No universal nonlinear RT60, finite-tail, listening or device-deadline claim."
         }
       ],
       "evidence": [
@@ -3013,6 +3023,15 @@
       ],
       "result": "Cumulative relative-error reweighting was evaluated on the complete target spectrum with unchanged support/latency and diagnostic. 48 outer/128 CG iterations improve the 96k/1024/500Hz error only to -0.2164496413 dB; 96 outer/1024 CG gives -0.2173627069 dB, both fail the unchanged 0.05 dB gate. A full-spectrum numerical annihilating-functional witness was then generated and independently checked using Python scalar analog prototypes and cosine sums (no production biquads, fitter or FFT). For 4097 grid points the 96k/1024 centered-support relative-error lower bound is 0.02461391375, conservatively 0.2112049817 dB; the 0.05 dB contract permits at most 0.005773063. Largest annihilated representable cosine moment 7.44788e-19; target agreement 2.86473e-12 relative; finite moment leakage explicitly included. At 48k the corresponding lower bound is only 0.015149499 dB. This floating-point numerical witness establishes a strong fixed-support/full-spectrum limitation, not an interval-arithmetic proof or impossibility at the four isolated ignored-test probes. Rejected solver removed; production source exactly restored. Further whole-spectrum solver tuning cannot reasonably close the 96k short-support contract; FIR-M1 and any support/phase/latency policy decision remain open.",
       "limitations": "No production solver shipped or gate weakened. FIR-M1 remains failing, native/deadline work remains pending; overall 35/45 complete."
+    },
+    {
+      "name": "AAE continuous feedback limiter knee",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "Feedback soft_clip previously used identity through the ceiling then ceiling*tanh(x/ceiling), producing a -0.23839164 normalized jump at threshold. Threshold-adjacent impulses reproduced 0.22968596 peak recursive sample difference. Continuous odd monotone C1 half-ceiling knee now preserves small-signal unity and remains bounded by the same configured ceiling. 131076 signed grid probes at four ceilings assert bounds, monotonicity, symmetry and low-level identity; knee slopes match unity. 24 three-second recursive renders span 44.1/48/96/192 kHz, room 0.2/3 and modulation 0/0.5/1; worst difference 8.165836e-06, no allocations. Full release 102 passed, strict all-target QA Clippy and offline quality diagnostic pass; only printed quality change is high-level limiter_activity final_gain 0.322765 -> 0.322770; all other acoustic/detector rows unchanged. Existing neutral T30/treble damping and interrupted room-change heap tests pass. High-level feedback tails intentionally change above half ceiling; delay, latency, parameters, presets and storage unchanged. No universal nonlinear RT60, finite-tail, listening or device-deadline claim.",
+      "limitations": "AAE remains partial for noncorrelated transitions, maximum nonlinear/modulated decay and real listening/corpus evidence; overall 35/45 complete."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -16,7 +16,11 @@ dual-read-head transitions, while RT60 filter coefficients interpolate over
 5 ms. Both delay transitions use constant-sum smoothstep weights, so correlated
 old/new taps do not gain amplitude merely from crossfading. This also applies
 inside the FDN feedback loop. The safety control is emergency feedback headroom above nominal full
-scale, so the default +6 dB setting does not distort normal-level decay.
+scale. Feedback limiting has a continuous, monotone soft knee starting at half
+that ceiling (about 6 dB below it), with unity gain below the knee and an
+asymptote at the configured ceiling. It preserves small-signal decay while
+compressing high internal feedback levels. This replaces the former abrupt
+24% drop when crossing the ceiling; high-level tails can therefore change.
 
 The LFE output is a synthesized effects send, not complementary bass
 management. It uses a fourth-order Linkwitz-Riley low-pass at 120 Hz; main

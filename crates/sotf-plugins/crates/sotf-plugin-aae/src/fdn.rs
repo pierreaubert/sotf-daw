@@ -263,13 +263,19 @@ impl Fdn {
     }
 }
 
-/// Soft-clip using tanh for smooth limiting.
+/// Limit feedback continuously while preserving low-level unity gain.
+///
+/// The knee begins at half the ceiling (about 6 dB below it). Its value and
+/// slope match the identity there, and its asymptote is the existing ceiling.
+/// Switching directly from identity to tanh at the ceiling drops the output
+/// by about 24%, injecting a discontinuity into the recursive network.
 #[inline]
 fn soft_clip(x: f32, threshold: f32) -> f32 {
-    if x.abs() <= threshold {
+    let knee = threshold * 0.5;
+    if x.abs() <= knee {
         x
     } else {
-        threshold * (x / threshold).tanh()
+        (knee + knee * ((x.abs() - knee) / knee).tanh()).copysign(x)
     }
 }
 
@@ -401,6 +407,52 @@ mod tests {
             after_energy > before_energy * 0.1,
             "FDN state should persist across room-size changes: before={before_energy}, after={after_energy}"
         );
+    }
+
+    #[test]
+    fn limiter_is_continuous_and_monotone_through_its_ceiling() {
+        for threshold in [0.25_f32, 1.0, 2.0, 16.0] {
+            let below = soft_clip(threshold * (1.0 - 1e-5), threshold);
+            let above = soft_clip(threshold * (1.0 + 1e-5), threshold);
+            println!(
+                "limiter threshold={threshold} threshold_step={}",
+                (above - below) / threshold
+            );
+            assert!(
+                above >= below,
+                "increasing excitation must not reduce feedback"
+            );
+            assert!((above - below).abs() < threshold * 3e-5);
+            let mut previous = -threshold;
+            for index in -16_384..=16_384 {
+                let input = index as f32 * threshold / 1024.0;
+                let output = soft_clip(input, threshold);
+                assert!(output.is_finite() && output.abs() <= threshold);
+                assert!(output >= previous);
+                assert_eq!(output, -soft_clip(-input, threshold));
+                if input.abs() <= threshold * 0.5 {
+                    assert_eq!(output, input);
+                }
+                previous = output;
+            }
+        }
+    }
+
+    #[test]
+    fn limiter_knee_has_matching_unit_slope() {
+        for threshold in [0.25_f32, 1.0, 2.0, 16.0] {
+            let knee = threshold * 0.5;
+            let step = threshold * 0.0005;
+            let center = soft_clip(knee, threshold);
+            let left = (center - soft_clip(knee - step, threshold)) / step;
+            let right = (soft_clip(knee + step, threshold) - center) / step;
+            assert!((left - 1.0).abs() < 0.001);
+            assert!((right - 1.0).abs() < 0.001);
+            let saturation_slope = (soft_clip(16.0 * threshold, threshold)
+                - soft_clip(15.0 * threshold, threshold))
+                / threshold;
+            assert!(saturation_slope.abs() < 1e-5);
+        }
     }
 
     #[test]

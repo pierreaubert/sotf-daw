@@ -44,3 +44,10 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   layout are structural; rebuild rather than mutate them live.
 - The LFE effects send is LR4-low-passed at 120 Hz and is not complementary
   bass management. Spatial rows must never route ER/FDN energy into LFE.
+
+- Feedback limiting must be odd, continuous, monotone and bounded by its ceiling.
+  Preserve unity below half the ceiling and a matching unit slope at that knee;
+  do not switch directly from identity to tanh at the ceiling.
+- `audit_fdn_limiter` checks threshold-adjacent recursive responses across four
+  rates, both extreme room sizes and three modulation depths. It does not
+  certify arbitrary modulated RT60, recursive finite tails or listening quality.

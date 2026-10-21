@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Remove the discontinuity in FDN feedback limiting. A continuous monotone
+  soft knee starts at half the configured ceiling and approaches that ceiling;
+  small-signal unity gain and delay/latency/parameter contracts are unchanged.
+  High-level feedback tails intentionally change. Add transfer and recursive
+  continuity regressions across 44.1–192 kHz, extreme room sizes and modulation.
+
 - Use constant-sum smoothstep weights for live FDN room-size transitions.
   Eliminate correlated-tap feedback amplification while retaining the 10 ms
   transition, controls, delay storage, and zero algorithmic latency.
