@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[path = "hal_input_audit_tests.rs"]
+mod audit_tests;
+
 use super::types::HalInputPluginParams;
 #[cfg(all(target_os = "macos", feature = "hal"))]
 use driver_hal::HalInputReader;
@@ -26,6 +30,13 @@ trait HalAudioSource: Send {
     fn needs_control_recovery(&self) -> bool {
         false
     }
+}
+
+enum ReaderObservation {
+    Disconnected,
+    CipherReloadRequired,
+    Ready(HalStreamFormat),
+    Unavailable(String),
 }
 
 #[cfg(all(target_os = "macos", feature = "hal"))]
@@ -241,19 +252,29 @@ impl HalInputPlugin {
         if let Some(sample_rate) = self.initialized_sample_rate
             && format.sample_rate != sample_rate
         {
-            self.sample_rate_mismatch = true;
             return Err(format!(
                 "[HAL Input] Sample rate mismatch: HAL native rate {} Hz != engine rate {} Hz",
                 format.sample_rate, sample_rate
             ));
         }
         self.buffer_capacity_frames = format.buffer_capacity_frames;
-        self.is_connected = reader.is_connected();
+        let connected = reader.is_connected();
+        let needs_recovery = !connected || reader.needs_control_recovery();
+        self.observe_connection(connected);
         self.reader = Some(reader);
-        self.recovery_pending = false;
+        self.sample_rate_mismatch = false;
+        if needs_recovery {
+            self.note_recovery(if connected {
+                HalInputErrorKind::CipherReloadRequired
+            } else {
+                HalInputErrorKind::Disconnected
+            });
+        } else {
+            self.recovery_pending = false;
+            self.last_error = HalInputErrorKind::None;
+        }
         self.format_mismatch_pending = false;
         self.stream_armed = false;
-        self.last_error = HalInputErrorKind::None;
         Ok(())
     }
 
@@ -271,6 +292,92 @@ impl HalInputPlugin {
                 .map_err(|error| error.to_string())?;
         }
         self.activate_reader(Box::new(replacement))
+    }
+
+    fn observe_connection(&mut self, connected: bool) {
+        if connected != self.is_connected {
+            self.connection_generation.fetch_add(1, Ordering::Relaxed);
+        }
+        self.is_connected = connected;
+    }
+
+    fn note_recovery(&mut self, kind: HalInputErrorKind) {
+        if !self.recovery_pending {
+            self.recovery_generation.fetch_add(1, Ordering::Relaxed);
+        }
+        self.recovery_pending = true;
+        self.stream_armed = false;
+        self.last_error = kind;
+    }
+
+    fn reader_observation(&self) -> ReaderObservation {
+        let Some(reader) = self.reader.as_ref() else {
+            return ReaderObservation::Disconnected;
+        };
+        if !reader.is_connected() {
+            return ReaderObservation::Disconnected;
+        }
+        if reader.needs_control_recovery() {
+            return ReaderObservation::CipherReloadRequired;
+        }
+        match reader.current_format() {
+            Ok(format) => ReaderObservation::Ready(format),
+            Err(error) => ReaderObservation::Unavailable(error),
+        }
+    }
+
+    fn validate_observation(
+        &mut self,
+        observation: ReaderObservation,
+        before_read: Option<HalStreamFormat>,
+        output: &mut [f32],
+        frames: usize,
+    ) -> Result<Option<HalStreamFormat>, String> {
+        self.observe_connection(!matches!(observation, ReaderObservation::Disconnected));
+        let format = match observation {
+            ReaderObservation::Disconnected | ReaderObservation::CipherReloadRequired => {
+                let kind = if self.is_connected {
+                    HalInputErrorKind::CipherReloadRequired
+                } else {
+                    HalInputErrorKind::Disconnected
+                };
+                self.note_recovery(kind);
+                Self::zero_fill_from(output, 0);
+                self.missing_frames
+                    .fetch_add(frames as u64, Ordering::Relaxed);
+                return Ok(None);
+            }
+            ReaderObservation::Unavailable(error) => {
+                self.note_recovery(HalInputErrorKind::TransportCorruption);
+                Self::zero_fill_from(output, 0);
+                return Err(error);
+            }
+            ReaderObservation::Ready(format) => format,
+        };
+        self.sample_rate_mismatch = self
+            .initialized_sample_rate
+            .is_some_and(|rate| rate != format.sample_rate);
+        if self.sample_rate_mismatch
+            || format.channels != self.channels
+            || before_read.is_some_and(|before| before != format)
+        {
+            if !self.format_mismatch_pending {
+                self.format_change_generation
+                    .fetch_add(1, Ordering::Relaxed);
+            }
+            self.format_mismatch_pending = true;
+            self.note_recovery(HalInputErrorKind::FormatMismatch);
+            Self::zero_fill_from(output, 0);
+            return Err(format!(
+                "HAL Input stream format changed to {} Hz/{} ch/{} frames; expected {:?} Hz/{} ch and stable read geometry",
+                format.sample_rate,
+                format.channels,
+                format.buffer_capacity_frames,
+                self.initialized_sample_rate,
+                self.channels,
+            ));
+        }
+        Ok(Some(format))
     }
 
     pub(super) fn zero_fill_from(output: &mut [f32], start: usize) {
@@ -311,8 +418,6 @@ impl Plugin for HalInputPlugin {
             return Err("HAL Input transport requires a positive integer sample rate".to_string());
         }
         let sample_rate = sample_rate as u32;
-        self.sample_rate_mismatch = false;
-
         if let Some(ref reader) = self.reader {
             let format = reader.current_format()?;
             if format.channels != self.channels {
@@ -322,7 +427,6 @@ impl Plugin for HalInputPlugin {
                 ));
             }
             if format.sample_rate != sample_rate {
-                self.sample_rate_mismatch = true;
                 // No in-crate resampler is available; playing at mismatched rates
                 // produces incorrect pitch and duration.  Fail loudly so the caller
                 // can either configure the HAL to match the engine rate or insert a
@@ -337,6 +441,9 @@ impl Plugin for HalInputPlugin {
         }
 
         self.initialized_sample_rate = Some(sample_rate);
+        self.sample_rate_mismatch = false;
+        self.stream_armed = false;
+        self.last_error = HalInputErrorKind::None;
         self.recovery_pending = false;
         self.format_mismatch_pending = false;
 
@@ -408,89 +515,54 @@ impl Plugin for HalInputPlugin {
             ));
         }
 
-        if let Some(ref mut reader) = self.reader {
-            let was_connected = self.is_connected;
-            self.is_connected = reader.is_connected();
-            if self.is_connected != was_connected {
-                self.connection_generation.fetch_add(1, Ordering::Relaxed);
-            }
-            let recovery_needed = !self.is_connected || reader.needs_control_recovery();
-            if recovery_needed && !self.recovery_pending {
-                self.recovery_generation.fetch_add(1, Ordering::Relaxed);
-            }
-            self.recovery_pending = recovery_needed;
-            if !self.is_connected {
-                self.last_error = HalInputErrorKind::Disconnected;
-                self.stream_armed = false;
-                Self::zero_fill_from(output, 0);
-                return Ok(context.num_frames);
-            }
-            if reader.needs_control_recovery() {
-                self.last_error = HalInputErrorKind::CipherReloadRequired;
-                self.stream_armed = false;
-                Self::zero_fill_from(output, 0);
-                return Ok(context.num_frames);
-            }
-            let format = reader.current_format()?;
-            if format.channels != self.channels
-                || self
-                    .initialized_sample_rate
-                    .is_some_and(|rate| rate != format.sample_rate)
-            {
-                if !self.format_mismatch_pending {
-                    self.format_change_generation
-                        .fetch_add(1, Ordering::Relaxed);
-                }
-                self.format_mismatch_pending = true;
-                self.last_error = HalInputErrorKind::FormatMismatch;
-                Self::zero_fill_from(output, 0);
-                self.stream_armed = false;
-                return Err(format!(
-                    "HAL Input stream format changed to {} Hz/{} ch; expected {:?} Hz/{} ch",
-                    format.sample_rate,
-                    format.channels,
-                    self.initialized_sample_rate,
-                    self.channels
-                ));
-            }
-            self.format_mismatch_pending = false;
-            self.buffer_capacity_frames = format.buffer_capacity_frames;
-            let frames_read = reader.read_frames(output);
-            if frames_read > context.num_frames {
-                self.last_error = HalInputErrorKind::TransportCorruption;
-                Self::zero_fill_from(output, 0);
-                return Err(format!(
-                    "HAL Input reader returned {frames_read} frames for a {}-frame callback",
-                    context.num_frames
-                ));
-            }
-            let samples_read = frames_read
-                .checked_mul(self.channels)
-                .ok_or_else(|| "HAL Input reader frame/sample count overflow".to_string())?;
-            if frames_read > 0 {
-                self.stream_armed = true;
-            }
-            if frames_read < context.num_frames {
-                let missing = context.num_frames - frames_read;
-                self.missing_frames
-                    .fetch_add(missing as u64, Ordering::Relaxed);
-                if frames_read > 0 || (self.stream_armed && self.is_connected) {
-                    self.underrun_counter.fetch_add(1, Ordering::Relaxed);
-                    self.last_error = HalInputErrorKind::Underrun;
-                }
-                Self::zero_fill_from(output, samples_read);
-            }
-            if !self.is_connected {
-                self.stream_armed = false;
-            }
-        } else {
-            if self.is_connected {
-                self.connection_generation.fetch_add(1, Ordering::Relaxed);
-            }
-            self.is_connected = false;
-            self.last_error = HalInputErrorKind::Disconnected;
-            self.stream_armed = false;
+        let before = self.reader_observation();
+        let Some(format) = self.validate_observation(before, None, output, context.num_frames)?
+        else {
+            return Ok(context.num_frames);
+        };
+        // Idle callbacks may observe readiness, but never consume transport
+        // frames or close a recovery epoch by pretending a read succeeded.
+        if context.num_frames == 0 {
+            return Ok(0);
+        }
+        let frames_read = self
+            .reader
+            .as_mut()
+            .expect("validated source reader")
+            .read_frames(output);
+        let after = self.reader_observation();
+        let Some(after) =
+            self.validate_observation(after, Some(format), output, context.num_frames)?
+        else {
+            return Ok(context.num_frames);
+        };
+        if frames_read > context.num_frames {
+            self.note_recovery(HalInputErrorKind::TransportCorruption);
             Self::zero_fill_from(output, 0);
+            return Err(format!(
+                "HAL Input reader returned {frames_read} frames for a {}-frame callback",
+                context.num_frames
+            ));
+        }
+        // Only a completely validated read closes a recovery/format episode.
+        self.recovery_pending = false;
+        self.format_mismatch_pending = false;
+        self.sample_rate_mismatch = false;
+        self.buffer_capacity_frames = after.buffer_capacity_frames;
+        self.last_error = HalInputErrorKind::None;
+        if frames_read > 0 {
+            self.stream_armed = true;
+        }
+        if frames_read < context.num_frames {
+            let missing = context.num_frames - frames_read;
+            self.missing_frames
+                .fetch_add(missing as u64, Ordering::Relaxed);
+            if self.stream_armed {
+                self.underrun_counter.fetch_add(1, Ordering::Relaxed);
+                self.last_error = HalInputErrorKind::Underrun;
+            }
+            // Multiplication fits: frames_read <= the already checked request.
+            Self::zero_fill_from(output, frames_read * self.channels);
         }
 
         Ok(context.num_frames)
@@ -507,12 +579,12 @@ impl Plugin for HalInputPlugin {
 mod tests {
     use super::*;
 
+    use sotf_host::assert_no_allocs;
     use sotf_host::parameters::ParameterValue;
     use sotf_host::plugin::{Plugin, ProcessContext};
-    use sotf_host::{CountingAlloc, assert_no_allocs};
 
     #[global_allocator]
-    static ALLOCATOR: CountingAlloc = CountingAlloc;
+    static ALLOCATOR: super::audit_tests::CallbackAllocator = super::audit_tests::CallbackAllocator;
 
     struct FakeReader {
         format: HalStreamFormat,
@@ -575,7 +647,7 @@ mod tests {
     // Helper: build a plugin struct directly without going through new() so
     // tests run on non-macOS / without the `hal` feature.
     // -----------------------------------------------------------------------
-    fn stub_plugin(channels: usize) -> HalInputPlugin {
+    pub(super) fn stub_plugin(channels: usize) -> HalInputPlugin {
         HalInputPlugin {
             channels,
             underrun_counter: Arc::new(AtomicU64::new(0)),

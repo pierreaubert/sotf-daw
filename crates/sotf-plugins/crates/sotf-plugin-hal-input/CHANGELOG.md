@@ -1,3 +1,18 @@
+# Unreleased
+
+- Validate readiness and stream format around the HAL read; discard the complete
+  callback on an observed mid-read disconnect, key fault or format change.
+- Clear output on unavailable format and invalid count errors; request control
+  recovery for these rejected observations.
+- Count successful disconnected/key-recovery silence in missing frames while
+  preserving startup underrun arming. Idle callbacks observe status without reads.
+- Preserve active diagnostics on failed preparation and start successful
+  initialization/replacement unarmed. Keep recovery generations stable throughout
+  continuous fault episodes.
+- Add 7,680 controlled-reader state/output events and 128 allocation/free checks;
+  all 36 release tests pass. Native HAL compile/lint checks are separate from
+  outstanding real transport and hardware validation.
+
 # 0.5.87
 
 ## HAL Input review closure

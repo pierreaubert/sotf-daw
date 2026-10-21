@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-input",
+    "--release",
+    "--features",
+    "sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "audit_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 5 tests\nmid_read kind=Disconnected output_first=0 missing=8 recovery=true\nunavailable_silence mode=0 missing=16 underruns=0\nmid_read kind=CipherReloadRequired output_first=0 missing=8 recovery=true\nunavailable_silence mode=1 missing=16 underruns=0\nunavailable_format output_first=0 recovery=true\ntest hal_input_plugin::audit_tests::empty_callbacks_do_not_consume_reader_or_change_observed_state ... ok\nmid_read kind=FormatMismatch output_first=0 missing=0 recovery=true\nmid_read kind=FormatMismatch output_first=0 missing=0 recovery=true\nunavailable_silence mode=2 missing=16 underruns=0\ntest hal_input_plugin::audit_tests::unavailable_format_never_leaves_caller_output_unwritten ... ok\nmid_read kind=FormatMismatch output_first=0 missing=0 recovery=true\nmid_read kind=TransportCorruption output_first=0 missing=0 recovery=true\ntest hal_input_plugin::audit_tests::rejected_preparation_retains_active_state_and_success_starts_a_fresh_epoch ... ok\ntest hal_input_plugin::audit_tests::all_successful_unavailable_silence_is_counted_without_startup_underruns ... ok\ntest hal_input_plugin::audit_tests::mid_read_fault_discards_the_complete_unvalidated_callback ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-input v0.5.87 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input)\n    Finished `release` profile [optimized] target(s) in 4.04s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_input-0cfbc189b3f3d926)\n"
+}

@@ -23,3 +23,12 @@ cargo test -p sotf-plugin-hal-input
 
 - macOS only — requires CoreAudio HAL driver (sotf-macos-hal)
 - Plugin trait (not ParametricInPlacePlugin) — generates output without input
+
+- Reader observations before and after each nonempty read gate publication of
+  the entire callback. Do not claim these are an atomic native epoch fence.
+- Successful silence counts missing frames; error returns do not. Startup and
+  transport recovery remain distinct from an armed-stream underrun.
+- Empty callbacks observe readiness without consuming transport frames.
+- Use `--features sotf-host/qa` for the allocation assertions. Native `hal`
+  compile checks do not establish runtime transport correctness; constructors
+  can access live shared memory, so use an isolated fixture for native tests.

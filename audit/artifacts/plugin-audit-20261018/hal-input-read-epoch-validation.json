@@ -1,0 +1,60 @@
+{
+  "scope": "HAL input plugin observation/publication and diagnostic accounting; native compile-only against dirty user driver worktree",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_plugin.rs": "b695cbd7c11bb4f354c87209393a007894b9208972bec00c45a272cf8deeee29",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs": "d504fa62b8d5cbd8702d202237065b8c19e02d645022958ca52c6644340757ec",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/README.md": "0c7be66f542c08355694b268bd199a2ff6d966d7f91f011f60fef9791fc6d4ec",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/AGENTS.md": "4c1eaa9f21db35e47cfffab9f11f13d3725f6747f6f3334c5c2f44f778617ef5",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/CHANGELOG.md": "2f611b0b92678cc9a66c143c2695e1fdb6c71f8cbc7b1d10c8554d1b23b84361"
+  },
+  "raw_artifacts": [
+    "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-baseline.json",
+    "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-focused.json",
+    "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-suite.json",
+    "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-final-gates.json"
+  ],
+  "tests_passed": 36,
+  "model_events": 7680,
+  "channel_layouts": 16,
+  "sample_rates": [
+    44100,
+    48000,
+    96000,
+    192000
+  ],
+  "heap_callbacks": 128,
+  "allocations": 0,
+  "frees": 0,
+  "native_runtime_executed": false,
+  "native_dependency_worktree_sha256": {
+    "Cargo.lock": "4d54151024fc4b6a346a3d3f859037a547fdd8cbe1b2aa876765ff7d1e3e10e4",
+    "crates/driver-common/src/lib.rs": "defc348b63842bf97530388c6eed7df7623768bfdc4eefb2f65c7a737557ded0",
+    "crates/driver-hal/CHANGELOG.md": "59a997d82442a009e50201677f9434b17fe24f367edc87d69e6ac59dbf9690df",
+    "crates/driver-hal/Cargo.toml": "bf012ee8eff9fc0046109a3a609d3a60c0dd101b6312792af254fc3e39c8e7cf",
+    "crates/driver-hal/README.md": "c4a255941d3c9b3223a2020eb6b6b1b54696d2354fd796031be2e80222e00755",
+    "crates/driver-hal/shared_memory_layout.json": "70f728ea132a6c57653d13668395ce352f7a42c8a04bcdb4a92de70cdf466dc8",
+    "crates/driver-hal/src/bin/hal_transport_worker.rs": "f7a2a963621657adf22ed5c8bf131663b55a56b2174fa44981eecf00143530f9",
+    "crates/driver-hal/src/driver/hal_driver.rs": "df210631190a58f186595ddb6a33855826a8e0f9a8d994f72dde1736c8ff569b",
+    "crates/driver-hal/src/driver/tests.rs": "faf79d6802a3ccf2d5d9e4feb82a69ae9e69dbfa60f49be7cfd62bb0eac2ea7a",
+    "crates/driver-hal/src/reader_state.rs": "90dd05fc75f0f5dd571c9076c207dac9e4dfff6977b8a7ddf8f481ef75665cca",
+    "crates/driver-hal/src/shared_memory.rs": "d799e0b7603d57b4ae1b753d8854638efcd498788f3157c336895f5775c32537",
+    "crates/driver-hal/src/shared_memory/consts.rs": "eae45c7bdb4c02fbbbe2da2d4dcbdea8f5b6fdbb014f1c6f658005d1e101c9f2",
+    "crates/driver-hal/src/shared_memory/hal_input_reader.rs": "16d0e98e4e8f90eff764a226bb8ad694edc4775c0e97f19e7872a85d73b717af",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "10f77afebd77518d829261bb5a3c9bf1a970f2094854d422ea5d07cc9e870c85",
+    "crates/driver-hal/src/shared_memory/tests.rs": "f6b72dbfe461d29373581c545bd2a7696811700ef5e0d6ab66e038d93e8cb7f4",
+    "crates/driver-hal/src/shared_memory/tests/misc.rs": "91a7f505bd32a75fa4cb3a232f2607ae99169baa16171a69f8e7aaa629c6d2ea",
+    "crates/driver-hal/src/shared_memory/validate.rs": "22dd3488feb40bcfa79422f6777d71698ef40909fa4cd9fb4b52ad8884e9a05c",
+    "crates/driver-hal/tests/hal_passthrough_tests.rs": "70ce1bd12d324f88685e3c2d6671522a32a29bdba7e897aa0b8b6806dda1aa15",
+    "crates/driver-hal/tests/hal_passthrough_tests/misc.rs": "03224822e65f5785a998ac2d7d54585cdb6c2afeb66e05b472e602bc452d65c0",
+    "crates/driver-hal/tests/hal_passthrough_tests/types.rs": "8d29bb70070679b3d2e72c7e896856b97443a4c2c50f00572b61ba0400233df9",
+    "crates/driver-hal/src/bin/hal_capture_stress.rs": "51d9e877856ab3fdc52f4429d5141956282b0bec337deb0bc6dec278310f56a9",
+    "crates/driver-hal/src/bin/hal_capture_stress/metrics.rs": "065f2905266287f65338fa6873c53b62b8db93e177d0c1a5be15822b224e8397",
+    "crates/driver-hal/src/shared_memory/backing.rs": "4d32231efae03bb23c887d291c373f48d19e45034c5f00a9cb8f2c745b88f56f",
+    "crates/driver-hal/src/shared_memory/control.rs": "a53a0b71587db7428797aa66aba48ef085347de0005fc5ffe3de8dff72ef33a2"
+  },
+  "limitations": [
+    "Pre/post observations cannot certify atomic native epochs, ABA transitions or rollback consumed frames.",
+    "Actual restart/key rotation, first native reconnect frame, cross-process format/read races, writer disappearance, clock drift and hardware deadline validation remain outstanding.",
+    "Successful/silenced callback heap evidence excludes allocated String error reporting."
+  ]
+}

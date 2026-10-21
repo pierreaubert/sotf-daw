@@ -1438,9 +1438,28 @@
       "id": 26,
       "plugin": "HAL input",
       "audit_text": "[`hal_input_plugin.rs`](crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_plugin.rs):376\u2013481 enforces source geometry and initialized rate, zero-fills disconnect/recovery conditions, tracks connection/format generations and arms underrun accounting after data arrives. This is a good explicit startup distinction. Recovery/key reload is kept out of ordinary read processing.\n\nInline fake-reader tests establish local logic, but do not certify actual driver restart/key rotation or cross-process timing. Extend first frame after reconnect, format change during a partial callback, invalid frame count, writer disappearance and source-clock drift. Export missing-frame counts alongside state transitions. Classical elastic buffering/clock recovery may help where clocks differ; ML is inappropriate for transport correctness.",
-      "status": "not_reviewed",
-      "tasks": [],
-      "evidence": []
+      "status": "partial",
+      "tasks": [
+        {
+          "requirement": "Validate complete callback publication across reader observations and preserve preparation/diagnostic state.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs",
+            "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-validation.json"
+          ],
+          "result": "Five red regressions now pass: stale output on format query failure; mid-read fault prefix publication; omitted disconnected/key missing frames; reader invocation on empty callbacks; failed initialization changing active-clock diagnostics. One bounded read with pre/post observations now rejects untrusted full callbacks, requests control recovery, counts successful replacement silence and preserves startup underrun arming. 7680 independent controlled-reader events across 16 layouts and four rates verify exact output and generations; 128 successful/readiness-silence callbacks allocate/free nothing. Full release 36 passed, no ignored tests; core/native all-target strict Clippy and native check pass. Native checks use current dirty user driver dependencies and execute no native runtime tests."
+        },
+        {
+          "requirement": "Certify actual reconnect first frame, driver/key restart, cross-process format mutation, writer disappearance and source-clock drift.",
+          "status": "pending",
+          "evidence": [],
+          "result": "Controlled reader observations prove local logic only. Isolated native shared-memory and real device evidence remains required; no atomic epoch fencing, transport rollback, clock-recovery or deadline claim."
+        }
+      ],
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-validation.json"
+      ]
     },
     {
       "id": 27,
@@ -2962,6 +2981,15 @@
       ],
       "result": "Process and EOF now share a bounded complete-frame pending-FIFO flush. Frame-aligned storage remains direct; a frame split by physical VecDeque wrap uses prepared staging. Each valid older write is counted immediately, even if a later batch has an invalid report. Current input on Err remains caller-owned; successful calls count queued, written and explicit drop-newest frames. Writer-contract faults enter FormatError until control recovery. Observed ConfigurationChanged also stays latched when another consumer clears the shared flag; explicit control validation/recovery is required. Red baseline: three-channel process left two frames stranded; later writer failure reported requested 34/written 31/queued 1 instead of owned 33/written 32/queued 1; failed new overreport request was counted despite no accepted ownership. Separate format-latch baseline resumed Ready and made two writes at an unadmitted clock after the shared flag cleared. All reproduced cases now pass. Independent FIFO/conservation reference covers 40960 events, 27360 process calls and 4640 drains across 1-16 channels, 44.1/96 kHz and five fake transport geometries (1/2/3/8/17 frames), including partial writes, backpressure, disconnect/key/config gates, recovery, reset, successful initialization/wrong-format preflight rejection and exact sample ordering. Writer calls remain bounded to two per queued flush/drain and at most three per process. Sixteen wrapped-layout callback/service/reset checks have zero allocations/frees and retain prepared capacities. Full release 79 tests pass, no ignores; strict all-target release Clippy passes with and without native hal, and native all-target check/formatting pass. Native validation is compile-only against the current dirty driver worktree; no live HAL output was opened. Queue policy, limits, telemetry version/fields, parameters and fixed target/device latency are unchanged. Recovery documentation now correctly states that pending FIFO audio is retained; reset/successful initialize count canceled pending frames as drops. Real shared-memory/device/key/restart/clock-drift/timing evidence remains outstanding; overall 35/45 complete and HAL output partial.",
       "limitations": "HAL output moves from not_reviewed to partial. Real transport/device evidence remains pending; overall 35/45 complete, optional ML separate."
+    },
+    {
+      "name": "HAL input bounded read observations and missing-frame accounting",
+      "state": "verified_partial",
+      "plugin_ids": [
+        26
+      ],
+      "result": "Five red regressions now pass: stale output on format query failure; mid-read fault prefix publication; omitted disconnected/key missing frames; reader invocation on empty callbacks; failed initialization changing active-clock diagnostics. One bounded read with pre/post observations now rejects untrusted full callbacks, requests control recovery, counts successful replacement silence and preserves startup underrun arming. 7680 independent controlled-reader events across 16 layouts and four rates verify exact output and generations; 128 successful/readiness-silence callbacks allocate/free nothing. Full release 36 passed, no ignored tests; core/native all-target strict Clippy and native check pass. Native checks use current dirty user driver dependencies and execute no native runtime tests.",
+      "limitations": "All 45 plugins now reviewed: 35 complete and 10 partial. Real transport/device and other recorded plugin requirements remain; optional ML separate."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

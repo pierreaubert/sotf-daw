@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-input",
+    "--release",
+    "--features",
+    "sotf-host/qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "audit_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 5 tests\nunavailable_silence mode=0 missing=0 underruns=0\nunavailable_format output_first=99 recovery=false\nmid_read kind=Underrun output_first=1 missing=5 recovery=false\ntest hal_input_plugin::audit_tests::unavailable_format_never_leaves_caller_output_unwritten ... FAILED\ntest hal_input_plugin::audit_tests::mid_read_fault_discards_the_complete_unvalidated_callback ... FAILED\ntest hal_input_plugin::audit_tests::empty_callbacks_do_not_consume_reader_or_change_observed_state ... FAILED\ntest hal_input_plugin::audit_tests::rejected_preparation_retains_active_state_and_success_starts_a_fresh_epoch ... FAILED\ntest hal_input_plugin::audit_tests::all_successful_unavailable_silence_is_counted_without_startup_underruns ... FAILED\n\nfailures:\n\nfailures:\n    hal_input_plugin::audit_tests::all_successful_unavailable_silence_is_counted_without_startup_underruns\n    hal_input_plugin::audit_tests::empty_callbacks_do_not_consume_reader_or_change_observed_state\n    hal_input_plugin::audit_tests::mid_read_fault_discards_the_complete_unvalidated_callback\n    hal_input_plugin::audit_tests::rejected_preparation_retains_active_state_and_success_starts_a_fresh_epoch\n    hal_input_plugin::audit_tests::unavailable_format_never_leaves_caller_output_unwritten\n\ntest result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-hal-input v0.5.87 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input)\n    Finished `release` profile [optimized] target(s) in 4.33s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_input-0cfbc189b3f3d926)\n\nthread 'hal_input_plugin::audit_tests::empty_callbacks_do_not_consume_reader_or_change_observed_state' (334623744) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:180:5:\nassertion `left == right` failed\n  left: Err(\"HAL Input reader returned 3 frames for a 0-frame callback\")\n right: Ok(0)\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'hal_input_plugin::audit_tests::all_successful_unavailable_silence_is_counted_without_startup_underruns' (334623743) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:169:9:\nassertion `left == right` failed\n  left: 0\n right: 16\n\nthread 'hal_input_plugin::audit_tests::rejected_preparation_retains_active_state_and_success_starts_a_fresh_epoch' (334623746) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:194:5:\nassertion `left == right` failed: failed clock preparation cannot corrupt active-clock status\n  left: HalInputDiagnostics { underrun_count: 0, missing_frames: 0, connection_generation: 0, recovery_generation: 0, format_change_generation: 0, connected: true, sample_rate_mismatch: true, needs_control_recovery: false, format: Some((48000, 2)), buffer_capacity_frames: 16, available_frames: 0, last_error: None }\n right: HalInputDiagnostics { underrun_count: 0, missing_frames: 0, connection_generation: 0, recovery_generation: 0, format_change_generation: 0, connected: true, sample_rate_mismatch: false, needs_control_recovery: false, format: Some((48000, 2)), buffer_capacity_frames: 16, available_frames: 0, last_error: None }\n\nthread 'hal_input_plugin::audit_tests::mid_read_fault_discards_the_complete_unvalidated_callback' (334623745) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:129:9:\nunvalidated prefix must not escape\n\nthread 'hal_input_plugin::audit_tests::unavailable_format_never_leaves_caller_output_unwritten' (334623747) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:99:5:\nassertion failed: out.iter().all(|&v| v == 0.0)\nerror: test failed, to rerun pass `-p sotf-plugin-hal-input --lib`\n"
+}
