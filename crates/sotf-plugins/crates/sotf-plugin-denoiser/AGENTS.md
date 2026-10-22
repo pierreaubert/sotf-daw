@@ -52,3 +52,15 @@ cargo test -p sotf-plugin-denoiser
 - Keep independent f64 periodogram/gain, per-channel capture, profile publication,
   source/EOF partition, lifecycle and allocation/free checks. These are fixed-
   profile correctness checks, not blind speech or held-out quality acceptance.
+
+- Fast main-grid adaptation must equal two ordinary noise-PSD updates with frozen
+  observation/probability: use squared retention, not halved retention. Keep the
+  previous-channel-frame trigger and current p<0.3 boundary unchanged. The small
+  analysis arm has no fast-adaptation branch; do not add one implicitly.
+- Preserve the independent two-update regression across coefficient/probability/
+  history boundaries. Retain baseline and candidate recorded metrics, including
+  regressions, rather than presenting this rate correction as speech preservation.
+- Recorded estimator diagnostics reuse attributed fixture manifests and retain all
+  six sources, three conditions and both FFT modes. Align source metrics by public
+  latency but render the complete synthesis support through EOF. Preserve exact
+  reset/partition/polarity checks and separately report trailing synthesis energy.

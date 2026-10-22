@@ -19,6 +19,17 @@ feed another channel's estimator. With spatial and other cross-channel modes
 disabled, changing channel order preserves the corresponding audio exactly.
 Reset and explicit noise-profile learning restart each channel's history.
 
+When the preceding frame was mostly quiet and the current speech probability is
+below 0.3, fast adaptation performs the equivalent of two ordinary noise-PSD
+updates with the observation and probability frozen. For ordinary retention
+`a = alpha_s + (1-alpha_s)*p`, the fast update retains `a*a` of the previous PSD.
+This doubles its exponential tracking rate. The former `a/2` retained only 0.45
+at the default quiet-bin coefficient of 0.9, rather than 0.81, accelerating the
+rate by about 7.6 times. This correction keeps the trigger, probability, minimum
+tracking and bootstrap rules unchanged. It adds one scalar multiplication and
+no storage or allocations. It does not infer that a quiet-bin label is correct
+or prevent stationary speech/music from entering the noise estimate.
+
 Bootstrap uses a prepared observation span of at least 106.6667 ms, rounded
 up to complete analysis hops. This retains the historical five-hop bootstrap
 at 48 kHz in 2048-point mode; 512-point mode now uses twenty hops there.
@@ -50,8 +61,9 @@ getters reflect automatic capture completion/profile selection immediately.
 
 The fixed-profile audit uses controlled captured silence on one channel and
 seeded noise on another. It verifies profile ownership and reduction, not blind
-speech preservation: recorded later-vowel projections remain about 0.0946/0.1212
-in the two blind FFT modes. Held-out music/speech/noise and device-load deadline
+speech preservation: recorded later-vowel projections remain about 0.0946/0.1243
+in the two blind FFT modes after the fast-adaptation correction (previously
+0.0946/0.1212). Held-out music/speech/noise and device-load deadline
 evidence remain open; optional learned models are separate work.
 
 Serialized percentage-like values are normalized fractions (`0.70` means 70%); UI scaling is
@@ -86,3 +98,30 @@ padding cannot advance its count, finish capture, or replace the stored profile.
 Ordinary adaptive noise and gain updates continue to render retained audio. A
 partial capture keeps its owned storage and active flag until reset; reset clears
 that incomplete capture while preserving the existing profile and its settings.
+
+## Recorded estimator diagnostics
+
+`tests/audit_recorded_estimator.rs` measures six preselected existing recordings:
+three English LibriSpeech speakers, the original `/s/` phoneme crop, a violin and
+a cymbal. Their original PCM hashes, licenses, attribution and transformations
+remain in the speech-denoiser and de-esser fixture manifests. No new PCM copies or
+learned models are added. These are development measurements, not an independent
+held-out population or listening panel.
+
+Each source runs clean, with stationary colored noise and with a fixed noise
+step, in both FFT modes (36 rows). Added-noise mixtures have whole-clip 0 dB SNR;
+the step occupies the middle third with a 16:1 amplitude change. The same seed
+and boundaries apply to every source. Latency-aligned onset, early, body and full
+source windows report clean/output energy, dot product, error energy, clean
+projection and ordinary SDR. Gain loss is therefore visible rather than hidden
+by a scale-invariant score. Trailing synthesis energy is recorded separately.
+All complete EOF waveforms agree after reset at fixed/irregular callback sizes;
+three-speaker stereo polarity tests match independent mono processing exactly.
+These controlled relationships do not establish arbitrary stereo image quality.
+
+The exact two-update correction makes only small, mixed changes in this matrix:
+full-clip SDR changes span about -0.00052 to +0.0499 dB. The original low-latency
+later-vowel projection rises from 0.12125 to 0.12429, still far below unity.
+No metric threshold or source was selected to turn that into quality acceptance.
+Noise adaptation, initial-speech contamination, steady music attenuation,
+held-out mixtures, perceptual quality and device-load timing remain open.

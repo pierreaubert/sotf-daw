@@ -1,0 +1,48 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "fast_adaptation_matches_two_ordinary_constant_observation_updates",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "stdout": "\nrunning 1 test\nfast_adaptation_reference cases=120 failures=33 maximum_error=3.916273156804344e0\ntest mcra::channel_learning_tests::fast_adaptation_matches_two_ordinary_constant_observation_updates ... FAILED\n\nfailures:\n\nfailures:\n    mcra::channel_learning_tests::fast_adaptation_matches_two_ordinary_constant_observation_updates\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 82 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling math-iir-fir v0.5.27 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-iir-fir)\n   Compiling math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 28.00s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-6a61cc5935637b57)\n\nthread 'mcra::channel_learning_tests::fast_adaptation_matches_two_ordinary_constant_observation_updates' (340779113) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs:311:9:\nassertion `left == right` failed: fast mode must equal two ordinary updates, retaining trigger/probability boundaries\n  left: 33\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-denoiser --lib`\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-denoiser",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--test",
+      "audit_recorded_estimator",
+      "--test",
+      "audit_channel_learning",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 101,
+    "stdout": "\nrunning 2 tests\nchannel_swap rate=44100 low_latency=false recorded=false maximum_error=0e0\n{\"first_100ms_clean_projection\":0.8524628579511925,\"input_sdr_db\":-11.330588062112977,\"latency_frames\":2048,\"low_latency\":false,\"measurement\":\"recorded_denoiser_onset\",\"note\":\"one recorded speaker with deterministic added noise; no population or perceptual quality gate\",\"output_sdr_db\":0.8278837675191699,\"rate\":48000,\"vowel_300_450ms_clean_projection\":0.09458483663210437}\n{\"end_frame\":2400,\"gain_db\":-6.605755322210311e-7,\"low_latency\":false,\"measurement\":\"independent_noise_channel\",\"start_frame\":0}\n{\"end_frame\":4800,\"gain_db\":-0.7778519831979325,\"low_latency\":false,\"measurement\":\"independent_noise_channel\",\"start_frame\":0}\n{\"end_frame\":9600,\"gain_db\":-10.414051505100115,\"low_latency\":false,\"measurement\":\"independent_noise_channel\",\"start_frame\":4800}\n{\"end_frame\":21600,\"gain_db\":-19.789307613728212,\"low_latency\":false,\"measurement\":\"independent_noise_channel\",\"start_frame\":14400}\n{\"end_frame\":45600,\"gain_db\":-19.999994763330395,\"low_latency\":false,\"measurement\":\"independent_noise_channel\",\"start_frame\":40800}\nchannel_swap rate=44100 low_latency=true recorded=false maximum_error=0e0\n{\"first_100ms_clean_projection\":0.9970037852287646,\"input_sdr_db\":-11.330588062112977,\"latency_frames\":512,\"low_latency\":true,\"measurement\":\"recorded_denoiser_onset\",\"note\":\"one recorded speaker with deterministic added noise; no population or perceptual quality gate\",\"output_sdr_db\":1.083658353127429,\"rate\":48000,\"vowel_300_450ms_clean_projection\":0.12124745240289327}\n{\"end_frame\":2400,\"gain_db\":-6.560601429098163e-7,\"low_latency\":true,\"measurement\":\"independent_noise_channel\",\"start_frame\":0}\n{\"end_frame\":4800,\"gain_db\":-0.011897716903589756,\"low_latency\":true,\"measurement\":\"independent_noise_channel\",\"start_frame\":0}\n{\"end_frame\":9600,\"gain_db\":-6.277718094128027,\"low_latency\":true,\"measurement\":\"independent_noise_channel\",\"start_frame\":4800}\n{\"end_frame\":21600,\"gain_db\":-19.607517667294204,\"low_latency\":true,\"measurement\":\"independent_noise_channel\",\"start_frame\":14400}\n{\"end_frame\":45600,\"gain_db\":-19.99999054309764,\"low_latency\":true,\"measurement\":\"independent_noise_channel\",\"start_frame\":40800}\ntest recorded_speech_at_start_reports_aligned_quality_and_noise_tracking ... ok\nchannel_swap rate=48000 low_latency=false recorded=false maximum_error=0e0\nchannel_swap rate=48000 low_latency=false recorded=true maximum_error=0e0\nchannel_swap rate=48000 low_latency=true recorded=false maximum_error=0e0\nchannel_swap rate=48000 low_latency=true recorded=true maximum_error=0e0\nchannel_swap rate=96000 low_latency=false recorded=false maximum_error=0e0\nchannel_swap rate=96000 low_latency=true recorded=false maximum_error=0e0\ntest independent_noise_learning_is_channel_order_invariant ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s\n\n\nrunning 2 tests\ntest recorded_sources_report_clean_retention_and_stationary_or_step_noise_tradeoffs ... FAILED\ntest recorded_stereo_polarity_and_channel_order_match_mono_through_eof ... FAILED\n\nfailures:\n\nfailures:\n    recorded_sources_report_clean_retention_and_stationary_or_step_noise_tradeoffs\n    recorded_stereo_polarity_and_channel_order_match_mono_through_eof\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 18.58s\n     Running tests/audit_channel_learning.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_channel_learning-e7ba150282cffca2)\n     Running tests/audit_recorded_estimator.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_recorded_estimator-af6b5d09b5710b6d)\n\nthread 'recorded_sources_report_clean_retention_and_stationary_or_step_noise_tradeoffs' (340781945) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs:142:5:\nassertion `left == right` failed\n  left: 195584\n right: 194048\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'recorded_stereo_polarity_and_channel_order_match_mono_through_eof' (340781946) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs:142:5:\nassertion `left == right` failed\n  left: 195584\n right: 194048\nerror: test failed, to rerun pass `-p sotf-plugin-denoiser --test audit_recorded_estimator`\n"
+  }
+]

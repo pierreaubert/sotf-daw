@@ -1232,17 +1232,44 @@
             "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-validation.json"
           ],
           "result": "Captured noise profiles now govern both analysis resolutions. Each small FFT accumulates its own per-channel windowed periodograms during the same source capture epoch; completion publishes both grids and recomputes latest small gains before blending. Fixed profiles override live-estimator warm-up from the first processed frame; normal temporal smoothing remains. Reset/same-clock init and canceled replacement capture retain the published profile; clear or a real sample-rate change invalidates both, while invalid initialization remains transactional. EOF padding measures neither profile. Primitive cached parameter values now follow automatic profile/learning transitions without schema allocation. Red baseline: first-frame gain stayed 1 despite a valid profile, changed-clock data remained active, and a captured-silence channel was reduced to RMS 0.0109478 by the live small arm. Four final 48/96k/FFT-mode cases retain RMS 0.99999989-0.99999993 on that channel while independently captured noise stays at 0.01219-0.01704. Disabling/re-enabling the profile restores live reduction and then the exact original fixed-profile waveform. Independent f64 DFT/power and gain checks across 12 channel/bin probes have maximum scaled power error 9.80545e-8 (2e-6 gate), gain error 1.43131e-8 (1e-5). Six source-partition cases preserve exact audio/both grids and freeze pending capture at EOF; cancel/clear/clock ownership pass. Six lifecycle cases have zero allocations and frees with FFT latency unchanged. Full release 124 passed, four existing ignores; standard 48-row optional QA, strict all-target release Clippy and formatting pass. Twelve prior blind recorded/onset/noise rows are exactly unchanged, including weak later-vowel projections 0.09458/0.12125. These are fixed-profile correctness observations, not held-out quality or device deadline proof. No schema/preset/latency/dependency/ML change; optional small-profile payload adds 2056 bytes/channel excluding Vec headers. Overall remains 35/45, denoiser partial."
+        },
+        {
+          "requirement": "Make main-grid fast noise adaptation equal its documented two-update rate and retain multi-source startup/noise/music tradeoffs.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-candidate.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-initial-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-selection.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-source.json",
+            "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-denoiser-fast-adaptation.py",
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs"
+          ],
+          "result": "Correct the documented main-grid 2x fast-adaptation recurrence: use squared ordinary retention rather than halving retention. At quiet-bin default alpha0.9, previous code retained0.45 (7.5788x exponential rate) rather than0.81 (exact2x). Keep per-channel previous-frame trigger, current p<0.3 boundary, minimum/probability tracking, bootstrap clock, small-arm algorithm and fixed-profile semantics. Independent two-ordinary-update reference across120supported coefficient/probability/history/trigger cases fails33before(maxPSDerror3.91627),0after(maxerror9.52483e-7 at unchanged3e-6gate). No new allocation/storage/schema/parameter/dependency/latency/tail contract. Preselected six existing hash/provenance-verified recordings span three English speakers, original phoneme, violin/cymbal; clean/stationary/step-noise at whole-clip0dB added SNR and both FFT modes produce36rows/144window comparisons. Report all signed clean-projection/ordinary-SDR deltas, onset/body and post-source synthesis energy. Complete EOF/reset/fixed-irregular renders exact; six three-speaker polarity-mode checks match mono exactly. Initial harness incorrectly assumed EOF support equals latency; preserve failure, then enforce documented exact synthesis end and crop only source-quality windows. Full127release tests pass,4existingignores; strict all-target QAClippy,format and48row optional-mode QA pass. Independent verifier checks complete matrix, source/provenance hashes, scalar energy/dot/error/SDR identities and A/B inputs. Full-source SDR changes-0.000515705..+0.04988997dB; effects small and mixed, not a predeclared quality gate. Original later-vowel projections0.09458/0.12125 become0.09460/0.12429, still poor. Multi-source development data are not held-out population/perceptual/native-device acceptance. Denoiser partial; overall35/45complete."
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/denoiser-channel-learning-validation.json",
         "audit/artifacts/plugin-audit-20261018/denoiser-bootstrap-clock-validation.json",
         "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-baseline.json",
-        "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-validation.json"
+        "audit/artifacts/plugin-audit-20261018/denoiser-captured-resolution-validation.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-selection.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-source.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-denoiser-fast-adaptation.py",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs"
       ],
       "remaining": [
-        "Investigate speech already present during the nominal 106.6667 ms bootstrap and later vowel loss: the recorded 300-450ms clean projection is only 0.09458 quality/0.12125 low-latency. Longer low-latency warm-up improves the initial projection but passes more noise; assess across sources before estimator tuning.",
-        "Extend held-out multi-speaker/music/noise mixtures with provenance, stereo phase/image metrics and nonstationary noise adaptation rather than infer quality from one isolated phoneme recording.",
+        "Investigate initial speech contamination during the106.6667ms bootstrap and later vowel loss. Correcting fast adaptation to exactly two ordinary updates changes original later-vowel projections0.09458/0.12125to0.09460/0.12429,stillpoor. Six-source development matrix has small mixed SDR changes; no speech-preservation or listening acceptance claim.",
+        "Extend genuinely held-out multi-speaker/language/music/recorded-noise mixtures with provenance and nonstationary adaptation evidence. Current36row development matrix reuses three English speakers, one phoneme and violin/cymbal with two synthetic-noise recipes. Exact channel order/polarity/mono matching does not establish arbitrary stereo phase/image quality.",
         "Measure optional multi-resolution/analysis workload and validate spatial/other optional modes under the target deadline; retain deterministic Wiener/MCRA baselines and separate optional learned music-mask research."
       ]
     },
@@ -3568,6 +3595,27 @@
         "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_offline_tail.rs"
       ],
       "limitations": "Reference caller/test policy only. Native support remainsInfinite. Finite after-cap observations do not bound total omitted energy or prove audibility; sparse decayfit/nativewall/corpus acceptance remains open."
+    },
+    {
+      "name": "Denoiser exact two-update fast adaptation and recorded development matrix",
+      "state": "verified_partial",
+      "plugin_ids": [
+        19
+      ],
+      "result": "Correct the documented main-grid 2x fast-adaptation recurrence: use squared ordinary retention rather than halving retention. At quiet-bin default alpha0.9, previous code retained0.45 (7.5788x exponential rate) rather than0.81 (exact2x). Keep per-channel previous-frame trigger, current p<0.3 boundary, minimum/probability tracking, bootstrap clock, small-arm algorithm and fixed-profile semantics. Independent two-ordinary-update reference across120supported coefficient/probability/history/trigger cases fails33before(maxPSDerror3.91627),0after(maxerror9.52483e-7 at unchanged3e-6gate). No new allocation/storage/schema/parameter/dependency/latency/tail contract. Preselected six existing hash/provenance-verified recordings span three English speakers, original phoneme, violin/cymbal; clean/stationary/step-noise at whole-clip0dB added SNR and both FFT modes produce36rows/144window comparisons. Report all signed clean-projection/ordinary-SDR deltas, onset/body and post-source synthesis energy. Complete EOF/reset/fixed-irregular renders exact; six three-speaker polarity-mode checks match mono exactly. Initial harness incorrectly assumed EOF support equals latency; preserve failure, then enforce documented exact synthesis end and crop only source-quality windows. Full127release tests pass,4existingignores; strict all-target QAClippy,format and48row optional-mode QA pass. Independent verifier checks complete matrix, source/provenance hashes, scalar energy/dot/error/SDR identities and A/B inputs. Full-source SDR changes-0.000515705..+0.04988997dB; effects small and mixed, not a predeclared quality gate. Original later-vowel projections0.09458/0.12125 become0.09460/0.12429, still poor. Multi-source development data are not held-out population/perceptual/native-device acceptance. Denoiser partial; overall35/45complete.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-selection.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-source.json",
+        "audit/artifacts/plugin-audit-20261018/denoiser-fast-adaptation-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-denoiser-fast-adaptation.py",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs"
+      ],
+      "limitations": "Vowel loss remains; development recordings/synthetic added noise are not held-out/listening acceptance. Standard QA is not device-load deadline proof."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

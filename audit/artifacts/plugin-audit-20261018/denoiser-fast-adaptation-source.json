@@ -1,0 +1,9 @@
+{
+  "production_base": "61858a9",
+  "sources": {
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs": "6104779152f65d39a3a1bde84f8166a4e6a2df4b6313d9ba4a68f2abe0f2dbea",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs": "f1e15205e743d9e9b658611d4466b6a0e06ca467f7b758aeff223ce8d345adc6",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_channel_learning.rs": "ad585619aa51faa9eb049932cd58906ad78fde53fb71b220d4720439601db154"
+  },
+  "base_mcra_sha256": "c703e27a371bfdb3df74970023a951c88801f8ba9f727165a0f42c8fc59fe3e4"
+}

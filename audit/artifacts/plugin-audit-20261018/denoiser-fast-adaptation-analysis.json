@@ -1,0 +1,1192 @@
+{
+  "recurrence_reference_cases": 120,
+  "baseline_failures": 33,
+  "candidate_failures": 0,
+  "passed_tests": 127,
+  "existing_ignored": 4,
+  "recorded_conditions": 36,
+  "window_comparisons": 144,
+  "full_sdr_delta_min_db": -0.0005157045529877724,
+  "full_sdr_delta_max_db": 0.049889968673596075,
+  "default_legacy_acceleration": 7.578813478960585,
+  "default_corrected_acceleration": 1.9999999999999998,
+  "recorded_original_onset": [
+    {
+      "first_100ms_clean_projection": 0.8524329178979725,
+      "input_sdr_db": -11.330588062112977,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "measurement": "recorded_denoiser_onset",
+      "note": "one recorded speaker with deterministic added noise; no population or perceptual quality gate",
+      "output_sdr_db": 0.8270024824645643,
+      "rate": 48000,
+      "vowel_300_450ms_clean_projection": 0.09460257128412618
+    },
+    {
+      "first_100ms_clean_projection": 0.9970037852287646,
+      "input_sdr_db": -11.330588062112977,
+      "latency_frames": 512,
+      "low_latency": true,
+      "measurement": "recorded_denoiser_onset",
+      "note": "one recorded speaker with deterministic added noise; no population or perceptual quality gate",
+      "output_sdr_db": 1.0919510979339027,
+      "rate": 48000,
+      "vowel_300_450ms_clean_projection": 0.12429172822128826
+    }
+  ],
+  "signed_changes": [
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.000122647454495306,
+      "projection_delta": -9.777273276667664e-06
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.016371426291083013,
+      "projection_delta": 0.0023406356636193615
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.01406642223871657,
+      "projection_delta": 0.0019739661578516143
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.002544182566657227,
+      "projection_delta": 0.0002446637809992158
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.014250056527835842,
+      "projection_delta": 0.002241616144888048
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.012678948628681797,
+      "projection_delta": 0.0019292993665118163
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 9.784369524190595e-05,
+      "projection_delta": 4.988830772933994e-07
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.0001301674928744223,
+      "projection_delta": -1.6949319020242992e-06
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -6.506098326752863e-09,
+      "projection_delta": -9.839621062379678e-10
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 1.9915915133172923e-05,
+      "projection_delta": -2.5843273260273136e-07
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0011767490570504524,
+      "projection_delta": 0.00014486258778692584
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 1.2067954857641894e-08,
+      "projection_delta": 1.588673331776036e-09
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.0001444096039051601,
+      "projection_delta": 2.215091477923703e-05
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 3.3689388214241944e-05,
+      "projection_delta": -1.0057421562237323e-09
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 4.484094222445556e-05,
+      "projection_delta": 6.761804349053602e-06
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.0034086255092790063,
+      "projection_delta": 0.00044527251162504444
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.0029595250134102358,
+      "projection_delta": 0.0003768371477765736
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0007660773014208644,
+      "projection_delta": 8.623308933780605e-05
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.005548345795742593,
+      "projection_delta": 0.0007110571494348683
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.004978119872623532,
+      "projection_delta": 0.0006133065721527498
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -0.0006770640447939513,
+      "projection_delta": -7.191464812761339e-06
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0018907004806383299,
+      "projection_delta": -0.00017167506149456946
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.015000552347845031,
+      "projection_delta": 0.0016927670179265192
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.011417854687352902,
+      "projection_delta": 0.001106610082516446
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0012135591571995619,
+      "projection_delta": 0.00017684699707976037
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.0010711914042506043,
+      "projection_delta": 0.00019777108856622316
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.0010967635876533155,
+      "projection_delta": 0.0001740759072170195
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 4.2686688003001905e-05,
+      "projection_delta": -4.142171854404353e-06
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0025153516315437052,
+      "projection_delta": -0.0002449487199912559
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -6.118781259445427e-09,
+      "projection_delta": -1.1840997210521564e-09
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": -0.0005041096848388271,
+      "projection_delta": -5.60128106522062e-05
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0006540434096473646,
+      "projection_delta": 9.180940897995926e-05
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 1.314121811368807e-09,
+      "projection_delta": 2.80066664304357e-11
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.00011585336251362932,
+      "projection_delta": 2.084520482659169e-05
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -0.0007773234995855915,
+      "projection_delta": -8.743121312604352e-06
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0027017689577237824,
+      "projection_delta": -0.00024213565302905193
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.009389549878093484,
+      "projection_delta": 0.001190479228238575
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.006868986333165683,
+      "projection_delta": 0.0007503332732932411
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0017954992684954263,
+      "projection_delta": 0.00025540192279377427
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 4.928883645671789e-08,
+      "projection_delta": 7.566223897415014e-10
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.0003141416886953685,
+      "projection_delta": 5.798912821888824e-05
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.0022671853231468475,
+      "projection_delta": 2.053652815070528e-05
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.02418687520729268,
+      "projection_delta": 0.0027601928807150233
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.05178885389917687,
+      "projection_delta": 0.007371999960961939
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.046900761387834944,
+      "projection_delta": 0.006164212950513559
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0014160542337853244,
+      "projection_delta": 0.00017223038817043568
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.06091381283086039,
+      "projection_delta": 0.007419291597931477
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.049889968673596075,
+      "projection_delta": 0.00574625002801285
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.00020871464586935673,
+      "projection_delta": 7.195790054259632e-06
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.00017612273737577233,
+      "projection_delta": 6.106835157393409e-06
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -7.31521232477661e-09,
+      "projection_delta": -1.0710148878878556e-09
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 3.5922296895529726e-05,
+      "projection_delta": 1.4603444291605427e-06
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0004805957438360764,
+      "projection_delta": 0.00011167506298759289
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": -7.044520633492368e-09,
+      "projection_delta": -3.4959635186737614e-10
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 7.923999623771216e-05,
+      "projection_delta": 1.9559572165123162e-05
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.001174680063487088,
+      "projection_delta": 1.0294756911499725e-05
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.06139470342211295,
+      "projection_delta": 0.0074806369078257995
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.02556449657118698,
+      "projection_delta": 0.003623794678519726
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.03167602631583888,
+      "projection_delta": 0.004102689920282371
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0007494710840443286,
+      "projection_delta": 0.00012352272334412162
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.04017657166646349,
+      "projection_delta": 0.005023993356009865
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.03366651945253807,
+      "projection_delta": 0.003892296646066773
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -0.0022869214429537266,
+      "projection_delta": -3.214406003126946e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0005739274753469026,
+      "projection_delta": -7.09967867316974e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.0001526025554804411,
+      "projection_delta": 1.5972201360792138e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": -0.00030062271590192147,
+      "projection_delta": -3.9148873378108684e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.05119119419364049,
+      "projection_delta": 0.004850715101906322
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 8.070612715282977e-05,
+      "projection_delta": 1.3572482436885469e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.032952053559119676,
+      "projection_delta": 0.002939718927916557
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -9.256163674242757e-05,
+      "projection_delta": -5.254476708138611e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0008814022683256706,
+      "projection_delta": -0.00010988268751938035
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -5.930347879434805e-09,
+      "projection_delta": -2.6253621498995017e-09
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": -0.0005157045529877724,
+      "projection_delta": -6.921647322286062e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.00017492161624099722,
+      "projection_delta": 1.0751168077111073e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 1.580691133540313e-10,
+      "projection_delta": 1.1155505824644862e-09
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 9.836527101092507e-05,
+      "projection_delta": 6.505683461582867e-06
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -0.002323797639732561,
+      "projection_delta": -3.8306110296648654e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -0.0007282672666415468,
+      "projection_delta": -8.629337014801064e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 1.0111550121427726e-05,
+      "projection_delta": -2.0665568548072777e-08
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": -0.00044510969512567833,
+      "projection_delta": -5.421005647149313e-05
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.009109128406321165,
+      "projection_delta": 0.0008746323541026502
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 2.523674409449228e-07,
+      "projection_delta": 2.74251769627476e-08
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.005340874049595268,
+      "projection_delta": 0.0005292306534725733
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -3.181662595608259e-06,
+      "projection_delta": -1.966500773331603e-08
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.03865923109056091,
+      "projection_delta": 0.004458090033021389
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.007482391808800948,
+      "projection_delta": 0.0011686551949067203
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.007598531877167858,
+      "projection_delta": 0.0011785904464108876
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.6252352057175781,
+      "projection_delta": 0.027619590605416966
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.0007146496120753465,
+      "projection_delta": 0.0001646580993996949
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.001066669261941211,
+      "projection_delta": 0.0002484513361383778
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.00011810248456356476,
+      "projection_delta": -3.2498764103439104e-06
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.003724468070512188,
+      "projection_delta": -5.65331693264115e-08
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -2.2949697697782767e-10,
+      "projection_delta": -5.234011835053565e-10
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 3.867241383392894e-05,
+      "projection_delta": -9.89057183375941e-10
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0010624319818068884,
+      "projection_delta": -2.7741966101460513e-05
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 6.9451233652984e-09,
+      "projection_delta": 7.02618602188565e-10
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 1.7209987748567634e-05,
+      "projection_delta": -8.39839502664308e-08
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.00011628499109228585,
+      "projection_delta": -5.936136920903223e-07
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.00012839754344573517,
+      "projection_delta": -4.802216158755757e-07
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.03242843023662623,
+      "projection_delta": 0.010866001497661926
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.03227286529005724,
+      "projection_delta": 0.01083184528938791
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 3.127992335261176e-06,
+      "projection_delta": 2.5560697280713196e-06
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.0001777977255578156,
+      "projection_delta": 2.6628050018934202e-05
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.00017714797683709982,
+      "projection_delta": 2.6552153671727252e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": -0.0006526547520380177,
+      "projection_delta": -1.8963519743397939e-06
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 0.0005079293689767006,
+      "projection_delta": 4.864911354007795e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": 0.0006411452788108729,
+      "projection_delta": 0.00010079910137994474
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 0.0005577339010480742,
+      "projection_delta": 6.487077210026726e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.0033604410114520533,
+      "projection_delta": 0.00025695814923543114
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 0.00173707927476352,
+      "projection_delta": 0.00021398010746248586
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.0024362800102961657,
+      "projection_delta": 0.00024358869978680087
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.00011707317116105287,
+      "projection_delta": 0.000317903040370382
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": 2.9901493677098046e-05,
+      "projection_delta": -1.2130402018972752e-07
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -3.757915174595894e-07,
+      "projection_delta": -4.136504562490817e-08
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": 2.277906804837304e-05,
+      "projection_delta": -9.559054094110397e-08
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 6.553931322872408e-06,
+      "projection_delta": 7.609676025283063e-07
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 5.579078530271175e-07,
+      "projection_delta": 6.030395933998012e-08
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 4.52128499806026e-06,
+      "projection_delta": 5.430168989323247e-07
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "window": "onset",
+      "sdr_delta_db": 0.0001069143789464988,
+      "projection_delta": 2.524223529776215e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "window": "early",
+      "sdr_delta_db": -7.007578693984939e-07,
+      "projection_delta": -1.0798473897011274e-07
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "window": "body",
+      "sdr_delta_db": -3.3501363971844e-07,
+      "projection_delta": -3.6199240174839e-08
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "window": "full",
+      "sdr_delta_db": -5.510565078692409e-07,
+      "projection_delta": -8.558755183740718e-08
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "window": "onset",
+      "sdr_delta_db": 0.0,
+      "projection_delta": 0.0
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "window": "early",
+      "sdr_delta_db": 0.00030371424484776366,
+      "projection_delta": 3.150139142227282e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "window": "body",
+      "sdr_delta_db": 6.708836362212534e-05,
+      "projection_delta": 7.219839029737329e-06
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "window": "full",
+      "sdr_delta_db": 0.0002278415235388298,
+      "projection_delta": 2.394827936390287e-05
+    }
+  ],
+  "scope": "Exact two-update fast-adaptation recurrence plus controlled development recordings and existing gates; not resolution of vowel loss, held-out quality or native-device timing."
+}

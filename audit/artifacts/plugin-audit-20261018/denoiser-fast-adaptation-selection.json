@@ -1,0 +1,53 @@
+{
+  "production_base": "61858a9",
+  "sources": [
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-0.pcm",
+      "sha256": "b9304f708a85c526c3a52ec129547581ac50e5233e9122c103ee743ef6e5dc61",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "2ce1bb2ca00a5477d2d081e6206af0bdb9668295c5bdad0472ab842da6fc02a7"
+    },
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-1.pcm",
+      "sha256": "0cb7de4024e244d60fa56321bc753eed361ed7077e619dacf4cf8ac6b79f00ab",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "2ce1bb2ca00a5477d2d081e6206af0bdb9668295c5bdad0472ab842da6fc02a7"
+    },
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-2.pcm",
+      "sha256": "c99ecea1a804d967807d95ea64335020d48ff96a4d0e13cb336bd8eedfc5bf22",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "2ce1bb2ca00a5477d2d081e6206af0bdb9668295c5bdad0472ab842da6fc02a7"
+    },
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/s.pcm",
+      "sha256": "d379a1403fefe14dc20c1b9154fd2c9d0a046c590a22ef654cc5e7cfadb15e37",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "8732b877c0b6b4d2e75dac103dff1c386663795fb20c04c6c5c518227708ad21"
+    },
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/violin.pcm",
+      "sha256": "7e752a7bfe578bc9980d981ca72c33dfa9c154f1542cbb4314054de7fef807fd",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "8732b877c0b6b4d2e75dac103dff1c386663795fb20c04c6c5c518227708ad21"
+    },
+    {
+      "file": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/cymbal.pcm",
+      "sha256": "3ca2ede4de3060e3a99ce4edcf010ebfa3f7618e0b6e916d6d9d61b89776c5df",
+      "provenance_manifest": "crates/sotf-plugins/crates/sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json",
+      "provenance_manifest_sha256": "8732b877c0b6b4d2e75dac103dff1c386663795fb20c04c6c5c518227708ad21"
+    }
+  ],
+  "conditions": [
+    "clean",
+    "stationary",
+    "step"
+  ],
+  "low_latency": [
+    false,
+    true
+  ],
+  "noise_seed": "0x9a7f2513",
+  "noise_snr_db": 0,
+  "scope": "Preselected existing attributed recorded clips; no output-based source selection. Classical estimator recurrence correction, not a new model or population/listening acceptance."
+}

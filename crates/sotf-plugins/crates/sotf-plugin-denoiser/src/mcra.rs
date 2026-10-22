@@ -140,11 +140,12 @@ impl DenoiserPlugin {
             // Step 5: Update noise estimate with adaptive smoothing
             // When p is high (speech present), alpha_d → 1 → slow/no update
             // When p is low (speech absent), alpha_d → alpha_s → normal update
-            // Fast adaptation: when previous frame was mostly quiet (learning_active),
-            // use 2x faster tracking for low-speech bins to converge ~265ms vs ~530ms.
+            // Two ordinary updates with a frozen observation/probability retain
+            // alpha_d^2 of the previous estimate. This doubles the exponential
+            // tracking rate; halving alpha_d instead can accelerate it much more.
             let mut alpha_d = alpha_s + (1.0 - alpha_s) * p;
             if use_fast_adapt && p < 0.3 {
-                alpha_d /= 2.0; // 2x faster tracking
+                alpha_d *= alpha_d;
             }
             let noise_est = alpha_d * self.mcra.noise_psd[channel][k] + (1.0 - alpha_d) * power;
             self.mcra.noise_psd[channel][k] = noise_est;
@@ -264,6 +265,54 @@ mod channel_learning_tests {
             plugin.fft.freq_domain[channel].fill(Complex::new(2.0_f32.sqrt(), 0.0));
         }
         plugin
+    }
+
+    #[test]
+    fn fast_adaptation_matches_two_ordinary_constant_observation_updates() {
+        let mut cases = 0;
+        let mut failures = 0;
+        let mut maximum_error = 0.0_f64;
+        for alpha_s in [0.5_f32, 0.7, 0.9, 0.99] {
+            for probability in [0.0_f32, 0.2, 0.299, 0.3, 0.6] {
+                for previous_noise in [0.0_f32, 1.0, 10.0] {
+                    for fast in [false, true] {
+                        let mut plugin = prepared(1);
+                        plugin.mcra.mcra_alpha_s = alpha_s;
+                        // A large tracked minimum makes the observed ratio <=1,
+                        // so the probability only decays by the configured pole.
+                        plugin.mcra.smoothed_psd[0].fill(100.0);
+                        plugin.mcra.min_psd[0].fill(100.0);
+                        plugin.mcra.min_psd_b[0].fill(100.0);
+                        plugin.mcra.speech_presence[0].fill(probability / plugin.mcra.mcra_alpha_p);
+                        plugin.mcra.noise_psd[0].fill(previous_noise);
+                        plugin.mcra.learning_active[0] = fast;
+                        let power = f64::from(plugin.get_power_at_bin(0, 0));
+                        plugin.update_noise_estimation();
+                        let observed_probability = plugin.mcra.speech_presence[0][0];
+                        assert!((observed_probability - probability).abs() < 2e-7);
+                        let retention = f64::from(alpha_s)
+                            + (1.0 - f64::from(alpha_s)) * f64::from(observed_probability);
+                        let ordinary = |noise: f64| retention * noise + (1.0 - retention) * power;
+                        let mut expected = ordinary(f64::from(previous_noise));
+                        if fast && observed_probability < 0.3 {
+                            expected = ordinary(expected);
+                        }
+                        let error = (f64::from(plugin.mcra.noise_psd[0][0]) - expected).abs();
+                        maximum_error = maximum_error.max(error);
+                        failures += usize::from(error > 3e-6);
+                        cases += 1;
+                    }
+                }
+            }
+        }
+        println!(
+            "fast_adaptation_reference cases={cases} failures={failures} maximum_error={maximum_error:e}"
+        );
+        assert_eq!(cases, 120);
+        assert_eq!(
+            failures, 0,
+            "fast mode must equal two ordinary updates, retaining trigger/probability boundaries"
+        );
     }
 
     #[test]
