@@ -1,0 +1,20 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/AGENTS.md": "534d9ce597db35674f5746cd34f1a138fc0b5216d639ff99bb3fffe83a388341",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/README.md": "958866e7dfa3099a8063266b8543adbb3e6df39798ee9baf8e92cc526c93f6e4",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/CHANGELOG.md": "9f96e4c292af5d5fc815ba9ef878bbb5c872488f4a5fa10226ded01e00145ef3",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/apply.rs": "b5720a5d7aa2248f9ad9b21e28fa4dccbfcd163c1a14079160bf6b68f55822e0",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": "650cf713d2e317810f78a5b10dce3feb76ad5891a9f751402ae5fecd8dd14bcf",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/misc.rs": "ed985df6ca38950b82a9edf69872e4f5e00b255e8cd11bb1052b7bfd46adc1e2",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/transfer_audit_tests.rs": "87c6c9a8b0f37e5f94ccb35dedf03be581dc7aa4840686aca218fd241a69bff0",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs": "5b9d7c4f0a08fe2771b61b4911d99b7d0cbdb7e939ad979f86fb1665e7cebdad",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/centered_coordinated_limits_bits.txt": "cd11e1dd8d1e694573a727e833481816e4d7d2da8c432580be3972e78c51e11e",
+  "audit/plugin-remediation-20261018.json": "62973dfa3597f901d98e97be9f7d24d43633ad8eb822e9613158f28bb7c8c5a1",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-analysis.json": "6a7c0d00344177e5a4ada192fe6e801b53985b4dd9d7bb8e7192bb3b6a12f108",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-baseline.json": "f6621044089ed976cadcc9d394ae74f821f58a42c19a96418d25c68cbf0a845b",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-default-change.json": "44ef302e43e0eda4041c7f8c2b0c0be5a5c6efa45131c7d469dc023ff2989f4a",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-initial-candidate.json": "1a8c32c382b6b82778c8647aac5a8e9a5759299cb6d2f35834ac1e4f44f311bd",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-nominal-report.json": "fbe5a8eb817ff0277c923511dded6ae8d5bbdfe077c1bf21150e276376601775",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-reference-candidate.json": "cd25c1dbedc98bcf2e7d40c429e5321b52b59b09b59e4234b63b460dd9d7141a",
+  "audit/artifacts/plugin-audit-20261018/xtc-coordinated-limits-validation.json": "4b76c1eb38dbcd6f185522b3e790ec6432dde5e851dcf581051d83c55257d9a1",
+  "audit/artifacts/plugin-audit-20261018/verify-xtc-coordinated-limits.py": "4892486e9a0f67256d3a14cf4e5c5071789a544a9578cc97c39d2cd3174ccdf5"
+}

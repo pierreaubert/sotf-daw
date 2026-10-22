@@ -10,7 +10,7 @@ use super::misc::SPEED_OF_SOUND;
 use super::misc::condition_number_2x2;
 use super::misc::sanitize_filter;
 use super::misc::sigmoid_smooth;
-use super::misc::soft_limit_complex_magnitude;
+use super::misc::{soft_limit_column_f64, soft_limit_filter_column};
 use super::types::GeometryCache;
 use super::types::HrtfTransferFunctions;
 use super::xtc_filters::XtcFilters;
@@ -395,10 +395,8 @@ fn compute_xtc_filters_asymmetric_with_cache(
             w_rr *= gain_r;
 
             // Re-apply soft limit: spectral normalization can push gains past budget
-            w_ll = soft_limit_complex_magnitude(w_ll, max_gain_linear);
-            w_lr = soft_limit_complex_magnitude(w_lr, max_gain_linear);
-            w_rl = soft_limit_complex_magnitude(w_rl, max_gain_linear);
-            w_rr = soft_limit_complex_magnitude(w_rr, max_gain_linear);
+            [w_ll, w_rl] = soft_limit_filter_column([w_ll, w_rl], max_gain_linear);
+            [w_lr, w_rr] = soft_limit_filter_column([w_lr, w_rr], max_gain_linear);
         }
 
         // Crossfade to identity (stereo passthrough) at very low and very high frequencies
@@ -521,10 +519,8 @@ fn compute_xtc_filters_hrtf(
             w_lr *= gain_r;
             w_rr *= gain_r;
 
-            w_ll = soft_limit_complex_magnitude(w_ll, max_gain_linear);
-            w_lr = soft_limit_complex_magnitude(w_lr, max_gain_linear);
-            w_rl = soft_limit_complex_magnitude(w_rl, max_gain_linear);
-            w_rr = soft_limit_complex_magnitude(w_rr, max_gain_linear);
+            [w_ll, w_rl] = soft_limit_filter_column([w_ll, w_rl], max_gain_linear);
+            [w_lr, w_rr] = soft_limit_filter_column([w_lr, w_rr], max_gain_linear);
         }
 
         // Crossfade to identity at band edges
@@ -623,8 +619,7 @@ fn compute_xtc_filters_symmetric_with_cache(
                 w_lr *= gain;
             }
             // Re-apply soft limit: spectral normalization can push gains past budget
-            w_ll = soft_limit_complex_magnitude(w_ll, max_gain_linear);
-            w_lr = soft_limit_complex_magnitude(w_lr, max_gain_linear);
+            [w_ll, w_lr] = soft_limit_filter_column([w_ll, w_lr], max_gain_linear);
         }
 
         // Crossfade to identity (stereo passthrough) at very low and very high frequencies
@@ -696,14 +691,10 @@ fn compute_full_2x2_inverse(
     let [h_ll, h_lr, h_rl, h_rr] = [h_ll, h_lr, h_rl, h_rr].map(widen);
     let beta = f64::from(beta);
     let max_gain_linear = f64::from(max_gain_linear);
-    let limit = |c: Complex<f64>, ceiling: f64| {
-        let magnitude = c.norm();
-        let knee = ceiling * 0.5;
-        if magnitude <= knee {
-            c
-        } else {
-            c * ((knee + knee * ((magnitude - knee) / knee).tanh()) / magnitude)
-        }
+    let limit = |values: (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>)| {
+        let [ll, rl] = soft_limit_column_f64([values.0, values.2], max_gain_linear);
+        let [lr, rr] = soft_limit_column_f64([values.1, values.3], max_gain_linear);
+        (ll, lr, rl, rr)
     };
     let pack = |values: (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>)| {
         let narrow = |c: Complex<f64>| Complex::new(c.re as f32, c.im as f32);
@@ -731,12 +722,12 @@ fn compute_full_2x2_inverse(
     // 2. Compute inv(A) = (1/det) * [[a_11, -a_01], [-a_10, a_00]]
     let det = a_00 * a_11 - a_01.norm_sqr();
     if det == 0.0 || det.abs() < 1e-10 * (a_00 * a_11).abs() {
-        return (
+        return pack(limit((
             Complex::new(1.0, 0.0),
             Complex::new(0.0, 0.0),
             Complex::new(0.0, 0.0),
             Complex::new(1.0, 0.0),
-        );
+        )));
     }
 
     let inv_a_00 = a_11 / det;
@@ -759,11 +750,7 @@ fn compute_full_2x2_inverse(
     let w1_rr = inv_a_10 * h_rl.conj() + inv_a_11 * h_rr.conj();
 
     if bypass_neumann {
-        let w1_ll_limit = limit(w1_ll, max_gain_linear);
-        let w1_lr_limit = limit(w1_lr, max_gain_linear);
-        let w1_rl_limit = limit(w1_rl, max_gain_linear);
-        let w1_rr_limit = limit(w1_rr, max_gain_linear);
-        return pack((w1_ll_limit, w1_lr_limit, w1_rl_limit, w1_rr_limit));
+        return pack(limit((w1_ll, w1_lr, w1_rl, w1_rr)));
     }
 
     // Neumann series refinement: W₂ = W₁ * (2I - C*W₁)
@@ -798,15 +785,8 @@ fn compute_full_2x2_inverse(
     let w2_rl = w1_rl + (w2_rl_full - w1_rl) * 0.7;
     let w2_rr = w1_rr + (w2_rr_full - w1_rr) * 0.7;
 
-    let w1_ll_limit = limit(w1_ll, max_gain_linear);
-    let w1_lr_limit = limit(w1_lr, max_gain_linear);
-    let w1_rl_limit = limit(w1_rl, max_gain_linear);
-    let w1_rr_limit = limit(w1_rr, max_gain_linear);
-
-    let w2_ll_limit = limit(w2_ll, max_gain_linear);
-    let w2_lr_limit = limit(w2_lr, max_gain_linear);
-    let w2_rl_limit = limit(w2_rl, max_gain_linear);
-    let w2_rr_limit = limit(w2_rr, max_gain_linear);
+    let (w1_ll_limit, w1_lr_limit, w1_rl_limit, w1_rr_limit) = limit((w1_ll, w1_lr, w1_rl, w1_rr));
+    let (w2_ll_limit, w2_lr_limit, w2_rl_limit, w2_rr_limit) = limit((w2_ll, w2_lr, w2_rl, w2_rr));
 
     let identity = Complex::new(1.0, 0.0);
     // Error for W1 = C*W1 - I
@@ -881,6 +861,13 @@ mod singular_plant_tests {
             compute_full_2x2_inverse(zero, zero, zero, zero, 0.0, 4.0, true),
             (one, zero, zero, one)
         );
+        for ceiling in [0.125, 0.5, 1.0, 4.0] {
+            let (ll, lr, rl, rr) =
+                compute_full_2x2_inverse(zero, zero, zero, zero, 0.0, ceiling, true);
+            assert!(ll.norm() <= ceiling && rr.norm() <= ceiling);
+            assert_eq!((lr, rl), (zero, zero));
+            assert_eq!(ll, rr);
+        }
         // Positive beta makes the Gram matrix invertible even at small scale;
         // its zero adjoint yields zero, rather than an absolute-threshold fallback.
         for beta in [0.000001, 0.01] {

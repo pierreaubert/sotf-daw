@@ -23,6 +23,7 @@ pub(crate) fn sanitize_filter(filter: &mut [Complex<f32>]) {
 /// Below 50% of max_mag: passthrough (no change).
 /// Above 50%: smooth tanh curve approaching max_mag asymptotically.
 /// Phase is always preserved — only magnitude is affected.
+#[cfg(test)]
 #[inline]
 pub(crate) fn soft_limit_complex_magnitude(c: Complex<f32>, max_mag: f32) -> Complex<f32> {
     let mag = c.norm();
@@ -37,6 +38,35 @@ pub(crate) fn soft_limit_complex_magnitude(c: Complex<f32>, max_mag: f32) -> Com
     let new_mag = knee_start + headroom * (excess / headroom).tanh();
 
     c * (new_mag / mag)
+}
+
+/// Apply one soft gain to a two-speaker input column.
+///
+/// The largest coefficient sets the existing half-ceiling tanh knee. Sharing
+/// its real gain preserves the complex speaker-drive ratio and therefore the
+/// normalized ear response for any fixed linear plant. Preparation uses f64
+/// so finite f32 extremes do not overflow magnitude calculations.
+#[inline]
+pub(super) fn soft_limit_column_f64(column: [Complex<f64>; 2], ceiling: f64) -> [Complex<f64>; 2] {
+    let peak = column[0].norm().max(column[1].norm());
+    let knee = ceiling * 0.5;
+    if peak <= knee {
+        return column;
+    }
+    let limited = knee + knee * ((peak - knee) / knee).tanh();
+    let gain = limited / peak;
+    column.map(|value| value * gain)
+}
+
+/// Limit a stored f32 filter column using widened preparation arithmetic.
+#[inline]
+pub(super) fn soft_limit_filter_column(
+    column: [Complex<f32>; 2],
+    ceiling: f32,
+) -> [Complex<f32>; 2] {
+    let widened = column.map(|value| Complex::new(f64::from(value.re), f64::from(value.im)));
+    soft_limit_column_f64(widened, f64::from(ceiling))
+        .map(|value| Complex::new(value.re as f32, value.im as f32))
 }
 
 /// Compute the Woodworth diffraction path around the head for a given incidence angle.
@@ -173,5 +203,52 @@ mod condition_number_tests {
             ),
             1e6
         );
+    }
+}
+
+#[cfg(test)]
+mod coordinated_limit_tests {
+    use super::*;
+
+    #[test]
+    fn column_limit_retains_legacy_peak_curve_and_quiet_identity() {
+        let quiet = [Complex::new(0.125, -0.125), Complex::new(-0.25, 0.0)];
+        assert_eq!(soft_limit_filter_column(quiet, 1.0), quiet);
+        assert_eq!(
+            soft_limit_filter_column([Complex::new(0.0, 0.0); 2], 1.0),
+            [Complex::new(0.0, 0.0); 2]
+        );
+        let mut cases = 0;
+        let mut maximum_curve_error = 0.0_f32;
+        for ceiling in [0.125, 1.0, 4.0] {
+            for phase in [-2.0_f32, -0.5, 0.0, 0.5, 2.0] {
+                for step in 0..=2048 {
+                    let peak = Complex::from_polar(ceiling * step as f32 / 256.0, phase);
+                    let result =
+                        soft_limit_filter_column([peak, peak * Complex::new(0.2, 0.1)], ceiling);
+                    let legacy = soft_limit_complex_magnitude(peak, ceiling);
+                    let error = (result[0] - legacy).norm();
+                    maximum_curve_error = maximum_curve_error.max(error);
+                    assert!(error <= ceiling * 5e-7);
+                    assert!(result.iter().all(|c| c.norm() <= ceiling * 1.000001));
+                    cases += 1;
+                }
+            }
+        }
+        for ceiling in [0.125, 1.0, 4.0] {
+            let result = soft_limit_filter_column(
+                [
+                    Complex::new(f32::MAX, f32::MAX),
+                    Complex::new(-f32::MAX, f32::MAX),
+                ],
+                ceiling,
+            );
+            assert!(
+                result.iter().all(|c| c.re.is_finite()
+                    && c.im.is_finite()
+                    && c.norm() <= ceiling * 1.000001)
+            );
+        }
+        println!("column_limit_curve cases={cases} maximum_curve_error={maximum_curve_error}");
     }
 }

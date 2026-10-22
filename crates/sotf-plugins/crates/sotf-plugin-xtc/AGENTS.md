@@ -106,7 +106,8 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - Center-range plus spherical extra-arc paths remain an approximation, not exact
   finite-distance ear-surface acoustics or measured human HRTFs. Per-source
   near-ear normalization intentionally changes centered/default coefficients.
-  Preserve the historical fixture and the new continuous-path fixture separately.
+  Preserve historical default and continuous-path fixtures beside the current
+  coordinated-limit fixture.
 - Prepare geometry and inverse arithmetic in f64 off the callback. Compute the
   small singular value through the determinant/product relation rather than
   subtracting nearly equal eigenvalue roots. Preserve mirror/scale invariance,
@@ -117,3 +118,18 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - Keep prior mismatch/report failures as historical evidence. Shared-model
   predictions and spherical symmetry tests do not establish measured robustness,
   reconstructed true peaks, native deadlines or listening quality.
+
+## Prepared inverse gain invariants
+
+- Limit inverse and normalized filter columns with a shared real gain over both
+  speaker coefficients. Keep the half-ceiling tanh knee and coefficient ceiling;
+  independent coefficient knees rotate a cancellation steering vector.
+- Apply the final per-bin effort budget with one common matrix gain from the
+  larger speaker-row power. Preserve both input columns and every row budget;
+  do not independently scale speaker rows. Unused quieter-row headroom is valid.
+- Widen row-power and scaling arithmetic so finite f32 extremes cannot overflow
+  past the budget. Preserve quiet-column identity, the legacy peak-knee curve,
+  independent Cholesky steering comparisons and asymmetric/extreme effort tests.
+- A gain cap does not prove measured cancellation or true-peak safety. The
+  intentional identity blend can change steering; retain its nominal failures
+  and every negative mismatch row without changing thresholds to clear a report.

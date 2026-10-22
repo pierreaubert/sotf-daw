@@ -165,3 +165,51 @@ fn signed_displacement_and_room_mismatch_are_not_hidden() {
         "independent_mismatch ear_cases={cases} degraded={degraded} min_signed_depth_db={worst_depth} max_signed_depth_db={best_depth} max_filter_gain={maximum_gain}"
     );
 }
+
+#[test]
+fn inverse_gain_limiting_preserves_each_input_steering_ray() {
+    let mut columns = 0;
+    let mut failures = 0;
+    let mut limited = 0;
+    let mut maximum_error = 0.0_f64;
+    for frequency in [100.0, 250.0, 500.0, 1000.0, 4000.0, 8000.0] {
+        for x in [-0.1, 0.0, 0.1] {
+            for yaw in [-0.3, 0.0, 0.3] {
+                for reflection in [0.0, 0.4] {
+                    for beta in [0.00001_f32, 0.001, 0.1] {
+                        let c = plant(frequency, x, yaw, reflection);
+                        let expected = reference_inverse(c, f64::from(beta));
+                        for ceiling in [0.5_f32, 1.0, 4.0] {
+                            let actual = production_inverse(c, beta, ceiling);
+                            for column in 0..2 {
+                                let a = [expected[0][column], expected[1][column]];
+                                let b = [actual[0][column], actual[1][column]];
+                                let norm = (a[0].norm_sqr() + a[1].norm_sqr()).sqrt()
+                                    * (b[0].norm_sqr() + b[1].norm_sqr()).sqrt();
+                                assert!(norm > 0.0);
+                                // A common real gain must preserve the complex
+                                // two-speaker ray, hence every plant's normalized
+                                // desired/cross-ear ratio for that input cue.
+                                let error = (a[0] * b[1] - a[1] * b[0]).norm() / norm;
+                                maximum_error = maximum_error.max(error);
+                                failures += usize::from(error > 2e-5);
+                                limited += usize::from(
+                                    a[0].norm().max(a[1].norm()) > f64::from(ceiling) * 0.5,
+                                );
+                                assert!(
+                                    b.iter().all(|v| v.norm() <= f64::from(ceiling) * 1.000001)
+                                );
+                                columns += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "inverse_steering columns={columns} limited_columns={limited} failed_columns={failures} maximum_ray_error={maximum_error}"
+    );
+    assert!(limited > 0);
+    assert_eq!(failures, 0);
+}

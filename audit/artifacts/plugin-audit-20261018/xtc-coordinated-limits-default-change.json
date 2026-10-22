@@ -1,0 +1,10 @@
+{
+  "words": 4100,
+  "changed_words": 26,
+  "maximum_component_difference": 0.03259247541427612,
+  "previous_fixture_sha256": "c513fab27fabc96117fc439c14173cd975a4f762a89bccaf9c7466146d02c3e3",
+  "current_fixture_sha256": "cd11e1dd8d1e694573a727e833481816e4d7d2da8c432580be3972e78c51e11e",
+  "frequency_blend_blocks_unchanged": 3,
+  "base_commit": "f88f58e",
+  "scope": "Intentional coordinated gain-control response change; both earlier fixtures remain preserved. Frequency blends, regularization and gain ceilings are unchanged."
+}

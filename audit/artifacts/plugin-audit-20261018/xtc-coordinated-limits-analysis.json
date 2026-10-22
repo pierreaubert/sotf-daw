@@ -1,0 +1,32 @@
+{
+  "passed_tests": 251,
+  "existing_ignored": 1,
+  "inverse_steering_columns": 1944,
+  "actively_limited_columns": 1432,
+  "effort_steering_columns": 72,
+  "legacy_peak_curve_cases": 30735,
+  "rendered_pose_cases": 120,
+  "zero_heap_pose_cases": 60,
+  "latency_samples": 2048,
+  "rendered_mismatch_cases": 360,
+  "degraded_mismatch_cases": 140,
+  "worst_normalized_mismatch_db": -5.382083283837915,
+  "previous_degraded_mismatch_cases": 140,
+  "minimum_separation_change_db": -4.2911230124786925e-09,
+  "maximum_separation_change_db": 1.8906533227891487e-08,
+  "comparison_resolution_db": 1e-06,
+  "improved_rows_above_resolution": 0,
+  "worsened_rows_above_resolution": 0,
+  "default_coefficient_change": {
+    "words": 4100,
+    "changed_words": 26,
+    "maximum_component_difference": 0.03259247541427612,
+    "previous_fixture_sha256": "c513fab27fabc96117fc439c14173cd975a4f762a89bccaf9c7466146d02c3e3",
+    "current_fixture_sha256": "cd11e1dd8d1e694573a727e833481816e4d7d2da8c432580be3972e78c51e11e",
+    "frequency_blend_blocks_unchanged": 3,
+    "base_commit": "f88f58e",
+    "scope": "Intentional coordinated gain-control response change; both earlier fixtures remain preserved. Frequency blends, regularization and gain ceilings are unchanged."
+  },
+  "nominal_report": "16/17; 93.75Hz cancellation 4.822dB remains below 5dB",
+  "scope": "Ray invariance holds through coordinated limits for a fixed linear plant; identity blending, transfer-model mismatch, measured/native/loaded deadlines, reconstructed true peaks and listening remain separate."
+}

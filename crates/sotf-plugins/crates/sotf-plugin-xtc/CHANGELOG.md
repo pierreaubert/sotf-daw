@@ -1,3 +1,16 @@
+# Unreleased coordinated prepared-filter gain audit (2026-10-22)
+
+- Apply one soft gain per input column in the inverse and after spectral
+  normalization. Preserve the relative complex speaker drives while retaining
+  the existing half-ceiling tanh knee and coefficient ceiling.
+- Use one common matrix gain for the final per-bin loudspeaker-row power budget.
+  Preserve both steering rays; quieter rows may retain unused headroom. Widen
+  power/scaling arithmetic so finite f32 extremes cannot bypass the budget.
+- Add independent Cholesky ray, asymmetric effort, finite-extreme and legacy
+  peak-curve regressions. Preserve earlier fixtures beside the current response.
+- Default filters intentionally change. Nominal 93.75 Hz cancellation remains
+  below its unchanged 5 dB target; this does not establish measured robustness.
+
 # Unreleased continuous source-to-ear path audit (2026-10-22)
 
 - Evaluate all four signed source-to-ear transfers with continuous near-ear

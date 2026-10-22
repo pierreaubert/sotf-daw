@@ -97,9 +97,10 @@ minimum thresholds and the failed 8 kHz ILD tolerance are unchanged.
 Before continuous ear-path normalization, the default nominal report passed
 15 of 17 comparisons: 8 kHz ILD was 36.124 dB versus 12 dB (20 dB tolerance),
 and the 100 Hz request selected a 93.75 Hz bin with 4.986 dB versus a 5 dB minimum.
-The continuous-path report passes 16 of 17: far/near shadow ILD is 28.627 dB,
-within that existing broad tolerance, while 93.75 Hz cancellation is 4.954 dB and
-still fails. This is an analytical reference comparison, not calibrated HRTF
+The continuous-path report initially passed 16 of 17: far/near shadow ILD is 28.627 dB,
+within that existing broad tolerance, while 93.75 Hz cancellation was 4.954 dB
+and still failed. Coordinated gain limiting retains 16/17 with 4.822 dB at that
+bin; the existing 5 dB target remains failed. This is an analytical reference comparison, not calibrated HRTF
 accuracy. The controlled 360-row point-source/echo mismatch matrix now has 140
 degraded normalized-separation rows (previously 134), with worst -5.382 dB
 (previously -5.010 dB). All rows remain; correcting model symmetry does not
@@ -200,3 +201,26 @@ remain f32. Stable condition-number arithmetic avoids subtracting close singular
 value roots. Design and diagnostics share the plant; the callback still adopts
 prepared filters through the existing bounded worker exchange. Parameter and
 preset schemas, FFT latency, gain limits and callback ownership stay unchanged.
+
+## Prepared-filter gain limits
+
+Each inverse input column uses one soft gain chosen by its largest complex
+coefficient. Both speaker drives retain their relative amplitude and phase.
+Spectral-normalization limiting uses the same column rule, including measured
+HRTF filter preparation. The half-ceiling tanh knee and coefficient ceiling are
+unchanged; independently compressing coefficients could rotate the cancellation
+steering vector even when each coefficient stayed within budget.
+
+The final per-bin effort cap uses one common matrix gain set by the larger
+loudspeaker-row power. Every row still satisfies its sum-of-squared-coefficients
+budget, while both input columns keep their steering ratios. A quieter speaker
+can retain unused headroom. Power calculations and scaling use f64 preparation
+arithmetic so finite f32 extremes do not overflow or evade the cap.
+
+These changes preserve normalized ear ratios through the limiting operations for
+a fixed linear plant. They do not preserve cancellation through the intentional
+band-edge identity blend, establish correct measured transfer data, or guarantee
+time-domain/reconstructed peak levels. Frequency blends, regularization, gain
+ceilings, parameter schemas, worker ownership and FFT latency are unchanged.
+Default responses intentionally change; earlier coefficient fixtures and nominal
+failures remain alongside the current coordinated-limit fixture.
