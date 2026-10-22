@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-aae-thread-cpu.py"
+  ],
+  "exit_code": 0,
+  "stdout": "{\n  \"cases\": 16,\n  \"callback_samples\": 66818,\n  \"wall_deadline_misses\": 112,\n  \"cpu_deadline_misses\": 0,\n  \"missing_cpu_samples\": 0,\n  \"cpu_coverage_complete\": true,\n  \"negative_wall_cpu_gaps_retained\": 64862,\n  \"empty_cpu_bracket_median_ns\": 125,\n  \"worst_wall_pair\": {\n    \"rate\": 192000,\n    \"block_frames\": 64,\n    \"updates_each_block\": true,\n    \"index\": 8554,\n    \"wall_ns\": 11517292,\n    \"thread_cpu_ns\": 39792,\n    \"gap_ns\": 11477500\n  },\n  \"wall_deadline_gate_passed\": false,\n  \"scope\": \"current-thread CPU does not identify cause of elapsed gap or replace legacy/native gates\"\n}\n",
+  "stderr": ""
+}

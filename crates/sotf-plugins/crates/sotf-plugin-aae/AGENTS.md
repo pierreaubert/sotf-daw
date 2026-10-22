@@ -111,3 +111,10 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
 - Keep long-silence and seeded-state regressions plus the unflushed recurrence
   comparison. Preserve nonzero output bits/numerical zeros; signed silent zero
   bits may differ. This cleanup must not change excited Infinite tail metadata.
+
+- Keep `qa-aae-timing` separate from the legacy wall/load gate. Preserve all paired
+  callback samples and the fixed five-second full-stream/spatial-prelude matrix.
+  Missing CPU clock data is unknown, not zero; it must produce an incomplete result.
+- CPU spans bracket wall intervals and include sampling work. Preserve negative
+  wall-minus-CPU values; do not subtract calibration to obtain passing deadlines.
+  CPU excludes other-thread work and does not establish a causal waiting source.

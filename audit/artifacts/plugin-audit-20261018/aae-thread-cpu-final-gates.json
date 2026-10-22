@@ -1,0 +1,77 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 8.415958958910778,
+    "stdout": "\nrunning 2 tests\ntest tests::percentiles_keep_empty_and_endpoint_cases_explicit ... ok\nknown_wait wall_ns=26645000 thread_cpu_ns=12375\ntest tests::paired_clocks_distinguish_known_waiting_from_cpu_execution ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\n\n",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 8.32s\n     Running unittests bin/qa_aae_timing.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_timing-3714940f96c3773b)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.8740866249427199,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 0.73s\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "run",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing"
+    ],
+    "exit_code": 1,
+    "elapsed_seconds": 11.563327040988952,
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 8.72s\n     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-timing`\n",
+    "stdout_artifact": "audit/artifacts/plugin-audit-20261018/aae-thread-cpu-timing.jsonl"
+  }
+]

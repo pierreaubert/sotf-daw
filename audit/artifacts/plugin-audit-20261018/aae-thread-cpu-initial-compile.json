@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-host",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--lib",
+      "thread_cpu",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 148.28881958290003,
+    "stdout": "\nrunning 2 tests\ntest test_utils::thread_cpu::tests::timestamp_conversion_rejects_invalid_kernel_fields ... ok\nthread_cpu_busy_ns=3143792\ntest test_utils::thread_cpu::tests::current_thread_clock_advances_with_executed_work ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 711 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling tempfile v3.27.0\n   Compiling console v0.16.6\n   Compiling rusty-fork v0.3.1\n   Compiling similar v2.7.0\n   Compiling proptest v1.12.0\n   Compiling insta v1.49.0\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Finished `release` profile [optimized] target(s) in 2m 28s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_host-0e746c3c6672f2f3)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing"
+    ],
+    "exit_code": 101,
+    "elapsed_seconds": 41.082274083048105,
+    "stdout": "",
+    "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\nerror[E0277]: the trait bound `u128: From<i32>` is not satisfied\n  --> crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_timing.rs:79:43\n   |\n79 |                     duration.as_nanos() * u128::from(rate) >= block as u128 * 1_000_000_000\n   |                                           ^^^^ the trait `From<i32>` is not implemented for `u128`\n   |\n   = note: `u128` implements similarly named trait `cast::From`, but not `From<i32>`\n   = help: `u128` implements trait `From<T>`:\n             From<Ipv6Addr>\n             From<bool>\n             From<char>\n             From<std::ascii::Char>\n             From<u16>\n             From<u32>\n             From<u64>\n             From<u8>\n           and 4 others\n\nFor more information about this error, try `rustc --explain E0277`.\nerror: could not compile `sotf-plugin-aae` (bin \"qa-aae-timing\" test) due to 1 previous error\n"
+  }
+]

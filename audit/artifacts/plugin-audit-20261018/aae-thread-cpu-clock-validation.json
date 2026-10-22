@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 5.5682172500528395,
+    "stdout": "\nrunning 2 tests\ntest tests::percentiles_keep_empty_and_endpoint_cases_explicit ... ok\nknown_wait wall_ns=21196833 thread_cpu_ns=8291\ntest tests::paired_clocks_distinguish_known_waiting_from_cpu_execution ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 5.49s\n     Running unittests bin/qa_aae_timing.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_timing-3714940f96c3773b)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing",
+      "--no-deps",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.5692612091079354,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 0.48s\n"
+  }
+]

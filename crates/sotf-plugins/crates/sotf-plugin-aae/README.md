@@ -153,3 +153,18 @@ unchanged. Legitimate f32-subnormal inputs are normal f64 values and retain thei
 output. Independent recurrence tests preserve nonzero f32 bits and numerical
 zero values; silent positive/negative-zero bit patterns may differ. This state
 cleanup leaves the conservative excited `Infinite` tail contract in place.
+
+Run `cargo run --release -p sotf-plugin-aae --features qa --bin qa-aae-timing`
+for paired wall/current-thread CPU observations. The fixed matrix uses 9.1.6,
+44.1/48/96/192 kHz, 64/512-frame blocks, and steady versus per-block RT60/room
+updates. Each case spans five seconds with full-stream input/output allocations
+and the legacy spatial-control preparation; the final block stays full-sized.
+Every callback retains both clocks. Empty clock brackets expose sampling cost;
+CPU intervals include that work, and wall-minus-CPU can be slightly negative.
+
+The diagnostic exits nonzero on wall or CPU deadline observations and exits 2
+when CPU-clock coverage is missing. The existing `qa-aae` wall/load gates remain
+unchanged and separate. A low CPU duration paired with a large wall duration
+identifies elapsed time outside the calling thread's measured CPU interval; it
+does not identify whether scheduling, paging, another thread, or other waiting
+caused it. These offline measurements do not certify native-device deadlines.

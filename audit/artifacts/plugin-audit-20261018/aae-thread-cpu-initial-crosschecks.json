@@ -1,0 +1,64 @@
+{
+  "temporary_root": "/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij",
+  "source": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host/src/test_utils/thread_cpu.rs",
+  "libc_version": "0.2.191",
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij/Cargo.toml",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 1.8241614170838147,
+      "stdout": "",
+      "stderr": "     Locking 1 package to highest Rust 1.99.1 compatible version\n   Compiling libc v0.2.191\n'apple-m4' is not a recognized processor for this target (ignoring processor)\n'apple-m4' is not a recognized processor for this target (ignoring processor)\n    Checking qa-thread-cpu-crosscheck v0.0.0 (/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij)\n'apple-m4' is not a recognized processor for this target (ignoring processor)\n'apple-m4' is not a recognized processor for this target (ignoring processor)\nwarning: target feature `x87` must be enabled to ensure that the ABI of the current target can be implemented correctly\n  |\n  = note: this was previously accepted by the compiler but is being phased out; it will become a hard error in a future release!\n  = note: for more information, see issue #116344 <https://github.com/rust-lang/rust/issues/116344>\n\nwarning: `qa-thread-cpu-crosscheck` (lib) generated 1 warning\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.75s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij/Cargo.toml",
+        "--target",
+        "aarch64-pc-windows-msvc",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.1541028751526028,
+      "stdout": "",
+      "stderr": "    Checking qa-thread-cpu-crosscheck v0.0.0 (/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s\n"
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij/Cargo.toml",
+        "--target",
+        "aarch64-apple-ios",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.16127795889042318,
+      "stdout": "",
+      "stderr": "    Checking qa-thread-cpu-crosscheck v0.0.0 (/Volumes/home_tmp/tmp/qa-clock-cross-_4gj90ij)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s\n"
+    }
+  ]
+}

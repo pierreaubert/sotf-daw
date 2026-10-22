@@ -84,3 +84,8 @@ cargo check -p sotf-host && cargo clippy -p sotf-host
   and allocation-free reset. `loudness_history_heap` includes long nonzero
   callbacks and retention policy checks; silence alone cannot prove a backend's
   above-gate history stays bounded.
+
+- `test_utils::thread_cpu_time` is QA instrumentation, not a DSP scheduling tool.
+  Keep platform calls isolated and timestamp fields checked. Unsupported/error
+  clocks return None with no wall-clock fallback. Never replace wall deadlines
+  with current-thread CPU time or infer whole-process work from a thread clock.

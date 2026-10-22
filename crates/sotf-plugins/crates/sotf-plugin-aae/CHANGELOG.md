@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add a separate paired wall/current-thread CPU timing diagnostic across maximum
+  layout, four rates, 64/512-frame blocks and frequent RT60/room updates. Retain
+  raw coupled samples, clock-bracket overhead and explicit missing coverage.
+  Keep legacy wall/load gates unchanged; CPU observations do not replace them.
+
 - Clear only double-subnormal recursive tone-filter output state during silence.
   Prevent a near-unit pole from rounding hidden state back to itself indefinitely.
   Preserve normal f64 state, current f32 output and legitimate f32-subnormal audio.
