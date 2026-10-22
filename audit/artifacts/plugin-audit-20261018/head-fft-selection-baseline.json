@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "head_partition_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nhead_fft_example head=257 blocks=[257, 514, 1028, 2056] first_delay=0\nhead_fft_selection cases=962 levels=4817 failures=476\ntest nupc::head_partition_tests::every_supported_head_selects_power_two_tail_blocks_under_the_requested_cap ... FAILED\n\nfailures:\n\nfailures:\n    nupc::head_partition_tests::every_supported_head_selects_power_two_tail_blocks_under_the_requested_cap\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 19 filtered out; finished in 0.08s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 8.56s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::head_partition_tests::every_supported_head_selects_power_two_tail_blocks_under_the_requested_cap' (341922835) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs:58:5:\nassertion `left == right` failed: non-power head lengths still force non-power FFTs\n  left: 476\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

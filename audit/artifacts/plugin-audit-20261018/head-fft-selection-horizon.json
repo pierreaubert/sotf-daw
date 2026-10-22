@@ -1,0 +1,1773 @@
+{
+  "matched_scope": "Historical matched-callback timing diagnostic only; 12 geometries cover fewer than four actual prepared periods. Do not classify this matched dataset as the full actual-horizon gate.",
+  "extended_geometries": 12,
+  "additional_callbacks": 30600,
+  "matched_callbacks": 532086,
+  "expected_expanded_callbacks": 562686,
+  "rows": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131072,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4096,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131584,
+      "actual_period_frames": 262144,
+      "measured_period_frames": 262144,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4112,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 8192
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65536,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2048,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65792,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2056,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 8192,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 4112,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131072,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4096,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131584,
+      "actual_period_frames": 262144,
+      "measured_period_frames": 262144,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4112,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 8192
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65536,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2048,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65792,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2056,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 8192,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 4112,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131072,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4096,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 131584,
+      "actual_period_frames": 262144,
+      "measured_period_frames": 262144,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 4112,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 8192
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65536,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2048,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 65792,
+      "actual_period_frames": 131072,
+      "measured_period_frames": 131072,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 2056,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 4096
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 1024
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16384,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16384,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 512,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 512
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 16448,
+      "actual_period_frames": 16384,
+      "measured_period_frames": 16448,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 514,
+          "matched_actual_periods": 4.015625,
+          "expanded_callbacks": 514
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 8.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 8192,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "legacy_period_frames": 4112,
+      "actual_period_frames": 8192,
+      "measured_period_frames": 8192,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 16.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 1024,
+      "actual_period_frames": 1024,
+      "measured_period_frames": 1024,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 32.0,
+          "expanded_callbacks": 256
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 128.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32768,
+      "actual_period_frames": 32768,
+      "measured_period_frames": 32768,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1024,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 1024
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 256,
+          "matched_actual_periods": 4.0,
+          "expanded_callbacks": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "legacy_period_frames": 32896,
+      "actual_period_frames": 65536,
+      "measured_period_frames": 65536,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "matched_callbacks": 1028,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 2048
+        },
+        {
+          "callback_frames": 512,
+          "matched_callbacks": 257,
+          "matched_actual_periods": 2.0078125,
+          "expanded_callbacks": 512
+        }
+      ]
+    }
+  ]
+}

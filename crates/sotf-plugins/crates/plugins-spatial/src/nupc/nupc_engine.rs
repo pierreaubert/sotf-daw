@@ -55,13 +55,43 @@ impl NupcKernel {
         }
     }
 
+    /// Prepare a direct head with power-of-two FFT tail blocks.
+    ///
+    /// Retain all requested direct taps up to the IR length. A nonempty tail
+    /// uses the largest power-of-two base no greater than `min_block` and the
+    /// actual head length; output delays preserve absolute tap placement.
+    /// With no head, ordinary construction keeps its requested block size.
+    /// Preparation allocates and must run off the audio thread.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcKernel;
+    /// let kernel = NupcKernel::new_with_head(&[1.0, 0.5, 0.25], 1024, 2);
+    /// let engine = kernel.instantiate();
+    /// assert_eq!(engine.head_taps(), 2);
+    /// assert_eq!(engine.latency_samples(), 0);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `min_block` is zero and the IR extends beyond the direct head.
     pub fn new_with_head(ir: &[f32], min_block: usize, head_taps: usize) -> Self {
         let head_len = head_taps.min(ir.len());
         if head_len == 0 {
             return Self::new(ir, min_block);
         }
         let tail = &ir[head_len..];
-        let specs = coalesce_partition_levels(plan_partitions(tail.len(), min_block.min(head_len)));
+        // Keep every direct tap, but avoid inheriting a prime/non-power head
+        // length as the FFT grid. The existing absolute-offset delay places
+        // the tail correctly even when the first FFT block is shorter.
+        let block_cap = min_block.min(head_len);
+        let fft_block = if tail.is_empty() {
+            block_cap // An empty tail needs no transform or positive block cap.
+        } else {
+            1_usize << block_cap.ilog2()
+        };
+        let specs = coalesce_partition_levels(plan_partitions(tail.len(), fft_block));
         let mut planner = RealFftPlanner::new();
         let levels = specs
             .iter()
@@ -181,6 +211,17 @@ impl NupcEngine {
             output += level.push_sample(sample);
         }
         output
+    }
+
+    /// Return the largest prepared FFT block, excluding direct taps.
+    ///
+    /// Returns zero when no FFT levels are needed, including a pure direct head.
+    pub fn largest_block_size(&self) -> usize {
+        self.levels
+            .iter()
+            .map(|level| level.kernel.block_size)
+            .max()
+            .unwrap_or(0)
     }
 
     /// Returns the number of IR samples handled by the time-domain head (0 if disabled).

@@ -1,0 +1,35 @@
+{
+  "base_commit": "8bc59c6a6035f4c49ecf5f250dda9ea03d69a058",
+  "source_sha256": {
+    "Cargo.lock": "8214e358c13655280a7eab0dc02de2e3df72d1efcae178e2a5ff15585289742c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "59bc9a6b8c5714c8f2e9c4b6a4390e0c2b338718928f705cdafa82bbc87b0548",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "47cb680045051f96742ca5358b719c9e851150363ce5b1c0e18a97b8a2dc3930",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs": "a1a7c1c898194833f04b29e8ef091397991b5071f275a1fcd592f19ec4d9c2ea",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs": "d55af70e46b207324831ad759858d1f1aeca3b53fafbf79287cfc53bf3562747",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "2119e32721979ad80620e08728dae2bf58a99a1c3401c32ed16d975e1b12d5aa",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "79321a0648a1dec724e23a6d6607770667b09432b7eb192d2df4e8d1acb4fdca",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs": "a47f361baeeef98c00e2fa6cecacf85dff79b7719b265c94baa83eb37f01c00f",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "b5fdb80bd89e250a09f02784ad16811e1d34d1ae21946f578b727f50f0dacec5",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/Cargo.toml": "1f95133ba21929a2c05ad27fd0b0eb2f7fd70997f6808006b8cae80b554aaa79",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "f12ae3efbb234580c80d35cd25eebb8f8a67431b422bf8c1acf2adc88809ea11",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs": "5e027d5c953935d825791a816fb4618cf00903082403ea0987dc2c2012ba9b3e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs": "6b2eeba3681ae27e9d0172a773185fce638a0d7c264fd444007013735c1f12ed",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests.rs": "3011183bfdd4f6ea2a15c09cda2bc5864eb18e5c5ab3d219736eefbce61cc6b4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/misc.rs": "0ce81ad3257c60661f5dd47f6ba3dd1bfdc3f3be165ebd145f740fbed7320f30",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs": "e8ffe06bdd13211504a634b00fc2c3d0588200ff66b619e1b13b3e8a55ddc171",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs": "e4b83754d07d8e762f004d2192bc91ea5e1be0c7f4450b98d1f5566519a422a4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs": "76fa9909c9bf0d8c297e56aeddbe0c9885a4c7d6972ca02b046ea9454d72570f"
+  },
+  "baseline_artifact_sha256": {
+    "nupc-phase-load.json": "c1ba0f7bb7bc82d7bd4d3011752cd7a10c3658ef7e67cd5560550e1e4a088bc0",
+    "head-fft-selection-baseline.json": "924487f64e121951a5e3f9b0af337d30391f10a64111b9853105f459f3f29265"
+  },
+  "hashes_unchanged_after_load": true,
+  "snapshot_paths": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-nupc_engine.rs.txt",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-convolution_plugin.rs.txt",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-qa_convolution_load.rs.txt"
+  }
+}

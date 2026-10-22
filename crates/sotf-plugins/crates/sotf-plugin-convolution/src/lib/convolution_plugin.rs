@@ -479,6 +479,22 @@ impl ConvolutionPlugin {
         Some(frames as usize)
     }
 
+    /// Return the largest prepared partition period for load diagnostics.
+    #[cfg(feature = "qa")]
+    #[doc(hidden)]
+    pub fn qa_largest_partition_frames(&self) -> usize {
+        if self.nupc_engines.is_empty() {
+            PARTITION_SIZE
+        } else {
+            self.nupc_engines
+                .iter()
+                .map(nupc::NupcEngine::largest_block_size)
+                .max()
+                .unwrap_or(0)
+                .max(1)
+        }
+    }
+
     /// Estimate backend payload for explicit QA geometry sweeps.
     ///
     /// This diagnostic does not check source duration or decoded sample storage.

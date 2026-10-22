@@ -358,3 +358,54 @@ source hashes, the initial source snapshot and selection rationale are retained
 under `audit/artifacts/plugin-audit-20261018/nupc-phase-*`, with
 `verify-nupc-phase.py`. UPC, direct-head and remaining ordinary NUPC capacity
 work stays open. Linear-phase EQ has no new maximum-load acceptance result.
+
+### Power-of-two tail blocks with a direct head
+
+A direct-head NUPC kernel selects the largest power-of-two base no greater than
+both the requested block cap and the actual head length. The direct head keeps
+every configured tap. For a 257-tap head, tail blocks start at 256 rather than
+257 samples; the first level's output delay becomes one sample rather than zero,
+so the first tail tap still occurs at sample 257. Larger tail levels keep the
+same absolute-offset placement rule and one inverse normalization.
+
+This changes internal tail partition geometry and can add a level near a size
+boundary. It does not truncate or reshape the IR, add signal latency, alter head
+samples, change channel routing, or move work to another thread. Ordinary NUPC
+construction and the current phase policy are unchanged. Direct heads still use
+phase zero; the earlier all-engine phase trial used the previous grid and is
+retained separately.
+
+The explicit public partition planner still honors its supplied base. Admission
+retains the previous conservative planning arithmetic, limits and source-length
+boundaries. The materialized backend can therefore differ from that model;
+retained-allocation checks remain necessary. The old unmerged renderer and all
+its waveform/tolerance assertions are retained; only the structural coalescing
+expectation now describes the newly selected head grid. Independent f64 dense,
+sparse and complete-tail references retain their existing gates.
+
+The load diagnostic now queries the largest materialized block period, while
+retaining the historical planning period as a floor. Steady phases use at least
+four periods of the larger value and at least 256 callbacks; no horizon is
+shortened. Each row reports legacy, actual and measured periods. This matters
+near a head-grid size boundary, where a new final level can be larger than the
+old planner predicted. Warm full-history counts and callback deadlines stay the
+same. The first matched-horizon run is retained for historical comparison, but
+does not certify four actual periods in those expanded geometries.
+
+At the historical horizon, all 21 head geometries record fewer misses: 2,350
+to 660 in total. That matched run fails in 41/63 geometries with 40,918 misses
+over 532,086 callbacks. Twelve geometries have insufficient actual-period
+coverage there. The strengthened final gate adds 30,600 callbacks across those
+12 geometries, never shortens any case, and still exits 1: 43/63 failures and
+40,949 physical misses over 562,686 callbacks, including 690 head misses.
+Every row is finite, callback allocation/free-free and within its unchanged
+conservative retained estimate.
+
+The new grids can add levels and storage: matched head retained requested
+bytes are about 1.049–1.701 times prior values. These are not RSS or aggregate
+replacement-overlap bounds. Timing observations are unmatched and local, not
+causal or native-device acceptance. Both full red datasets, the matched source
+snapshots, period-coverage report and independent verifier are retained under
+`audit/artifacts/plugin-audit-20261018/head-fft-selection-*` and
+`verify-head-fft-selection.py`. Capacity and aggregate/native validation remain
+open; no new linear-phase EQ maximum-load acceptance is claimed.

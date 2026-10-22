@@ -261,12 +261,13 @@ fn run(case: Case, id: usize) -> Result<Value, String> {
     let construction_ms = start.elapsed().as_secs_f64() * 1e3;
     let retained = LIVE.load(Ordering::Relaxed).saturating_sub(before);
     let peak = PEAK.load(Ordering::Relaxed).saturating_sub(before);
+    let actual_largest_period = plugin.qa_largest_partition_frames();
     let mut plugin = ParametricInPlacePluginAdapter::new(plugin);
     Plugin::initialize(&mut plugin, f64::from(case.rate))?;
     let latency = plugin.latency_samples();
     let warm_calls = (length + latency + 37).div_ceil(128);
     let warm = measure(&mut plugin, case, 128, warm_calls)?;
-    let largest_period = if case.nupc {
+    let legacy_largest_period = if case.nupc {
         let head = if case.head { HEAD.min(length) } else { 0 };
         let min_block = if head == 0 { 1024 } else { 1024.min(head) };
         plugins_spatial::nupc::plan_partitions(length - head, min_block)
@@ -277,6 +278,9 @@ fn run(case: Case, id: usize) -> Result<Value, String> {
     } else {
         1024
     };
+    // Keep the historical horizon as a floor, but cover four periods of the
+    // materialized runtime even when internal partition selection changes.
+    let largest_period = legacy_largest_period.max(actual_largest_period);
     let mut steady = Vec::new();
     for frames in [128, 512] {
         let calls = 256.max((largest_period * 4).div_ceil(frames));
@@ -288,6 +292,9 @@ fn run(case: Case, id: usize) -> Result<Value, String> {
         "next_frame_rejection":next_error,"construction_ms":construction_ms,
         "construction_retained_requested_delta_bytes":retained,"construction_peak_requested_delta_bytes":peak,
         "retained_delta_within_estimate":retained<=case.estimate(length),"latency_frames":latency,
+        "legacy_largest_period_frames":legacy_largest_period,
+        "actual_largest_period_frames":actual_largest_period,
+        "measured_largest_period_frames":largest_period,
         "warm":warm,"steady":steady}),
     )
 }

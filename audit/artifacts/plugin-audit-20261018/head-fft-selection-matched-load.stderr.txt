@@ -1,0 +1,3 @@
+   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)
+    Finished `release` profile [optimized] target(s) in 11.19s
+     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-convolution-load`

@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Latest selected ordinary-NUPC phase run still fails in 43/63 geometries with 42,605 misses across 532,086 callbacks. Prior accepted UPC real-FFT baseline: 58 / 43,053. Ordinary NUPC misses fall 525 to 94 with no geometry recording more; UPC and direct-head schedules remain unchanged and still require capacity work. The all-engine phase trial was rejected because head misses rose 2,364 to 3,547 despite fewer failing rows; all raw results remain. Earlier rejected UPC tail distribution produced 69,510 misses. Preserve every geometry, strict deadline and finite/zero-heap/admission gate. Local unmatched timings do not establish native-device compliance."
+          "evidence": "Current actual-period-aware full63 gate remains red:43 failed geometries,40949 physical misses across562686 callbacks. Horizons are at least four materialized periods and never below historical duration;12 geometries gain30600 callbacks. The separate matched historical-horizon run records41 failures/40918 misses over532086 callbacks, versus prior43/42605; head misses2350 to660 across21 geometries with none higher. Matched results do not certify actual-period coverage in12 changed head grids. Retained head requested memory rises5\u201370%, within unchanged conservative estimates. Preserve all raw results, strict budgets, admission lengths, finite/zero-heap gates and native capacity scope. UPC, remaining NUPC/head capacity and aggregate/native evidence stay open."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1129,6 +1129,38 @@
             "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs"
           ],
           "result": "Add preparation-time NupcKernel::instantiate_with_phase(index,count), retaining default instantiate at phase zero. Each level starts with floor(B*index/count) zero-prehistory input samples and the same output-queue cursor; reset restores both. Widen the product to u128 to handle valid extreme usize fractions. Convolution staggers ordinary NUPC mapped output/path engines, including four-path true stereo. Direct heads and linear-phase EQ retain phase zero. Absolute IR offsets, level delay, signal latency, direct taps, normalization, automation, native finite support, kernel/plan sharing, callback-thread execution and conservative admission arithmetic are unchanged. No new vector buffers/plans/workers/dependencies/parameters; one phase scalar per level is retained within the metadata reserve. Steady transform rate and per-block work are unchanged, although a finite interval may contain one extra earlier boundary per level. Structural regression across 1176 configurations fails 15120/16464 checks with a zero-phase stub, then zero after implementation. Thirty-six independent dense/sparse f64 full-tail cases cover phase zero, half, 11/12, 31/32, B-1 and extreme usize fractions, with maximum error 1.58325e-8 at unchanged 2e-5 gate; dirty partial reset and irregular callback replay are bit-exact. Complete shared/Convolution/linear-phase EQ release selection: 269 passed/seven retained ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; standard QA records zero physical misses. The initial all-engine phase policy passes functional/resource checks but is rejected: 37/63 failed geometries and 43808 total misses, with direct-head misses 2364 to 3547 (ordinary NUPC 525 to 98). Preserve its complete raw data, source snapshot and validation. The selected ordinary-only policy retains all 63 geometries, 532086 callbacks, identical admitted lengths/estimates/latencies/budgets and strict margin 1.0. It still exits 1: 43 failed geometries and 42605 misses, versus accepted baseline 58 / 43053. Ordinary NUPC misses are 94 versus 525, with no geometry recording more; unchanged UPC totals 40161 versus 40164 and phase-zero heads 2350 versus 2364. All rows remain finite, allocation/free-free in callbacks and within conservative retained bounds. These development-matrix-guided, unmatched local timings are not causal/generalized/native-device acceptance. Full source/baseline hashes, both complete red matrices, selection rationale and independent verifier are retained. UPC/direct-head throughput and full capacity remain pending; no new linear-phase EQ maximum-load or FIR-M1 claim. Convolution remains partial, overall production completion 35/45."
+        },
+        {
+          "task": "Select FFT-friendly direct-head tail blocks and measure four actual prepared periods without shortening historical load horizons",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-focused.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-horizon.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-convolution_plugin.rs.txt",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-nupc_engine.rs.txt",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-qa_convolution_load.rs.txt",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-source.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-validation.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-source.json",
+            "audit/artifacts/plugin-audit-20261018/head-fft-selection-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-head-fft-selection.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
+          ],
+          "result": "Direct-head NupcKernel preparation now chooses the largest power-of-two tail base within the requested cap and actual head length. Every direct tap is retained; absolute-offset delay compensates the shorter block (257 taps: blocks 257/514/1028/2056 become 256/512/1024/2048, first delay 0 to 1). Ordinary construction, phase policy (heads zero), public explicit planner, callback convolution, normalization, routing, automation, latency, complete finite support and kernel sharing are unchanged. Admission arithmetic/limits/source lengths remain the previous conservative model. Across every supported head 32..512 and caps 32/1024, 962 structural cases fail 476 before and zero after; materialized runtime levels total 4817 before and 5260 after, so more levels/storage are possible. The old unmerged renderer and its waveform/assertion bodies are byte-identical; only structural coalescing expectations describe the selected new grid. Independent f64 dense54/sparse4/legacy-unmerged45/phased36 full-tail cases retain errors below 2.43e-8 at unchanged 2e-5 gates, with exact dirty reset/partition replay. Final affected release tests: 271 passed/seven retained ignores; strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter with zero local physical misses. A historical matched-horizon 63-case run retains all old geometry/admission/budget fields and 532086 callbacks: 41 failed cases /40918 total misses versus prior43/42605. All21 head geometries record fewer misses, head total2350 to660. However near grid boundaries12 matched geometries cover fewer than four actual prepared periods. Preserve that diagnostic and exact kernel/plugin/harness snapshots; do not classify it as actual-period capacity acceptance. Add a read-only largest-block accessor plus QA-only plugin metadata; load QA measures max(actual prepared period, historical planning period), preserving warm counts, 256-call minimum, 128/512 sizes and strict raw 1.0 budgets. Final full63 gate therefore adds30600 calls in12 geometries (never shorter) and verifies at least four actual periods: 562686 callbacks, 43 failed geometries,40949 physical misses,690 in head cases; exit1. All rows finite, callback allocation/free-free and within unchanged conservative estimates; all admitted lengths, latencies and source boundaries match. Matched head retained requested bytes rise to1.04938\u20131.70126 times prior values; this CPU/memory tradeoff is not RSS or an aggregate-overlap bound. Both complete red runs, coverage-gap explanation, source/baseline hashes, all period fields and independent verifier are retained. Local unmatched timing is not causal/generalized/native-device acceptance. Maximum capacity remains open; linear-phase EQ keeps phase-zero/no-head construction with no new maximum-load result or FIR-M1 claim. Convolution partial; overall35/45 complete."
         }
       ],
       "evidence": [
@@ -1239,7 +1271,28 @@
         "audit/artifacts/plugin-audit-20261018/nupc-phase-source.json",
         "audit/artifacts/plugin-audit-20261018/nupc-phase-validation.json",
         "audit/artifacts/plugin-audit-20261018/verify-nupc-phase.py",
-        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs"
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-focused.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-horizon.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-qa_convolution_load.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-source.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-validation.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-source.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-head-fft-selection.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
       ]
     },
     {
@@ -4095,6 +4148,42 @@
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs"
       ],
       "limitations": "Full strict Convolution capacity still fails in 43/63 cases. Ordinary-only policy was selected using development matrix observations; no native or held-out acceptance. Direct-head and UPC throughput remain open, as do prior linear-phase EQ 28/108 failures and FIR-M1. Overall completion remains 35/45."
+    },
+    {
+      "name": "Power-of-two direct-head FFT tail selection and actual-period-aware capacity diagnostics",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14
+      ],
+      "result": "Direct-head NupcKernel preparation now chooses the largest power-of-two tail base within the requested cap and actual head length. Every direct tap is retained; absolute-offset delay compensates the shorter block (257 taps: blocks 257/514/1028/2056 become 256/512/1024/2048, first delay 0 to 1). Ordinary construction, phase policy (heads zero), public explicit planner, callback convolution, normalization, routing, automation, latency, complete finite support and kernel sharing are unchanged. Admission arithmetic/limits/source lengths remain the previous conservative model. Across every supported head 32..512 and caps 32/1024, 962 structural cases fail 476 before and zero after; materialized runtime levels total 4817 before and 5260 after, so more levels/storage are possible. The old unmerged renderer and its waveform/assertion bodies are byte-identical; only structural coalescing expectations describe the selected new grid. Independent f64 dense54/sparse4/legacy-unmerged45/phased36 full-tail cases retain errors below 2.43e-8 at unchanged 2e-5 gates, with exact dirty reset/partition replay. Final affected release tests: 271 passed/seven retained ignores; strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter with zero local physical misses. A historical matched-horizon 63-case run retains all old geometry/admission/budget fields and 532086 callbacks: 41 failed cases /40918 total misses versus prior43/42605. All21 head geometries record fewer misses, head total2350 to660. However near grid boundaries12 matched geometries cover fewer than four actual prepared periods. Preserve that diagnostic and exact kernel/plugin/harness snapshots; do not classify it as actual-period capacity acceptance. Add a read-only largest-block accessor plus QA-only plugin metadata; load QA measures max(actual prepared period, historical planning period), preserving warm counts, 256-call minimum, 128/512 sizes and strict raw 1.0 budgets. Final full63 gate therefore adds30600 calls in12 geometries (never shorter) and verifies at least four actual periods: 562686 callbacks, 43 failed geometries,40949 physical misses,690 in head cases; exit1. All rows finite, callback allocation/free-free and within unchanged conservative estimates; all admitted lengths, latencies and source boundaries match. Matched head retained requested bytes rise to1.04938\u20131.70126 times prior values; this CPU/memory tradeoff is not RSS or an aggregate-overlap bound. Both complete red runs, coverage-gap explanation, source/baseline hashes, all period fields and independent verifier are retained. Local unmatched timing is not causal/generalized/native-device acceptance. Maximum capacity remains open; linear-phase EQ keeps phase-zero/no-head construction with no new maximum-load result or FIR-M1 claim. Convolution partial; overall35/45 complete.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-focused.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-horizon.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-qa_convolution_load.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-source.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-matched-validation.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-source.json",
+        "audit/artifacts/plugin-audit-20261018/head-fft-selection-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-head-fft-selection.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
+      ],
+      "limitations": "Current strengthened load gate still fails43/63 with40949 misses over562686 callbacks. Matched historical timing is incomplete actual-period coverage for12 geometries and is not native/causal acceptance. Head retained requested memory increases5\u201370%. All original plugin requirements, prior EQ28/108 failures and FIR-M1 remain open; completion35/45."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

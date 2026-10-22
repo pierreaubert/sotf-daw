@@ -68,3 +68,14 @@ cargo test -p plugins-spatial
   retain phase zero: the full-matrix all-engine trial increased head deadline
   misses. The shared API still supports head phases numerically; that does not
   establish their maximum-load performance.
+
+- Direct-head kernel preparation rounds the tail's base down to a power of two
+  within min(requested cap, actual head length). Keep every head tap and use the
+  existing absolute-offset output delay (257 taps -> B=256, initial delay=1).
+  An empty tail needs no positive block cap. No-head construction and the public
+  explicit partition planner keep their supplied base.
+- Geometry can gain a level near a boundary. Preserve all waveform stimuli and
+  numerical gates in the old unmerged reference; structural coalescing coverage
+  describes the selected head grid. Keep Convolution's conservative admission
+  arithmetic unchanged and verify materialized retained storage at its original
+  boundaries. Do not infer capacity from powers-of-two selection alone.

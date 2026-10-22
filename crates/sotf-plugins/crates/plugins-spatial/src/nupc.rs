@@ -19,3 +19,6 @@ mod head_tests;
 
 #[cfg(test)]
 mod phase_tests;
+
+#[cfg(test)]
+mod head_partition_tests;

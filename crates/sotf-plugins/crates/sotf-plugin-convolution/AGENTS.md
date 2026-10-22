@@ -145,3 +145,16 @@ cargo test -p sotf-plugin-convolution
 - This keeps per-block transform work and steady rate unchanged; a finite
   interval can include one extra shifted boundary per level. Preserve full
   capacity measurements and f64/reset/callback-partition/zero-heap gates.
+
+- Shared direct-head kernels now select a power-of-two tail base within the
+  actual head and requested cap. Head length, zero latency and absolute tail
+  offset stay unchanged; e.g. 257 taps use B=256 plus one delay sample.
+  Keep the conservative admission model and full workload boundaries unchanged.
+  The prior all-engine phase rejection used the older grid; head phase zero
+  remains the selected production policy pending separate full-load evidence.
+
+- `qa-convolution-load` queries the materialized largest block through QA
+  metadata, then uses max(actual period, historical planning period) for its
+  four-period horizon and preserves the 256-call floor. Never shorten historical
+  durations or change callback budgets. Report all three period values; a
+  planning estimate alone can miss a larger level after constructor changes.

@@ -73,7 +73,12 @@ fn runtime_has_one_level_per_block_size_with_unchanged_partition_coverage() {
                 let min_block = if effective_head == 0 {
                     block
                 } else {
-                    block.min(effective_head)
+                    // Head construction now selects an FFT-friendly cap before
+                    // coalescing. Keep the old unmerged renderer below unchanged
+                    // as an independent layout/equivalence reference.
+                    let cap = block.min(effective_head);
+                    let upper = cap.next_power_of_two();
+                    if upper == cap { cap } else { upper / 2 }
                 };
                 let original = plan_partitions(length - effective_head, min_block);
                 let mut sizes: Vec<_> = original.iter().map(|s| s.block_size).collect();

@@ -1,0 +1,4841 @@
+{
+  "functional_verified": true,
+  "normal_tests_passed": 271,
+  "normal_tests_ignored": 7,
+  "head_selection_cases": 962,
+  "old_levels": 4817,
+  "new_levels": 5260,
+  "maximum_errors": {
+    "nupc_coalesced_unmerged": 2.2351741790771484e-08,
+    "nupc_real_direct_reference": 1.5679317962036254e-08,
+    "nupc_large_sparse_reference": 2.420713940409769e-08,
+    "nupc_phase_f64": 1.5832483768463135e-08
+  },
+  "admission_arithmetic_unchanged": true,
+  "load_measurement_budgets_and_matrix_unchanged": true,
+  "actual_partition_horizon_verified": true,
+  "extended_horizon_geometries": 12,
+  "additional_callbacks": 30600,
+  "load": {
+    "cases": 63,
+    "callbacks": 562686,
+    "failed_cases": 43,
+    "physical_misses": 40949,
+    "deadline_pass": false
+  },
+  "matched_historical_horizon_load": {
+    "cases": 63,
+    "callbacks": 532086,
+    "failed_cases": 41,
+    "physical_misses": 40918,
+    "deadline_pass": false
+  },
+  "previous_load": {
+    "cases": 63,
+    "callbacks": 532086,
+    "failed_cases": 43,
+    "physical_misses": 42605,
+    "deadline_pass": false
+  },
+  "matched_head_old_misses": 2350,
+  "matched_head_new_misses": 660,
+  "expanded_head_misses": 690,
+  "matched_head_geometries_fewer_misses": 21,
+  "matched_head_geometries_equal_misses": 0,
+  "matched_head_geometries_more_misses": 0,
+  "matched_head_retained_ratio_min": 1.0493783911213932,
+  "matched_head_retained_ratio_max": 1.7012552786580861,
+  "comparisons": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 34870647,
+      "new_retained_bytes": 34870647,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 1,
+      "old_retained_bytes": 58388367,
+      "new_retained_bytes": 58388279,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 0,
+          "new_misses": 1
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 16,
+      "old_retained_bytes": 58948743,
+      "new_retained_bytes": 98541271,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 8192,
+          "old_misses": 16,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46441839,
+      "new_retained_bytes": 46441839,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 8,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 15,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 4096,
+          "old_misses": 8,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1439,
+      "new_misses": 1439,
+      "old_retained_bytes": 150491689,
+      "new_retained_bytes": 150491689,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 1407,
+          "new_misses": 1407
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 68120849,
+      "new_retained_bytes": 68120849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 20,
+      "old_retained_bytes": 69831905,
+      "new_retained_bytes": 118801897,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 16,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1243,
+      "new_misses": 1243,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 19,
+      "new_misses": 0,
+      "old_retained_bytes": 48780161,
+      "new_retained_bytes": 51640433,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 11,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 8,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 880
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 20,
+      "old_retained_bytes": 81148857,
+      "new_retained_bytes": 85155945,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 47,
+          "new_misses": 11
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 32,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 16,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 486,
+      "new_misses": 486,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 31,
+      "new_misses": 7,
+      "old_retained_bytes": 36408179,
+      "new_retained_bytes": 60125555,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 15,
+          "new_misses": 3
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 69584225,
+      "new_retained_bytes": 69584225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 23,
+      "new_misses": 8,
+      "old_retained_bytes": 36760017,
+      "new_retained_bytes": 60682705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 15,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 8,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2843,
+      "new_misses": 2845,
+      "old_retained_bytes": 69491993,
+      "new_retained_bytes": 69491993,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2811,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 36,
+      "old_retained_bytes": 58948745,
+      "new_retained_bytes": 98541273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 8192,
+          "old_misses": 32,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 8,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 92626129,
+      "new_retained_bytes": 92626129,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2813,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 16,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 4096,
+          "old_misses": 16,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 1024,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776361,
+      "new_retained_bytes": 238776361,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 17889,
+          "new_callbacks": 17889,
+          "old_misses": 2236,
+          "new_misses": 2236
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1,
+      "new_misses": 0,
+      "old_retained_bytes": 68120761,
+      "new_retained_bytes": 68120849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 1,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 40,
+      "old_retained_bytes": 69831993,
+      "new_retained_bytes": 118801897,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 32,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1371,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 48,
+      "new_misses": 10,
+      "old_retained_bytes": 48780161,
+      "new_retained_bytes": 51640433,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 24,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 16,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 8,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 880
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 191,
+      "new_misses": 48,
+      "old_retained_bytes": 81148857,
+      "new_retained_bytes": 85155945,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 95,
+          "new_misses": 23
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 64,
+          "new_misses": 17
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 15,
+      "old_retained_bytes": 36408179,
+      "new_retained_bytes": 60125555,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 31,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 138894401,
+      "new_retained_bytes": 138894401,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2813,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 51,
+      "new_misses": 16,
+      "old_retained_bytes": 36760017,
+      "new_retained_bytes": 60682705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 16,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 138734681,
+      "new_retained_bytes": 138734681,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 45009,
+          "new_callbacks": 45009,
+          "old_misses": 5626,
+          "new_misses": 5626
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 47,
+      "new_misses": 47,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 207,
+      "new_misses": 72,
+      "old_retained_bytes": 58948745,
+      "new_retained_bytes": 98541273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 127,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 8192,
+          "old_misses": 64,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 16,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 184994705,
+      "new_retained_bytes": 184994705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 45009,
+          "new_callbacks": 45009,
+          "old_misses": 5626,
+          "new_misses": 5626
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 36,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 4096,
+          "old_misses": 32,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 1024,
+          "old_misses": 8,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776361,
+      "new_retained_bytes": 238776273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 17889,
+          "new_callbacks": 17889,
+          "old_misses": 2236,
+          "new_misses": 2236
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 68120763,
+      "new_retained_bytes": 68120763,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 208,
+      "new_misses": 81,
+      "old_retained_bytes": 69831907,
+      "new_retained_bytes": 118801899,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 127,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 64,
+          "new_misses": 33
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 17,
+          "new_misses": 16
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1371,
+      "old_retained_bytes": 238948467,
+      "new_retained_bytes": 238948467,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685587,
+      "new_retained_bytes": 46685587,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 99,
+      "new_misses": 28,
+      "old_retained_bytes": 48780163,
+      "new_retained_bytes": 51640435,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 47,
+          "new_misses": 11
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 32,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 20,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844299,
+      "new_retained_bytes": 238844299,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 880
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 2,
+      "old_retained_bytes": 81709243,
+      "new_retained_bytes": 81709331,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 1
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 1
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 451,
+      "new_misses": 114,
+      "old_retained_bytes": 81148859,
+      "new_retained_bytes": 85155947,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 194,
+          "new_misses": 49
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 130,
+          "new_misses": 33
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 127,
+          "new_misses": 32
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048853,
+      "new_retained_bytes": 239048853,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598325,
+      "new_retained_bytes": 55598325,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 244,
+      "new_misses": 63,
+      "old_retained_bytes": 36408181,
+      "new_retained_bytes": 60125557,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 62,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 64,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 118,
+          "new_misses": 32
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 5006,
+      "new_misses": 5006,
+      "old_retained_bytes": 239063875,
+      "new_retained_bytes": 239063875,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 38769,
+          "new_callbacks": 38769,
+          "old_misses": 4846,
+          "new_misses": 4846
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936051,
+      "new_retained_bytes": 35936051,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 103,
+      "new_misses": 36,
+      "old_retained_bytes": 36760019,
+      "new_retained_bytes": 60682707,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 2048,
+          "old_misses": 32,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 512,
+          "old_misses": 8,
+          "new_misses": 4
+        }
+      ]
+    }
+  ],
+  "matched_comparisons": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 34870647,
+      "new_retained_bytes": 34870559,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 58388367,
+      "new_retained_bytes": 58388279,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 12,
+      "old_retained_bytes": 58948743,
+      "new_retained_bytes": 98541271,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 4112,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46441839,
+      "new_retained_bytes": 46441839,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 7,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 15,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 2056,
+          "old_misses": 8,
+          "new_misses": 2
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1439,
+      "new_misses": 1439,
+      "old_retained_bytes": 150491689,
+      "new_retained_bytes": 150491689,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 1407,
+          "new_misses": 1407
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 68120849,
+      "new_retained_bytes": 68120849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 14,
+      "old_retained_bytes": 69831905,
+      "new_retained_bytes": 118801897,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 4,
+          "new_misses": 2
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1243,
+      "new_misses": 1243,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 19,
+      "new_misses": 0,
+      "old_retained_bytes": 48780161,
+      "new_retained_bytes": 51640433,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 11,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 8,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 880
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 21,
+      "old_retained_bytes": 81148857,
+      "new_retained_bytes": 85155857,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 47,
+          "new_misses": 11
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 32,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 16,
+          "new_misses": 1
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 486,
+      "new_misses": 486,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 31,
+      "new_misses": 7,
+      "old_retained_bytes": 36408179,
+      "new_retained_bytes": 60125555,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 15,
+          "new_misses": 3
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 69584225,
+      "new_retained_bytes": 69584225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 11259,
+          "new_callbacks": 11259,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 23,
+      "new_misses": 6,
+      "old_retained_bytes": 36760017,
+      "new_retained_bytes": 60682705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 15,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 8,
+          "new_misses": 2
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2843,
+      "new_misses": 2845,
+      "old_retained_bytes": 69491993,
+      "new_retained_bytes": 69491993,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2811,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 26,
+      "old_retained_bytes": 58948745,
+      "new_retained_bytes": 98541273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 4112,
+          "old_misses": 32,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 8,
+          "new_misses": 2
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 92626129,
+      "new_retained_bytes": 92626129,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2813,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 12,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 2056,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776361,
+      "new_retained_bytes": 238776361,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 17889,
+          "new_callbacks": 17889,
+          "old_misses": 2236,
+          "new_misses": 2236
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1,
+      "new_misses": 0,
+      "old_retained_bytes": 68120761,
+      "new_retained_bytes": 68120849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 1,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 29,
+      "old_retained_bytes": 69831993,
+      "new_retained_bytes": 118801897,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 32,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 8,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1371,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 48,
+      "new_misses": 10,
+      "old_retained_bytes": 48780161,
+      "new_retained_bytes": 51640433,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 24,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 16,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 8,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1041,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 881
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 191,
+      "new_misses": 48,
+      "old_retained_bytes": 81148857,
+      "new_retained_bytes": 85155945,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 95,
+          "new_misses": 23
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 64,
+          "new_misses": 17
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 15,
+      "old_retained_bytes": 36408179,
+      "new_retained_bytes": 60125555,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 31,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 138894401,
+      "new_retained_bytes": 138894401,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 22509,
+          "new_callbacks": 22509,
+          "old_misses": 2813,
+          "new_misses": 2813
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 51,
+      "new_misses": 12,
+      "old_retained_bytes": 36760017,
+      "new_retained_bytes": 60682705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 31,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 16,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 4,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 138734681,
+      "new_retained_bytes": 138734681,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 45009,
+          "new_callbacks": 45009,
+          "old_misses": 5626,
+          "new_misses": 5626
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 47,
+      "new_misses": 48,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8169,
+          "new_callbacks": 8169,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4096,
+          "new_callbacks": 4096,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 1
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 207,
+      "new_misses": 52,
+      "old_retained_bytes": 58948745,
+      "new_retained_bytes": 98541273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 8219,
+          "new_callbacks": 8219,
+          "old_misses": 127,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4112,
+          "new_callbacks": 4112,
+          "old_misses": 64,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 16,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 184994705,
+      "new_retained_bytes": 184994705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 45009,
+          "new_callbacks": 45009,
+          "old_misses": 5626,
+          "new_misses": 5626
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4073,
+          "new_callbacks": 4073,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2048,
+          "new_callbacks": 2048,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 26,
+      "old_retained_bytes": 36839993,
+      "new_retained_bytes": 60787225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 4107,
+          "new_callbacks": 4107,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2056,
+          "new_callbacks": 2056,
+          "old_misses": 32,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 8,
+          "new_misses": 2
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776361,
+      "new_retained_bytes": 238776361,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 17889,
+          "new_callbacks": 17889,
+          "old_misses": 2236,
+          "new_misses": 2236
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 68120763,
+      "new_retained_bytes": 68120851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 208,
+      "new_misses": 64,
+      "old_retained_bytes": 69831907,
+      "new_retained_bytes": 118801899,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 127,
+          "new_misses": 35
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 64,
+          "new_misses": 21
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 17,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1371,
+      "old_retained_bytes": 238948467,
+      "new_retained_bytes": 238948467,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 9689,
+          "new_callbacks": 9689,
+          "old_misses": 1211,
+          "new_misses": 1211
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685587,
+      "new_retained_bytes": 46685587,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 745,
+          "new_callbacks": 745,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 99,
+      "new_misses": 30,
+      "old_retained_bytes": 48780163,
+      "new_retained_bytes": 51640347,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 47,
+          "new_misses": 12
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 32,
+          "new_misses": 10
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 20,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844299,
+      "new_retained_bytes": 238844299,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 7041,
+          "new_callbacks": 7041,
+          "old_misses": 880,
+          "new_misses": 880
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709243,
+      "new_retained_bytes": 81709331,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 873,
+          "new_callbacks": 873,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 512,
+          "new_callbacks": 512,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 451,
+      "new_misses": 151,
+      "old_retained_bytes": 81148859,
+      "new_retained_bytes": 85155947,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 766,
+          "new_callbacks": 766,
+          "old_misses": 194,
+          "new_misses": 65
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 514,
+          "new_callbacks": 514,
+          "old_misses": 130,
+          "new_misses": 52
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 127,
+          "new_misses": 34
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048853,
+      "new_retained_bytes": 239048853,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 3633,
+          "new_callbacks": 3633,
+          "old_misses": 454,
+          "new_misses": 454
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598325,
+      "new_retained_bytes": 55598325,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 297,
+          "new_callbacks": 297,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 244,
+      "new_misses": 92,
+      "old_retained_bytes": 36408181,
+      "new_retained_bytes": 60125557,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 252,
+          "new_callbacks": 252,
+          "old_misses": 62,
+          "new_misses": 28
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 64,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 118,
+          "new_misses": 32
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 5006,
+      "new_misses": 5006,
+      "old_retained_bytes": 239063875,
+      "new_retained_bytes": 239063875,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 38769,
+          "new_callbacks": 38769,
+          "old_misses": 4846,
+          "new_misses": 4846
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 128,
+          "new_misses": 128
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936051,
+      "new_retained_bytes": 35936051,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2025,
+          "new_callbacks": 2025,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1024,
+          "new_callbacks": 1024,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 256,
+          "new_callbacks": 256,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 103,
+      "new_misses": 26,
+      "old_retained_bytes": 36760019,
+      "new_retained_bytes": 60682707,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "old_callbacks": 2051,
+          "new_callbacks": 2051,
+          "old_misses": 63,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "old_callbacks": 1028,
+          "new_callbacks": 1028,
+          "old_misses": 32,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "old_callbacks": 257,
+          "new_callbacks": 257,
+          "old_misses": 8,
+          "new_misses": 2
+        }
+      ]
+    }
+  ],
+  "scope": "All admitted geometries and strict budgets retained. Historical matched timings are unmatched local observations; the final horizon is extended to at least four actual prepared periods and never shorter than historical duration. No causal/native-device or new linear-EQ capacity acceptance."
+}
