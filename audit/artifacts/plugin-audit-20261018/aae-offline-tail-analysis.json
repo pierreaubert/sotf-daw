@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "focused_tests": 8,
+  "export_configurations": 16,
+  "maximum_envelope_error": 8.857674684871475e-12,
+  "long_rt_observed_after_cap_fraction_min": 0.21774282996539762,
+  "long_rt_observed_after_cap_fraction_max": 0.39684134776792696,
+  "source": {
+    "source": "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_offline_tail.rs",
+    "sha256": "f4fc89d1134c879547b20dfdb756443a53359027ba100a6ca7cc6af5c42cef8a",
+    "production_dsp_changed": false
+  },
+  "scope": "Frozen neutral-damping offline caller policy and retained native EOF contracts; finite observed continuation is not an infinite-tail bound or listening/native-device acceptance."
+}

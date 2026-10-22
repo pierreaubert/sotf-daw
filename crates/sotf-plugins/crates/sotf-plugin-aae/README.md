@@ -182,3 +182,36 @@ on macOS/Linux. Unsupported or invalid observations remain missing. Loop
 counters include instrumentation and other threads, and their completeness
 depends on the OS; zero does not exclude events. These aggregate observations
 do not assign a fault or context switch to a particular missed callback.
+
+### Explicit offline export policy
+
+`tests/audit_offline_tail.rs` provides a reference offline caller for an AAE
+`DawHost` graph. After the final source frame, keep calling ordinary `process`
+with stereo silence for an explicitly chosen number of tail frames. Count this
+budget in frames from source EOF, independent of callback boundaries. Export
+exactly that duration and report `duration_limit`; it is intentional truncation,
+not native drain completion or a measured quiet-tail guarantee.
+
+The reference applies a common half-cosine gain to every output channel over the
+last chosen fade frames. For a fade of at least two frames, its first gain is one
+and its final gain is zero; a one-frame fade zeros that frame. A zero-length fade
+leaves an abrupt cut, while a zero tail budget emits no tail. The export envelope
+is applied to the returned audio, outside the recursive network, so it does not
+change feedback state or the plugin's `Infinite` metadata. Choose duration and
+fade for the content and downstream export requirements; RT60 alone does not
+establish finite support. Do not early-stop on quiet callbacks: the maximum
+predelay and sparse reflections can conceal future energy.
+
+Run `cargo test --release -p sotf-plugin-aae --test audit_offline_tail -- --nocapture`.
+Sixteen frozen neutral-damping configurations span 48/96 kHz, 5.0/9.1.6, both
+room-size extremes and 0.3/6-second RT60. The deliberately short half-second-plus-
+seven-frame budget and 10 ms fade expose truncation rather than assert audibility.
+The test compares every exported sample against an independent sine-squared
+form of the envelope on an unfaded host continuation, checks callback invariance,
+zero endpoints, continued state, silent predelay, short budgets and native EOF
+refusal. JSON rows separately report energy removed by fading and energy observed
+in a finite continuation after the cap. The latter is a lower bound on total
+omitted energy, not an infinite-tail error bound. Arbitrary modulation, damping,
+auto gain, changing controls and perceptual acceptance need separate evaluation.
+This is a reference caller policy; the plugin does not choose an export duration
+or add a native finite drain.

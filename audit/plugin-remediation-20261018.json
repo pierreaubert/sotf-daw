@@ -151,6 +151,19 @@
             "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-analysis.json"
           ],
           "result": "Extend the offline paired-clock diagnostic to64cases:16rate/block/control conditions, two allocated-only and two explicitly touched repetitions in alternating ABBA/BAAB order. Retain full five-second streams,11silent warmups, spatial prelude, every raw callback and all failures. Independent verifier confirms267272callbacks, exact integer deadline decisions, distributions, coupled maxima, resource deltas and16identical rendered-audio SHA256 groups. The run exits1: allocated-only has2wall misses/133636callbacks; explicitly touched has0/133636; both have0thread-CPU misses and complete clock/resource coverage. Both misses occur at192k/64steady, first allocated-only repetition: indices133/14505; wall592584/345708ns,CPU26750/36667ns. Aggregate loop minor faults are9351allocated-only versus0touched, involuntary switches374versus232; all major faults/voluntary switches zero. Process counters include instrumentation and other threads; zero is not exclusion, allocation-only need not be nonresident and touching does not pin memory. This comparison supports buffer preparation as a follow-up but does not causally attribute individual misses, erase earlier112misses/39.700ms incidents or certify native deadlines. QA-only getrusage helper uses existing libc, explicit None for unsupported/errors/invalid counters and checked deltas; two tests pass. Initial SHA library hex-format compile error is retained; bytewise hex formatting resolves it. Final host714passed/1existingignore, timing2passed, strict host/AAE all-target QA Clippy, format and production host no-QA check pass. Exact helper cross-compiles for Linux and Windows/iOS fallback with generic CPU flags; only macOS runtime is verified. No production DSP, engine, driver, dependency, latency or wall-gate change. AAE remains partial and overall35/45plugins complete."
+        },
+        {
+          "requirement": "Validate explicit bounded offline AAE truncation and output-fade policy end to end without misreporting native finite support.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/aae-offline-tail-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/aae-offline-tail-initial.json",
+            "audit/artifacts/plugin-audit-20261018/aae-offline-tail-source.json",
+            "audit/artifacts/plugin-audit-20261018/aae-offline-tail-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-aae-offline-tail.py",
+            "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_offline_tail.rs"
+          ],
+          "result": "Validate an explicit offline AAE caller truncation/fade policy through actual DawHost processing. Keep normal stereo-silence process calls for exactly the chosen tail frame budget, apply one common output-only half-cosine fade and report duration_limit; do not invoke native drain or infer completion from quiet gaps/RT60. Sixteen frozen neutral-damping configurations cover48/96kHz,5.0/9.1.6,bothroomsizeextremes,RT0.3/6,max100mspredelay,finalsourceframeimpulse. Compare every exported sample with independent sine-squared envelope on unfaded host continuation;maxerror8.85768e-12 versus1e-9gate. Large/irregular callbacks exact; zero endpoints,zero/one/shortbudgets and continuedrecursive state pass. NativeexcitedInfinite andEOFrefusal preserved;10mssilentpredelay precedes laterenergy. Halfsecond+7framecap intentionally truncates; in6secondRTcases observedaftercapenergy is21.77..39.68% of rawcap+finiteobservedcontinuationenergy,not totalinfiniteremainder. Eightfocusedtests andstrictQAtestClippy/format pass. No productionDSP/API/latency/parameter/dependency change; this is referencecaller/testpolicy,not automaticexport duration or applicationUI integration. AAEpartial,overall35/45complete."
         }
       ],
       "evidence": [
@@ -168,11 +181,17 @@
         "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-timing.jsonl",
         "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-run.json",
         "audit/artifacts/plugin-audit-20261018/verify-aae-buffer-preparation.py",
-        "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-analysis.json"
+        "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-initial.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-source.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-aae-offline-tail.py",
+        "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_offline_tail.rs"
       ],
       "remaining": [
         "Perceptual acceptance of interrupted predelay/room transitions remains; deterministic noncorrelated room and maximum-range predelay fades now match bounded staged references exactly.",
-        "Resolve12/208 sparse large-room/minimum-RT60 fit failures and loaded/native wall timing. Legacy QA retains6.11%wall-derived load and39.700ms maximum failure; earlier coupled full-stream matrix retains112wall misses/66818callbacks. Balanced64case buffer comparison observes2allocated-only versus0explicitly-touched wall misses over133636callbacks each, with0CPU misses and9351versus0aggregate loop minor faults. Individual wait causes/native scheduling/residency remain unproven; preserve wall gates. Recursive EOF remains Infinite; finite offline truncation/fade policy remains open.",
+        "Resolve12/208 sparse large-room/minimum-RT60 fit failures and loaded/native wall timing. Legacy QA retains6.11%wall-derived load and39.700ms maximum failure; earlier coupled full-stream matrix retains112wall misses/66818callbacks. Balanced64case buffer comparison observes2allocated-only versus0explicitly-touched wall misses over133636callbacks each, with0CPU misses and9351versus0aggregate loop minor faults. Individual wait causes/native scheduling/residency remain unproven; preserve wall gates. Recursive EOF remains Infinite. A fixed offline reference caller truncation/fade policy is now validated; application export integration, arbitrary changing/colored/modulated/AutoGain configurations and cutoff audibility remain open.",
         "External listening/corpus artifacts and measured spatial/envelopment quality remain separate from synthetic gates; the existing synthetic detector precision of 0.5 is not corpus acceptance."
       ]
     },
@@ -3532,6 +3551,23 @@
         "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-validation.json"
       ],
       "limitations": "Production unchanged from7165135; all XTC remaining scope and overall35/45completion unchanged."
+    },
+    {
+      "name": "AAE bounded offline caller tail policy",
+      "state": "verified_partial",
+      "plugin_ids": [
+        1
+      ],
+      "result": "Validate an explicit offline AAE caller truncation/fade policy through actual DawHost processing. Keep normal stereo-silence process calls for exactly the chosen tail frame budget, apply one common output-only half-cosine fade and report duration_limit; do not invoke native drain or infer completion from quiet gaps/RT60. Sixteen frozen neutral-damping configurations cover48/96kHz,5.0/9.1.6,bothroomsizeextremes,RT0.3/6,max100mspredelay,finalsourceframeimpulse. Compare every exported sample with independent sine-squared envelope on unfaded host continuation;maxerror8.85768e-12 versus1e-9gate. Large/irregular callbacks exact; zero endpoints,zero/one/shortbudgets and continuedrecursive state pass. NativeexcitedInfinite andEOFrefusal preserved;10mssilentpredelay precedes laterenergy. Halfsecond+7framecap intentionally truncates; in6secondRTcases observedaftercapenergy is21.77..39.68% of rawcap+finiteobservedcontinuationenergy,not totalinfiniteremainder. Eightfocusedtests andstrictQAtestClippy/format pass. No productionDSP/API/latency/parameter/dependency change; this is referencecaller/testpolicy,not automaticexport duration or applicationUI integration. AAEpartial,overall35/45complete.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-initial.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-source.json",
+        "audit/artifacts/plugin-audit-20261018/aae-offline-tail-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-aae-offline-tail.py",
+        "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_offline_tail.rs"
+      ],
+      "limitations": "Reference caller/test policy only. Native support remainsInfinite. Finite after-cap observations do not bound total omitted energy or prove audibility; sparse decayfit/nativewall/corpus acceptance remains open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

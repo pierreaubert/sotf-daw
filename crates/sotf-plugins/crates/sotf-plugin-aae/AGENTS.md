@@ -124,3 +124,12 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
 - Resource snapshots describe the whole process, including instrumentation and
   other threads. Keep unsupported/decreasing data explicit; do not use aggregate
   faults/context switches to attribute a particular callback's elapsed gap.
+
+- Keep offline export duration/fade policy distinct from native support. The
+  reference caller feeds stereo silence through DawHost, counts tail frames from
+  source EOF, applies one common output-only half-cosine fade and reports duration
+  truncation. Do not stop on quiet callback gaps or write the fade into feedback.
+- Preserve `audit_offline_tail`'s independent unfaded continuation, partition,
+  silent-predelay, short-budget, zero-endpoint and continued-state checks. Its
+  finite after-cap energy is observed omitted energy, not an infinite remainder
+  bound or listening acceptance. Excited metadata stays Infinite.
