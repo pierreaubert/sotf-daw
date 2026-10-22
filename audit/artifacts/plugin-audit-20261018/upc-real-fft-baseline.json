@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-convolution",
+    "--release",
+    "--features",
+    "qa",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "upc_real_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nupc_real_cache cases=12 checks=140 failures=140 dft_checks=240 maximum_error=8.95138017275828e-7\ntest convolution_plugin::upc_real_tests::real_file_upc_uses_half_spectra_and_matches_independent_f64_dft ... FAILED\n\nfailures:\n\nfailures:\n    convolution_plugin::upc_real_tests::real_file_upc_uses_half_spectra_and_matches_independent_f64_dft\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 75 filtered out; finished in 0.07s\n\n",
+  "stderr": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 21.24s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-3b713420ee281462)\n\nthread 'convolution_plugin::upc_real_tests::real_file_upc_uses_half_spectra_and_matches_independent_f64_dft' (341406157) panicked at crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs:128:5:\nassertion `left == right` failed: UPC needs N/2+1 bins and matching FDL stride\n  left: 140\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-convolution --lib`\n"
+}

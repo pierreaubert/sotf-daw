@@ -263,3 +263,36 @@ unmatched wall-clock observations. Every case is finite, fits its conservative
 retained-storage estimate and records zero callback allocations/frees. The
 captured linear-phase EQ 28/108 failing-row result remains pending; its ordinary
 path does not instantiate direct heads, and no new EQ load result is claimed.
+
+### Real-input UPC transforms
+
+Uniform convolution uses a real 2,048-point transform for each 1,024-frame
+partition. Prepared IR spectra, channel FDLs and convolution sums store 1,025
+nonnegative-frequency bins. A preallocated 2,048-float workspace holds transform
+input/output; complex scratch covers both transform directions. DC and Nyquist
+remain real, interior coefficients are not doubled, and overlap-add retains one
+`1/2048` inverse normalization.
+
+This preserves ordinary/cyclic and true-stereo routing, 1,024-frame latency,
+callback partitioning, complete native tails, mix/gain timing and asynchronous
+state ownership. Independent f64 DFT checks validate file-prepared spectra;
+the existing direct-convolution, reset, routing, drain and callback heap tests
+cover streaming behavior. Floating-point roundoff may differ.
+
+The conservative full-complex admission arithmetic is deliberately retained.
+Its spare complex-buffer allowance covers the real workspace, and real FFT
+plans fit the existing planner/scratch reserve. Admitted source lengths and
+all 63 load geometries stay unchanged. Smaller spectra reduce persistent
+storage and multiply-accumulate work but do not distribute partition-boundary
+bursts across callbacks or establish deadline compliance.
+
+The complete UPC real-FFT load run still fails in 58/63 geometries, with 43,053
+physical misses over the same 532,086 callbacks, versus 58 / 43,261 in the
+preceding direct-head run. UPC misses total 40,164 versus 40,357, while unchanged
+NUPC paths total 2,889 versus 2,904. Retained UPC requested bytes are about
+50.09–50.17% of preceding values; these counters are not RSS. All cases remain
+finite, heap-free in callbacks and within the unchanged retained estimate.
+Historical timings are unmatched; maximum-load scheduling remains open. Full
+raw results and their consistency verifier are retained in
+`audit/artifacts/plugin-audit-20261018/upc-real-fft-*` and
+`verify-upc-real-fft.py`. Linear-phase EQ has no new load acceptance result.

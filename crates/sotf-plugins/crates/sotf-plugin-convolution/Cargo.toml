@@ -29,6 +29,7 @@ required-features = ["qa"]
 sotf-host = { workspace = true }
 plugins-spatial = { workspace = true }
 rustfft = { workspace = true }
+realfft = { workspace = true }
 rubato = { workspace = true }
 audioadapter-buffers = { workspace = true }
 log = { workspace = true }

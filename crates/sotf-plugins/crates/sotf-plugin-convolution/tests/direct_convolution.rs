@@ -3,6 +3,7 @@
 // Rust guideline compliant 2026-02-21
 
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
+use realfft::RealFftPlanner;
 use rubato::{Fft, FixedSync, Resampler, WindowFunction};
 use rustfft::FftPlanner;
 use sotf_host::parameters::{ParameterId, ParameterValue};
@@ -1583,5 +1584,27 @@ fn aud134_preedit_full_audio_arrays_match_legacy_and_diagonal_routes() {
         &legacy_dir,
         true,
         true,
+    );
+}
+
+#[test]
+fn upc_real_fft_plans_fit_the_unchanged_conservative_reserve() {
+    const N: usize = 2048;
+    let mut scratch = 0;
+    let allocated = allocated_bytes_while(|| {
+        let mut planner = RealFftPlanner::<f32>::new();
+        let forward = planner.plan_fft_forward(N);
+        let inverse = planner.plan_fft_inverse(N);
+        scratch = forward.get_scratch_len().max(inverse.get_scratch_len());
+        assert!(scratch <= 8 * N);
+        std::hint::black_box((forward, inverse));
+    });
+    let reserved = N * 26 * std::mem::size_of::<rustfft::num_complex::Complex<f32>>() + 4 * 1024;
+    println!(
+        "upc_real_plan allocated_bytes={allocated} reserve_bytes={reserved} scratch_complex={scratch}"
+    );
+    assert!(
+        allocated <= reserved,
+        "real FFT plans exceed the retained legacy bound"
     );
 }

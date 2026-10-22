@@ -1,5 +1,5 @@
-use super::misc::FFT_SIZE;
 use super::misc::PARTITION_SIZE;
+use super::misc::{FFT_BINS, FFT_SIZE};
 use super::types::ConvolutionPluginParams;
 use super::types::ConvolutionState;
 use super::types::IrLoadResult;
@@ -7,10 +7,10 @@ use super::types::{ConvolutionLoadStatus, IrLoadCompletion, RetiredIrState};
 use crate::params::PARAMS as CV;
 use audioadapter_buffers::direct::SequentialSliceOfVecs;
 use plugins_spatial::{nupc, validate_interleaved_in_place};
+use realfft::RealFftPlanner;
 use rubato::{
     Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction,
 };
-use rustfft::FftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::param_bridge;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
@@ -237,6 +237,7 @@ pub struct IrRuntimeState {
     // active root. A callback clone cannot be the final owner, and replacement
     // moves the old root into the existing off-thread retirement payload.
     pub(super) state: Arc<Option<ConvolutionState>>,
+    /// Flattened UPC FDL: [partition][input channel][nonnegative bin].
     pub(super) fdl_flat: Vec<Complex<f32>>,
     pub(super) fdl_head: usize,
     pub(super) fft_scratch: Vec<Complex<f32>>,
@@ -271,7 +272,6 @@ pub struct ConvolutionPlugin {
     pub(super) gain_db_value: f32,
     pub(super) input_buffers: Vec<Vec<f32>>,
     pub(super) input_fill: usize,
-    /// Flattened Frequency Domain Line (FDL): [partition * channels * FFT_SIZE + channel * FFT_SIZE + bin]
     pub(super) output_accum: Vec<Vec<f32>>,
     /// Per-channel output ring buffer: stores completed partition output so
     /// partial-block boundaries are handled correctly (fix for issue #1).
@@ -284,6 +284,7 @@ pub struct ConvolutionPlugin {
     pub(super) mix_envelope: Vec<f32>,
     pub(super) gain_envelope: Vec<f32>,
     // Pre-allocated scratch buffers (avoid heap allocs in audio callback)
+    pub(super) fft_time: Vec<f32>,
     pub(super) fft_spectrum: Vec<Complex<f32>>,
     pub(super) fft_sum: Vec<Complex<f32>>,
     pub(super) cached_parameters: Vec<Parameter>,
@@ -692,9 +693,9 @@ impl ConvolutionPlugin {
         path_lengths: &[usize],
         output_channels: usize,
     ) -> Option<usize> {
-        // UPC retains every IR spectrum plus one FDL per input channel.
-        // Buffer payload for per-channel accumulators and FFT scratch is added
-        // as fixed prepared state below.
+        // Retain the conservative full-complex model to keep admitted workloads
+        // unchanged. Half-spectrum savings also cover the real time workspace.
+        // The actual UPC caches and FDL store only FFT_BINS values per spectrum.
         let max_parts = path_lengths.iter().copied().max()?.div_ceil(PARTITION_SIZE);
         let mut bytes = 0_usize;
         for &length in path_lengths {
@@ -796,8 +797,9 @@ impl ConvolutionPlugin {
             output_ring_available: 0,
             mix_envelope: vec![1.0; PARTITION_SIZE],
             gain_envelope: vec![1.0; PARTITION_SIZE],
-            fft_spectrum: vec![Complex::new(0.0, 0.0); FFT_SIZE],
-            fft_sum: vec![Complex::new(0.0, 0.0); FFT_SIZE],
+            fft_time: vec![0.0; FFT_SIZE],
+            fft_spectrum: vec![Complex::new(0.0, 0.0); FFT_BINS],
+            fft_sum: vec![Complex::new(0.0, 0.0); FFT_BINS],
             cached_parameters: Vec::new(),
             use_nupc: CV[3].default_bool(),
             zero_latency_head: false,
@@ -1141,29 +1143,31 @@ impl ConvolutionPlugin {
         let (partitions, num_partitions, fft_forward, fft_inverse, fft_scratch_len) = if use_nupc {
             (Vec::new(), 0, None, None, 0)
         } else {
-            let mut planner = FftPlanner::<f32>::new();
+            let mut planner = RealFftPlanner::<f32>::new();
             let fft_forward = planner.plan_fft_forward(FFT_SIZE);
             let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
+            let fft_scratch_len = fft_forward
+                .get_scratch_len()
+                .max(fft_inverse.get_scratch_len());
+            let mut preparation_scratch = vec![Complex::new(0.0, 0.0); fft_scratch_len];
             let mut partitions = Vec::with_capacity(ir_channels);
             for ch_samples in &ir_samples {
                 let num_parts = ch_samples.len().div_ceil(PARTITION_SIZE);
                 let mut ch_parts = Vec::with_capacity(num_parts);
                 for p in 0..num_parts {
-                    let mut block = vec![Complex::new(0.0, 0.0); FFT_SIZE];
+                    let mut block = vec![0.0; FFT_SIZE];
+                    let mut spectrum = vec![Complex::new(0.0, 0.0); FFT_BINS];
                     let start = p * PARTITION_SIZE;
                     let end = (start + PARTITION_SIZE).min(ch_samples.len());
-                    for (i, &s) in ch_samples[start..end].iter().enumerate() {
-                        block[i] = Complex::new(s, 0.0);
-                    }
-                    fft_forward.process(&mut block);
-                    ch_parts.push(block);
+                    block[..end - start].copy_from_slice(&ch_samples[start..end]);
+                    fft_forward
+                        .process_with_scratch(&mut block, &mut spectrum, &mut preparation_scratch)
+                        .expect("prepared UPC forward transform dimensions");
+                    ch_parts.push(spectrum);
                 }
                 partitions.push(ch_parts);
             }
             let num_partitions = partitions[0].len();
-            let fft_scratch_len = fft_forward
-                .get_inplace_scratch_len()
-                .max(fft_inverse.get_inplace_scratch_len());
             (
                 partitions,
                 num_partitions,
@@ -1210,11 +1214,11 @@ impl ConvolutionPlugin {
             max_ir_frames: ir_samples.iter().map(Vec::len).max().unwrap_or(0),
             state: Arc::new(Some(state)),
             nupc_engines,
-            fdl_flat: vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_SIZE],
+            fdl_flat: vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_BINS],
             fdl_head: 0,
             fft_scratch: vec![Complex::new(0.0, 0.0); fft_scratch_len],
             rayon_accum_pool: (0..rayon::current_num_threads().min(num_partitions))
-                .map(|_| vec![Complex::new(0.0, 0.0); FFT_SIZE])
+                .map(|_| vec![Complex::new(0.0, 0.0); FFT_BINS])
                 .collect(),
             ir_file: path.to_string(),
         })
@@ -2074,23 +2078,21 @@ impl ConvolutionPlugin {
                 };
 
                 for ch in 0..self.channels {
-                    for i in 0..PARTITION_SIZE {
-                        self.fft_spectrum[i] = Complex::new(self.input_buffers[ch][i], 0.0);
-                    }
-                    for i in PARTITION_SIZE..FFT_SIZE {
-                        self.fft_spectrum[i] = Complex::new(0.0, 0.0);
-                    }
+                    self.fft_time[..PARTITION_SIZE].copy_from_slice(&self.input_buffers[ch]);
+                    self.fft_time[PARTITION_SIZE..].fill(0.0);
                     state
                         .fft_forward
                         .as_ref()
                         .expect("UPC state must have a forward FFT plan")
                         .process_with_scratch(
+                            &mut self.fft_time,
                             &mut self.fft_spectrum,
                             &mut self.ir_runtime.fft_scratch,
-                        );
+                        )
+                        .expect("prepared UPC forward transform dimensions");
 
-                    let off_base = (self.fdl_head * self.channels + ch) * FFT_SIZE;
-                    self.ir_runtime.fdl_flat[off_base..off_base + FFT_SIZE]
+                    let off_base = (self.fdl_head * self.channels + ch) * FFT_BINS;
+                    self.ir_runtime.fdl_flat[off_base..off_base + FFT_BINS]
                         .copy_from_slice(&self.fft_spectrum);
                 }
 
@@ -2104,15 +2106,15 @@ impl ConvolutionPlugin {
                         if self.true_stereo {
                             for input_ch in 0..2 {
                                 let ir_ch = input_ch * 2 + output_ch;
-                                let fdl_off = (fdl_p * self.channels + input_ch) * FFT_SIZE;
+                                let fdl_off = (fdl_p * self.channels + input_ch) * FFT_BINS;
                                 complex_mul_add_simd(
                                     &mut self.fft_sum,
-                                    &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_SIZE],
+                                    &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
                                     &state.partitions[ir_ch][p],
                                 );
                             }
                         } else {
-                            let fdl_off = (fdl_p * self.channels + output_ch) * FFT_SIZE;
+                            let fdl_off = (fdl_p * self.channels + output_ch) * FFT_BINS;
                             let ir_ch = if state.ir_channels == 1 {
                                 0
                             } else {
@@ -2120,19 +2122,27 @@ impl ConvolutionPlugin {
                             };
                             complex_mul_add_simd(
                                 &mut self.fft_sum,
-                                &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_SIZE],
+                                &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
                                 &state.partitions[ir_ch][p],
                             );
                         }
                     }
+                    // DC and Nyquist are real in the implicit Hermitian spectrum.
+                    self.fft_sum[0].im = 0.0;
+                    self.fft_sum[FFT_BINS - 1].im = 0.0;
                     state
                         .fft_inverse
                         .as_ref()
                         .expect("UPC state must have an inverse FFT plan")
-                        .process_with_scratch(&mut self.fft_sum, &mut self.ir_runtime.fft_scratch);
+                        .process_with_scratch(
+                            &mut self.fft_sum,
+                            &mut self.fft_time,
+                            &mut self.ir_runtime.fft_scratch,
+                        )
+                        .expect("prepared UPC inverse dimensions and real endpoints");
 
                     for i in 0..FFT_SIZE {
-                        self.output_accum[output_ch][i] += self.fft_sum[i].re * inv_n;
+                        self.output_accum[output_ch][i] += self.fft_time[i] * inv_n;
                     }
                 }
 
@@ -2180,3 +2190,7 @@ mod resource_tests;
 #[cfg(test)]
 #[path = "storm_tests.rs"]
 mod storm_tests;
+
+#[cfg(test)]
+#[path = "upc_real_tests.rs"]
+mod upc_real_tests;

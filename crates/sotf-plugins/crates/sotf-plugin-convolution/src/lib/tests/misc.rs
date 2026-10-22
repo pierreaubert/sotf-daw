@@ -1,9 +1,9 @@
 use super::super::convolution_plugin::ConvolutionPlugin;
-use super::super::misc::FFT_SIZE;
 use super::super::misc::PARTITION_SIZE;
+use super::super::misc::{FFT_BINS, FFT_SIZE};
 use super::super::types::ConvolutionPluginParams;
 use super::super::types::ConvolutionState;
-use rustfft::FftPlanner;
+use realfft::RealFftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -41,7 +41,7 @@ fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> 
 
     // Build partitions from the IR data
     let ir_channels = ir.len();
-    let mut planner = FftPlanner::<f32>::new();
+    let mut planner = RealFftPlanner::<f32>::new();
     let fft_forward = planner.plan_fft_forward(FFT_SIZE);
     let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
 
@@ -50,22 +50,23 @@ fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> 
         let num_parts = ch_samples.len().div_ceil(PARTITION_SIZE);
         let mut ch_parts = Vec::with_capacity(num_parts);
         for p in 0..num_parts {
-            let mut block = vec![Complex::new(0.0, 0.0); FFT_SIZE];
+            let mut block = vec![0.0; FFT_SIZE];
+            let mut spectrum = vec![Complex::new(0.0, 0.0); FFT_BINS];
             let start = p * PARTITION_SIZE;
             let end = (start + PARTITION_SIZE).min(ch_samples.len());
             for (i, &s) in ch_samples[start..end].iter().enumerate() {
-                block[i] = Complex::new(s, 0.0);
+                block[i] = s;
             }
-            fft_forward.process(&mut block);
-            ch_parts.push(block);
+            fft_forward.process(&mut block, &mut spectrum).unwrap();
+            ch_parts.push(spectrum);
         }
         partitions.push(ch_parts);
     }
 
     let num_partitions = partitions[0].len();
     let fft_scratch_len = fft_forward
-        .get_inplace_scratch_len()
-        .max(fft_inverse.get_inplace_scratch_len());
+        .get_scratch_len()
+        .max(fft_inverse.get_scratch_len());
 
     plugin.ir_runtime.state = Arc::new(Some(ConvolutionState {
         partitions,
@@ -74,7 +75,7 @@ fn make_plugin_with_ir(channels: usize, sample_rate: u32, ir: Vec<Vec<f32>>) -> 
         fft_forward: Some(fft_forward),
         fft_inverse: Some(fft_inverse),
     }));
-    plugin.fdl_flat = vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_SIZE];
+    plugin.fdl_flat = vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_BINS];
     plugin.fdl_head = 0;
     plugin.fft_scratch = vec![Complex::new(0.0, 0.0); fft_scratch_len];
 

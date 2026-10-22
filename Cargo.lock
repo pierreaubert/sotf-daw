@@ -8992,6 +8992,7 @@ dependencies = [
  "log",
  "plugins-spatial",
  "rayon",
+ "realfft",
  "rustfft",
  "serde",
  "serde_json",

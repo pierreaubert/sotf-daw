@@ -7,8 +7,12 @@ use super::*;
 fn long_mono_ir_rejects_channel_expanded_storage_over_budget() {
     let ir = vec![vec![0.0; 48_000 * 30]];
     let upc_fdl_lower_bound =
-        ir[0].len().div_ceil(PARTITION_SIZE) * 32 * FFT_SIZE * std::mem::size_of::<Complex<f32>>();
-    assert!(upc_fdl_lower_bound > MAX_IR_MEMORY_BYTES);
+        ir[0].len().div_ceil(PARTITION_SIZE) * 32 * FFT_BINS * std::mem::size_of::<Complex<f32>>();
+    assert!(upc_fdl_lower_bound < MAX_IR_MEMORY_BYTES);
+    assert!(
+        ConvolutionPlugin::estimated_ordinary_backend_bytes(&[ir[0].len()], false, 32, false, 128)
+            > MAX_IR_MEMORY_BYTES
+    );
     let nupc_fdl_lower_bound: usize = nupc::plan_partitions(ir[0].len(), PARTITION_SIZE)
         .iter()
         .map(|spec| spec.count * (spec.fft_size / 2 + 1) * 32 * std::mem::size_of::<Complex<f32>>())

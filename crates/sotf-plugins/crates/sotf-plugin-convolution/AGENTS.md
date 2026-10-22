@@ -21,7 +21,7 @@ Data flow: IR file loaded (WAV/FLAC via Symphonia, resampled via rubato if neede
 - `ConvolutionState` -- Holds pre-computed frequency-domain IR partitions: `partitions[channel][partition][bin]`.
 - `ConvolutionPluginParams` -- Serde config: `ir_file`, `mix`, `gain_db`, `use_nupc`, `zero_latency_head`, `head_taps`.
 
-**Constants:** `PARTITION_SIZE = 1024`, `FFT_SIZE = 2048` (zero-padded for linear convolution).
+**Constants:** `PARTITION_SIZE = 1024`, `FFT_SIZE = 2048` (zero-padded for linear convolution), `FFT_BINS = 1025` (UPC nonnegative-frequency storage).
 
 ## Key Public API
 
@@ -119,3 +119,12 @@ cargo test -p sotf-plugin-convolution
   A smaller spectrum does not schedule large FFT bursts across callbacks or prove
   maximum-load deadline compliance. Retain f64/direct, resource, zero-heap,
   asynchronous ownership and complete native-tail tests.
+
+- UPC also uses real transforms: every prepared spectrum, FDL stride and sum is
+  `FFT_BINS = FFT_SIZE/2+1`, while `fft_time` holds `FFT_SIZE` real samples.
+  Keep DC/Nyquist real and apply only one inverse `1/FFT_SIZE`; do not double
+  interior convolution coefficients. Preserve the full-complex admission
+  allowance and existing latency/routing/async ownership contracts.
+- `upc_real_tests.rs` checks real-file half-spectrum storage against independent
+  f64 DFT probes. Preserve all existing streaming stimuli and accuracy gates
+  when changing synthetic cache fixtures to a new transform representation.

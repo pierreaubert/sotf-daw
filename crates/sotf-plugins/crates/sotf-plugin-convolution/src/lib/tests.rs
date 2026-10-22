@@ -4,9 +4,9 @@ use super::convolution_plugin::{
 use super::types::ConvolutionPluginParams;
 use super::types::ConvolutionState;
 use super::types::{ConvolutionLoadStatus, IrLoadCompletion, IrLoadResult, RetiredIrState};
-use crate::misc::{FFT_SIZE, PARTITION_SIZE};
+use crate::misc::{FFT_BINS, FFT_SIZE, PARTITION_SIZE};
 use plugins_spatial::nupc;
-use rustfft::FftPlanner;
+use realfft::RealFftPlanner;
 use rustfft::num_complex::Complex;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
@@ -752,15 +752,16 @@ fn configured_zero_latency_head_is_stable_before_runtime_ir_load() {
 fn make_delta_ir_plugin(use_nupc: bool, zero_latency_head: bool) -> ConvolutionPlugin {
     let mut plugin = ConvolutionPlugin::new(1, 48_000);
     plugin.max_ir_frames = 1;
-    let mut planner = FftPlanner::<f32>::new();
+    let mut planner = RealFftPlanner::<f32>::new();
     let fft_forward = planner.plan_fft_forward(FFT_SIZE);
     let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
-    let mut partition = vec![Complex::new(0.0, 0.0); FFT_SIZE];
-    partition[0] = Complex::new(1.0, 0.0);
-    fft_forward.process(&mut partition);
+    let mut partition = vec![Complex::new(0.0, 0.0); FFT_BINS];
+    let mut impulse = vec![0.0; FFT_SIZE];
+    impulse[0] = 1.0;
+    fft_forward.process(&mut impulse, &mut partition).unwrap();
     let scratch_len = fft_forward
-        .get_inplace_scratch_len()
-        .max(fft_inverse.get_inplace_scratch_len());
+        .get_scratch_len()
+        .max(fft_inverse.get_scratch_len());
     plugin.ir_runtime.state = Arc::new(Some(ConvolutionState {
         partitions: vec![vec![partition]],
         num_partitions: 1,
@@ -768,7 +769,7 @@ fn make_delta_ir_plugin(use_nupc: bool, zero_latency_head: bool) -> ConvolutionP
         fft_forward: Some(fft_forward),
         fft_inverse: Some(fft_inverse),
     }));
-    plugin.fdl_flat = vec![Complex::new(0.0, 0.0); FFT_SIZE];
+    plugin.fdl_flat = vec![Complex::new(0.0, 0.0); FFT_BINS];
     plugin.fft_scratch = vec![Complex::new(0.0, 0.0); scratch_len];
     plugin.use_nupc = use_nupc;
     plugin.zero_latency_head = zero_latency_head;
@@ -783,15 +784,16 @@ fn make_delta_ir_plugin(use_nupc: bool, zero_latency_head: bool) -> ConvolutionP
 }
 
 fn make_delta_ir_result(ir_file: &str) -> IrLoadResult {
-    let mut planner = FftPlanner::<f32>::new();
+    let mut planner = RealFftPlanner::<f32>::new();
     let fft_forward = planner.plan_fft_forward(FFT_SIZE);
     let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
-    let mut partition = vec![Complex::new(0.0, 0.0); FFT_SIZE];
-    partition[0] = Complex::new(1.0, 0.0);
-    fft_forward.process(&mut partition);
+    let mut partition = vec![Complex::new(0.0, 0.0); FFT_BINS];
+    let mut impulse = vec![0.0; FFT_SIZE];
+    impulse[0] = 1.0;
+    fft_forward.process(&mut impulse, &mut partition).unwrap();
     let scratch_len = fft_forward
-        .get_inplace_scratch_len()
-        .max(fft_inverse.get_inplace_scratch_len());
+        .get_scratch_len()
+        .max(fft_inverse.get_scratch_len());
     IrLoadResult {
         max_ir_frames: 1,
         state: Arc::new(Some(ConvolutionState {
@@ -802,7 +804,7 @@ fn make_delta_ir_result(ir_file: &str) -> IrLoadResult {
             fft_inverse: Some(fft_inverse),
         })),
         nupc_engines: Vec::new(),
-        fdl_flat: vec![Complex::new(0.0, 0.0); FFT_SIZE],
+        fdl_flat: vec![Complex::new(0.0, 0.0); FFT_BINS],
         fdl_head: 0,
         fft_scratch: vec![Complex::new(0.0, 0.0); scratch_len],
         rayon_accum_pool: Vec::new(),

@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "The latest unchanged 63-geometry direct-head run still fails in 58 geometries with 43,261 misses across 532,086 callbacks. Prior coalesced run: 59 / 45,578; real-FFT run: 62 / 48,377; original full-complex run: 61 / 51,122. Preserve every result and strict deadline. Isolated head-cost improvement does not establish full capacity or native compliance. Remaining uniform-convolution and large FFT burst costs require further work."
+          "evidence": "Latest unchanged 63-geometry UPC real-FFT run still fails in 58 geometries with 43,053 misses across 532,086 callbacks. Prior direct-head run: 58 / 43,261; coalesced: 59 / 45,578; NUPC real-FFT: 62 / 48,377; original complex: 61 / 51,122. Preserve all results and strict deadlines. UPC retained storage falls to about 50.1%, but partition-boundary compute bursts and native deadline compliance remain unresolved."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1078,6 +1078,28 @@
             "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
           ],
           "result": "Optimize the direct time-domain head with two contiguous reversed-history dot products, four independent f32 sums and one write-position wrap per source sample. Remove per-tap ring branches without duplicating history, adding persistent storage/dependencies, or changing taps, latency, parameters, partition/admission geometry or callback ownership. Safe portable Rust only. Eighteen independent f64 cases span head lengths 1 through 512 around odd/lane boundaries, every circular phase, zero continuation and exact reset; maximum error is 5.33502e-8 under the unchanged 2e-5 gate (old scalar reference 1.35265e-7). Existing independent dense, large sparse and explicitly unmerged NUPC references remain below their gates. All 264 regular affected tests pass; six existing ignores remain and one new profiling diagnostic is ignored by default but executed explicitly. Strict all-target QA Clippy, formatting and standard Convolution QA pass. Preserve the initial test-only manual-slice-fill lint failure and allocated-only baseline; final symmetric explicit output touching uses fill outside timed callbacks. The predeclared isolated ABBA criterion requires median candidate/legacy p50 <=0.9 at 257/512 taps. Final 32-channel, 128-frame, 32-callback trials produce ratios 0.30449/0.30270 (32 taps: 0.39427), satisfying that criterion. Keep every raw duration and checksum. Pre-link assembly is scalar; final linked ARM64 profiling executable contains packed multiplications, verified by saved disassembly. This does not establish another architecture or full native callback performance. The unchanged complete 63-geometry Plugin load matrix still exits 1: 58 failing geometries and 43,261 physical misses over 532,086 callbacks, versus coalesced baseline 59 / 45,578. Direct-head totals change from 4,678 to 2,379; ten geometries record fewer misses, ten equal and one more (48k true-stereo, 23 to 24). Non-head NUPC 528 to 525 and UPC 40,372 to 40,357 are unmatched observations. All cases remain finite, allocation/free-free in callbacks, within unchanged conservative estimates, and identical in IR lengths, latency, phase callback counts and budgets. Macro timings remain historical unmatched observations, separate from the isolated paired kernel guard. Both failures and independent verification are retained. Linear-phase EQ does not instantiate direct heads; its latest 28/108 failing-row matrix remains pending and no new timing result is claimed. Maximum capacity/native validation, FIR-M1 and wider plugin scope remain open. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
+        },
+        {
+          "task": "Reduce uniform-convolution spectral storage and transform work using real-input FFTs",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-focused.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-initial-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-source.json",
+            "audit/artifacts/plugin-audit-20261018/upc-real-fft-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-upc-real-fft.py",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
+          ],
+          "result": "UPC now uses real forward/inverse 2048-point transforms and 1025-bin prepared IR spectra, FDLs and sums, with a preallocated real workspace and one 1/N inverse scale. Ordinary/cyclic and true-stereo routing, 1024-frame latency, automation clocks, async retirement, complete native tails, callback scheduling and conservative admission arithmetic remain unchanged. The real-file structural regression fails 140 checks before and zero after across 12 geometries; 240 independent f64 DFT probes have maximum error 1.30891e-6 under the unchanged 2e-5 gate. Actual real FFT plan allocations are 91,348 bytes within the retained 430,080-byte reserve, with zero extra complex scratch. The selected shared/Convolution/linear-phase EQ release suite passes 266 tests with seven retained ignores (six existing functional ignores and the separately executed prior head-cost diagnostic). Strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter recording zero local physical misses. The complete unchanged 63-case strict load run retains 532,086 callbacks, identical admitted lengths/estimates/latencies/budgets, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. UPC retained requested bytes are 50.087\u201350.172% of preceding values. The gate still exits 1: 58 failed geometries and 43,053 misses, versus 58 / 43,261 previously. UPC misses change from 40,357 to 40,164; NUPC from 2,904 to 2,889. These are unmatched local timing observations, not causal speedup or native-device compliance. Full raw rows, failures, source hashes and an independent consistency verifier are retained. Linear-phase EQ uses the unchanged shared NUPC path; its prior 28/108 failed-row result remains pending, with no new EQ load claim. Convolution remains partial and overall production completion stays 35/45."
         }
       ],
       "evidence": [
@@ -1142,7 +1164,21 @@
         "audit/artifacts/plugin-audit-20261018/nupc-direct-head-validation.json",
         "audit/artifacts/plugin-audit-20261018/verify-nupc-direct-head.py",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
-        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-focused.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-source.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-upc-real-fft.py",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
       ]
     },
     {
@@ -3914,6 +3950,32 @@
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
       ],
       "limitations": "Strict convolution load remains red in 58/63 geometries. The paired diagnostic measures heads-only wall time. Linear EQ 28/108 remains pending without a new load run; no native/device or cross-architecture acceptance claim."
+    },
+    {
+      "name": "Real-input UPC transforms with unchanged admission and strict load matrix",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14
+      ],
+      "result": "UPC now uses real forward/inverse 2048-point transforms and 1025-bin prepared IR spectra, FDLs and sums, with a preallocated real workspace and one 1/N inverse scale. Ordinary/cyclic and true-stereo routing, 1024-frame latency, automation clocks, async retirement, complete native tails, callback scheduling and conservative admission arithmetic remain unchanged. The real-file structural regression fails 140 checks before and zero after across 12 geometries; 240 independent f64 DFT probes have maximum error 1.30891e-6 under the unchanged 2e-5 gate. Actual real FFT plan allocations are 91,348 bytes within the retained 430,080-byte reserve, with zero extra complex scratch. The selected shared/Convolution/linear-phase EQ release suite passes 266 tests with seven retained ignores (six existing functional ignores and the separately executed prior head-cost diagnostic). Strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter recording zero local physical misses. The complete unchanged 63-case strict load run retains 532,086 callbacks, identical admitted lengths/estimates/latencies/budgets, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. UPC retained requested bytes are 50.087\u201350.172% of preceding values. The gate still exits 1: 58 failed geometries and 43,053 misses, versus 58 / 43,261 previously. UPC misses change from 40,357 to 40,164; NUPC from 2,904 to 2,889. These are unmatched local timing observations, not causal speedup or native-device compliance. Full raw rows, failures, source hashes and an independent consistency verifier are retained. Linear-phase EQ uses the unchanged shared NUPC path; its prior 28/108 failed-row result remains pending, with no new EQ load claim. Convolution remains partial and overall production completion stays 35/45.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-focused.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-source.json",
+        "audit/artifacts/plugin-audit-20261018/upc-real-fft-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-upc-real-fft.py",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
+      ],
+      "limitations": "Strict Convolution capacity remains red in 58/63 geometries. Historical local timing is unmatched and not native-device acceptance. Linear-phase EQ remains at its prior 28/108 failing rows. Broader plugin scope remains open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

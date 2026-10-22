@@ -66,8 +66,8 @@ pub(super) struct ConvolutionState {
     pub(super) ir_channels: usize,
     /// UPC-only plans. NUPC construction leaves these empty so the two
     /// backends do not duplicate immutable IR spectra and FFT plans.
-    pub(super) fft_forward: Option<Arc<dyn rustfft::Fft<f32>>>,
-    pub(super) fft_inverse: Option<Arc<dyn rustfft::Fft<f32>>>,
+    pub(super) fft_forward: Option<Arc<dyn realfft::RealToComplex<f32>>>,
+    pub(super) fft_inverse: Option<Arc<dyn realfft::ComplexToReal<f32>>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
