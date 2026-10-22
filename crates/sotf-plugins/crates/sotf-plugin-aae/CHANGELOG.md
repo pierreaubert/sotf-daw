@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Compare allocated-only versus explicitly touched buffers in the timing
+  diagnostic with balanced order, repeated conditions and identical-audio hashes.
+  Record process-wide page-fault/context-switch snapshots and missing coverage.
+  Preserve all wall failures; these counters do not attribute individual waits.
+
 - Add a separate paired wall/current-thread CPU timing diagnostic across maximum
   layout, four rates, 64/512-frame blocks and frequent RT60/room updates. Retain
   raw coupled samples, clock-bracket overhead and explicit missing coverage.

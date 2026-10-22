@@ -1,0 +1,64 @@
+{
+  "cases": 64,
+  "callback_samples": 267272,
+  "cohorts": {
+    "allocated_only": {
+      "cases": 32,
+      "callbacks": 133636,
+      "wall_misses": 2,
+      "cpu_misses": 0,
+      "missing_cpu": 0,
+      "missing_usage": 0,
+      "preparation_usage": {
+        "minor_faults": 941,
+        "major_faults": 0,
+        "voluntary_switches": 0,
+        "involuntary_switches": 1
+      },
+      "loop_usage": {
+        "minor_faults": 9351,
+        "major_faults": 0,
+        "voluntary_switches": 0,
+        "involuntary_switches": 374
+      },
+      "preparation_wall_ns": 5822541
+    },
+    "explicitly_touched": {
+      "cases": 32,
+      "callbacks": 133636,
+      "wall_misses": 0,
+      "cpu_misses": 0,
+      "missing_cpu": 0,
+      "missing_usage": 0,
+      "preparation_usage": {
+        "minor_faults": 0,
+        "major_faults": 0,
+        "voluntary_switches": 0,
+        "involuntary_switches": 0
+      },
+      "loop_usage": {
+        "minor_faults": 0,
+        "major_faults": 0,
+        "voluntary_switches": 0,
+        "involuntary_switches": 232
+      },
+      "preparation_wall_ns": 15315665
+    }
+  },
+  "identical_rendering_conditions": 16,
+  "negative_wall_cpu_gaps_retained": 266729,
+  "empty_cpu_bracket_median_ns": 125,
+  "worst_wall_pair": {
+    "rate": 192000,
+    "block_frames": 64,
+    "updates_each_block": false,
+    "explicit_buffer_touch": false,
+    "replicate": 0,
+    "index": 133,
+    "wall_ns": 592584,
+    "thread_cpu_ns": 26750,
+    "gap_ns": 565834
+  },
+  "wall_deadline_gate_passed": false,
+  "scope": "Process counters include instrumentation and other threads; zero counters do not exclude events. Buffer touching does not pin pages; allocated-only may already be resident. Cohort observations do not attribute individual waits or certify native deadlines."
+}

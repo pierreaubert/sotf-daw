@@ -5,6 +5,7 @@ mod counting_alloc;
 mod measure;
 mod misc;
 mod performance_profiler;
+mod process_usage;
 mod signal_gen;
 mod test;
 mod thread_cpu;
@@ -15,6 +16,8 @@ pub use counting_alloc::*;
 pub use measure::*;
 pub use misc::*;
 pub use performance_profiler::*;
+#[doc(inline)]
+pub use process_usage::{ProcessUsage, process_usage};
 pub use signal_gen::*;
 pub use test::*;
 #[doc(inline)]

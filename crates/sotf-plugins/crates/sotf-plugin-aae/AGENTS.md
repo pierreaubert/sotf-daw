@@ -118,3 +118,9 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
 - CPU spans bracket wall intervals and include sampling work. Preserve negative
   wall-minus-CPU values; do not subtract calibration to obtain passing deadlines.
   CPU excludes other-thread work and does not establish a causal waiting source.
+- Preserve both allocated-only and explicitly touched timing cohorts with two
+  repetitions each in alternating ABBA/BAAB order (64 cases). Retain every wall
+  failure and verify identical audio hashes; preparation is not memory pinning.
+- Resource snapshots describe the whole process, including instrumentation and
+  other threads. Keep unsupported/decreasing data explicit; do not use aggregate
+  faults/context switches to attribute a particular callback's elapsed gap.

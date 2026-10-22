@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-host",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--lib",
+      "process_usage",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 35.987089791102335,
+    "stdout": "\nrunning 2 tests\ntest test_utils::process_usage::tests::checked_deltas_preserve_counters_and_refuse_decreases ... ok\nprocess_usage_delta=ProcessUsage { minor_faults: 9, major_faults: 0, voluntary_switches: 0, involuntary_switches: 0 }\ntest test_utils::process_usage::tests::native_snapshots_have_monotonic_process_counters_when_available ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 713 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Finished `release` profile [optimized] target(s) in 35.91s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_host-0e746c3c6672f2f3)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae-timing"
+    ],
+    "exit_code": 101,
+    "elapsed_seconds": 8.745395875070244,
+    "stdout": "",
+    "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\nerror[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied\n   --> crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_timing.rs:175:56\n    |\n175 |                     let audio_sha256 = format!(\"{:x}\", digest.finalize());\n    |                                                 ----   ^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`\n    |                                                 |\n    |                                                 required by this formatting parameter\n    |\n    = help: the following other types implement trait `LowerHex`:\n              &T\n              &mut T\n              Saturating<T>\n              Wrapping<T>\n              compiler_builtins::math::libm_math::support::big::i256\n              compiler_builtins::math::libm_math::support::big::u256\n              compiler_builtins::math::libm_math::support::hex_float::hex_fmt::Hex<T>\n              either::Either<L, R>\n            and 66 others\n    = note: the full name for the type has been written to '/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_timing-3714940f96c3773b.long-type-3640507952733523173.txt'\n    = note: consider using `--verbose` to print the full type name to the console\n\nFor more information about this error, try `rustc --explain E0277`.\nerror: could not compile `sotf-plugin-aae` (bin \"qa-aae-timing\" test) due to 1 previous error\n"
+  }
+]

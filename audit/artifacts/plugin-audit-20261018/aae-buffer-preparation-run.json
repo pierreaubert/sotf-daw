@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "-p",
+    "sotf-plugin-aae",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-aae-timing"
+  ],
+  "exit_code": 1,
+  "elapsed_seconds": 14.30034108296968,
+  "source_sha256": "ac92b0c911807876ad83775937105aa9001bc3093d068cce841d5d1e10cdeeae"
+}

@@ -1,0 +1,18 @@
+{
+  "crates/sotf-plugins/crates/sotf-host/src/test_utils.rs": "232137a1923d502ea925067afa5fff01cad56e98a7247543f52f443b84fecdee",
+  "crates/sotf-plugins/crates/sotf-host/src/test_utils/process_usage.rs": "e5cf172199f24c93d76f3d5b9efcda5e6c2f2a64db3125bbfd19334d75de84ed",
+  "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_timing.rs": "ac92b0c911807876ad83775937105aa9001bc3093d068cce841d5d1e10cdeeae",
+  "crates/sotf-plugins/crates/sotf-plugin-aae/README.md": "039720b454e0518ca5714631e9314a0e551de8ac7ab7f084a78e985a61074f39",
+  "crates/sotf-plugins/crates/sotf-plugin-aae/AGENTS.md": "866cb5902c2b2ebd2a2eb908fa892d73bec66ede16e724b827b2af01b4fdccb2",
+  "crates/sotf-plugins/crates/sotf-plugin-aae/CHANGELOG.md": "e6d6c0c9d55c1f09b4c379951f11afad3136fe1769cefe783335737cbc0697d3",
+  "audit/plugin-remediation-20261018.json": "d96eaa5a0f7fc1eb70c15048b0ece134fb0ec4221efcb5a9beac101da324089d",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-analysis.json": "043409f5bd2e33ff6d2295c33f51a74eba1ad32fb62eac813b554a0acf2da1a1",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-cross.json": "50f12584d759f63bba73301bf8fffd98ef76953e9b367d3ce6d624badaec0800",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-focused.json": "98eed74e0dfb3cf64767b336681ff5ed929366c216182cd02e46312e351942dd",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-host-validation.json": "c0a94a9c168992e2ab631ac4cc7aa7ee719ba44950fdff6fb33de0cf7d09e78a",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-run.json": "ee8e87f2fe38843afa14c873ea523bb235474f794e037bca37fda8c897eaf8ab",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-timing.jsonl": "bc6663d9dd790c02526d5990276348dd875324c211d7bdfc7f6b3d1e33454674",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-timing.stderr": "26cc43cded6fd49f4b3639a187cf18b38c85a67c72b65b2bf4666d960329404c",
+  "audit/artifacts/plugin-audit-20261018/aae-buffer-preparation-validation.json": "46edd8e4e09faeda16cc9c7eeb16f7c94734e11dfa4436c9f5f5553759b541ff",
+  "audit/artifacts/plugin-audit-20261018/verify-aae-buffer-preparation.py": "dbf2d283da8eaa86db3584cfde6c29d10109f394e9ee0172b6ac0b8b5e8723fd"
+}

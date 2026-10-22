@@ -163,8 +163,22 @@ Every callback retains both clocks. Empty clock brackets expose sampling cost;
 CPU intervals include that work, and wall-minus-CPU can be slightly negative.
 
 The diagnostic exits nonzero on wall or CPU deadline observations and exits 2
-when CPU-clock coverage is missing. The existing `qa-aae` wall/load gates remain
+when CPU-clock or process-resource coverage is missing. The existing `qa-aae` wall/load gates remain
 unchanged and separate. A low CPU duration paired with a large wall duration
 identifies elapsed time outside the calling thread's measured CPU interval; it
 does not identify whether scheduling, paging, another thread, or other waiting
 caused it. These offline measurements do not certify native-device deadlines.
+
+Each of the 16 timing conditions runs twice with allocated-only buffers and
+twice with an explicit input/output write pass before processing (64 cases).
+Alternating ABBA/BAAB ordering balances preparation order; allocated-only does
+not imply nonresident memory, and touching does not pin pages. All cases retain
+the same full-stream allocations, callback clocks and deadline thresholds.
+SHA-256 hashes of rendered f32 samples verify identical audio across cohorts.
+
+Process-wide resource snapshots bracket buffer preparation and the processing
+loop, recording minor/major faults and voluntary/involuntary context switches
+on macOS/Linux. Unsupported or invalid observations remain missing. Loop
+counters include instrumentation and other threads, and their completeness
+depends on the OS; zero does not exclude events. These aggregate observations
+do not assign a fault or context switch to a particular missed callback.

@@ -1,0 +1,68 @@
+{
+  "manifest": "[package]\nname=\"qa-process-usage-cross\"\nversion=\"0.0.0\"\nedition=\"2024\"\n[lib]\npath=\"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host/src/test_utils/process_usage.rs\"\n[target.'cfg(any(target_os = \"macos\", target_os = \"linux\"))'.dependencies]\nlibc=\"=0.2.191\"\n[workspace]\n",
+  "source_sha256": "e5cf172199f24c93d76f3d5b9efcda5e6c2f2a64db3125bbfd19334d75de84ed",
+  "encoded_rustflags": "-C\u001ftarget-cpu=generic",
+  "results": [
+    {
+      "target": "x86_64-unknown-linux-gnu",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip/Cargo.toml",
+        "--target",
+        "x86_64-unknown-linux-gnu",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.7152988750021905,
+      "stdout": "",
+      "stderr": "     Locking 1 package to highest Rust 1.99.1 compatible version\n    Checking qa-process-usage-cross v0.0.0 (/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.66s\n"
+    },
+    {
+      "target": "aarch64-pc-windows-msvc",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip/Cargo.toml",
+        "--target",
+        "aarch64-pc-windows-msvc",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.20541604212485254,
+      "stdout": "",
+      "stderr": "    Checking qa-process-usage-cross v0.0.0 (/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s\n"
+    },
+    {
+      "target": "aarch64-apple-ios",
+      "command": [
+        "rtk",
+        "proxy",
+        "cargo",
+        "check",
+        "--offline",
+        "--manifest-path",
+        "/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip/Cargo.toml",
+        "--target",
+        "aarch64-apple-ios",
+        "--target-dir",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.2218648751731962,
+      "stdout": "",
+      "stderr": "    Checking qa-process-usage-cross v0.0.0 (/Volumes/home_tmp/tmp/qa-usage-cross-ui1rx4ip)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s\n"
+    }
+  ],
+  "scope": "Compile only exact helper module; macOS only runtime tested. Unsupported Windows/iOS return None."
+}
