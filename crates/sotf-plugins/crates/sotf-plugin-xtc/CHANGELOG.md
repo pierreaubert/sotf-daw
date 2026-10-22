@@ -1,3 +1,19 @@
+# Unreleased normalization fixed-point audit (2026-10-22)
+
+- Share spectral normalization across symmetric, asymmetric and measured-HRTF
+  preparation. Cap its per-column correction gain directly by the coefficient
+  ceiling instead of compressing already-limited columns through a second knee.
+- Preserve bounded unity-gain fixed points, tiny-response skips and steering.
+  Keep the 90% correction, target clamp, first inverse soft knee, final row-power
+  cap, frequency blends, regularization and callback ownership unchanged.
+- Add fixed-point, non-worsening reachable-column and stored-filter stage replay
+  regressions. Extend actual rendered measurements to normalization on/off and
+  four additional low-frequency bins; preserve raw matrices and old subsets.
+  Compare with the same diagnostic on an isolated prior production checkout.
+- Preserve earlier response fixtures and every nominal failure.
+- Nominal 93.75 Hz cancellation remains below 5 dB; stage replay locates the main
+  loss in the unchanged identity blend, without claiming measured robustness.
+
 # Unreleased coordinated prepared-filter gain audit (2026-10-22)
 
 - Apply one soft gain per input column in the inverse and after spectral

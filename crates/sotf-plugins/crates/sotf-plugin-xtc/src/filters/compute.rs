@@ -4,13 +4,14 @@ use super::super::reflections::{
 };
 use super::apply::apply_beta_freq_boosts;
 use super::apply::apply_effort_constraint;
+use super::apply::normalize_filter_columns;
 use super::build::build_beta_lut_condition_number;
 use super::head::head_shadowing_complex;
 use super::misc::SPEED_OF_SOUND;
 use super::misc::condition_number_2x2;
 use super::misc::sanitize_filter;
 use super::misc::sigmoid_smooth;
-use super::misc::{soft_limit_column_f64, soft_limit_filter_column};
+use super::misc::soft_limit_column_f64;
 use super::types::GeometryCache;
 use super::types::HrtfTransferFunctions;
 use super::xtc_filters::XtcFilters;
@@ -21,6 +22,10 @@ use std::sync::Arc;
 #[cfg(test)]
 #[path = "transfer_audit_tests.rs"]
 mod transfer_audit_tests;
+
+#[cfg(test)]
+#[path = "stage_audit_tests.rs"]
+mod stage_audit_tests;
 
 #[cfg(test)]
 #[path = "lateral_pose_tests.rs"]
@@ -359,44 +364,15 @@ fn compute_xtc_filters_asymmetric_with_cache(
             params.bypass_neumann_refinement,
         );
 
-        // Per-bin spectral normalization: target unity gain for the estimated ear response.
         if params.spectral_normalization && !params.bypass_spectral_normalization {
-            // Left Ear response for unit Left Input (L_in = 1, R_in = 0)
-            // Speakers emit: out_L = w_ll, out_R = w_rl
-            // Left ear hears: h_ipsi * w_ll + h_contra * w_rl
-            let ear_l = w_ll * h_ll_ipsi_final + w_rl * h_ll_contra_final;
-
-            // Right Ear response for unit Right Input (L_in = 0, R_in = 1)
-            // Speakers emit: out_L = w_lr, out_R = w_rr
-            // Right ear hears: h_contra * w_lr + h_ipsi * w_rr
-            let ear_r = w_lr * h_rr_contra_final + w_rr * h_rr_ipsi_final;
-
-            // Compute both gains before applying, to avoid contamination
-            let mag_l = ear_l.norm();
-            let gain_l = if mag_l > 0.01 {
-                1.0 + 0.9 * ((1.0 / mag_l).clamp(0.5, 4.0) - 1.0)
-            } else {
-                1.0
-            };
-
-            let mag_r = ear_r.norm();
-            let gain_r = if mag_r > 0.01 {
-                1.0 + 0.9 * ((1.0 / mag_r).clamp(0.5, 4.0) - 1.0)
-            } else {
-                1.0
-            };
-
-            // Scale COLUMNS, not rows:
-            // Left column (w_ll, w_rl) → left ear correction
-            // Right column (w_lr, w_rr) → right ear correction
-            w_ll *= gain_l;
-            w_rl *= gain_l;
-            w_lr *= gain_r;
-            w_rr *= gain_r;
-
-            // Re-apply soft limit: spectral normalization can push gains past budget
-            [w_ll, w_rl] = soft_limit_filter_column([w_ll, w_rl], max_gain_linear);
-            [w_lr, w_rr] = soft_limit_filter_column([w_lr, w_rr], max_gain_linear);
+            [[w_ll, w_lr], [w_rl, w_rr]] = normalize_filter_columns(
+                [
+                    [h_ll_ipsi_final, h_ll_contra_final],
+                    [h_rr_contra_final, h_rr_ipsi_final],
+                ],
+                [[w_ll, w_lr], [w_rl, w_rr]],
+                max_gain_linear,
+            );
         }
 
         // Crossfade to identity (stereo passthrough) at very low and very high frequencies
@@ -495,32 +471,12 @@ fn compute_xtc_filters_hrtf(
             params.bypass_neumann_refinement,
         );
 
-        // Per-bin spectral normalization
         if params.spectral_normalization && !params.bypass_spectral_normalization {
-            let ear_l = w_ll * h_ll_final + w_rl * h_lr_final;
-            let ear_r = w_lr * h_rl_final + w_rr * h_rr_final;
-
-            let mag_l = ear_l.norm();
-            let gain_l = if mag_l > 0.01 {
-                1.0 + 0.9 * ((1.0 / mag_l).clamp(0.5, 4.0) - 1.0)
-            } else {
-                1.0
-            };
-
-            let mag_r = ear_r.norm();
-            let gain_r = if mag_r > 0.01 {
-                1.0 + 0.9 * ((1.0 / mag_r).clamp(0.5, 4.0) - 1.0)
-            } else {
-                1.0
-            };
-
-            w_ll *= gain_l;
-            w_rl *= gain_l;
-            w_lr *= gain_r;
-            w_rr *= gain_r;
-
-            [w_ll, w_rl] = soft_limit_filter_column([w_ll, w_rl], max_gain_linear);
-            [w_lr, w_rr] = soft_limit_filter_column([w_lr, w_rr], max_gain_linear);
+            [[w_ll, w_lr], [w_rl, w_rr]] = normalize_filter_columns(
+                [[h_ll_final, h_lr_final], [h_rl_final, h_rr_final]],
+                [[w_ll, w_lr], [w_rl, w_rr]],
+                max_gain_linear,
+            );
         }
 
         // Crossfade to identity at band edges
@@ -605,21 +561,17 @@ fn compute_xtc_filters_symmetric_with_cache(
             params.bypass_neumann_refinement,
         );
 
-        // Per-bin spectral normalization: target unity gain for the estimated ear response.
-        // This compensates for attenuation introduced by regularization (beta),
-        // preventing dull/mono-like sound at low frequencies.
         if params.spectral_normalization && !params.bypass_spectral_normalization {
-            let ear_response = w_ll * h_ipsi_final + w_lr * h_contra_final;
-            let mag = ear_response.norm();
-            if mag > 0.01 {
-                // Gentle correction: 90% of the way to unity.
-                let correction = (1.0 / mag).clamp(0.5, 4.0);
-                let gain = 1.0 + 0.9 * (correction - 1.0);
-                w_ll *= gain;
-                w_lr *= gain;
-            }
-            // Re-apply soft limit: spectral normalization can push gains past budget
-            [w_ll, w_lr] = soft_limit_filter_column([w_ll, w_lr], max_gain_linear);
+            let [[ll, lr], _] = normalize_filter_columns(
+                [
+                    [h_ipsi_final, h_contra_final],
+                    [h_contra_final, h_ipsi_final],
+                ],
+                [[w_ll, w_lr], [w_lr, w_ll]],
+                max_gain_linear,
+            );
+            w_ll = ll;
+            w_lr = lr;
         }
 
         // Crossfade to identity (stereo passthrough) at very low and very high frequencies

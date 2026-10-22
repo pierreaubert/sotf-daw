@@ -213,3 +213,52 @@ fn inverse_gain_limiting_preserves_each_input_steering_ray() {
     assert!(limited > 0);
     assert_eq!(failures, 0);
 }
+
+#[test]
+fn normalization_never_worsens_reachable_regularized_columns() {
+    let f = |value: C| Complex::new(value.re as f32, value.im as f32);
+    let wide = |value: Complex<f32>| C::new(f64::from(value.re), f64::from(value.im));
+    let mut columns = 0;
+    let mut failures = 0;
+    let mut maximum_worsening = 0.0_f64;
+    for frequency in [100.0, 250.0, 500.0, 1000.0, 4000.0, 8000.0] {
+        for x in [-0.1, 0.0, 0.1] {
+            for yaw in [-0.3, 0.0, 0.3] {
+                for reflection in [0.0, 0.4] {
+                    for beta in [0.00001_f32, 0.001, 0.1] {
+                        let field = plant(frequency, x, yaw, reflection);
+                        let model = field.map(|row| row.map(f));
+                        for ceiling in [0.5, 1.0, 4.0] {
+                            let prepared =
+                                production_inverse(field, beta, ceiling).map(|row| row.map(f));
+                            let normalized =
+                                super::normalize_filter_columns(model, prepared, ceiling);
+                            for column in 0..2 {
+                                let magnitude = |w: [[Complex<f32>; 2]; 2]| {
+                                    (wide(model[column][0]) * wide(w[0][column])
+                                        + wide(model[column][1]) * wide(w[1][column]))
+                                    .norm()
+                                };
+                                let before = magnitude(prepared);
+                                let after = magnitude(normalized);
+                                let worsening = (after - 1.0).abs() - (before - 1.0).abs();
+                                maximum_worsening = maximum_worsening.max(worsening);
+                                failures += usize::from(worsening > 2e-6);
+                                assert!(
+                                    normalized
+                                        .iter()
+                                        .all(|row| row[column].norm() <= ceiling * 1.000001)
+                                );
+                                columns += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "reachable_normalization columns={columns} failures={failures} maximum_worsening={maximum_worsening}"
+    );
+    assert_eq!(failures, 0);
+}

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "normalization_",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 16.0698471670039,
+  "stdout": "\nrunning 5 tests\ntest config::tests::test_default_spectral_normalization_is_true ... ok\nnormalization_fixed_points coefficients=28 failures=0 maximum_error=0.00000023841858\nnormalization_gain level=0.05 column=0 before=0.050000003539025784 after=0.06666667166919937 worsening=-0.01666666813017359\nnormalization_gain level=0.05 column=1 before=0.050000001676380634 after=0.10000000335276127 worsening=-0.050000001676380634\nnormalization_gain level=0.2 column=0 before=0.20000001415610313 after=0.2666666866767975 worsening=-0.06666667252069436\nnormalization_gain level=0.2 column=1 before=0.20000000670552254 after=0.4000000134110451 worsening=-0.20000000670552254\nnormalization_gain level=0.6 column=0 before=0.6000000685453415 after=0.8000000947997687 worsening=-0.20000002625442725\nnormalization_gain level=0.6 column=1 before=0.6000000387430191 after=0.9600000047683679 worsening=-0.3599999660253488\nnormalization_gain level=0.98 column=0 before=0.9800001084804535 after=0.9979999884026256 worsening=-0.017999879922172113\nnormalization_gain level=0.98 column=1 before=0.9800000488758087 after=0.9979999944604145 worsening=-0.017999945584605825\nnormalization_gain level=0.99 column=0 before=0.9900000244379044 after=0.9990000160769981 worsening=-0.008999991639093707\nnormalization_gain level=0.99 column=1 before=0.989999994635582 after=0.9989999860037457 worsening=-0.008999991368163762\nnormalization_gain level=1 column=0 before=1.0000000447034836 after=0.9999999680689369 worsening=-0.0000000127724204546098\nnormalization_gain level=1 column=1 before=1.0000000149011612 after=1.0000000149011612 worsening=0\nnormalization_gain level=1.01 column=0 before=1.0100000649690628 after=1.0009999836513765 worsening=-0.00900008131768626\nnormalization_gain level=1.01 column=1 before=1.0100000351667404 after=1.0010000315155132 worsening=-0.009000003651227217\nnormalization_gain level=1.02 column=0 before=1.0199999809265137 after=1.0020000127343565 worsening=-0.017999968192157212\nnormalization_gain level=1.02 column=1 before=1.0199999809265137 after=1.0020000127343565 worsening=-0.017999968192157212\nnormalization_gain level=1.8 column=0 before=1.8000001013278961 after=1.0800000270775367 worsening=-0.7200000742503594\nnormalization_gain level=1.8 column=1 before=1.8000000417232513 after=1.079999960660933 worsening=-0.7200000810623184\nnormalization_gain level=4 column=0 before=4.000000178813934 after=2.2000000779117848 worsening=-1.8000001009021496\nnormalization_gain level=4 column=1 before=4.000000059604645 after=2.200000080466271 worsening=-1.7999999791383736\nnormalization_progress columns=20 failures=0 maximum_worsening=0\ntest filters::apply::tests::normalization_keeps_unity_fixed_points_and_tiny_response_skips ... ok\ntest filters::apply::tests::normalization_moves_bounded_columns_toward_unity_without_turning_them ... ok\ntest config::tests::test_deserialize_empty_json_spectral_normalization_true ... ok\nreachable_normalization columns=1944 failures=0 maximum_worsening=0.000000049049482697682834\ntest filters::compute::transfer_audit_tests::normalization_never_worsens_reachable_regularized_columns ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 192 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 16.02s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+}

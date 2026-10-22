@@ -11,6 +11,43 @@ pub(super) fn apply_beta_freq_boosts(beta: f32, freq: f32, params: &XtcPluginPar
     beta * low_factor * high_factor
 }
 
+/// Normalize the desired-ear magnitudes of a prepared two-input filter.
+///
+/// Apply the existing 90% correction with its 0.5..4 target clamp and tiny
+/// response skip. A single real gain preserves each column's steering. The
+/// coefficient ceiling caps that gain without reapplying the inverse soft knee;
+/// the final common matrix effort cap still owns the loudspeaker-row budget.
+pub(super) fn normalize_filter_columns(
+    plant: [[Complex<f32>; 2]; 2],
+    mut filters: [[Complex<f32>; 2]; 2],
+    ceiling: f32,
+) -> [[Complex<f32>; 2]; 2] {
+    let wide = |value: Complex<f32>| Complex::new(f64::from(value.re), f64::from(value.im));
+    for column in 0..2 {
+        let input = [wide(filters[0][column]), wide(filters[1][column])];
+        let response = input[0] * wide(plant[column][0]) + input[1] * wide(plant[column][1]);
+        let magnitude = response.norm();
+        let requested_gain = if magnitude > f64::from(0.01_f32) {
+            1.0 + 0.9 * ((1.0 / magnitude).clamp(0.5, 4.0) - 1.0)
+        } else {
+            1.0
+        };
+        let peak = input[0].norm().max(input[1].norm());
+        // The inverse already applied its soft knee. Cap only the correction
+        // gain here; compressing again would move a unity response away from
+        // unity, even when the requested correction was exactly one.
+        let gain = if peak > 0.0 {
+            requested_gain.min(f64::from(ceiling) / peak)
+        } else {
+            requested_gain
+        };
+        let corrected = input.map(|value| value * gain);
+        filters[0][column] = Complex::new(corrected[0].re as f32, corrected[0].im as f32);
+        filters[1][column] = Complex::new(corrected[1].re as f32, corrected[1].im as f32);
+    }
+    filters
+}
+
 /// Limit loudspeaker effort independently at each frequency.
 ///
 /// A coefficient-wise limit still permits a two-input output row to carry
@@ -153,5 +190,123 @@ mod tests {
         );
         assert_eq!(failures, 0);
         assert_eq!(budget_failures, 0);
+    }
+    #[test]
+    fn normalization_keeps_unity_fixed_points_and_tiny_response_skips() {
+        let zero = Complex::new(0.0, 0.0);
+        let matrices = [
+            (
+                [
+                    [Complex::new(0.25, 0.0), zero],
+                    [zero, Complex::new(0.5, 0.0)],
+                ],
+                [
+                    [Complex::new(4.0, 0.0), zero],
+                    [zero, Complex::new(2.0, 0.0)],
+                ],
+            ),
+            (
+                [
+                    [Complex::new(2.0 / 7.0, 0.0), Complex::new(1.0 / 7.0, 0.0)],
+                    [Complex::new(-1.0 / 7.0, 0.0), Complex::new(3.0 / 7.0, 0.0)],
+                ],
+                [
+                    [Complex::new(3.0, 0.0), Complex::new(-1.0, 0.0)],
+                    [Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
+                ],
+            ),
+        ];
+        let mut cases = 0;
+        let mut failures = 0;
+        let mut maximum_error = 0.0_f32;
+        for (plant, filters) in matrices {
+            for phase in [-1.0_f32, 0.0, 1.0] {
+                let phases = [
+                    Complex::from_polar(1.0, phase),
+                    Complex::from_polar(1.0, -phase),
+                ];
+                let plant =
+                    std::array::from_fn(|row| plant[row].map(|value| value * phases[row].conj()));
+                let filters = filters.map(|row| [row[0] * phases[0], row[1] * phases[1]]);
+                let result = normalize_filter_columns(plant, filters, 4.0);
+                for (actual, expected) in result
+                    .into_iter()
+                    .flatten()
+                    .zip(filters.into_iter().flatten())
+                {
+                    let error = (actual - expected).norm();
+                    maximum_error = maximum_error.max(error);
+                    failures += usize::from(error > 2e-6);
+                    cases += 1;
+                }
+            }
+        }
+        let skipped = matrices[1].1;
+        let tiny = [[zero; 2]; 2];
+        let result = normalize_filter_columns(tiny, skipped, 4.0);
+        for (actual, expected) in result
+            .into_iter()
+            .flatten()
+            .zip(skipped.into_iter().flatten())
+        {
+            let error = (actual - expected).norm();
+            maximum_error = maximum_error.max(error);
+            failures += usize::from(error > 2e-6);
+            cases += 1;
+        }
+        assert_eq!(normalize_filter_columns(tiny, tiny, 4.0), tiny);
+        println!(
+            "normalization_fixed_points coefficients={cases} failures={failures} maximum_error={maximum_error}"
+        );
+        assert_eq!(failures, 0);
+    }
+
+    #[test]
+    fn normalization_moves_bounded_columns_toward_unity_without_turning_them() {
+        let base = [
+            [
+                Complex::new(2.0_f32 / 7.0, 0.0),
+                Complex::new(1.0 / 7.0, 0.0),
+            ],
+            [Complex::new(-1.0 / 7.0, 0.0), Complex::new(3.0 / 7.0, 0.0)],
+        ];
+        let filters = [
+            [Complex::new(3.0, 0.0), Complex::new(-1.0, 0.0)],
+            [Complex::new(1.0, 0.0), Complex::new(2.0, 0.0)],
+        ];
+        let wide = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
+        let mut failures = 0;
+        let mut cases = 0;
+        let mut maximum_worsening = 0.0_f64;
+        for level in [0.05_f32, 0.2, 0.6, 0.98, 0.99, 1.0, 1.01, 1.02, 1.8, 4.0] {
+            let plant = base.map(|row| row.map(|c| c * level));
+            let result = normalize_filter_columns(plant, filters, 4.0);
+            for column in 0..2 {
+                let response = |w: [[Complex<f32>; 2]; 2]| {
+                    (wide(plant[column][0]) * wide(w[0][column])
+                        + wide(plant[column][1]) * wide(w[1][column]))
+                    .norm()
+                };
+                let before = response(filters);
+                let after = response(result);
+                let worsening = (after - 1.0).abs() - (before - 1.0).abs();
+                maximum_worsening = maximum_worsening.max(worsening);
+                failures += usize::from(worsening > 2e-6);
+                let a = [wide(filters[0][column]), wide(filters[1][column])];
+                let b = [wide(result[0][column]), wide(result[1][column])];
+                let denominator = (a[0].norm_sqr() + a[1].norm_sqr()).sqrt()
+                    * (b[0].norm_sqr() + b[1].norm_sqr()).sqrt();
+                assert!((a[0] * b[1] - a[1] * b[0]).norm() / denominator < 2e-6);
+                assert!(b.iter().all(|v| v.norm() <= 4.000004));
+                println!(
+                    "normalization_gain level={level} column={column} before={before} after={after} worsening={worsening}"
+                );
+                cases += 1;
+            }
+        }
+        println!(
+            "normalization_progress columns={cases} failures={failures} maximum_worsening={maximum_worsening}"
+        );
+        assert_eq!(failures, 0);
     }
 }

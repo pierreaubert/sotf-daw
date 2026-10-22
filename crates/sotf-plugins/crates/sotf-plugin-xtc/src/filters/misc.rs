@@ -59,6 +59,7 @@ pub(super) fn soft_limit_column_f64(column: [Complex<f64>; 2], ceiling: f64) -> 
 }
 
 /// Limit a stored f32 filter column using widened preparation arithmetic.
+#[cfg(test)]
 #[inline]
 pub(super) fn soft_limit_filter_column(
     column: [Complex<f32>; 2],

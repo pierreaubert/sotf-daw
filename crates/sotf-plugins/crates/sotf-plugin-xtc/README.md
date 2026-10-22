@@ -100,11 +100,15 @@ and the 100 Hz request selected a 93.75 Hz bin with 4.986 dB versus a 5 dB minim
 The continuous-path report initially passed 16 of 17: far/near shadow ILD is 28.627 dB,
 within that existing broad tolerance, while 93.75 Hz cancellation was 4.954 dB
 and still failed. Coordinated gain limiting retains 16/17 with 4.822 dB at that
-bin; the existing 5 dB target remains failed. This is an analytical reference comparison, not calibrated HRTF
-accuracy. The controlled 360-row point-source/echo mismatch matrix now has 140
-degraded normalized-separation rows (previously 134), with worst -5.382 dB
-(previously -5.010 dB). All rows remain; correcting model symmetry does not
-establish improved robustness.
+bin. Correcting normalization then gives 4.811 dB; the existing 5 dB target
+remains failed. This is an analytical reference comparison, not calibrated HRTF
+accuracy. The earlier six-frequency, normalization-off point-source/echo matrix
+has 140 degraded normalized-separation rows out of 360 (previously 134 before
+the geometry correction), with worst -5.382 dB. That historical subset remains
+unchanged. Expanded ten-frequency matrices now record normalization explicitly:
+600 rows per mode, including 23.4375, 46.875, 93.75 and 187.5 Hz. Each mode retains
+146 degraded rows; the larger count includes additional low-frequency cases.
+These controlled fields do not establish measured-HRTF robustness.
 
 Prediction helpers allocate filter arrays and belong on a control/analysis thread,
 not in `process()`. Matrix evaluation operates only on supplied values.
@@ -206,10 +210,12 @@ preset schemas, FFT latency, gain limits and callback ownership stay unchanged.
 
 Each inverse input column uses one soft gain chosen by its largest complex
 coefficient. Both speaker drives retain their relative amplitude and phase.
-Spectral-normalization limiting uses the same column rule, including measured
-HRTF filter preparation. The half-ceiling tanh knee and coefficient ceiling are
-unchanged; independently compressing coefficients could rotate the cancellation
-steering vector even when each coefficient stayed within budget.
+That half-ceiling tanh knee applies in the inverse. Spectral normalization then
+uses one real correction gain per column, capped directly by the existing
+coefficient ceiling. It does not reapply the inverse knee: a column already at
+unity desired-ear gain remains unchanged. This rule is shared by symmetric,
+asymmetric and measured-HRTF preparation. Independently compressing coefficients
+could rotate the cancellation steering vector even within the gain budget.
 
 The final per-bin effort cap uses one common matrix gain set by the larger
 loudspeaker-row power. Every row still satisfies its sum-of-squared-coefficients
@@ -224,3 +230,32 @@ time-domain/reconstructed peak levels. Frequency blends, regularization, gain
 ceilings, parameter schemas, worker ownership and FFT latency are unchanged.
 Default responses intentionally change; earlier coefficient fixtures and nominal
 failures remain alongside the current coordinated-limit fixture.
+
+The shared normalization stage preserves its 90% correction, 0.5..4 correction
+target clamp and tiny-response skip. Widened response and gain arithmetic avoids
+additional f32 cancellation/overflow during preparation. Direct fixed-point and
+reachable regularized-column checks require correction to move desired magnitude
+toward unity when the coefficient budget allows. The final matrix effort cap
+can still limit level to satisfy its separate physical budget.
+
+`preparation_stage_replay_matches_production_and_retains_metrics` records six
+preparation stages over two rates, two FFT sizes, both head models and both LF
+modes. Stored coefficients must match the replay. At nominal 48 kHz/FFT2048,
+the selected 93.75 Hz bin has about 25.81 dB raw cancellation before the identity
+blend and 4.81 dB afterward; the final effort cap is inactive there. The
+normalized intermediate has row power about 18.37 against a 15.85 budget, so any
+blend change must still preserve the effort constraint. This is a
+shared-model causal comparison, not rendered or measured acoustic validation.
+Unbounded inverse rows are counterfactuals because gain limits can also change
+which refinement candidate is selected.
+
+Rendered validation explicitly disables AutoGain, uses quiet signals and captures
+actual speaker-transfer matrices for fixed and irregular callbacks. Both
+spectral-normalization modes are measured. A separate Python verifier reconstructs
+the point-source/echo fields and every metric from those matrices. The identical
+diagnostic also ran against the previous production commit in an isolated
+checkout; historical normalization-off data remain unchanged. At nominal 93.75 Hz,
+normalization-on intended gain improves from about -0.234 to -0.102 dB and
+normalized separation from 4.491 to 4.613 dB, while raw attenuation changes from
+4.726 to 4.715 dB. The 5 dB nominal raw target remains open. These are controlled
+rendered measurements, not native ABI/device or listener evidence.

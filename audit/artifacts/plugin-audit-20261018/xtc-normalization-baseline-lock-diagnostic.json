@@ -1,0 +1,19 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "metadata",
+    "--offline",
+    "--no-deps",
+    "--format-version",
+    "1"
+  ],
+  "exit_code": 0,
+  "stderr": "",
+  "before_sha256": "2404b6199b91c89546f8591bcb6521a92dc4c9d916c8cd7e7d546a07b558802a",
+  "after_sha256": "2404b6199b91c89546f8591bcb6521a92dc4c9d916c8cd7e7d546a07b558802a",
+  "package_keys_unchanged": true,
+  "changed_packages": [],
+  "diff": ""
+}

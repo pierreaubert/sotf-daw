@@ -1,0 +1,80 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "metadata",
+    "--offline",
+    "--format-version",
+    "1"
+  ],
+  "exit_code": 0,
+  "stderr": "",
+  "before_sha256": "2404b6199b91c89546f8591bcb6521a92dc4c9d916c8cd7e7d546a07b558802a",
+  "after_sha256": "199c86ee8840ef244d1d0dbc85590c5d55314c034aa3b0a72e946ff7baaa5143",
+  "package_keys_unchanged": true,
+  "changed_packages": [
+    {
+      "package": [
+        "sotf-capture",
+        "0.6.0",
+        null
+      ],
+      "before": {
+        "name": "sotf-capture",
+        "version": "0.6.0",
+        "dependencies": [
+          "audioadapter-buffers",
+          "autoeq",
+          "chrono",
+          "clap",
+          "cpal",
+          "ctrlc",
+          "env_logger",
+          "hound",
+          "libc",
+          "log",
+          "math-dsp",
+          "math-rir",
+          "rtrb",
+          "rustfft",
+          "serde",
+          "serde_json",
+          "sha2",
+          "sotf-rubato",
+          "tempfile",
+          "thiserror 2.0.21"
+        ]
+      },
+      "after": {
+        "name": "sotf-capture",
+        "version": "0.6.0",
+        "dependencies": [
+          "audioadapter-buffers",
+          "autoeq",
+          "chrono",
+          "clap",
+          "cpal",
+          "ctrlc",
+          "env_logger",
+          "hound",
+          "libc",
+          "log",
+          "math-dsp",
+          "math-rir",
+          "rtrb",
+          "rustfft",
+          "rustix",
+          "serde",
+          "serde_json",
+          "sha2",
+          "sotf-rubato",
+          "tempfile",
+          "thiserror 2.0.21"
+        ]
+      }
+    }
+  ],
+  "diff": "diff --git a/Cargo.lock b/Cargo.lock\nindex a45962e..61c7745 100644\n--- a/Cargo.lock\n+++ b/Cargo.lock\n@@ -7526,6 +7526,7 @@ dependencies = [\n  \"math-rir\",\n  \"rtrb\",\n  \"rustfft\",\n+ \"rustix\",\n  \"serde\",\n  \"serde_json\",\n  \"sha2\",\n",
+  "metadata_sha256": "d7af0ef2a88ba69f5034a7cf1bcc4c6495f526a661554461f972fd9953f1d451"
+}

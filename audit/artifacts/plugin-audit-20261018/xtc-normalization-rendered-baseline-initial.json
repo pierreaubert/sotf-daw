@@ -1,0 +1,29 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "audit_cancellation",
+    "--",
+    "--nocapture"
+  ],
+  "base_commit": "49aec9e",
+  "worktree": "/Volumes/home_worktrees/xtc-normalization-49aec-wh1zyj_8",
+  "diagnostic_sha256": "e102bdee176c3c1a1635962edeacc5a7ef8a91851a42b0775422960bb1e3a105",
+  "exit_code": 101,
+  "elapsed_seconds": 0.24983954103663564,
+  "stdout": "",
+  "stderr": "error: cannot update the lock file /Volumes/home_worktrees/xtc-normalization-49aec-wh1zyj_8/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n",
+  "scope": "Baseline production sources; only the current expanded public-API diagnostic test is copied in. No current production changes are applied."
+}

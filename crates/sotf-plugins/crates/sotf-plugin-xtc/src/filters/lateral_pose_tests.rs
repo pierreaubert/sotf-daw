@@ -76,7 +76,7 @@ fn tiny_yaw_has_no_artificial_geometry_deadband() {
 }
 
 #[test]
-fn centered_coordinated_limit_coefficients_match_reference() {
+fn centered_normalization_coefficients_match_reference() {
     let filters = compute_xtc_filters_full(&XtcPluginParams::default(), 48_000, 1025);
     let bits: Vec<_> = filters
         .filter_ll
@@ -84,7 +84,7 @@ fn centered_coordinated_limit_coefficients_match_reference() {
         .chain(&filters.filter_lr)
         .flat_map(|c| [c.re.to_bits(), c.im.to_bits()])
         .collect();
-    let expected: Vec<u32> = include_str!("centered_coordinated_limits_bits.txt")
+    let expected: Vec<u32> = include_str!("centered_normalization_bits.txt")
         .lines()
         .map(|line| line.parse().unwrap())
         .collect();
@@ -97,7 +97,7 @@ fn centered_coordinated_limit_coefficients_match_reference() {
         assert!((f32::from_bits(actual) - f32::from_bits(expected)).abs() < 2e-6);
     }
     println!(
-        "centered_coordinated_reference coefficient_words={} bit_differences={bit_differences}",
+        "centered_normalization_reference coefficient_words={} bit_differences={bit_differences}",
         bits.len()
     );
 }

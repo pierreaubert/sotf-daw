@@ -1,0 +1,224 @@
+{
+  "passed_tests": 256,
+  "existing_ignored": 1,
+  "fixed_point_coefficients": 28,
+  "controlled_gain_columns": 20,
+  "reachable_prepared_columns": 1944,
+  "stage_conditions": 16,
+  "stage_frequency_cases": 96,
+  "stage_records": 576,
+  "maximum_independent_metric_error_db": 0.0,
+  "maximum_independent_power_error": 0.0,
+  "maximum_stored_coefficient_error": 0.0,
+  "maximum_staged_normalization_worsening": 0.0,
+  "nominal_selected_bin_stages": [
+    {
+      "stage": "regularized_unbounded",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        19.217862443142174,
+        19.217862443142174
+      ],
+      "desired_gain_db": [
+        -0.9775991989700252,
+        -0.9775991989700252
+      ],
+      "separation_improvement_db": [
+        18.240263244172148,
+        18.240263244172148
+      ],
+      "row_powers": [
+        12.862222462445633,
+        12.862222462445633
+      ]
+    },
+    {
+      "stage": "refined_unbounded",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        26.17241841405002,
+        26.17241841405002
+      ],
+      "desired_gain_db": [
+        -0.42310358564947537,
+        -0.42310358564947537
+      ],
+      "separation_improvement_db": [
+        25.749314828400546,
+        25.749314828400546
+      ],
+      "row_powers": [
+        16.904801485957638,
+        16.904801485957638
+      ]
+    },
+    {
+      "stage": "inverse_limited",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        26.38946459927549,
+        26.38946459927549
+      ],
+      "desired_gain_db": [
+        -0.6401607547626921,
+        -0.6401607547626921
+      ],
+      "separation_improvement_db": [
+        25.7493038445128,
+        25.7493038445128
+      ],
+      "row_powers": [
+        16.080676014343926,
+        16.080676014343926
+      ]
+    },
+    {
+      "stage": "normalized_capped",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        25.81123441618509,
+        25.81123441618509
+      ],
+      "desired_gain_db": [
+        -0.06193380714463862,
+        -0.06193380714463862
+      ],
+      "separation_improvement_db": [
+        25.749300609040453,
+        25.749300609040453
+      ],
+      "row_powers": [
+        18.370753942424273,
+        18.370753942424273
+      ]
+    },
+    {
+      "stage": "identity_blended",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        4.810583311011987,
+        4.810583311011987
+      ],
+      "desired_gain_db": [
+        -0.027688108592580203,
+        -0.027688108592580203
+      ],
+      "separation_improvement_db": [
+        4.7828952024194065,
+        4.7828952024194065
+      ],
+      "row_powers": [
+        4.639932439127784,
+        4.639932439127784
+      ]
+    },
+    {
+      "stage": "effort_limited",
+      "frequency_hz": 93.75,
+      "alpha": 0.447944313287735,
+      "raw_depth_db": [
+        4.810583311011987,
+        4.810583311011987
+      ],
+      "desired_gain_db": [
+        -0.027688108592580203,
+        -0.027688108592580203
+      ],
+      "separation_improvement_db": [
+        4.7828952024194065,
+        4.7828952024194065
+      ],
+      "row_powers": [
+        4.639932439127784,
+        4.639932439127784
+      ]
+    }
+  ],
+  "rendered_mismatch_cases": 1200,
+  "rendered_normalization_cohorts": {
+    "False": {
+      "cases": 600,
+      "degraded": 146,
+      "worst_normalized_db": -5.382083283837915,
+      "minimum_change_from_baseline_db": 0.0,
+      "maximum_change_from_baseline_db": 0.0,
+      "nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.35313758667029194,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 4.737498859885632,
+        "separation_improvement_db": 4.384361273215339,
+        "spectral_normalization": false,
+        "yaw_rad": 0.0
+      },
+      "baseline_nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.35313758667029194,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 4.737498859885632,
+        "separation_improvement_db": 4.384361273215339,
+        "spectral_normalization": false,
+        "yaw_rad": 0.0
+      }
+    },
+    "True": {
+      "cases": 600,
+      "degraded": 146,
+      "worst_normalized_db": -5.382084138159015,
+      "minimum_change_from_baseline_db": -6.167026885606219e-06,
+      "maximum_change_from_baseline_db": 0.3617127945879286,
+      "nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.1019004491010271,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 4.715135546305735,
+        "separation_improvement_db": 4.613235097204708,
+        "spectral_normalization": true,
+        "yaw_rad": 0.0
+      },
+      "baseline_nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.23437629646969313,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 4.725620532437579,
+        "separation_improvement_db": 4.491244235967885,
+        "spectral_normalization": true,
+        "yaw_rad": 0.0
+      }
+    }
+  },
+  "rendered_pose_cases": 240,
+  "historical_off_rows_preserved": 360,
+  "maximum_rendered_metric_error_db": 0.0,
+  "maximum_baseline_rendered_metric_error_db": 0.0,
+  "default_coefficient_change": {
+    "words": 4100,
+    "changed_words": 1549,
+    "maximum_component_difference": 0.08222192525863647,
+    "previous_fixture_sha256": "cd11e1dd8d1e694573a727e833481816e4d7d2da8c432580be3972e78c51e11e",
+    "current_fixture_sha256": "53b901e3c32ed7811009d98a0b7efb72dd871560dfd74f8bcfcc98ad684adc25",
+    "frequency_blend_blocks_unchanged": 3,
+    "beta_function_unchanged": true,
+    "base_commit": "49aec9e",
+    "scope": "Normalization correction intentionally changes filters; earlier fixtures remain. Frequency blends, regularization, first inverse soft knee and final row-power budget are unchanged."
+  },
+  "nominal_report": "16/17; selected93.75Hz cancellation4.811dB remains below5dB",
+  "scope": "Stage replay is a shared-model causal comparison. Counterfactual unbounded refinement can choose a different candidate. Measured/native robustness, device/update deadlines, reconstructed true peaks and listening remain unproven."
+}

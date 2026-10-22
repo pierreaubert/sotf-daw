@@ -1,0 +1,11 @@
+{
+  "words": 4100,
+  "changed_words": 1549,
+  "maximum_component_difference": 0.08222192525863647,
+  "previous_fixture_sha256": "cd11e1dd8d1e694573a727e833481816e4d7d2da8c432580be3972e78c51e11e",
+  "current_fixture_sha256": "53b901e3c32ed7811009d98a0b7efb72dd871560dfd74f8bcfcc98ad684adc25",
+  "frequency_blend_blocks_unchanged": 3,
+  "beta_function_unchanged": true,
+  "base_commit": "49aec9e",
+  "scope": "Normalization correction intentionally changes filters; earlier fixtures remain. Frequency blends, regularization, first inverse soft knee and final row-power budget are unchanged."
+}

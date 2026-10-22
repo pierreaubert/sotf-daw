@@ -121,9 +121,14 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 
 ## Prepared inverse gain invariants
 
-- Limit inverse and normalized filter columns with a shared real gain over both
-  speaker coefficients. Keep the half-ceiling tanh knee and coefficient ceiling;
+- Limit inverse columns with a shared real soft gain over both speaker
+  coefficients. Keep its half-ceiling tanh knee and the coefficient ceiling;
   independent coefficient knees rotate a cancellation steering vector.
+- Spectral normalization applies one ceiling-capped real correction gain per
+  column. Do not reapply the inverse knee: bounded unity responses are fixed
+  points, tiny-response skips stay unchanged, and reachable bounded corrections
+  must not move desired magnitude farther from unity before the final effort cap.
+  Keep the 90% correction and 0.5..4 correction-target clamp.
 - Apply the final per-bin effort budget with one common matrix gain from the
   larger speaker-row power. Preserve both input columns and every row budget;
   do not independently scale speaker rows. Unused quieter-row headroom is valid.
@@ -133,3 +138,13 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - A gain cap does not prove measured cancellation or true-peak safety. The
   intentional identity blend can change steering; retain its nominal failures
   and every negative mismatch row without changing thresholds to clear a report.
+
+- Retain preparation-stage replay against stored coefficients and raw matrices.
+  Treat unbounded/refined rows as counterfactuals and shared-model cancellation
+  as separate from rendered or measured validation. Preserve the nominal failing
+  selected bin; changing normalization must not silently alter identity blends.
+
+- Rendered mismatch evidence must state spectral-normalization and AutoGain modes.
+  Historical six-frequency matrices disabled normalization; they do not validate
+  normalization-on behavior. Preserve that subset and retain explicit on/off
+  low-frequency renders, raw speaker matrices and independently recomputed metrics.

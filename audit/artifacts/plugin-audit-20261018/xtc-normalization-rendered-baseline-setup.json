@@ -1,0 +1,7 @@
+{
+  "base_commit": "49aec9e",
+  "worktree": "/Volumes/home_worktrees/xtc-normalization-49aec-wh1zyj_8",
+  "add_exit_code": 0,
+  "add_stdout": "HEAD is now at 49aec9e fix(xtc): preserve cancellation steering through prepared gain limits\n",
+  "add_stderr": "Preparing worktree (detached HEAD 49aec9e)\n"
+}
