@@ -5,20 +5,14 @@ use super::super::reflections::{
 use super::apply::apply_beta_freq_boosts;
 use super::apply::apply_effort_constraint;
 use super::build::build_beta_lut_condition_number;
-use super::build::build_pinna_contra_lut;
-use super::build::build_pinna_ipsi_lut;
 use super::head::head_shadowing_complex;
 use super::misc::SPEED_OF_SOUND;
 use super::misc::condition_number_2x2;
-use super::misc::contralateral_shadow_angle;
 use super::misc::sanitize_filter;
 use super::misc::sigmoid_smooth;
 use super::misc::soft_limit_complex_magnitude;
-use super::misc::woodworth_diffraction_path;
-use super::types::AsymmetricGeometry;
 use super::types::GeometryCache;
 use super::types::HrtfTransferFunctions;
-use super::types::SymmetricGeometry;
 use super::xtc_filters::XtcFilters;
 use rustfft::num_complex::Complex;
 use std::f32::consts::PI;
@@ -72,37 +66,64 @@ pub(crate) fn head_shadowing_for_plant(
     base * correction
 }
 
-/// Build the relative contralateral transfer before pinna shaping.
+/// Build a continuous four-path relative analytical plant.
 ///
-/// Both geometry paths use the same LF mode and single geometric delay.
-#[inline]
-pub(crate) fn contralateral_transfer(
+/// Rows are ears; columns are speakers. Each source's near-ear magnitude is
+/// the reference for both of its ear paths. At either median plane both ear
+/// angles coincide, so their shadow and pinna ratios converge to one rather
+/// than switching between unity and an attenuated fixed contralateral label.
+/// Both sources share one range/time reference; lateral range differences stay
+/// in the matrix. This retains the center-range/extra-arc approximation rather
+/// than claiming exact finite-distance ear-surface acoustics.
+pub(crate) fn analytical_plant(
     params: &XtcPluginParams,
+    cache: &GeometryCache,
     freq: f32,
-    angle: f32,
-    radius: f32,
-    amplitude: f32,
-    delay: f32,
-) -> Complex<f32> {
-    let shadow = head_shadowing_for_plant(
-        freq,
-        angle,
-        radius,
-        params.head_model,
-        params.head_shadow_cutoff_hz,
-        params.head_shadow_slope_db_per_octave,
-    ) * amplitude;
-    let phase = -2.0 * PI * freq * delay;
-    let path = Complex::new(phase.cos(), phase.sin());
-    let phase_only = shadow * path;
-    if params.itd_modeling == "explicit_delay" {
-        // Preserve the historical unity-amplitude LF approximation and its
-        // 300 Hz crossover / 50 Hz width for every analytical geometry.
-        let blend = 1.0 / (1.0 + ((freq - 300.0) / 50.0).exp());
-        path * blend + phase_only * (1.0 - blend)
-    } else {
-        phase_only
-    }
+) -> [[Complex<f32>; 2]; 2] {
+    let column = |source: &super::types::SourceGeometry| {
+        let shadow = |angle| {
+            head_shadowing_for_plant(
+                freq,
+                angle,
+                params.head_radius_m,
+                params.head_model,
+                params.head_shadow_cutoff_hz,
+                params.head_shadow_slope_db_per_octave,
+            )
+            .re
+        };
+        let near_shadow = shadow(source.near_angle);
+        let pinna = |angle: f32| {
+            if params.pinna_model_enabled {
+                super::pinna_resonance_contra(freq, angle.to_degrees() - 90.0)
+            } else {
+                1.0
+            }
+        };
+        let near_pinna = pinna(source.near_angle);
+        let reference_pinna = if params.pinna_model_enabled {
+            super::pinna_resonance(freq)
+        } else {
+            1.0
+        };
+        std::array::from_fn::<_, 2, _>(|ear| {
+            let shadow_ratio =
+                shadow(source.ear_angles[ear]) / near_shadow * source.amplitudes[ear];
+            let magnitude = if params.itd_modeling == "explicit_delay" {
+                let blend = 1.0 / (1.0 + ((freq - 300.0) / 50.0).exp());
+                blend + shadow_ratio * (1.0 - blend)
+            } else {
+                shadow_ratio
+            };
+            let amplitude =
+                magnitude * (pinna(source.ear_angles[ear]) / near_pinna) * reference_pinna;
+            let phase = -2.0 * PI * freq * source.delays[ear];
+            Complex::new(phase.cos(), phase.sin()) * amplitude
+        })
+    };
+    let left = column(&cache.sources[0]);
+    let right = column(&cache.sources[1]);
+    [[left[0], right[0]], [left[1], right[1]]]
 }
 
 /// Compute geometry cache for the given parameters.
@@ -119,93 +140,47 @@ pub(crate) fn compute_geometry_cache(
     // Fixed world speakers at (+/-d*sin(theta), d*cos(theta)), matching
     // reflections. Positive listener Z moves toward them. Translation changes
     // source range/incidence; yaw rotates incidence without moving the center.
-    let d = params.distance_m;
-    let speaker_theta = params.speaker_angle_deg * PI / 180.0;
+    let d = f64::from(params.distance_m);
+    let speaker_theta = f64::from(params.speaker_angle_deg).to_radians();
     let speaker_x = d * speaker_theta.sin();
-    let forward = d * speaker_theta.cos() - params.head_offset_z;
-    let a = params.head_radius_m;
-    let x_offset = params.head_offset_x;
-    let theta_rad = if params.head_offset_z == 0.0 {
-        speaker_theta
-    } else {
-        speaker_x.atan2(forward)
-    };
-    // Preserve historical centered coefficients exactly. These symmetric values
-    // are used only when lateral offset and yaw are both zero.
-    let l_ipsi = if params.head_offset_z == 0.0 {
-        compute_path_length(d, speaker_theta, 0.0)
-    } else {
-        speaker_x.hypot(forward)
-    };
-    let diffraction_extra = woodworth_diffraction_path(theta_rad, a);
-    let l_contra_full = l_ipsi + diffraction_extra;
-    let amplitude_ratio = l_ipsi / l_contra_full;
-    let delay_ipsi = l_ipsi / SPEED_OF_SOUND;
-    let delay_contra = l_contra_full / SPEED_OF_SOUND;
-    let contra_angle = contralateral_shadow_angle(theta_rad);
-
-    let symmetric = SymmetricGeometry {
-        a,
-        theta_rad,
-        amplitude_ratio,
-        delay_ipsi,
-        delay_contra,
-        contra_angle,
-    };
-
-    // Any lateral displacement or yaw requires the full two-ear matrix.
-    let yaw_rad = params.head_yaw_deg * PI / 180.0;
-    let asymmetric = if params.head_yaw_deg != 0.0 || x_offset != 0.0 {
-        let left_x = -speaker_x - x_offset;
-        let right_x = speaker_x - x_offset;
-        let (sin_yaw, cos_yaw) = yaw_rad.sin_cos();
-        let incidence = |source_x: f32| {
-            let local_x = source_x * cos_yaw - forward * sin_yaw;
-            let local_z = source_x * sin_yaw + forward * cos_yaw;
-            local_x.atan2(local_z)
-        };
-        let theta_left = -incidence(left_x);
-        let theta_right = incidence(right_x);
-
-        let l_left_ipsi = left_x.hypot(forward);
-        let l_left_contra_ipsi = right_x.hypot(forward);
-        let diffraction_left = woodworth_diffraction_path(theta_right.abs(), a);
-        let l_left_contra_full = l_left_contra_ipsi + diffraction_left;
-        let amplitude_ratio_left = l_left_ipsi / l_left_contra_full;
-        let delay_left_ipsi = l_left_ipsi / SPEED_OF_SOUND;
-        let delay_left_contra = l_left_contra_full / SPEED_OF_SOUND;
-        let angle_left_contra = contralateral_shadow_angle(theta_right.abs());
-
-        let l_right_ipsi = l_left_contra_ipsi;
-        let l_right_contra_ipsi = l_left_ipsi;
-        let diffraction_right = woodworth_diffraction_path(theta_left.abs(), a);
-        let l_right_contra_full = l_right_contra_ipsi + diffraction_right;
-        let amplitude_ratio_right = l_right_ipsi / l_right_contra_full;
-        let delay_right_ipsi = l_right_ipsi / SPEED_OF_SOUND;
-        let delay_right_contra = l_right_contra_full / SPEED_OF_SOUND;
-        let angle_right_contra = contralateral_shadow_angle(theta_left.abs());
-
-        Some(AsymmetricGeometry {
-            a,
-            theta_left,
-            theta_right,
-            amplitude_ratio_left,
-            delay_left_ipsi,
-            delay_left_contra,
-            angle_left_contra,
-            amplitude_ratio_right,
-            delay_right_ipsi,
-            delay_right_contra,
-            angle_right_contra,
-        })
-    } else {
-        None
-    };
-
+    let forward = d * speaker_theta.cos() - f64::from(params.head_offset_z);
+    let a = f64::from(params.head_radius_m);
+    let x_offset = f64::from(params.head_offset_x);
+    let yaw_rad = f64::from(params.head_yaw_deg).to_radians();
+    let left_x = -speaker_x - x_offset;
+    let right_x = speaker_x - x_offset;
+    let ranges = [left_x.hypot(forward), right_x.hypot(forward)];
+    // The mean is a common smooth reference under lateral mirroring. Using
+    // min(range_L, range_R) created a cusp and a first-order common phase shift
+    // at the centered pose, despite smooth physical source motion.
+    let reference_range = (ranges[0] + ranges[1]) * 0.5;
+    let (sin_yaw, cos_yaw) = yaw_rad.sin_cos();
+    let sources = std::array::from_fn(|speaker| {
+        let x = [left_x, right_x][speaker];
+        let projection = ((x * cos_yaw - forward * sin_yaw) / ranges[speaker]).clamp(-1.0, 1.0);
+        let near_angle = projection.abs().acos();
+        let extra = a * (projection.abs().asin() + projection.abs());
+        let ear_angles = [(-projection).acos(), projection.acos()];
+        let extras = [
+            if projection > 0.0 { extra } else { 0.0 },
+            if projection < 0.0 { extra } else { 0.0 },
+        ];
+        super::types::SourceGeometry {
+            near_angle: near_angle as f32,
+            ear_angles: ear_angles.map(|angle| angle as f32),
+            amplitudes: std::array::from_fn(|ear| {
+                (reference_range / (ranges[speaker] + extras[ear])) as f32
+            }),
+            delays: std::array::from_fn(|ear| {
+                (((ranges[speaker] - reference_range) + extras[ear]) / f64::from(SPEED_OF_SOUND))
+                    as f32
+            }),
+        }
+    });
     GeometryCache {
+        sources,
         freq_per_bin,
-        symmetric,
-        asymmetric,
+        is_symmetric: params.head_yaw_deg == 0.0 && params.head_offset_x == 0.0,
     }
 }
 
@@ -279,7 +254,7 @@ pub(crate) fn compute_xtc_filters_full_with_cache_and_hrtf(
     hrtf_data: Option<&HrtfTransferFunctions>,
 ) -> XtcFilters {
     let _sample_rate = _sample_rate.into();
-    let is_symmetric = cache.asymmetric.is_none() && hrtf_data.is_none();
+    let is_symmetric = cache.is_symmetric && hrtf_data.is_none();
     let room_data_ref: Option<&RoomReflectionData> = room_data
         .as_ref()
         .map(|r: &Arc<RoomReflectionData>| r.as_ref());
@@ -324,7 +299,6 @@ pub(crate) fn compute_xtc_filters_full_with_cache_and_hrtf(
 
 /// Compute asymmetric filters for non-zero yaw angle using pre-computed geometry cache.
 ///
-/// Optimization 5: Uses pre-computed beta and pinna LUTs to avoid per-bin exp()/powf().
 fn compute_xtc_filters_asymmetric_with_cache(
     params: &XtcPluginParams,
     num_bins: usize,
@@ -336,79 +310,11 @@ fn compute_xtc_filters_asymmetric_with_cache(
     let mut filter_rl = vec![Complex::new(0.0, 0.0); num_bins];
     let mut filter_rr = vec![Complex::new(0.0, 0.0); num_bins];
 
-    let asym = cache
-        .asymmetric
-        .as_ref()
-        .expect("asymmetric geometry required");
-    let a = asym.a;
     let max_gain_linear = 10.0_f32.powf(params.max_gain_db / 20.0);
-
-    // Pre-compute pinna LUTs: avoids 3× powf() per bin (Optimization 5)
-    // Angles are in degrees here: theta_right and theta_left are in radians, convert.
-    let pinna_ipsi_lut = if params.pinna_model_enabled {
-        Some(build_pinna_ipsi_lut(num_bins, cache.freq_per_bin))
-    } else {
-        None
-    };
-    let pinna_left_contra_lut = if params.pinna_model_enabled {
-        Some(build_pinna_contra_lut(
-            num_bins,
-            cache.freq_per_bin,
-            asym.theta_right.abs() * 180.0 / PI,
-        ))
-    } else {
-        None
-    };
-    let pinna_right_contra_lut = if params.pinna_model_enabled {
-        Some(build_pinna_contra_lut(
-            num_bins,
-            cache.freq_per_bin,
-            asym.theta_left.abs() * 180.0 / PI,
-        ))
-    } else {
-        None
-    };
-
     for bin in 0..num_bins {
         let freq = bin as f32 * cache.freq_per_bin;
-
-        // Pinna resonance: use pre-computed LUTs (Optimization 5)
-        let pinna_ipsi = pinna_ipsi_lut.as_deref().map_or(1.0, |lut| lut[bin]);
-
-        // Use pre-computed geometry values (Optimization 3)
-        let delay_left_ipsi = asym.delay_left_ipsi;
-        let delay_left_contra = asym.delay_left_contra;
-        let delay_right_ipsi = asym.delay_right_ipsi;
-        let delay_right_contra = asym.delay_right_contra;
-
-        // Left ear: ipsi speaker is left speaker, contra is right speaker.
-        // Use relative transfer functions: ipsilateral path is our reference.
-        let h_ll_ipsi = Complex::new(1.0, 0.0) * pinna_ipsi;
-        let pinna_left_contra = pinna_left_contra_lut.as_deref().map_or(1.0, |lut| lut[bin]);
-        let delta_t_left = delay_left_contra - delay_left_ipsi;
-        let h_ll_contra = contralateral_transfer(
-            params,
-            freq,
-            asym.angle_left_contra,
-            a,
-            asym.amplitude_ratio_left,
-            delta_t_left,
-        ) * pinna_left_contra;
-
-        // Right ear: ipsi speaker is right speaker, contra is left speaker
-        let h_rr_ipsi = Complex::new(1.0, 0.0) * pinna_ipsi;
-        let pinna_right_contra = pinna_right_contra_lut
-            .as_deref()
-            .map_or(1.0, |lut| lut[bin]);
-        let delta_t_right = delay_right_contra - delay_right_ipsi;
-        let h_rr_contra = contralateral_transfer(
-            params,
-            freq,
-            asym.angle_right_contra,
-            a,
-            asym.amplitude_ratio_right,
-            delta_t_right,
-        ) * pinna_right_contra;
+        let [[h_ll_ipsi, h_ll_contra], [h_rr_contra, h_rr_ipsi]] =
+            analytical_plant(params, cache, freq);
 
         // Integrate room reflections: add reflection contributions to transfer functions
         let (h_ll_ipsi_final, h_ll_contra_final, h_rr_ipsi_final, h_rr_contra_final) =
@@ -661,8 +567,7 @@ fn compute_xtc_filters_hrtf(
 /// - filter_ll: diagonal filter (direct path processing)
 /// - filter_lr: cross filter (crosstalk cancellation)
 ///
-/// Optimization 3: Uses pre-computed geometry cache.
-/// Optimization 5: Uses pre-computed beta and pinna LUTs to avoid per-bin exp()/powf().
+/// Geometry is prepared once; magnitude design remains off the audio thread.
 fn compute_xtc_filters_symmetric_with_cache(
     params: &XtcPluginParams,
     num_bins: usize,
@@ -672,47 +577,10 @@ fn compute_xtc_filters_symmetric_with_cache(
     let mut filter_ll = vec![Complex::new(0.0, 0.0); num_bins];
     let mut filter_lr = vec![Complex::new(0.0, 0.0); num_bins];
 
-    let sym = &cache.symmetric;
-    let a = sym.a;
     let max_gain_linear = 10.0_f32.powf(params.max_gain_db / 20.0);
-
-    // Pre-compute pinna LUTs: avoids 3× powf() per bin (Optimization 5)
-    let pinna_ipsi_lut = if params.pinna_model_enabled {
-        Some(build_pinna_ipsi_lut(num_bins, cache.freq_per_bin))
-    } else {
-        None
-    };
-    let pinna_contra_lut = if params.pinna_model_enabled {
-        Some(build_pinna_contra_lut(
-            num_bins,
-            cache.freq_per_bin,
-            sym.theta_rad.to_degrees(),
-        ))
-    } else {
-        None
-    };
-
     for bin in 0..num_bins {
         let freq = bin as f32 * cache.freq_per_bin;
-
-        // Use relative transfer functions: ipsilateral path is our reference (gain 1.0, phase 0)
-        let h_ipsi = Complex::new(1.0, 0.0);
-
-        // Contralateral path is relative to ipsilateral.
-        let h_contra = contralateral_transfer(
-            params,
-            freq,
-            sym.contra_angle,
-            a,
-            sym.amplitude_ratio,
-            sym.delay_contra - sym.delay_ipsi,
-        );
-
-        // Pinna resonance shaping: use pre-computed LUTs (Optimization 5)
-        let pinna_ipsi = pinna_ipsi_lut.as_deref().map_or(1.0, |lut| lut[bin]);
-        let pinna_contra = pinna_contra_lut.as_deref().map_or(1.0, |lut| lut[bin]);
-        let h_ipsi_shaped = h_ipsi * pinna_ipsi;
-        let h_contra_shaped = h_contra * pinna_contra;
+        let [[h_ipsi_shaped, h_contra_shaped], _] = analytical_plant(params, cache, freq);
 
         // Integrate room reflections: add reflection contributions to transfer functions
         let (h_ipsi_final, h_contra_final) = if let Some(room) = room_data {
@@ -793,84 +661,16 @@ pub(crate) fn compute_2x2_inverse(
     max_gain_linear: f32,
     bypass_neumann: bool,
 ) -> (Complex<f32>, Complex<f32>) {
-    let h_ipsi_mag_sq = h_ipsi.norm_sqr();
-    let h_contra_mag_sq = h_contra.norm_sqr();
-    let cross_term = (h_ipsi * h_contra.conj()).re * 2.0;
-
-    let diag = h_ipsi_mag_sq + h_contra_mag_sq + beta;
-    let off_diag = cross_term;
-
-    let det = diag * diag - off_diag * off_diag;
-
-    // Use a relative threshold to avoid falsely detecting singularity when the
-    // transfer function magnitudes are small (e.g., in a deep notch).
-    // An absolute 1e-10 triggers for |H| ~ 1e-3 where det ~ 1e-12, even though
-    // the matrix is perfectly invertible.
-    if det.abs() < 1e-10 * diag.abs() {
-        return (Complex::new(1.0, 0.0), Complex::new(0.0, 0.0));
-    }
-
-    let inv_diag = diag / det;
-    let inv_off_diag = -off_diag / det;
-
-    let h_ipsi_conj = h_ipsi.conj();
-    let h_contra_conj = h_contra.conj();
-
-    let w1_ipsi = h_ipsi_conj * inv_diag + h_contra_conj * inv_off_diag;
-    let w1_contra = h_ipsi_conj * inv_off_diag + h_contra_conj * inv_diag;
-
-    // Diagnostic bypass: skip Neumann refinement, return first-order inverse only
-    if bypass_neumann {
-        let w1_ipsi = soft_limit_complex_magnitude(w1_ipsi, max_gain_linear);
-        let w1_contra = soft_limit_complex_magnitude(w1_contra, max_gain_linear);
-        return (w1_ipsi, w1_contra);
-    }
-
-    // Neumann series refinement: W₂ = W₁ * (2I - C*W₁)
-    // Compute the product C*W₁ for the 2x2 symmetric matrix C = [[h_ipsi, h_contra], [h_contra, h_ipsi]]
-    //
-    // (C*W₁)[0,0] = h_ipsi * w1_ipsi + h_contra * w1_contra
-    // (C*W₁)[0,1] = h_ipsi * w1_contra + h_contra * w1_ipsi
-    let cw_00 = h_ipsi * w1_ipsi + h_contra * w1_contra;
-    let cw_01 = h_ipsi * w1_contra + h_contra * w1_ipsi;
-
-    // (2I - C*W₁)
-    let r_00 = Complex::new(2.0, 0.0) - cw_00;
-    let r_01 = Complex::new(0.0, 0.0) - cw_01;
-
-    // W₂ = W₁ * R where R = (2I - C*W₁)
-    // W₂[0,0] = w1_ipsi * r_00 + w1_contra * r_01  (but r is column-matched)
-    // For the one-ear case, the "matrix" is really [w_ipsi, w_contra] (row vector)
-    // times the 2x2 correction matrix R = [[r_00, r_01], [r_01, r_00]] (also symmetric)
-    let w2_ipsi_full = w1_ipsi * r_00 + w1_contra * r_01;
-    let w2_contra_full = w1_contra * r_00 + w1_ipsi * r_01;
-
-    // Dampen refinement: blend 70% between first-order (w1) and full refinement (w2).
-    // Prevents over-amplification at ill-conditioned bins where refinement diverges.
-    let w2_ipsi = w1_ipsi + (w2_ipsi_full - w1_ipsi) * 0.7;
-    let w2_contra = w1_contra + (w2_contra_full - w1_contra) * 0.7;
-
-    // Per-bin fallback: if refinement increased cancellation error, use first-order.
-    // At ill-conditioned bins (spectral radius > ~1.43), Neumann series diverges.
-    let w1_ipsi_limited = soft_limit_complex_magnitude(w1_ipsi, max_gain_linear);
-    let w1_contra_limited = soft_limit_complex_magnitude(w1_contra, max_gain_linear);
-    let w2_ipsi_limited = soft_limit_complex_magnitude(w2_ipsi, max_gain_linear);
-    let w2_contra_limited = soft_limit_complex_magnitude(w2_contra, max_gain_linear);
-
-    let identity = Complex::new(1.0, 0.0);
-    let err1_diag = h_ipsi * w1_ipsi_limited + h_contra * w1_contra_limited - identity;
-    let err1_off = h_ipsi * w1_contra_limited + h_contra * w1_ipsi_limited;
-    let err1_sq = err1_diag.norm_sqr() + err1_off.norm_sqr();
-
-    let err2_diag = h_ipsi * w2_ipsi_limited + h_contra * w2_contra_limited - identity;
-    let err2_off = h_ipsi * w2_contra_limited + h_contra * w2_ipsi_limited;
-    let err2_sq = err2_diag.norm_sqr() + err2_off.norm_sqr();
-
-    if err2_sq <= err1_sq {
-        (w2_ipsi_limited, w2_contra_limited)
-    } else {
-        (w1_ipsi_limited, w1_contra_limited)
-    }
+    let (ll, lr, _, _) = compute_full_2x2_inverse(
+        h_ipsi,
+        h_contra,
+        h_contra,
+        h_ipsi,
+        beta,
+        max_gain_linear,
+        bypass_neumann,
+    );
+    (ll, lr)
 }
 
 /// Compute full 2x2 regularized inverse for asymmetric crosstalk cancellation.
@@ -889,6 +689,31 @@ fn compute_full_2x2_inverse(
     max_gain_linear: f32,
     bypass_neumann: bool,
 ) -> (Complex<f32>, Complex<f32>, Complex<f32>, Complex<f32>) {
+    // Filter preparation runs off the callback. Use f64 for the Gram determinant
+    // and inverse/refinement arithmetic: the four-path model can be nearly rank
+    // deficient at a quarter turn, where f32 cancellation spoiled mirror limits.
+    let widen = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
+    let [h_ll, h_lr, h_rl, h_rr] = [h_ll, h_lr, h_rl, h_rr].map(widen);
+    let beta = f64::from(beta);
+    let max_gain_linear = f64::from(max_gain_linear);
+    let limit = |c: Complex<f64>, ceiling: f64| {
+        let magnitude = c.norm();
+        let knee = ceiling * 0.5;
+        if magnitude <= knee {
+            c
+        } else {
+            c * ((knee + knee * ((magnitude - knee) / knee).tanh()) / magnitude)
+        }
+    };
+    let pack = |values: (Complex<f64>, Complex<f64>, Complex<f64>, Complex<f64>)| {
+        let narrow = |c: Complex<f64>| Complex::new(c.re as f32, c.im as f32);
+        (
+            narrow(values.0),
+            narrow(values.1),
+            narrow(values.2),
+            narrow(values.3),
+        )
+    };
     // 1. Compute A = C^H * C + beta * I
     // C^H = [[h_ll*, h_rl*],
     //        [h_lr*, h_rr*]]
@@ -905,7 +730,7 @@ fn compute_full_2x2_inverse(
 
     // 2. Compute inv(A) = (1/det) * [[a_11, -a_01], [-a_10, a_00]]
     let det = a_00 * a_11 - a_01.norm_sqr();
-    if det.abs() < 1e-10 {
+    if det == 0.0 || det.abs() < 1e-10 * (a_00 * a_11).abs() {
         return (
             Complex::new(1.0, 0.0),
             Complex::new(0.0, 0.0),
@@ -934,11 +759,11 @@ fn compute_full_2x2_inverse(
     let w1_rr = inv_a_10 * h_rl.conj() + inv_a_11 * h_rr.conj();
 
     if bypass_neumann {
-        let w1_ll_limit = soft_limit_complex_magnitude(w1_ll, max_gain_linear);
-        let w1_lr_limit = soft_limit_complex_magnitude(w1_lr, max_gain_linear);
-        let w1_rl_limit = soft_limit_complex_magnitude(w1_rl, max_gain_linear);
-        let w1_rr_limit = soft_limit_complex_magnitude(w1_rr, max_gain_linear);
-        return (w1_ll_limit, w1_lr_limit, w1_rl_limit, w1_rr_limit);
+        let w1_ll_limit = limit(w1_ll, max_gain_linear);
+        let w1_lr_limit = limit(w1_lr, max_gain_linear);
+        let w1_rl_limit = limit(w1_rl, max_gain_linear);
+        let w1_rr_limit = limit(w1_rr, max_gain_linear);
+        return pack((w1_ll_limit, w1_lr_limit, w1_rl_limit, w1_rr_limit));
     }
 
     // Neumann series refinement: W₂ = W₁ * (2I - C*W₁)
@@ -973,15 +798,15 @@ fn compute_full_2x2_inverse(
     let w2_rl = w1_rl + (w2_rl_full - w1_rl) * 0.7;
     let w2_rr = w1_rr + (w2_rr_full - w1_rr) * 0.7;
 
-    let w1_ll_limit = soft_limit_complex_magnitude(w1_ll, max_gain_linear);
-    let w1_lr_limit = soft_limit_complex_magnitude(w1_lr, max_gain_linear);
-    let w1_rl_limit = soft_limit_complex_magnitude(w1_rl, max_gain_linear);
-    let w1_rr_limit = soft_limit_complex_magnitude(w1_rr, max_gain_linear);
+    let w1_ll_limit = limit(w1_ll, max_gain_linear);
+    let w1_lr_limit = limit(w1_lr, max_gain_linear);
+    let w1_rl_limit = limit(w1_rl, max_gain_linear);
+    let w1_rr_limit = limit(w1_rr, max_gain_linear);
 
-    let w2_ll_limit = soft_limit_complex_magnitude(w2_ll, max_gain_linear);
-    let w2_lr_limit = soft_limit_complex_magnitude(w2_lr, max_gain_linear);
-    let w2_rl_limit = soft_limit_complex_magnitude(w2_rl, max_gain_linear);
-    let w2_rr_limit = soft_limit_complex_magnitude(w2_rr, max_gain_linear);
+    let w2_ll_limit = limit(w2_ll, max_gain_linear);
+    let w2_lr_limit = limit(w2_lr, max_gain_linear);
+    let w2_rl_limit = limit(w2_rl, max_gain_linear);
+    let w2_rr_limit = limit(w2_rr, max_gain_linear);
 
     let identity = Complex::new(1.0, 0.0);
     // Error for W1 = C*W1 - I
@@ -998,11 +823,11 @@ fn compute_full_2x2_inverse(
     let err2_11 = h_rl * w2_lr_limit + h_rr * w2_rr_limit - identity;
     let err2_sq = err2_00.norm_sqr() + err2_01.norm_sqr() + err2_10.norm_sqr() + err2_11.norm_sqr();
 
-    if err2_sq <= err1_sq {
+    pack(if err2_sq <= err1_sq {
         (w2_ll_limit, w2_lr_limit, w2_rl_limit, w2_rr_limit)
     } else {
         (w1_ll_limit, w1_lr_limit, w1_rl_limit, w1_rr_limit)
-    }
+    })
 }
 
 /// Compute condition-number based regularization parameter β(f).
@@ -1038,7 +863,31 @@ pub(crate) fn compute_beta_condition_number_full(
     apply_beta_freq_boosts(beta, freq, params)
 }
 
+#[cfg(test)]
 #[inline]
 pub(crate) fn compute_path_length(distance: f32, theta: f32, ear_offset: f32) -> f32 {
     ((distance * theta.sin() + ear_offset).powi(2) + (distance * theta.cos()).powi(2)).sqrt()
+}
+
+#[cfg(test)]
+mod singular_plant_tests {
+    use super::*;
+
+    #[test]
+    fn zero_plant_has_explicit_singular_and_regularized_outcomes() {
+        let zero = Complex::new(0.0, 0.0);
+        let one = Complex::new(1.0, 0.0);
+        assert_eq!(
+            compute_full_2x2_inverse(zero, zero, zero, zero, 0.0, 4.0, true),
+            (one, zero, zero, one)
+        );
+        // Positive beta makes the Gram matrix invertible even at small scale;
+        // its zero adjoint yields zero, rather than an absolute-threshold fallback.
+        for beta in [0.000001, 0.01] {
+            assert_eq!(
+                compute_full_2x2_inverse(zero, zero, zero, zero, beta, 4.0, true),
+                (zero, zero, zero, zero)
+            );
+        }
+    }
 }

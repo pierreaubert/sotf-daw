@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "quarter_turn_spherical",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 9.39115137513727,
+  "stdout": "",
+  "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\nerror[E0432]: unresolved import `sotf_host::assert_no_allocs`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/tests.rs:17:5\n    |\n 17 | use sotf_host::assert_no_allocs;\n    |     ^^^^^^^^^^^----------------\n    |                |\n    |                no `assert_no_allocs` in the root\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:70\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                                                                      ^^^^^^^^^^^^^^^^\n\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/realtime_tests.rs:26:29\n    |\n 26 |         unsafe { sotf_host::CountingAlloc.alloc(layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/realtime_tests.rs:36:29\n    |\n 36 |         unsafe { sotf_host::CountingAlloc.dealloc(ptr, layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nSome errors have detailed explanations: E0425, E0432.\nFor more information about an error, try `rustc --explain E0425`.\nerror: could not compile `sotf-plugin-xtc` (lib test) due to 3 previous errors\n"
+}

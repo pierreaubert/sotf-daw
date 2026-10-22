@@ -226,37 +226,43 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
                     let rx = d * theta.sin() - f64::from(x);
                     let dl = lx.hypot(forward);
                     let dr = rx.hypot(forward);
-                    let left_angle = -lx.atan2(forward) + yaw;
-                    let right_angle = rx.atan2(forward) - yaw;
                     for bin in [8, 40, 80, 180, 340] {
                         let frequency = rate as f32 * bin as f32 / 2048.0;
-                        let cross = |angle: f64, ipsi: f64, contra_ipsi: f64| {
-                            let delta = radius * (angle.abs() + angle.abs().sin());
-                            let contra = contra_ipsi + delta;
+                        let ranges = [dl, dr];
+                        let reference = (dl + dr) * 0.5;
+                        let mut plant = [[Complex::new(0.0, 0.0); 2]; 2];
+                        for (speaker, sx) in [lx, rx].into_iter().enumerate() {
+                            let projection = ((sx * yaw.cos() - forward * yaw.sin())
+                                / ranges[speaker])
+                                .clamp(-1.0, 1.0);
+                            let gamma_near = projection.abs().acos();
+                            let delta = radius * (projection.abs().asin() + projection.abs());
                             let mu = (std::f64::consts::TAU * f64::from(frequency) * radius
                                 / 343.0)
                                 .min(20.0);
                             let alpha = (1.0 + mu * mu / 4.0).sqrt().recip();
-                            let incidence = (std::f64::consts::FRAC_PI_2 + angle.abs())
-                                .min(std::f64::consts::PI);
-                            let magnitude =
-                                (alpha + (1.0 - alpha) * (incidence / 2.0).cos()) * ipsi / contra;
-                            let path = Complex::from_polar(
-                                1.0,
-                                -std::f64::consts::TAU * f64::from(frequency) * (contra - ipsi)
-                                    / 343.0,
-                            );
-                            let shadowed = path * magnitude;
-                            if mode == "explicit_delay" {
-                                let blend =
-                                    1.0 / (1.0 + ((f64::from(frequency) - 300.0) / 50.0).exp());
-                                path * blend + shadowed * (1.0 - blend)
-                            } else {
-                                shadowed
+                            let head = |gamma: f64| alpha + (1.0 - alpha) * (gamma * 0.5).cos();
+                            for (ear, side) in [-1.0, 1.0].into_iter().enumerate() {
+                                let gamma = (side * projection).acos();
+                                let extra = if side * projection < 0.0 { delta } else { 0.0 };
+                                let amplitude = head(gamma) / head(gamma_near) * reference
+                                    / (ranges[speaker] + extra);
+                                let amplitude = if mode == "explicit_delay" {
+                                    let blend =
+                                        1.0 / (1.0 + ((f64::from(frequency) - 300.0) / 50.0).exp());
+                                    blend + amplitude * (1.0 - blend)
+                                } else {
+                                    amplitude
+                                };
+                                plant[ear][speaker] = Complex::from_polar(
+                                    amplitude,
+                                    -std::f64::consts::TAU
+                                        * f64::from(frequency)
+                                        * (ranges[speaker] - reference + extra)
+                                        / 343.0,
+                                );
                             }
-                        };
-                        let left = cross(right_angle, dl, dr);
-                        let right = cross(left_angle, dr, dl);
+                        }
                         let f64c = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
                         let ll = f64c(filters.filter_ll[bin]);
                         let lr = f64c(filters.filter_lr[bin]);
@@ -265,8 +271,12 @@ fn selected_brown_duda_model_matches_independent_complex_oracle() {
                         let rr =
                             f64c(filters.filter_rr.as_ref().unwrap_or(&filters.filter_ll)[bin]);
                         let expected = [
-                            20.0 * (right.norm() / (right * ll + rl).norm()).log10(),
-                            20.0 * (left.norm() / (lr + left * rr).norm()).log10(),
+                            20.0 * (plant[1][0].norm()
+                                / (plant[1][0] * ll + plant[1][1] * rl).norm())
+                            .log10(),
+                            20.0 * (plant[0][1].norm()
+                                / (plant[0][0] * lr + plant[0][1] * rr).norm())
+                            .log10(),
                         ];
                         let actual = predict_analytic_cancellation(&p, rate, frequency).unwrap();
                         for (a, e) in actual.metrics.raw_depth_db.iter().zip(expected) {

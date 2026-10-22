@@ -1,0 +1,8 @@
+{
+  "words": 4100,
+  "changed_words": 4094,
+  "maximum_absolute_word_difference": 0.1256178915500641,
+  "old_fixture_sha256": "7c2678dd5d2864731c41202a51d54f098ed0400504cbafb8259acaedf5643260",
+  "new_fixture_sha256": "c513fab27fabc96117fc439c14173cd975a4f762a89bccaf9c7466146d02c3e3",
+  "scope": "Intentional analytical-model change; old centered fixture remains preserved. New fixture captured only after independent geometry/Brown-Duda inverse checks, mirror and continuity gates passed."
+}

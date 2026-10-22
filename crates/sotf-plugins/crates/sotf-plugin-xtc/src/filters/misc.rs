@@ -1,4 +1,5 @@
 use rustfft::num_complex::Complex;
+#[cfg(test)]
 use std::f32::consts::PI;
 
 /// Speed of sound at 20°C in m/s
@@ -45,6 +46,7 @@ pub(crate) fn soft_limit_complex_magnitude(c: Complex<f32>, max_mag: f32) -> Com
 ///
 /// For angle <= PI/2: extra_path = a * (angle + sin(angle))
 /// For angle > PI/2:  extra_path = a * (PI - angle + sin(angle))
+#[cfg(test)]
 #[inline]
 pub(crate) fn woodworth_diffraction_path(angle_rad: f32, head_radius: f32) -> f32 {
     let theta = angle_rad.abs().min(PI);
@@ -62,6 +64,7 @@ pub(crate) fn woodworth_diffraction_path(angle_rad: f32, head_radius: f32) -> f3
 /// (same side) is at 90° from center, and the contralateral ear (opposite side) is at
 /// -90°. The angular separation from source to contralateral ear, measured around the
 /// head surface, is approximately PI/2 + speaker_angle.
+#[cfg(test)]
 #[inline]
 pub(crate) fn contralateral_shadow_angle(speaker_angle_rad: f32) -> f32 {
     (PI / 2.0 + speaker_angle_rad).min(PI)
@@ -79,25 +82,20 @@ pub(super) fn condition_number_2x2(
     h10: Complex<f32>,
     h11: Complex<f32>,
 ) -> f32 {
-    // Frobenius norm squared = |h00|^2 + |h01|^2 + |h10|^2 + |h11|^2
-    let frob_sq = h00.norm_sqr() + h01.norm_sqr() + h10.norm_sqr() + h11.norm_sqr();
-    // |det(C)|^2 = |h00*h11 - h01*h10|^2
-    let det = h00 * h11 - h01 * h10;
-    let det_sq = det.norm_sqr();
-
-    if det_sq < 1e-20 {
-        return 1e6; // Effectively singular
+    // Use widened, scale-independent arithmetic. Subtracting the two close
+    // eigenvalue roots in f32 made mirrored near-singular plants choose
+    // different regularization strengths.
+    let widen = |c: Complex<f32>| Complex::new(f64::from(c.re), f64::from(c.im));
+    let [a, b, c, d] = [h00, h01, h10, h11].map(widen);
+    let frobenius = a.norm_sqr() + b.norm_sqr() + c.norm_sqr() + d.norm_sqr();
+    let determinant = (a * d - b * c).norm();
+    if determinant == 0.0 || frobenius == 0.0 {
+        return 1e6;
     }
-
-    // For 2x2: σ_max^2 + σ_min^2 = frob_sq, σ_max * σ_min = |det|
-    // σ_max^2 = (frob_sq + sqrt(frob_sq^2 - 4*det_sq)) / 2
-    // σ_min^2 = (frob_sq - sqrt(frob_sq^2 - 4*det_sq)) / 2
-    let disc = (frob_sq * frob_sq - 4.0 * det_sq).max(0.0);
-    let disc_sqrt = disc.sqrt();
-    let sigma_max_sq = (frob_sq + disc_sqrt) * 0.5;
-    let sigma_min_sq = (frob_sq - disc_sqrt).max(1e-20) * 0.5;
-
-    (sigma_max_sq / sigma_min_sq).sqrt()
+    let discriminant = (frobenius * frobenius - 4.0 * determinant * determinant).max(0.0);
+    let largest_squared = (frobenius + discriminant.sqrt()) * 0.5;
+    // sigma_min = |det(C)| / sigma_max avoids cancellation in the small root.
+    (largest_squared / determinant) as f32
 }
 
 /// Smooth sigmoid function for gradual transitions
@@ -142,5 +140,38 @@ mod rear_diffraction_tests {
             "rear_diffraction cases={cases} maximum_error_m={maximum_error} failed_values={failures}"
         );
         assert_eq!(failures, 0);
+    }
+}
+
+#[cfg(test)]
+mod condition_number_tests {
+    use super::*;
+
+    #[test]
+    fn small_singular_value_and_scale_do_not_change_condition_number() {
+        for epsilon in [0.01_f32, 0.0001, 0.000001] {
+            let cross = 1.0 - epsilon;
+            let expected = (1.0 + f64::from(cross)) / (1.0 - f64::from(cross));
+            for exponent in [-40, 0, 40] {
+                let scale = 2.0_f32.powi(exponent);
+                let diagonal = Complex::new(scale, 0.0);
+                let off_diagonal = Complex::new(cross * scale, 0.0);
+                let actual = condition_number_2x2(diagonal, off_diagonal, off_diagonal, diagonal);
+                let relative_error = (f64::from(actual) / expected - 1.0).abs();
+                println!(
+                    "condition epsilon={epsilon} scale_exponent={exponent} actual={actual} expected={expected} relative_error={relative_error}"
+                );
+                assert!(relative_error < 1e-5);
+            }
+        }
+        assert_eq!(
+            condition_number_2x2(
+                Complex::new(1.0, 0.0),
+                Complex::new(1.0, 0.0),
+                Complex::new(1.0, 0.0),
+                Complex::new(1.0, 0.0)
+            ),
+            1e6
+        );
     }
 }

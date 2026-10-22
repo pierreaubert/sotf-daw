@@ -1,0 +1,77 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-xtc",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "inverse",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 17.6000572910998,
+    "stdout": "\nrunning 3 tests\ntest tests::test_2x2_inverse_no_identity_fallback_for_small_transfer_functions ... ok\nindependent_inverse cases=324 maximum_complex_error=5.018933916688317e-7\ntest filters::compute::transfer_audit_tests::regularized_inverse_matches_independent_cholesky_plants ... ok\ntest tests::sofa_delay_tests::xtc_plant_delay_matches_analytic_response_and_inverse_cascade ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 188 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 17.51s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-xtc",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--lib",
+      "zero_plant_has_explicit",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.25972166704013944,
+    "stdout": "\nrunning 1 test\ntest filters::compute::singular_plant_tests::zero_plant_has_explicit_singular_and_regularized_outcomes ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 190 filtered out; finished in 0.00s\n\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.21s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-xtc",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.522724957903847,
+    "stdout": "",
+    "stderr": "    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 1.43s\n"
+  }
+]

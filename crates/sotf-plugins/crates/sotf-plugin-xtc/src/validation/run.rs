@@ -36,7 +36,8 @@ pub fn run_validation(params: &XtcPluginParams, sample_rate: u32) -> ValidationR
     // A correct XTC setup should have ITD matching the Woodworth formula
     let expected_itd = reference_itd_ms(params.speaker_angle_deg, params.head_radius_m);
     let geometry = compute_geometry_cache(params, sample_rate, num_bins);
-    let measured_itd = (geometry.symmetric.delay_contra - geometry.symmetric.delay_ipsi) * 1_000.0;
+    let measured_itd =
+        (geometry.sources[1].delays[0] - geometry.sources[1].delays[1]).abs() * 1_000.0;
     results.push(ValidationResult::check(
         "ITD (ms) - Geometry Check",
         expected_itd,
@@ -47,18 +48,30 @@ pub fn run_validation(params: &XtcPluginParams, sample_rate: u32) -> ValidationR
     // 2. ILD validation at key frequencies
     // Note: ILD varies significantly with individual anatomy, so we use wider tolerances
     for &(freq, expected_ild) in REFERENCE_ILD_POINTS {
-        // Nominal head-shadow magnitude for the selected model, not measured
+        // Relative far/near head-shadow magnitude for the selected model, not measured
         // binaural ILD (which also includes pinna, geometry and room response).
         let shadow = head_shadowing_for_plant(
             freq,
-            geometry.symmetric.contra_angle,
+            geometry.sources[1]
+                .ear_angles
+                .into_iter()
+                .fold(0.0_f32, f32::max),
             params.head_radius_m,
             params.head_model,
             params.head_shadow_cutoff_hz,
             params.head_shadow_slope_db_per_octave,
         )
         .norm();
-        let measured_ild = -20.0 * shadow.max(1e-6).log10();
+        let near = head_shadowing_for_plant(
+            freq,
+            geometry.sources[1].near_angle,
+            params.head_radius_m,
+            params.head_model,
+            params.head_shadow_cutoff_hz,
+            params.head_shadow_slope_db_per_octave,
+        )
+        .norm();
+        let measured_ild = -20.0 * (shadow / near).max(1e-6).log10();
         results.push(ValidationResult::check(
             &format!("ILD @ {}Hz (dB)", freq),
             expected_ild,

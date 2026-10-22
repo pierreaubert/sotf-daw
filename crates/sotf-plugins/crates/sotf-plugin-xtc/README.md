@@ -94,11 +94,16 @@ false bin-dependent differences. Obsolete test-only display-depth bounds were re
 finite-value and independent arithmetic checks; historical
 minimum thresholds and the failed 8 kHz ILD tolerance are unchanged.
 
-The corrected default nominal report passes 15 of 17 comparisons. It still reports
-8 kHz ILD at 36.124 dB versus 12 dB (20 dB tolerance), and the 100 Hz request maps
-to a 93.75 Hz bin whose 4.986 dB raw cancellation misses the retained 5 dB minimum.
-Passing the Rust tests, stability checks or standard processing QA does not clear
-these model/reference failures.
+Before continuous ear-path normalization, the default nominal report passed
+15 of 17 comparisons: 8 kHz ILD was 36.124 dB versus 12 dB (20 dB tolerance),
+and the 100 Hz request selected a 93.75 Hz bin with 4.986 dB versus a 5 dB minimum.
+The continuous-path report passes 16 of 17: far/near shadow ILD is 28.627 dB,
+within that existing broad tolerance, while 93.75 Hz cancellation is 4.954 dB and
+still fails. This is an analytical reference comparison, not calibrated HRTF
+accuracy. The controlled 360-row point-source/echo mismatch matrix now has 140
+degraded normalized-separation rows (previously 134), with worst -5.382 dB
+(previously -5.010 dB). All rows remain; correcting model symmetry does not
+establish improved robustness.
 
 Prediction helpers allocate filter arrays and belong on a control/analysis thread,
 not in `process()`. Matrix evaluation operates only on supplied values.
@@ -172,3 +177,26 @@ FFT are rejected. Trailing zeros and long unselected measurements are safe.
 Existing absent/zero-delay and SQLite long-IR truncation remains unchanged and is
 a separate limitation. Old caches that discarded delay metadata must be
 reimported from their source SOFA file.
+
+## Continuous analytical ear paths
+
+Synthetic filter preparation now evaluates all four speaker-to-ear paths from
+the signed source projection onto the interaural axis. Near-ear ownership follows
+the source across either median plane. Each source's two magnitudes share its
+near-ear head-shadow/pinna reference, so they converge at a crossing. Both source
+columns use the mean center range as one smooth propagation reference. The
+explicit LF mode blends geometric/shadow magnitude toward unity before pinna
+shaping, retaining its existing 300 Hz crossover and 50 Hz width.
+
+This intentionally changes centered/default as well as displaced filters. The
+historical default coefficient fixture remains alongside a separate continuous
+path fixture. Per-source normalization and center-range plus far-ear extra arc
+remain relative analytical approximations; they are not exact finite-distance
+ear-surface paths or measured HRTFs. At a quarter turn the spherical plant can
+be rank deficient, so no inverse can independently reproduce both ear cues.
+
+Geometry and inverse preparation use f64 internally; audio and stored filters
+remain f32. Stable condition-number arithmetic avoids subtracting close singular
+value roots. Design and diagnostics share the plant; the callback still adopts
+prepared filters through the existing bounded worker exchange. Parameter and
+preset schemas, FFT latency, gain limits and callback ownership stay unchanged.

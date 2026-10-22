@@ -88,8 +88,13 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
 - Any nonzero lateral offset or yaw selects the asymmetric matrix. Positive X
   points right, matching the room-reflection coordinates. Exact centered/yaw-zero
   geometry retains the optimized symmetric path.
-- Share the contralateral transfer/LF blend between both geometry paths and
-  diagnostics. Pinna shaping follows the blend; geometric delay owns ITD once.
+- Share the continuous four-path analytical plant between symmetric/full design
+  and diagnostics. Source projection selects ear incidence and the extra far-ear
+  arc; matrix indices identify ears/speakers without assuming fixed near ears.
+- Normalize both paths of each source by its near-ear shadow/pinna response.
+  Use the mean source-center range as a common smooth amplitude/time reference;
+  taking the minimum creates a cusp at the centered pose. The explicit LF mode
+  blends geometric/shadow magnitude toward unity before pinna shaping.
 - Keep mirror, near-center, independent arithmetic, rendered two-column routing,
   callback partition, reset, latency and zero-heap regressions. A finite pose
   change legitimately changes coefficients: distinguish that first-order response
@@ -98,15 +103,17 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
   head-center range and incidence. Positive Z points toward speakers; positive yaw
   turns right and must not change center range. Keep effective symmetric depth
   incidence shared by pinna shaping and diagnostics.
-- The legacy diffraction model still uses center ranges as path references and
-  fixed left/right ipsilateral assignments. Large-yaw ear reclassification,
-  ear-surface paths and measured calibration remain open. Cartesian arithmetic and
-  routing tests do not resolve those physical-model limitations.
-
-- `woodworth_diffraction_path` accepts source azimuth magnitude, not an ear-normal
-  shadow angle. Fold rear incidence through `pi-theta`; antipodal ears require
-  zero extra path at both median-plane directions. Keep the independent signed
-  projection oracle and front/default coefficient fixture.
-- Correct geometric path magnitude does not establish correct yaw-dependent ear
-  assignment. Reassigning fixed matrix labels needs continuous per-path amplitude
-  and phase references; do not introduce a median-plane gain jump with a sign flip.
+- Center-range plus spherical extra-arc paths remain an approximation, not exact
+  finite-distance ear-surface acoustics or measured human HRTFs. Per-source
+  near-ear normalization intentionally changes centered/default coefficients.
+  Preserve the historical fixture and the new continuous-path fixture separately.
+- Prepare geometry and inverse arithmetic in f64 off the callback. Compute the
+  small singular value through the determinant/product relation rather than
+  subtracting nearly equal eigenvalue roots. Preserve mirror/scale invariance,
+  relative singularity checks and the existing gain limits.
+- Retain quarter-turn equal-column and front/rear median-crossing regressions.
+  An antipodal sphere without pinna cues must give equal source columns at a
+  quarter turn; this rank-deficient geometry cannot provide independent ear cues.
+- Keep prior mismatch/report failures as historical evidence. Shared-model
+  predictions and spherical symmetry tests do not establish measured robustness,
+  reconstructed true peaks, native deadlines or listening quality.

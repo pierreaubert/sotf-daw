@@ -1,0 +1,28 @@
+{
+  "passed_tests": 247,
+  "final_inverse_regressions": 4,
+  "final_focused_crossing_tests": 2,
+  "nominal_report_passed_comparisons": 16,
+  "nominal_report_total_comparisons": 17,
+  "existing_ignored": 1,
+  "quarter_turn_comparisons": 80,
+  "median_crossing_cases": 240,
+  "independent_geometry_poses": 102,
+  "independent_inverse_cases": 324,
+  "independent_brown_duda_predictions": 360,
+  "mirror_cases": 216,
+  "center_continuity_cases": 720,
+  "rendered_pose_cases": 120,
+  "rendered_mismatch_cases": 360,
+  "degraded_mismatch_cases": 140,
+  "worst_normalized_mismatch_db": -5.382083279546792,
+  "default_coefficient_change": {
+    "words": 4100,
+    "changed_words": 4094,
+    "maximum_absolute_word_difference": 0.1256178915500641,
+    "old_fixture_sha256": "7c2678dd5d2864731c41202a51d54f098ed0400504cbafb8259acaedf5643260",
+    "new_fixture_sha256": "c513fab27fabc96117fc439c14173cd975a4f762a89bccaf9c7466146d02c3e3",
+    "scope": "Intentional analytical-model change; old centered fixture remains preserved. New fixture captured only after independent geometry/Brown-Duda inverse checks, mirror and continuity gates passed."
+  },
+  "scope": "Controlled analytical/rendered tests; measured HRTF/room robustness, finite-distance ear-surface paths, native deadlines, reconstructed true peaks and listening acceptance remain open."
+}

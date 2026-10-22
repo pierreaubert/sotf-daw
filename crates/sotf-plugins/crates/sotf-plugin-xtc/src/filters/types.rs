@@ -25,33 +25,14 @@ pub(crate) struct HrtfTransferFunctions {
 /// per frequency bin, avoiding redundant sqrt/trig operations.
 pub(crate) struct GeometryCache {
     pub freq_per_bin: f32,
-    // Symmetric geometry (yaw ~= 0)
-    pub symmetric: SymmetricGeometry,
-    // Asymmetric geometry (yaw != 0), computed lazily
-    pub asymmetric: Option<AsymmetricGeometry>,
+    pub sources: [SourceGeometry; 2],
+    pub is_symmetric: bool,
 }
 
-/// Geometry values for symmetric XTC (yaw ~= 0).
-pub(crate) struct SymmetricGeometry {
-    pub a: f32,
-    pub theta_rad: f32,
-    pub amplitude_ratio: f32,
-    pub delay_ipsi: f32,
-    pub delay_contra: f32,
-    pub contra_angle: f32,
-}
-
-/// Geometry values for asymmetric XTC (yaw != 0).
-pub(crate) struct AsymmetricGeometry {
-    pub a: f32,
-    pub theta_left: f32,
-    pub theta_right: f32,
-    pub amplitude_ratio_left: f32,
-    pub delay_left_ipsi: f32,
-    pub delay_left_contra: f32,
-    pub angle_left_contra: f32,
-    pub amplitude_ratio_right: f32,
-    pub delay_right_ipsi: f32,
-    pub delay_right_contra: f32,
-    pub angle_right_contra: f32,
+/// One source's continuous antipodal-ear geometry, prepared off the audio thread.
+pub(crate) struct SourceGeometry {
+    pub near_angle: f32,
+    pub ear_angles: [f32; 2],
+    pub amplitudes: [f32; 2],
+    pub delays: [f32; 2],
 }

@@ -3,8 +3,7 @@
 // Rust guideline compliant 2026-02-21
 use super::super::config::XtcPluginParams;
 use super::super::filters::{
-    GeometryCache, XtcFilters, compute_geometry_cache, compute_xtc_filters_full,
-    contralateral_transfer, pinna_resonance, pinna_resonance_contra,
+    XtcFilters, analytical_plant, compute_geometry_cache, compute_xtc_filters_full,
 };
 use super::matrix::{CancellationMetrics, ComplexTransferMatrix, evaluate_cancellation};
 use rustfft::num_complex::Complex;
@@ -74,62 +73,6 @@ fn selected_bin(params: &XtcPluginParams, sample_rate: u32, frequency: f32) -> O
 
 fn pack(matrix: [[Complex<f32>; 2]; 2]) -> ComplexTransferMatrix {
     matrix.map(|row| row.map(|c| [f64::from(c.re), f64::from(c.im)]))
-}
-
-fn analytical_plant(
-    params: &XtcPluginParams,
-    cache: &GeometryCache,
-    freq: f32,
-) -> [[Complex<f32>; 2]; 2] {
-    let ipsi = if params.pinna_model_enabled {
-        pinna_resonance(freq)
-    } else {
-        1.0
-    };
-    let cross = |angle: f32, radius: f32, amplitude: f32, delay: f32, pinna_angle: f32| {
-        let transfer = contralateral_transfer(params, freq, angle, radius, amplitude, delay);
-        let pinna = if params.pinna_model_enabled {
-            pinna_resonance_contra(freq, pinna_angle)
-        } else {
-            1.0
-        };
-        (transfer, pinna)
-    };
-    if let Some(asym) = &cache.asymmetric {
-        let (left, left_pinna) = cross(
-            asym.angle_left_contra,
-            asym.a,
-            asym.amplitude_ratio_left,
-            asym.delay_left_contra - asym.delay_left_ipsi,
-            asym.theta_right.abs().to_degrees(),
-        );
-        let (right, right_pinna) = cross(
-            asym.angle_right_contra,
-            asym.a,
-            asym.amplitude_ratio_right,
-            asym.delay_right_contra - asym.delay_right_ipsi,
-            asym.theta_left.abs().to_degrees(),
-        );
-        [
-            [Complex::new(ipsi, 0.0), left * left_pinna],
-            [right * right_pinna, Complex::new(ipsi, 0.0)],
-        ]
-    } else {
-        let sym = &cache.symmetric;
-        let delay = sym.delay_contra - sym.delay_ipsi;
-        let (contra, pinna) = cross(
-            sym.contra_angle,
-            sym.a,
-            sym.amplitude_ratio,
-            delay,
-            sym.theta_rad.to_degrees(),
-        );
-        let contra = contra * pinna;
-        [
-            [Complex::new(ipsi, 0.0), contra],
-            [contra, Complex::new(ipsi, 0.0)],
-        ]
-    }
 }
 
 pub(crate) fn prediction_with_filters(
@@ -261,4 +204,125 @@ pub fn measure_cancellation_depth_spectrum(
             )
         })
         .collect()
+}
+
+#[cfg(test)]
+mod source_crossing_tests {
+    use super::*;
+
+    #[test]
+    fn quarter_turn_spherical_sources_have_equal_transfer_columns() {
+        let mut cases = 0;
+        let mut failures = 0;
+        let mut maximum_error = 0.0_f32;
+        for head_model in [0, 1] {
+            for yaw in [-90.0, 90.0] {
+                for mode in ["phase_only", "explicit_delay"] {
+                    let params = XtcPluginParams {
+                        head_model,
+                        head_yaw_deg: yaw,
+                        itd_modeling: mode.into(),
+                        pinna_model_enabled: false,
+                        ..Default::default()
+                    };
+                    let cache = compute_geometry_cache(&params, 48_000, 1025);
+                    for frequency in [0.0, 93.75, 1000.0, 4000.0, 8000.0] {
+                        let plant = analytical_plant(&params, &cache, frequency);
+                        // At a quarter turn, both symmetric sources have equal
+                        // projection onto the interaural axis and equal range.
+                        // An antipodal spherical model without pinna cues must
+                        // therefore give equal columns, independently of ear-row
+                        // normalization. This is not a measured-human claim.
+                        for row in plant {
+                            let error = (row[0] - row[1]).norm();
+                            maximum_error = maximum_error.max(error);
+                            failures += usize::from(error > 2e-5);
+                            cases += 1;
+                        }
+                    }
+                }
+            }
+        }
+        println!(
+            "quarter_turn cases={cases} failed_values={failures} maximum_error={maximum_error}"
+        );
+        assert_eq!(failures, 0);
+    }
+    #[test]
+    fn both_ear_paths_converge_at_front_and_rear_source_crossings() {
+        let mut cases = 0;
+        let mut maximum_ear_error = 0.0_f32;
+        let mut maximum_pose_difference = 0.0_f32;
+        for head_model in [0, 1] {
+            for pinna in [false, true] {
+                for mode in ["phase_only", "explicit_delay"] {
+                    for (distance, angle, x, z, rear) in [
+                        (1.0_f32, 30.0_f32, 0.0, 0.0, false),
+                        (1.0, 30.0, 0.1, 0.5, false),
+                        (0.5, 60.0, 0.0, 0.5, true),
+                    ] {
+                        for speaker in [0, 1] {
+                            let side = if speaker == 0 { -1.0 } else { 1.0 };
+                            let sx = side * distance * angle.to_radians().sin() - x;
+                            let sz = distance * angle.to_radians().cos() - z;
+                            let azimuth = sx.atan2(sz).to_degrees();
+                            let yaw = if rear {
+                                azimuth - side * 180.0
+                            } else {
+                                azimuth
+                            };
+                            let params = XtcPluginParams {
+                                distance_m: distance,
+                                speaker_angle_deg: angle,
+                                head_offset_x: x,
+                                head_offset_z: z,
+                                head_yaw_deg: yaw,
+                                head_model,
+                                pinna_model_enabled: pinna,
+                                itd_modeling: mode.into(),
+                                ..Default::default()
+                            };
+                            for frequency in [93.75, 1000.0, 2700.0, 4500.0, 8000.0] {
+                                let plant = analytical_plant(
+                                    &params,
+                                    &compute_geometry_cache(&params, 48_000, 1025),
+                                    frequency,
+                                );
+                                let error = (plant[0][speaker] - plant[1][speaker]).norm();
+                                maximum_ear_error = maximum_ear_error.max(error);
+                                assert!(
+                                    error < 2e-5,
+                                    "median ears differ: yaw={yaw} frequency={frequency} error={error}"
+                                );
+                                let shifted = [-0.00001, 0.00001].map(|delta| {
+                                    let p = XtcPluginParams {
+                                        head_yaw_deg: yaw + delta,
+                                        ..params.clone()
+                                    };
+                                    analytical_plant(
+                                        &p,
+                                        &compute_geometry_cache(&p, 48_000, 1025),
+                                        frequency,
+                                    )
+                                });
+                                for (before, after) in shifted[0].iter().zip(&shifted[1]) {
+                                    let difference = (before[speaker] - after[speaker]).norm();
+                                    maximum_pose_difference =
+                                        maximum_pose_difference.max(difference);
+                                    assert!(
+                                        difference < 2e-4,
+                                        "source crossing jumps: yaw={yaw} frequency={frequency} difference={difference}"
+                                    );
+                                }
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        println!(
+            "source_crossings cases={cases} maximum_ear_error={maximum_ear_error} maximum_pose_difference={maximum_pose_difference}"
+        );
+    }
 }

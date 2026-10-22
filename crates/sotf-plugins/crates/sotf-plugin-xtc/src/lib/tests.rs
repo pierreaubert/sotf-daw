@@ -1070,9 +1070,6 @@ fn test_bypass_neumann_refinement() {
 /// normalization must use the correct cross-filter for each ear's response.
 #[test]
 fn test_asymmetric_spectral_norm_improves_ear_response() {
-    use rustfft::num_complex::Complex;
-    use std::f32::consts::PI;
-
     let num_bins = 513; // FFT_SIZE=1024
 
     // Filters WITHOUT spectral normalization
@@ -1093,8 +1090,6 @@ fn test_asymmetric_spectral_norm_improves_ear_response() {
     assert!(!filters_off.is_symmetric && !filters_on.is_symmetric);
 
     let cache = compute_geometry_cache(&params_on, 48000, num_bins);
-    let asym = cache.asymmetric.as_ref().unwrap();
-
     let bin_lo = (500.0 / cache.freq_per_bin) as usize;
     let bin_hi = (4000.0 / cache.freq_per_bin) as usize;
     let mut dev_off = 0.0_f64;
@@ -1102,12 +1097,7 @@ fn test_asymmetric_spectral_norm_improves_ear_response() {
 
     for bin in bin_lo..=bin_hi {
         let freq = bin as f32 * cache.freq_per_bin;
-        let h_ipsi = Complex::new(1.0_f32, 0.0);
-        let dt = asym.delay_left_contra - asym.delay_left_ipsi;
-        let g = head_shadowing_woodworth(freq, asym.angle_left_contra, asym.a)
-            * asym.amplitude_ratio_left;
-        let phase = -2.0 * PI * freq * dt;
-        let h_contra = Complex::new(g * phase.cos(), g * phase.sin());
+        let [[h_ipsi, h_contra], _] = filters::analytical_plant(&params_on, &cache, freq);
 
         // Correct ear response: h_ipsi * w_ll + h_contra * w_rl
         let ear_off = filters_off.filter_ll[bin] * h_ipsi
@@ -1168,7 +1158,6 @@ fn test_spectral_norm_does_not_exceed_gain_budget() {
 #[test]
 fn test_neumann_refinement_never_increases_error() {
     use filters::compute_2x2_inverse;
-    use std::f32::consts::PI;
 
     let mut params = XtcPluginParams::default();
     params.beta_base = 0.0003; // Low beta → ill-conditioned bins where Neumann diverges
@@ -1177,16 +1166,9 @@ fn test_neumann_refinement_never_increases_error() {
     let max_gain_linear = 10.0_f32.powf(params.max_gain_db / 20.0);
 
     let cache = compute_geometry_cache(&params, 48000, num_bins);
-    let sym = &cache.symmetric;
-
     for bin in 1..num_bins {
         let freq = bin as f32 * cache.freq_per_bin;
-
-        let h_ipsi = Complex::new(1.0, 0.0);
-        let delta_t = sym.delay_contra - sym.delay_ipsi;
-        let g = head_shadowing_woodworth(freq, sym.contra_angle, sym.a) * sym.amplitude_ratio;
-        let phase_contra = -2.0 * PI * freq * delta_t;
-        let h_contra = Complex::new(g * phase_contra.cos(), g * phase_contra.sin());
+        let [[h_ipsi, h_contra], _] = filters::analytical_plant(&params, &cache, freq);
 
         let beta = compute_beta_condition_number(h_ipsi, h_contra, freq, &params);
 
@@ -2092,18 +2074,18 @@ fn test_compute_geometry_cache_symmetric() {
     let cache = compute_geometry_cache(&params, 48000, 513);
 
     // Symmetric case has no asymmetric geometry
-    assert!(cache.asymmetric.is_none());
+    assert!(cache.is_symmetric);
 
     // freq_per_bin = sample_rate / (2 * (num_bins - 1))
     let expected_freq_per_bin = 48000.0 / (2.0 * 512.0);
     assert!((cache.freq_per_bin - expected_freq_per_bin).abs() < 1e-3);
 
     // Amplitude ratio should be between 0 and 1
-    assert!(cache.symmetric.amplitude_ratio > 0.0);
-    assert!(cache.symmetric.amplitude_ratio < 1.0);
+    assert!(cache.sources[0].amplitudes[1] > 0.0);
+    assert!(cache.sources[0].amplitudes[1] < 1.0);
 
     // Contra delay should be larger than ipsi delay
-    assert!(cache.symmetric.delay_contra > cache.symmetric.delay_ipsi);
+    assert!(cache.sources[0].delays[1] > cache.sources[0].delays[0]);
 }
 
 #[test]
@@ -2115,11 +2097,9 @@ fn test_compute_geometry_cache_asymmetric() {
     let cache = compute_geometry_cache(&params, 48000, 513);
 
     // Asymmetric case should have geometry
-    assert!(cache.asymmetric.is_some());
-    let asym = cache.asymmetric.as_ref().unwrap();
-
-    // Left and right angles should differ
-    assert!((asym.theta_left - asym.theta_right).abs() > 0.001);
+    assert!(!cache.is_symmetric);
+    // The two sources have different near-ear incidence at a nonzero yaw.
+    assert!((cache.sources[0].near_angle - cache.sources[1].near_angle).abs() > 0.001);
 }
 
 // === Pinna tests ===

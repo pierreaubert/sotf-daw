@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "quarter_turn_spherical",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 24.58915966702625,
+  "stdout": "\nrunning 1 test\nquarter_turn cases=80 failed_values=80 maximum_error=1.7712942\ntest validation::measure::source_crossing_tests::quarter_turn_spherical_sources_have_equal_transfer_columns ... FAILED\n\nfailures:\n\nfailures:\n    validation::measure::source_crossing_tests::quarter_turn_spherical_sources_have_equal_transfer_columns\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 187 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 24.52s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n\nthread 'validation::measure::source_crossing_tests::quarter_turn_spherical_sources_have_equal_transfer_columns' (339917563) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/measure.rs:304:9:\nassertion `left == right` failed\n  left: 80\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+}

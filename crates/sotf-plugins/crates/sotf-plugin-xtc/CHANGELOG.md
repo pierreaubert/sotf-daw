@@ -1,3 +1,16 @@
+# Unreleased continuous source-to-ear path audit (2026-10-22)
+
+- Evaluate all four signed source-to-ear transfers with continuous near-ear
+  normalization and a common mean-range/time reference. Correct source-side
+  crossings without a median-plane shadow/pinna gain jump.
+- Share the plant with diagnostics; intentionally update analytical default and
+  displaced filters while preserving the historical coefficient fixture.
+- Prepare geometry, inverse and condition estimates in f64 to retain numerical
+  mirror/scale invariance. Keep f32 audio/filter storage, gain limits, parameter
+  schemas, FFT latency and bounded worker/callback ownership unchanged.
+- Add independent quarter-turn and front/rear crossing regressions; these do not
+  establish measured-HRTF, finite-distance ear-surface or listening conformance.
+
 # Unreleased rear-hemisphere diffraction audit (2026-10-21)
 
 - Evaluate the shorter rear spherical arc for source azimuths beyond 90 degrees.
