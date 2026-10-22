@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Strict maximum-admission release gate remains failing:61/63 cases,51122 physical/reported misses across532086 callbacks. Sustained mixed-instance ownership/recovery is now separately verified with 4097-frame IRs, not a full-size deadline or aggregate RSS result. No deadline, matrix or resource-bound reduction accepted."
+          "evidence": "Real-FFT NUPC reduces redundant storage, but strict maximum-load capacity still fails: 62/63 geometries and 48,377 misses across 532,086 callbacks, versus historical 61/51,122. Of 42 NUPC geometries, 39 record fewer misses and three the same count. The additional failed geometry uses unchanged UPC DSP. Preserve these unmatched observations; no deadline, matrix or tolerance reduction and no support expansion. Further structural convolution/scheduling mitigation and loaded native validation remain required."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -998,6 +998,32 @@
             "audit/artifacts/plugin-audit-20261018/convolution-worker-overlap.json"
           ],
           "result": "18 live instances share production factory(4 workers,16 request slots) and deterministic shared8+8 retirement queues. 128 rounds x4 bursts =9216 selections, ordinary/true stereo UPC/NUPC/257-head,2/12 outputs,48/96k with4097-frame WAVs. Blocked retirement fences live roots; queue refusals preserve generation/pending/status/state. Distinct reclaimer thread releases52 payloads; every instance adopts a current real corrupt-file failure without replacing active root, then valid final selection. Reset process and complete EOS tails bit exact against fresh targets, zero allocations/frees throughout tested callbacks. Final focused debug:1712 accepted/7558 refused; release:1851 accepted/7419 refused;3192 process/drain calls each,18 current failures each. Full affected113 passed/4 existing ignored; release lib74 passed/1 existing ignored; strictClippy passes. Factory extraction preserves production limits/lifetime; no signal/schema/latency change. Full-size deadline capacity remains open."
+        },
+        {
+          "task": "Reduce redundant NUPC complex-spectrum work without changing admitted workload and verify all affected consumers and strict load cases.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-consumer-validation.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-final-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-historical-baseline-check.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-real-fft.py",
+            "crates/sotf-plugins/crates/plugins-spatial/Cargo.toml",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
+          ],
+          "result": "Shared NUPC now uses the existing workspace realfft 3.5.0 dependency, real forward/inverse plans and N/2+1-bin kernels, FDLs and sums. Each engine adds a prepared N-sample real workspace and uses the larger transform scratch requirement. N=2B padding, single 1/N normalization, absolute offsets, direct head, latency, reset, callback-thread scheduling and public parameters are preserved. DC/Nyquist imaginary components are explicitly zero before the real inverse. The baseline storage regression fails 120/132 spectra; the candidate has zero failures and stores 43,812 complex values instead of 87,360. Independent f64 references cover 54 dense cases and four 262,147-tap sparse cases, including power/non-power block sizes, DC/Nyquist, direct heads, reset, irregular rendering and complete last-tap support. Maximum errors are 2.26244e-8 and 2.42072e-8 under the unchanged 2e-5 gates. The full shared/Convolution suite passes 115 tests with four existing ignores; three final FFT regressions pass. The corrected half-spectrum resource assertion passes. All 145 linear-phase EQ consumer tests pass with two existing ignores. Strict all-target QA Clippy and formatting pass. Standard Convolution QA records zero physical misses, which is separate from maximum-load acceptance. The unchanged 63-geometry strict load matrix covers 532,086 callbacks: zero boundary errors, zero callback allocations/frees, finite output and retained bytes within every conservative estimate. It still exits 1: 62 failed geometries and 48,377 physical misses, versus historical 61 and 51,122. Of 42 NUPC geometries, 39 record fewer misses and three the same count; NUPC totals change from 10,771 to 7,976. Unchanged UPC totals change from 40,351 to 40,401, including one additional failed geometry with six misses. These are unmatched historical timing observations, not causal or native-device compliance evidence. Retained NUPC requested bytes are 62.25\u201364.29% of their historical values; these counters are not RSS or aggregate process bounds. Admission arithmetic, source lengths, estimates, latency, callback counts/horizons and the load harness are unchanged. The conservative full-complex allowance is deliberately retained to avoid expanding admitted workloads. The stale FDL-alone resource assertion now counts actual half spectra while preserving rejection. Historical backend hashes and outer audio functions were checked. Only the plugins-spatial dependency edge to already-locked realfft is added; no package version changes. Convolution and linear-phase EQ remain partial; overall completion remains 35/45. Maximum-load deadlines remain failed."
         }
       ],
       "evidence": [
@@ -1006,7 +1032,26 @@
         "Ordinary multichannel backend admission corrected before maximum-load renders: geometry-based estimate replaces coarse sample multiplier. Numerical/audio/finite-stream tests and planner/memory checks pass. Performance and pre-admission decode bounds remain open; entry 14 partial, overall 29/45 complete.",
         "Owned pre-admission decoded sample buffers are now bounded with per-packet enforcement and metadata refusal. Maximum-load callback timing and sustained mixed-instance/aggregate peak-memory validation remain open. Entry 14 partial; overall 29/45 complete.",
         "Full maximum-admission load data retained including failures; constructor memory and callback invariants pass but strict deadline gate fails 61/63. Legacy short-IR zero-miss result does not prove full-size capacity. Pending scheduling and mixed-instance overlap work remains; overall 29/45 complete.",
-        "Worker/retirement overlap now verified with real bounded preparation pool and shared reclamation queues; current failed decode and recovery are exercised on all18 instances. Prior full-admission deadline failure remains pending; Convolution partial and overall29/45 complete."
+        "Worker/retirement overlap now verified with real bounded preparation pool and shared reclamation queues; current failed decode and recovery are exercised on all18 instances. Prior full-admission deadline failure remains pending; Convolution partial and overall29/45 complete.",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-consumer-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-final-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-historical-baseline-check.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-real-fft.py",
+        "crates/sotf-plugins/crates/plugins-spatial/Cargo.toml",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
       ]
     },
     {
@@ -1920,6 +1965,32 @@
             "audit/artifacts/plugin-audit-20261018/fir-m1-lawson-validation.json"
           ],
           "result": "Cumulative relative-error reweighting was evaluated on the complete target spectrum with unchanged support/latency and diagnostic. 48 outer/128 CG iterations improve the 96k/1024/500Hz error only to -0.2164496413 dB; 96 outer/1024 CG gives -0.2173627069 dB, both fail the unchanged 0.05 dB gate. A full-spectrum numerical annihilating-functional witness was then generated and independently checked using Python scalar analog prototypes and cosine sums (no production biquads, fitter or FFT). For 4097 grid points the 96k/1024 centered-support relative-error lower bound is 0.02461391375, conservatively 0.2112049817 dB; the 0.05 dB contract permits at most 0.005773063. Largest annihilated representable cosine moment 7.44788e-19; target agreement 2.86473e-12 relative; finite moment leakage explicitly included. At 48k the corresponding lower bound is only 0.015149499 dB. This floating-point numerical witness establishes a strong fixed-support/full-spectrum limitation, not an interval-arithmetic proof or impossibility at the four isolated ignored-test probes. Rejected solver removed; production source exactly restored. Further whole-spectrum solver tuning cannot reasonably close the 96k short-support contract; FIR-M1 and any support/phase/latency policy decision remain open."
+        },
+        {
+          "task": "Verify the shared real-FFT NUPC backend through all linear-phase EQ consumer contracts.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-consumer-validation.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-final-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-historical-baseline-check.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-real-fft-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-real-fft.py",
+            "crates/sotf-plugins/crates/plugins-spatial/Cargo.toml",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
+          ],
+          "result": "All 145 release consumer tests pass with two existing ignores after the shared NUPC real-FFT conversion, including response, dynamic updates, replay, stale/revision ownership, channel routing, reset/heap and finite EOF. Strict all-target QA Clippy passes. FIR coefficients, phase, public latency, controls and quantum are unchanged; processing roundoff may change. This does not rerun or resolve the 108-row maximum-load failure or FIR-M1 response limitation."
         }
       ],
       "evidence": [
@@ -3616,6 +3687,37 @@
         "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_recorded_estimator.rs"
       ],
       "limitations": "Vowel loss remains; development recordings/synthetic added noise are not held-out/listening acceptance. Standard QA is not device-load deadline proof."
+    },
+    {
+      "name": "Shared NUPC real FFT and unchanged maximum-workload validation",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14,
+        30
+      ],
+      "result": "Shared NUPC now uses the existing workspace realfft 3.5.0 dependency, real forward/inverse plans and N/2+1-bin kernels, FDLs and sums. Each engine adds a prepared N-sample real workspace and uses the larger transform scratch requirement. N=2B padding, single 1/N normalization, absolute offsets, direct head, latency, reset, callback-thread scheduling and public parameters are preserved. DC/Nyquist imaginary components are explicitly zero before the real inverse. The baseline storage regression fails 120/132 spectra; the candidate has zero failures and stores 43,812 complex values instead of 87,360. Independent f64 references cover 54 dense cases and four 262,147-tap sparse cases, including power/non-power block sizes, DC/Nyquist, direct heads, reset, irregular rendering and complete last-tap support. Maximum errors are 2.26244e-8 and 2.42072e-8 under the unchanged 2e-5 gates. The full shared/Convolution suite passes 115 tests with four existing ignores; three final FFT regressions pass. The corrected half-spectrum resource assertion passes. All 145 linear-phase EQ consumer tests pass with two existing ignores. Strict all-target QA Clippy and formatting pass. Standard Convolution QA records zero physical misses, which is separate from maximum-load acceptance. The unchanged 63-geometry strict load matrix covers 532,086 callbacks: zero boundary errors, zero callback allocations/frees, finite output and retained bytes within every conservative estimate. It still exits 1: 62 failed geometries and 48,377 physical misses, versus historical 61 and 51,122. Of 42 NUPC geometries, 39 record fewer misses and three the same count; NUPC totals change from 10,771 to 7,976. Unchanged UPC totals change from 40,351 to 40,401, including one additional failed geometry with six misses. These are unmatched historical timing observations, not causal or native-device compliance evidence. Retained NUPC requested bytes are 62.25\u201364.29% of their historical values; these counters are not RSS or aggregate process bounds. Admission arithmetic, source lengths, estimates, latency, callback counts/horizons and the load harness are unchanged. The conservative full-complex allowance is deliberately retained to avoid expanding admitted workloads. The stale FDL-alone resource assertion now counts actual half spectra while preserving rejection. Historical backend hashes and outer audio functions were checked. Only the plugins-spatial dependency edge to already-locked realfft is added; no package version changes. Convolution and linear-phase EQ remain partial; overall completion remains 35/45. Maximum-load deadlines remain failed.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-consumer-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-final-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-historical-baseline-check.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-real-fft-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-real-fft.py",
+        "crates/sotf-plugins/crates/plugins-spatial/Cargo.toml",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
+      ],
+      "limitations": "Strictload remains failed62/63; unmatched historical timing is not device compliance. LinearEQ load108matrix andFIR-M1 remain open. No goal completion claim."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

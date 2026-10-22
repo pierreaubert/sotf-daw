@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "real_fft_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 2 tests\nnupc_half_spectra checks=132 failures=120 legacy_complex_values=87360 actual_complex_values=87360\ntest nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins ... FAILED\nnupc_real_direct_reference cases=54 maximum_error=2.2624312534524904e-8\ntest nupc::real_fft_tests::real_fft_render_matches_independent_f64_direct_convolution_through_complete_tail ... ok\n\nfailures:\n\nfailures:\n    nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.03s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.44s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-2f27b98433bf213c)\n\nthread 'nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins' (340853486) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs:33:5:\nassertion `left == right` failed: real transforms need only N/2+1 complex bins\n  left: 120\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

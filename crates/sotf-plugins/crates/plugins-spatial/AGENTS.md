@@ -18,4 +18,16 @@ cargo test -p plugins-spatial
 
 - Pure DSP: no `Plugin` trait impls — host integration lives in the per-plugin crates.
 - All public functions are real-time-safe; do not introduce allocations or locks here.
-- Keep dependency surface tight (just `sotf-host` + `rustfft`) so spatial plugins can pull this in without dragging the whole plugin tree.
+- Keep dependency surface tight (`sotf-host`, `rustfft` and workspace-existing `realfft`) so spatial plugins can pull this in without dragging the whole plugin tree.
+
+- NUPC transforms real blocks with N=2B and stores bins0..N/2 inclusive. Do not
+  duplicate negative-frequency spectra or double interior bins for convolution.
+  Preserve one 1/N inverse normalization, absolute partition offsets, overlap-add,
+  direct-head timing and the original callback-thread schedule.
+- Every engine owns a prepared real N-sample workspace and half-spectrum FDL,
+  input spectrum and sum. Scratch uses the larger forward/inverse requirement.
+  The inverse endpoints are real. Shared kernels contain immutable half spectra
+  and share both transform plans; processing/reset must not allocate or free.
+- Keep independent f64 convolution, DC/Nyquist, non-power-of-two block, direct-head,
+  complete-tail and partition/reset references. FFT changes may alter roundoff;
+  do not impose historical bit identity across different FFT algorithms.

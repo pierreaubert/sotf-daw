@@ -1,7 +1,7 @@
 use super::partition_level::{PartitionKernel, PartitionLevel};
 use super::time_domain_head::TimeDomainHead;
 use super::types::plan_partitions;
-use rustfft::FftPlanner;
+use realfft::RealFftPlanner;
 use std::sync::Arc;
 
 pub struct NupcKernel {
@@ -13,7 +13,7 @@ pub struct NupcKernel {
 impl NupcKernel {
     pub fn new(ir: &[f32], min_block: usize) -> Self {
         let specs = plan_partitions(ir.len(), min_block);
-        let mut planner = FftPlanner::new();
+        let mut planner = RealFftPlanner::new();
         let levels = specs
             .iter()
             .map(|spec| {
@@ -35,7 +35,7 @@ impl NupcKernel {
         }
         let tail = &ir[head_len..];
         let specs = plan_partitions(tail.len(), min_block.min(head_len));
-        let mut planner = FftPlanner::new();
+        let mut planner = RealFftPlanner::new();
         let levels = specs
             .iter()
             .map(|spec| {

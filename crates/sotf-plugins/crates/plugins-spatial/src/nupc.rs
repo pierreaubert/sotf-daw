@@ -7,3 +7,6 @@ mod types;
 
 pub use nupc_engine::*;
 pub use types::*;
+
+#[cfg(test)]
+mod real_fft_tests;

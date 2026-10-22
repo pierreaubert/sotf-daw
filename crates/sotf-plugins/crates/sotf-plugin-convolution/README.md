@@ -171,3 +171,36 @@ fixture cleanup. This validates ownership and recovery; it does not establish
 full-size simultaneous RSS or deadline compliance. Debug/release outcomes are
 recorded in
 [the overlap artifact](../../../../audit/artifacts/plugin-audit-20261018/convolution-worker-overlap.json).
+
+### Real-input NUPC transforms
+
+NUPC uses real forward/inverse transforms for each `N=2B` partition level and
+stores only the `N/2+1` nonnegative-frequency bins in kernels, per-engine FDLs
+and convolution sums. Interior bins are not doubled: these are convolution
+coefficients, not a one-sided power spectrum. The inverse keeps its single
+`1/N` normalization. A prepared real workspace holds the transform input/output;
+FFT scratch is sized for the larger of forward and inverse requirements.
+
+Partition plans, absolute offsets, direct-head taps, latency, output delays,
+channel mapping and callback-thread execution remain unchanged. Floating-point
+roundoff may change because the transform algorithm changes. Independent f64
+convolution and existing host/EOF tests establish waveform accuracy; memory and
+speed reductions do not by themselves establish callback deadlines.
+
+The 512 MiB admission estimate deliberately retains its conservative full-complex
+storage/plan allowance. The saved complex-buffer allowance also covers the new
+real workspace, and tested materialized backends remain below that estimate.
+Consequently the admitted source lengths and full load diagnostic matrix do not
+change with this implementation. The estimate is an upper bound, not a statement
+of actual half-spectrum storage or total process RSS.
+
+The retained strict 63-geometry load run still fails: 62 geometries and 48,377
+physical deadline misses over 532,086 complete callbacks, versus the historical
+61 geometries / 51,122 misses. Of 42 NUPC geometries, 39 record fewer misses and three the same count; the
+additional failed geometry is an unchanged UPC route. The observations are not
+an interleaved or controlled timing comparison. Every new case is finite and
+has zero callback allocations/frees, unchanged admission boundary/latency and
+retained requested bytes below the conservative estimate. NUPC retained backend
+allocation is about 62.25–64.29% of the historical value at the same geometry;
+these counters are not RSS or an aggregate process-memory bound. Large inline
+FFT bursts and full maximum-load deadline compliance remain open.

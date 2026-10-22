@@ -1,0 +1,32 @@
+[
+  {
+    "file": "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs",
+    "old_run_sha": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "before_change_sha": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "same": true
+  },
+  {
+    "file": "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
+    "old_run_sha": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872",
+    "before_change_sha": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872",
+    "same": true
+  },
+  {
+    "file": "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+    "old_run_sha": "bb15585a30bc1d4640f13feab843a120b6399c5ef3ccc2e6e505ca0f2636bbfd",
+    "before_change_sha": "bb15585a30bc1d4640f13feab843a120b6399c5ef3ccc2e6e505ca0f2636bbfd",
+    "same": true
+  },
+  {
+    "file": "crates/sotf-plugins/crates/plugins-spatial/src/nupc/tests.rs",
+    "old_run_sha": "176647d4d01b0cf75e4b3b5cf5229762d8f6e33b3055e59393254c6bb30d68c6",
+    "before_change_sha": "176647d4d01b0cf75e4b3b5cf5229762d8f6e33b3055e59393254c6bb30d68c6",
+    "same": true
+  },
+  {
+    "file": "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+    "old_run_sha": "a5f45c9ef2db5a4129609907118017d1df5db2876777e4047cc267af6326b17b",
+    "before_change_sha": "a5f45c9ef2db5a4129609907118017d1df5db2876777e4047cc267af6326b17b",
+    "same": true
+  }
+]

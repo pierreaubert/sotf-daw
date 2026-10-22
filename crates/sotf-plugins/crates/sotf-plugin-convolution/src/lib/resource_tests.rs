@@ -11,9 +11,15 @@ fn long_mono_ir_rejects_channel_expanded_storage_over_budget() {
     assert!(upc_fdl_lower_bound > MAX_IR_MEMORY_BYTES);
     let nupc_fdl_lower_bound: usize = nupc::plan_partitions(ir[0].len(), PARTITION_SIZE)
         .iter()
-        .map(|spec| spec.count * spec.fft_size * 32 * std::mem::size_of::<Complex<f32>>())
+        .map(|spec| spec.count * (spec.fft_size / 2 + 1) * 32 * std::mem::size_of::<Complex<f32>>())
         .sum();
-    assert!(nupc_fdl_lower_bound > MAX_IR_MEMORY_BYTES);
+    // Half-spectrum FDL storage alone no longer exceeds the cap. Admission
+    // deliberately retains the conservative full-complex backend estimate.
+    assert!(nupc_fdl_lower_bound < MAX_IR_MEMORY_BYTES);
+    assert!(
+        ConvolutionPlugin::estimated_ordinary_backend_bytes(&[ir[0].len()], true, 32, false, 128)
+            > MAX_IR_MEMORY_BYTES
+    );
     for use_nupc in [false, true] {
         assert!(
             ConvolutionPlugin::validate_ir_limits_for_routing(
@@ -29,7 +35,7 @@ fn long_mono_ir_rejects_channel_expanded_storage_over_budget() {
                 }
             )
             .is_err(),
-            "admitted {use_nupc} backend whose FDL alone exceeds budget"
+            "admitted {use_nupc} backend above the conservative storage budget"
         );
     }
 }

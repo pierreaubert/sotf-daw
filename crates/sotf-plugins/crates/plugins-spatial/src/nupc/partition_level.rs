@@ -1,6 +1,6 @@
 use super::types::PartitionSpec;
+use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
 use rustfft::num_complex::Complex;
-use rustfft::{Fft, FftPlanner};
 use sotf_host::simd::complex_mul_add_simd;
 use std::sync::Arc;
 
@@ -9,8 +9,8 @@ pub(super) struct PartitionKernel {
     pub(super) block_size: usize,
     pub(super) fft_size: usize,
     pub(super) ir_partitions: Vec<Vec<Complex<f32>>>,
-    pub(super) fft_forward: Arc<dyn Fft<f32>>,
-    pub(super) fft_inverse: Arc<dyn Fft<f32>>,
+    pub(super) fft_forward: Arc<dyn RealToComplex<f32>>,
+    pub(super) fft_inverse: Arc<dyn ComplexToReal<f32>>,
     pub(super) scratch_len: usize,
 }
 
@@ -31,6 +31,7 @@ pub(super) struct PartitionLevel {
     pub(super) input_accum: Vec<f32>,
     pub(super) input_fill: usize,
     /// Scratch buffers
+    pub(super) fft_time: Vec<f32>,
     pub(super) fft_scratch: Vec<Complex<f32>>,
     pub(super) fft_spectrum: Vec<Complex<f32>>,
     pub(super) fft_sum: Vec<Complex<f32>>,
@@ -40,13 +41,13 @@ impl PartitionKernel {
     pub(super) fn new(
         spec: &PartitionSpec,
         ir_data: &[f32],
-        planner: &mut FftPlanner<f32>,
+        planner: &mut RealFftPlanner<f32>,
     ) -> Arc<Self> {
         let fft_forward = planner.plan_fft_forward(spec.fft_size);
         let fft_inverse = planner.plan_fft_inverse(spec.fft_size);
         let scratch_len = fft_forward
-            .get_inplace_scratch_len()
-            .max(fft_inverse.get_inplace_scratch_len());
+            .get_scratch_len()
+            .max(fft_inverse.get_scratch_len());
 
         // Pre-compute FFT of each IR partition
         let mut ir_partitions = Vec::with_capacity(spec.count);
@@ -54,13 +55,16 @@ impl PartitionKernel {
             let ir_start = spec.offset + p * spec.block_size;
             let ir_end = (ir_start + spec.block_size).min(ir_data.len());
 
-            let mut block = vec![Complex::new(0.0, 0.0); spec.fft_size];
+            let mut block = vec![0.0; spec.fft_size];
+            let mut spectrum = vec![Complex::new(0.0, 0.0); spec.fft_size / 2 + 1];
             for (i, &s) in ir_data[ir_start..ir_end].iter().enumerate() {
-                block[i] = Complex::new(s, 0.0);
+                block[i] = s;
             }
             let mut scratch = vec![Complex::new(0.0, 0.0); scratch_len];
-            fft_forward.process_with_scratch(&mut block, &mut scratch);
-            ir_partitions.push(block);
+            fft_forward
+                .process_with_scratch(&mut block, &mut spectrum, &mut scratch)
+                .expect("prepared NUPC forward transform dimensions");
+            ir_partitions.push(spectrum);
         }
 
         Arc::new(Self {
@@ -80,9 +84,10 @@ impl PartitionLevel {
         let block_size = kernel.block_size;
         let fft_size = kernel.fft_size;
         let scratch_len = kernel.scratch_len;
+        let bins = fft_size / 2 + 1;
         Self {
             kernel,
-            fdl: vec![vec![Complex::new(0.0, 0.0); fft_size]; num_parts],
+            fdl: vec![vec![Complex::new(0.0, 0.0); bins]; num_parts],
             fdl_head: 0,
             output_accum: vec![0.0; fft_size],
             output_queue: vec![0.0; block_size],
@@ -91,9 +96,10 @@ impl PartitionLevel {
             output_delay_pos: 0,
             input_accum: vec![0.0; block_size],
             input_fill: 0,
+            fft_time: vec![0.0; fft_size],
             fft_scratch: vec![Complex::new(0.0, 0.0); scratch_len],
-            fft_spectrum: vec![Complex::new(0.0, 0.0); fft_size],
-            fft_sum: vec![Complex::new(0.0, 0.0); fft_size],
+            fft_spectrum: vec![Complex::new(0.0, 0.0); bins],
+            fft_sum: vec![Complex::new(0.0, 0.0); bins],
         }
     }
 
@@ -133,15 +139,16 @@ impl PartitionLevel {
         let num_parts = self.kernel.ir_partitions.len();
 
         // FFT input block (zero-padded)
-        for i in 0..b {
-            self.fft_spectrum[i] = Complex::new(self.input_accum[i], 0.0);
-        }
-        for i in b..self.kernel.fft_size {
-            self.fft_spectrum[i] = Complex::new(0.0, 0.0);
-        }
+        self.fft_time[..b].copy_from_slice(&self.input_accum);
+        self.fft_time[b..].fill(0.0);
         self.kernel
             .fft_forward
-            .process_with_scratch(&mut self.fft_spectrum, &mut self.fft_scratch);
+            .process_with_scratch(
+                &mut self.fft_time,
+                &mut self.fft_spectrum,
+                &mut self.fft_scratch,
+            )
+            .expect("prepared NUPC forward transform dimensions");
 
         // Push into FDL
         self.fdl_head = if self.fdl_head == 0 {
@@ -162,15 +169,20 @@ impl PartitionLevel {
             );
         }
 
-        // IFFT
+        // A real inverse stores only DC through Nyquist. Endpoints must be
+        // real; explicitly discard their unused imaginary components, including
+        // non-finite arithmetic there, before the inverse validates them.
+        self.fft_sum[0].im = 0.0;
+        self.fft_sum[self.kernel.fft_size / 2].im = 0.0;
         self.kernel
             .fft_inverse
-            .process_with_scratch(&mut self.fft_sum, &mut self.fft_scratch);
+            .process_with_scratch(&mut self.fft_sum, &mut self.fft_time, &mut self.fft_scratch)
+            .expect("prepared NUPC inverse transform dimensions and real endpoints");
 
         // Overlap-add into accumulator
         let inv_n = 1.0 / self.kernel.fft_size as f32;
         for i in 0..self.kernel.fft_size {
-            self.output_accum[i] += self.fft_sum[i].re * inv_n;
+            self.output_accum[i] += self.fft_time[i] * inv_n;
         }
 
         // Copy first B samples to output queue (these are the valid output for next block read)

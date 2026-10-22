@@ -1,0 +1,20 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 12 tests\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\nnupc_half_spectra checks=132 failures=0 legacy_complex_values=87360 actual_complex_values=43812\ntest nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins ... ok\nnupc_real_direct_reference cases=54 maximum_error=2.2624312534524904e-8\ntest nupc::real_fft_tests::real_fft_render_matches_independent_f64_direct_convolution_through_complete_tail ... ok\n\ntest result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.23s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n   Doc-tests plugins_spatial\n"
+}

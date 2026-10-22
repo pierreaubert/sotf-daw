@@ -634,6 +634,9 @@ impl ConvolutionPlugin {
         let mut engine_bytes = kernel_bytes; // immutable taps and per-engine history
 
         for spec in specs {
+            // Retain the conservative full-complex model so real-FFT adoption
+            // does not expand admitted workloads. Savings in the complex
+            // buffers also cover the added real transform workspace below.
             // Estimate without constructing a plan before accepting the
             // candidate against the IR memory limit. The 26N complex plan
             // allowance includes transform arrays and the nested plan state

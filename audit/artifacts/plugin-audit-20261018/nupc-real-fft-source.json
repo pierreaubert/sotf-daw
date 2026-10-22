@@ -1,0 +1,34 @@
+{
+  "base_commit": "2cf6a77",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "source_sha256": {
+    "Cargo.lock": "1626aeacf36592d56c64eda81ff1019f37225d0dcda0c77f46c1db9ff3d7687e",
+    "crates/sotf-plugins/crates/plugins-spatial/Cargo.toml": "949379e05d34f4751033286aa0cc62db869a5b7adecb17fa05e79d76b7c32777",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "971d31bd7135874c689bd7700f30f05be77a1ac43b4989efb1c2967629920890",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "1390d646455ee816900c25cacd62bb2ce2a1070ab175b931731e4739e7da779c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "0800810039b6c888fa3188945370618dcdfb639e5999f5bc7a1b03963c64457b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "667cfca0755eb6836f6f9130d89129eb5f7e8b48984be2b26b47e440bf730872",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "05fac3e49c2dd26d318bd2430b5e2b8d54473574d5d7450db3953218dc6e5903",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "2ed4a53c0d9870bebace3f343163d8c98d161dd8a2a80a390f021a27d90e9d9e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs": "1db10710c5fd9b272de210a1e3990710e6a577809402ba9d5f110169d20a45f4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28"
+  },
+  "fft_packages": [
+    {
+      "name": "realfft",
+      "version": "3.5.0",
+      "checksum": "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
+    },
+    {
+      "name": "rustfft",
+      "version": "6.4.1",
+      "checksum": "21db5f9893e91f41798c88680037dba611ca6674703c1a18601b01a72c8adb89"
+    }
+  ],
+  "admission_arithmetic_unchanged": true,
+  "historical_audio_functions_equal": {
+    "process_in_place": true,
+    "process_stream": true
+  }
+}

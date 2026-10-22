@@ -110,3 +110,12 @@ cargo test -p sotf-plugin-convolution
   all worker/reclaimer handles before removing fixture files.
 - This validates 4097-frame ownership/recovery; the maximum-admission timing
   baseline still fails. Do not turn this soak into a deadline/RSS compliance claim.
+
+- NUPC uses real transforms and N/2+1-bin immutable kernels/FDLs. Keep the
+  conservative full-complex admission model unchanged for this optimization;
+  its spare complex allowance covers the new real workspace. The estimate is
+  not an assertion that negative-frequency bins are still materialized.
+- Preserve the unchanged full63-case strict load geometry and every failed row.
+  A smaller spectrum does not schedule large FFT bursts across callbacks or prove
+  maximum-load deadline compliance. Retain f64/direct, resource, zero-heap,
+  asynchronous ownership and complete native-tail tests.
