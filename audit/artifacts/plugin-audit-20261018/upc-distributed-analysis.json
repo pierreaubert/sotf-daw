@@ -1,0 +1,3192 @@
+{
+  "candidate_functional_verified": true,
+  "candidate_rejected": true,
+  "production_dsp_restored_exactly": true,
+  "restored_tests_passed": 105,
+  "restored_tests_ignored": 4,
+  "restored_strict_clippy_passed": true,
+  "normal_tests_passed": 268,
+  "normal_tests_ignored": 7,
+  "cache_checks": 140,
+  "dft_checks": 240,
+  "maximum_dft_error": 1.3089011696757862e-06,
+  "early_tail_maximum_error": 7.450580596923828e-08,
+  "admission_arithmetic_unchanged": true,
+  "load_harness_unchanged": true,
+  "load": {
+    "cases": 63,
+    "callbacks": 532086,
+    "failed_cases": 54,
+    "physical_misses": 69510,
+    "deadline_pass": false
+  },
+  "previous_load": {
+    "cases": 63,
+    "callbacks": 532086,
+    "failed_cases": 58,
+    "physical_misses": 43053,
+    "deadline_pass": false
+  },
+  "upc_old_misses": 40164,
+  "upc_new_misses": 66626,
+  "nupc_old_misses": 2889,
+  "nupc_new_misses": 2884,
+  "upc_geometries_fewer_misses": 13,
+  "upc_geometries_equal_misses": 2,
+  "upc_geometries_more_misses": 6,
+  "upc_retained_ratio_min": 0.9999975337422063,
+  "upc_retained_ratio_max": 1.0000000430646188,
+  "comparisons": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 34870645,
+      "new_retained_bytes": 34870559,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 11259,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 901.292,
+          "new_p99_us": 114.584,
+          "old_max_us": 1591.334,
+          "new_max_us": 1655.166,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 766.959,
+          "new_p99_us": 105.625,
+          "old_max_us": 814.5840000000001,
+          "new_max_us": 110.042,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 857.9580000000001,
+          "new_p99_us": 404.583,
+          "old_max_us": 1089.625,
+          "new_max_us": 430.16700000000003,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 11,
+      "new_misses": 11,
+      "old_retained_bytes": 58388149,
+      "new_retained_bytes": 58388151,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8169,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 194.375,
+          "new_p99_us": 199.167,
+          "old_max_us": 4456.583,
+          "new_max_us": 4320.541,
+          "old_misses": 7,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4096,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 190.917,
+          "new_p99_us": 191.58399999999997,
+          "old_max_us": 4067.5829999999996,
+          "new_max_us": 3829.25,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1024,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 918.6669999999999,
+          "new_p99_us": 928.458,
+          "old_max_us": 4124.25,
+          "new_max_us": 3901.334,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 58948581,
+      "new_retained_bytes": 58948583,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8219,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 735.25,
+          "new_p99_us": 737.125,
+          "old_max_us": 12875.0,
+          "new_max_us": 12661.083999999999,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4112,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 859.0419999999999,
+          "new_p99_us": 736.167,
+          "old_max_us": 14254.958,
+          "new_max_us": 12941.833999999999,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1028,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 3671.5,
+          "new_p99_us": 3165.542,
+          "old_max_us": 15119.459,
+          "new_max_us": 13145.583,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1,
+      "new_misses": 0,
+      "old_retained_bytes": 46441837,
+      "new_retained_bytes": 46441839,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 11259,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 793.584,
+          "new_p99_us": 110.25,
+          "old_max_us": 10385.458,
+          "new_max_us": 438.084,
+          "old_misses": 1,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 803.3330000000001,
+          "new_p99_us": 121.041,
+          "old_max_us": 827.792,
+          "new_max_us": 130.042,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 895.959,
+          "new_p99_us": 420.5,
+          "old_max_us": 902.417,
+          "new_max_us": 428.5,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337231,
+      "new_retained_bytes": 36337233,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4073,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 203.66699999999997,
+          "new_p99_us": 183.375,
+          "old_max_us": 2105.792,
+          "new_max_us": 2128.0,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2048,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 182.041,
+          "new_p99_us": 182.417,
+          "old_max_us": 2024.8750000000002,
+          "new_max_us": 1802.0,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 512,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 886.75,
+          "new_p99_us": 880.708,
+          "old_max_us": 1861.875,
+          "new_max_us": 1863.6670000000001,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 36839847,
+      "new_retained_bytes": 36839849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4107,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 779.3340000000001,
+          "new_p99_us": 709.875,
+          "old_max_us": 6806.5419999999995,
+          "new_max_us": 6077.25,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2056,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 783.333,
+          "new_p99_us": 712.5,
+          "old_max_us": 6794.166,
+          "new_max_us": 6086.541,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 514,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 3024.042,
+          "new_p99_us": 3057.584,
+          "old_max_us": 6245.9580000000005,
+          "new_max_us": 6215.7080000000005,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1439,
+      "new_misses": 2,
+      "old_retained_bytes": 150491687,
+      "new_retained_bytes": 150491689,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 11259,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 8916.0,
+          "new_p99_us": 1253.2089999999998,
+          "old_max_us": 11902.375,
+          "new_max_us": 12817.584,
+          "old_misses": 1407,
+          "new_misses": 2
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 8838.957999999999,
+          "new_p99_us": 1287.5,
+          "old_max_us": 8848.708999999999,
+          "new_max_us": 1299.25,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 9154.125,
+          "new_p99_us": 4696.541,
+          "old_max_us": 9472.791,
+          "new_max_us": 4843.1669999999995,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 13,
+      "new_misses": 11,
+      "old_retained_bytes": 68120271,
+      "new_retained_bytes": 68120273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1154.417,
+          "new_p99_us": 1162.4579999999999,
+          "old_max_us": 5718.875,
+          "new_max_us": 5586.791,
+          "old_misses": 9,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1158.791,
+          "new_p99_us": 1158.125,
+          "old_max_us": 5410.208,
+          "new_max_us": 5712.9169999999995,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 5404.25,
+          "new_p99_us": 5503.7080000000005,
+          "old_max_us": 5583.125,
+          "new_max_us": 5551.791,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 69831223,
+      "new_retained_bytes": 69831137,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4429.25,
+          "new_p99_us": 4468.5,
+          "old_max_us": 18982.875,
+          "new_max_us": 18748.041,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4336.625,
+          "new_p99_us": 4453.875,
+          "old_max_us": 18914.625,
+          "new_max_us": 18693.5,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 18552.540999999997,
+          "new_p99_us": 18814.166,
+          "old_max_us": 18604.625,
+          "new_max_us": 18994.708,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1243,
+      "new_misses": 0,
+      "old_retained_bytes": 238948463,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 9689,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7488.2919999999995,
+          "new_p99_us": 1079.2079999999999,
+          "old_max_us": 10901.457999999999,
+          "new_max_us": 2565.0,
+          "old_misses": 1211,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7368.6669999999995,
+          "new_p99_us": 981.9169999999999,
+          "old_max_us": 7790.125,
+          "new_max_us": 988.167,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 7676.875,
+          "new_p99_us": 4115.917,
+          "old_max_us": 7951.333,
+          "new_max_us": 4238.0,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685103,
+      "new_retained_bytes": 46685105,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 745,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1115.333,
+          "new_p99_us": 1152.875,
+          "old_max_us": 2472.4170000000004,
+          "new_max_us": 2496.792,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1162.417,
+          "new_p99_us": 1135.083,
+          "old_max_us": 2448.5,
+          "new_max_us": 2526.5840000000003,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 2656.75,
+          "new_p99_us": 2638.875,
+          "old_max_us": 2724.75,
+          "new_max_us": 2662.542,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 19,
+      "new_misses": 19,
+      "old_retained_bytes": 48779487,
+      "new_retained_bytes": 48779489,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4552.584,
+          "new_p99_us": 4317.375,
+          "old_max_us": 9405.291,
+          "new_max_us": 8807.25,
+          "old_misses": 11,
+          "new_misses": 11
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4290.0,
+          "new_p99_us": 4506.25,
+          "old_max_us": 9131.5,
+          "new_max_us": 9420.292,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 9271.333,
+          "new_p99_us": 9302.041000000001,
+          "old_max_us": 9388.25,
+          "new_max_us": 9487.416000000001,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 5,
+      "old_retained_bytes": 238844295,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 7041,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 14298.167000000001,
+          "new_p99_us": 2078.292,
+          "old_max_us": 27647.583,
+          "new_max_us": 8166.833,
+          "old_misses": 880,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 13576.5,
+          "new_p99_us": 2186.958,
+          "old_max_us": 13625.625,
+          "new_max_us": 4300.7080000000005,
+          "old_misses": 32,
+          "new_misses": 1
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 15017.667,
+          "new_p99_us": 7357.875,
+          "old_max_us": 15174.958,
+          "new_max_us": 7576.083,
+          "old_misses": 128,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 21,
+      "new_misses": 21,
+      "old_retained_bytes": 81708047,
+      "new_retained_bytes": 81708049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 873,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3097.833,
+          "new_p99_us": 3200.833,
+          "old_max_us": 6613.75,
+          "new_max_us": 6867.0,
+          "old_misses": 13,
+          "new_misses": 13
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3179.5,
+          "new_p99_us": 3339.7079999999996,
+          "old_max_us": 6815.0,
+          "new_max_us": 7083.459,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 7290.5,
+          "new_p99_us": 7230.4580000000005,
+          "old_max_us": 7401.5,
+          "new_max_us": 7468.041,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 95,
+      "old_retained_bytes": 81146975,
+      "new_retained_bytes": 81147065,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 11631.957999999999,
+          "new_p99_us": 11871.334,
+          "old_max_us": 24128.166999999998,
+          "new_max_us": 24384.375,
+          "old_misses": 47,
+          "new_misses": 47
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 12008.792000000001,
+          "new_p99_us": 12058.042,
+          "old_max_us": 24565.541999999998,
+          "new_max_us": 24653.875,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 24938.875,
+          "new_p99_us": 25060.75,
+          "old_max_us": 25583.667,
+          "new_max_us": 25646.790999999997,
+          "old_misses": 16,
+          "new_misses": 16
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 486,
+      "new_misses": 0,
+      "old_retained_bytes": 239048849,
+      "new_retained_bytes": 239048851,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 3633,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7451.541,
+          "new_p99_us": 1234.0420000000001,
+          "old_max_us": 8369.583,
+          "new_max_us": 2420.708,
+          "old_misses": 454,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7593.875,
+          "new_p99_us": 1274.0,
+          "old_max_us": 7601.375,
+          "new_max_us": 1286.7079999999999,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 7848.625,
+          "new_p99_us": 4280.25,
+          "old_max_us": 7939.8330000000005,
+          "new_max_us": 4954.542,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 8,
+      "new_misses": 8,
+      "old_retained_bytes": 55597297,
+      "new_retained_bytes": 55597299,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 297,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 2919.833,
+          "new_p99_us": 2929.625,
+          "old_max_us": 3101.583,
+          "new_max_us": 3029.542,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 2965.708,
+          "new_p99_us": 2956.083,
+          "old_max_us": 3129.541,
+          "new_max_us": 3055.1659999999997,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 3324.667,
+          "new_p99_us": 3500.125,
+          "old_max_us": 3459.083,
+          "new_max_us": 3525.25,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 31,
+      "new_misses": 31,
+      "old_retained_bytes": 36406897,
+      "new_retained_bytes": 36406899,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 252,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 6180.041,
+          "new_p99_us": 6108.0,
+          "old_max_us": 6375.5,
+          "new_max_us": 6178.0,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 6039.75,
+          "new_p99_us": 6119.709,
+          "old_max_us": 6085.084,
+          "new_max_us": 6128.2919999999995,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 7669.3330000000005,
+          "new_p99_us": 7605.375,
+          "old_max_us": 7951.458,
+          "new_max_us": 7641.916,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 69584223,
+      "new_retained_bytes": 69584225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 11259,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1320.8339999999998,
+          "new_p99_us": 180.667,
+          "old_max_us": 1603.2920000000001,
+          "new_max_us": 383.0,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1389.541,
+          "new_p99_us": 176.167,
+          "old_max_us": 1626.959,
+          "new_max_us": 177.542,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 1340.625,
+          "new_p99_us": 699.542,
+          "old_max_us": 1353.458,
+          "new_max_us": 707.583,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35935855,
+      "new_retained_bytes": 35935769,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 387.20799999999997,
+          "new_p99_us": 367.542,
+          "old_max_us": 1895.125,
+          "new_max_us": 1836.208,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 364.959,
+          "new_p99_us": 363.66700000000003,
+          "old_max_us": 1899.792,
+          "new_max_us": 1730.709,
+          "old_misses": 0,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 1791.25,
+          "new_p99_us": 1776.708,
+          "old_max_us": 1805.709,
+          "new_max_us": 1799.458,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 36759759,
+      "new_retained_bytes": 36759761,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1445.583,
+          "new_p99_us": 1421.083,
+          "old_max_us": 6226.291,
+          "new_max_us": 6153.041,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1442.542,
+          "new_p99_us": 1420.833,
+          "old_max_us": 6196.958,
+          "new_max_us": 5992.4169999999995,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 10666.666666666666,
+          "old_p99_us": 6143.75,
+          "new_p99_us": 6142.375,
+          "old_max_us": 6188.958,
+          "new_max_us": 6286.8330000000005,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 2,
+      "old_retained_bytes": 69491991,
+      "new_retained_bytes": 69491993,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 22509,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1558.459,
+          "new_p99_us": 231.417,
+          "old_max_us": 2042.291,
+          "new_max_us": 4469.208,
+          "old_misses": 2813,
+          "new_misses": 1
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1594.083,
+          "new_p99_us": 251.87499999999997,
+          "old_max_us": 1624.75,
+          "new_max_us": 308.667,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 1741.916,
+          "new_p99_us": 2627.625,
+          "old_max_us": 1795.2079999999999,
+          "new_max_us": 6918.167,
+          "old_misses": 0,
+          "new_misses": 1
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 58388239,
+      "new_retained_bytes": 58388241,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8169,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 193.875,
+          "new_p99_us": 190.292,
+          "old_max_us": 3833.1670000000004,
+          "new_max_us": 3837.5420000000004,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4096,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 193.666,
+          "new_p99_us": 184.083,
+          "old_max_us": 3912.125,
+          "new_max_us": 3763.333,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1024,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 914.917,
+          "new_p99_us": 935.5,
+          "old_max_us": 3968.958,
+          "new_max_us": 3824.625,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 104,
+      "new_misses": 103,
+      "old_retained_bytes": 58948583,
+      "new_retained_bytes": 58948497,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8219,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 721.7919999999999,
+          "new_p99_us": 712.5,
+          "old_max_us": 12645.792,
+          "new_max_us": 12437.083999999999,
+          "old_misses": 63,
+          "new_misses": 63
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4112,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 738.083,
+          "new_p99_us": 715.917,
+          "old_max_us": 12818.542000000001,
+          "new_max_us": 12243.917,
+          "old_misses": 33,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1028,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 3120.542,
+          "new_p99_us": 3050.4579999999996,
+          "old_max_us": 12974.625,
+          "new_max_us": 12397.042000000001,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 0,
+      "old_retained_bytes": 92626127,
+      "new_retained_bytes": 92626129,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 22509,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1628.2079999999999,
+          "new_p99_us": 233.375,
+          "old_max_us": 2912.292,
+          "new_max_us": 668.25,
+          "old_misses": 2813,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1713.583,
+          "new_p99_us": 210.792,
+          "old_max_us": 1719.25,
+          "new_max_us": 214.29199999999997,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 1863.416,
+          "new_p99_us": 792.5840000000001,
+          "old_max_us": 1906.041,
+          "new_max_us": 839.2080000000001,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 11,
+      "new_misses": 11,
+      "old_retained_bytes": 36337231,
+      "new_retained_bytes": 36337233,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4073,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 197.0,
+          "new_p99_us": 182.917,
+          "old_max_us": 2008.7500000000002,
+          "new_max_us": 1968.75,
+          "old_misses": 7,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2048,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 194.292,
+          "new_p99_us": 179.417,
+          "old_max_us": 1987.2499999999998,
+          "new_max_us": 1798.958,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 512,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 951.209,
+          "new_p99_us": 879.083,
+          "old_max_us": 2063.792,
+          "new_max_us": 1862.625,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 36839847,
+      "new_retained_bytes": 36839849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4107,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 730.625,
+          "new_p99_us": 730.0,
+          "old_max_us": 6234.4169999999995,
+          "new_max_us": 6222.667,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2056,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 701.0,
+          "new_p99_us": 727.208,
+          "old_max_us": 6017.25,
+          "new_max_us": 6200.875,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 514,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 3238.375,
+          "new_p99_us": 3070.542,
+          "old_max_us": 6399.75,
+          "new_max_us": 6117.667,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 18401,
+      "old_retained_bytes": 238776359,
+      "new_retained_bytes": 238776361,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 17889,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 14654.916000000001,
+          "new_p99_us": 2010.958,
+          "old_max_us": 31523.834,
+          "new_max_us": 16680.166,
+          "old_misses": 2236,
+          "new_misses": 17889
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 14607.5,
+          "new_p99_us": 1799.7079999999999,
+          "old_max_us": 15735.417000000001,
+          "new_max_us": 1831.875,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 15314.792000000001,
+          "new_p99_us": 7775.917,
+          "old_max_us": 15530.583,
+          "new_max_us": 9146.833,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 27,
+      "new_misses": 27,
+      "old_retained_bytes": 68120271,
+      "new_retained_bytes": 68120273,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1170.5839999999998,
+          "new_p99_us": 1131.583,
+          "old_max_us": 5355.583,
+          "new_max_us": 5421.3330000000005,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1176.5,
+          "new_p99_us": 1205.708,
+          "old_max_us": 5528.4169999999995,
+          "new_max_us": 5733.6669999999995,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 5414.3330000000005,
+          "new_p99_us": 5634.9169999999995,
+          "old_max_us": 5721.583,
+          "new_max_us": 5711.917,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 107,
+      "new_misses": 103,
+      "old_retained_bytes": 69831223,
+      "new_retained_bytes": 69831225,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 4369.375,
+          "new_p99_us": 4303.2080000000005,
+          "old_max_us": 21439.541999999998,
+          "new_max_us": 18245.208,
+          "old_misses": 65,
+          "new_misses": 63
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 4425.4580000000005,
+          "new_p99_us": 4315.417,
+          "old_max_us": 20041.791999999998,
+          "new_max_us": 18209.540999999997,
+          "old_misses": 34,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 18547.834,
+          "new_p99_us": 18511.833,
+          "old_max_us": 19277.875,
+          "new_max_us": 18742.292,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 25,
+      "old_retained_bytes": 238948463,
+      "new_retained_bytes": 238948465,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 9689,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 7220.042,
+          "new_p99_us": 1103.9579999999999,
+          "old_max_us": 24938.084,
+          "new_max_us": 10114.708,
+          "old_misses": 1211,
+          "new_misses": 24
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 7211.5,
+          "new_p99_us": 962.75,
+          "old_max_us": 7294.334000000001,
+          "new_max_us": 974.9580000000001,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 8327.25,
+          "new_p99_us": 3933.25,
+          "old_max_us": 8997.958,
+          "new_max_us": 5956.291,
+          "old_misses": 128,
+          "new_misses": 1
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 9,
+      "new_misses": 9,
+      "old_retained_bytes": 46685015,
+      "new_retained_bytes": 46685105,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 745,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1173.2089999999998,
+          "new_p99_us": 1211.375,
+          "old_max_us": 2458.167,
+          "new_max_us": 2557.209,
+          "old_misses": 5,
+          "new_misses": 5
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1190.375,
+          "new_p99_us": 1141.834,
+          "old_max_us": 2540.792,
+          "new_max_us": 2529.75,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 2646.958,
+          "new_p99_us": 2647.5,
+          "old_max_us": 2717.7909999999997,
+          "new_max_us": 2766.0,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 47,
+      "new_misses": 47,
+      "old_retained_bytes": 48779487,
+      "new_retained_bytes": 48779489,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 4332.666,
+          "new_p99_us": 4438.334000000001,
+          "old_max_us": 8862.916000000001,
+          "new_max_us": 9131.333,
+          "old_misses": 23,
+          "new_misses": 23
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 4339.417,
+          "new_p99_us": 4414.040999999999,
+          "old_max_us": 8806.791,
+          "new_max_us": 9192.125,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 9379.542,
+          "new_p99_us": 9227.208,
+          "old_max_us": 9437.958,
+          "new_max_us": 9558.416,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 7553,
+      "old_retained_bytes": 238844295,
+      "new_retained_bytes": 238844297,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 7041,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 14390.667,
+          "new_p99_us": 2035.042,
+          "old_max_us": 16987.25,
+          "new_max_us": 2637.916,
+          "old_misses": 880,
+          "new_misses": 7041
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 14368.209,
+          "new_p99_us": 2000.6249999999998,
+          "old_max_us": 14547.208,
+          "new_max_us": 2016.6670000000001,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 14118.5,
+          "new_p99_us": 7566.5419999999995,
+          "old_max_us": 15002.082999999999,
+          "new_max_us": 7699.625,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 81708047,
+      "new_retained_bytes": 81708049,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 873,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 3207.208,
+          "new_p99_us": 3079.209,
+          "old_max_us": 6839.166,
+          "new_max_us": 6678.209,
+          "old_misses": 27,
+          "new_misses": 27
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 3121.625,
+          "new_p99_us": 3160.333,
+          "old_max_us": 6822.917,
+          "new_max_us": 6816.334,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 7389.291,
+          "new_p99_us": 7301.375,
+          "old_max_us": 7492.958,
+          "new_max_us": 7406.75,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 191,
+      "new_misses": 191,
+      "old_retained_bytes": 81147063,
+      "new_retained_bytes": 81147065,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 11963.167,
+          "new_p99_us": 11598.791000000001,
+          "old_max_us": 24782.541,
+          "new_max_us": 23575.833000000002,
+          "old_misses": 95,
+          "new_misses": 95
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 11950.957999999999,
+          "new_p99_us": 11682.458,
+          "old_max_us": 24455.25,
+          "new_max_us": 24094.0,
+          "old_misses": 64,
+          "new_misses": 64
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 25504.333000000002,
+          "new_p99_us": 25162.375,
+          "old_max_us": 25626.916999999998,
+          "new_max_us": 25528.708000000002,
+          "old_misses": 32,
+          "new_misses": 32
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 8,
+      "old_retained_bytes": 239048849,
+      "new_retained_bytes": 239048763,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 3633,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 7542.0419999999995,
+          "new_p99_us": 1237.625,
+          "old_max_us": 10501.208,
+          "new_max_us": 1514.542,
+          "old_misses": 454,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 7456.7080000000005,
+          "new_p99_us": 1262.167,
+          "old_max_us": 7500.125,
+          "new_max_us": 1324.0839999999998,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 7963.292,
+          "new_p99_us": 4168.541,
+          "old_max_us": 8035.2919999999995,
+          "new_max_us": 4487.4169999999995,
+          "old_misses": 128,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 17,
+      "new_misses": 17,
+      "old_retained_bytes": 55597297,
+      "new_retained_bytes": 55597299,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 297,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 3049.875,
+          "new_p99_us": 2892.9590000000003,
+          "old_max_us": 3105.792,
+          "new_max_us": 2956.291,
+          "old_misses": 9,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 3035.917,
+          "new_p99_us": 2885.458,
+          "old_max_us": 3096.083,
+          "new_max_us": 2899.625,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 3573.209,
+          "new_p99_us": 3307.9590000000003,
+          "old_max_us": 3744.375,
+          "new_max_us": 3350.458,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 95,
+      "new_misses": 95,
+      "old_retained_bytes": 36406897,
+      "new_retained_bytes": 36406899,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 252,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 6253.0,
+          "new_p99_us": 5901.625,
+          "old_max_us": 6354.165999999999,
+          "new_max_us": 5927.0,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 6256.25,
+          "new_p99_us": 5914.5830000000005,
+          "old_max_us": 6366.333,
+          "new_max_us": 5921.9169999999995,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 7391.208,
+          "new_p99_us": 7326.459,
+          "old_max_us": 8417.875,
+          "new_max_us": 7562.0419999999995,
+          "old_misses": 32,
+          "new_misses": 32
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 2845,
+      "new_misses": 6,
+      "old_retained_bytes": 138894399,
+      "new_retained_bytes": 138894401,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 22509,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 2677.5840000000003,
+          "new_p99_us": 358.625,
+          "old_max_us": 7195.875,
+          "new_max_us": 4949.625,
+          "old_misses": 2813,
+          "new_misses": 6
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 2623.042,
+          "new_p99_us": 355.166,
+          "old_max_us": 2663.167,
+          "new_max_us": 362.791,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 2863.709,
+          "new_p99_us": 1602.75,
+          "old_max_us": 3645.541,
+          "new_max_us": 1653.625,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 11,
+      "new_misses": 11,
+      "old_retained_bytes": 35935855,
+      "new_retained_bytes": 35935769,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 390.084,
+          "new_p99_us": 401.792,
+          "old_max_us": 1861.334,
+          "new_max_us": 1971.667,
+          "old_misses": 7,
+          "new_misses": 7
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 398.5,
+          "new_p99_us": 360.209,
+          "old_max_us": 1968.25,
+          "new_max_us": 1739.9589999999998,
+          "old_misses": 4,
+          "new_misses": 4
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 1742.791,
+          "new_p99_us": 1797.375,
+          "old_max_us": 1810.667,
+          "new_max_us": 1817.9170000000001,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 36759759,
+      "new_retained_bytes": 36759761,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1452.333,
+          "new_p99_us": 1458.625,
+          "old_max_us": 6112.291,
+          "new_max_us": 6519.6669999999995,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 1333.3333333333333,
+          "old_p99_us": 1523.0829999999999,
+          "new_p99_us": 1470.375,
+          "old_max_us": 6421.125,
+          "new_max_us": 6379.7080000000005,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 5333.333333333333,
+          "old_p99_us": 6229.125,
+          "new_p99_us": 6262.709,
+          "old_max_us": 6791.0,
+          "new_max_us": 6603.5,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 18,
+      "old_retained_bytes": 138734679,
+      "new_retained_bytes": 138734593,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 45009,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3546.917,
+          "new_p99_us": 468.208,
+          "old_max_us": 16396.334,
+          "new_max_us": 9978.832999999999,
+          "old_misses": 5626,
+          "new_misses": 17
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3611.875,
+          "new_p99_us": 489.458,
+          "old_max_us": 3654.334,
+          "new_max_us": 895.125,
+          "old_misses": 32,
+          "new_misses": 1
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4063.959,
+          "new_p99_us": 2026.375,
+          "old_max_us": 4293.291,
+          "new_max_us": 2115.0,
+          "old_misses": 128,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 51,
+      "new_misses": 51,
+      "old_retained_bytes": 58388239,
+      "new_retained_bytes": 58388241,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8169,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 207.958,
+          "new_p99_us": 197.417,
+          "old_max_us": 4293.834,
+          "new_max_us": 3758.667,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4096,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 203.5,
+          "new_p99_us": 197.416,
+          "old_max_us": 4107.7919999999995,
+          "new_max_us": 3796.208,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1024,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 988.291,
+          "new_p99_us": 908.541,
+          "old_max_us": 4172.459,
+          "new_max_us": 3716.792,
+          "old_misses": 4,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 207,
+      "new_misses": 207,
+      "old_retained_bytes": 58948583,
+      "new_retained_bytes": 58948585,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 8219,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 757.958,
+          "new_p99_us": 733.583,
+          "old_max_us": 13459.208999999999,
+          "new_max_us": 12787.792,
+          "old_misses": 127,
+          "new_misses": 127
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 4112,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 739.625,
+          "new_p99_us": 732.083,
+          "old_max_us": 12956.458,
+          "new_max_us": 12954.208,
+          "old_misses": 64,
+          "new_misses": 64
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 1028,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3244.5,
+          "new_p99_us": 3160.459,
+          "old_max_us": 13529.542,
+          "new_max_us": 12786.832999999999,
+          "old_misses": 16,
+          "new_misses": 16
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 9,
+      "old_retained_bytes": 184994703,
+      "new_retained_bytes": 184994705,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 45009,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3300.375,
+          "new_p99_us": 471.70799999999997,
+          "old_max_us": 9420.207999999999,
+          "new_max_us": 1903.5,
+          "old_misses": 5626,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3612.9159999999997,
+          "new_p99_us": 450.667,
+          "old_max_us": 3949.584,
+          "new_max_us": 477.33299999999997,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3742.375,
+          "new_p99_us": 2058.083,
+          "old_max_us": 3829.75,
+          "new_max_us": 2101.791,
+          "old_misses": 128,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 24,
+      "old_retained_bytes": 36337231,
+      "new_retained_bytes": 36337233,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4073,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 188.083,
+          "new_p99_us": 195.084,
+          "old_max_us": 2067.125,
+          "new_max_us": 1993.792,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2048,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 180.042,
+          "new_p99_us": 219.417,
+          "old_max_us": 1796.125,
+          "new_max_us": 2504.375,
+          "old_misses": 8,
+          "new_misses": 9
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 512,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 867.375,
+          "new_p99_us": 870.125,
+          "old_max_us": 1851.042,
+          "new_max_us": 1836.334,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 103,
+      "new_misses": 103,
+      "old_retained_bytes": 36839847,
+      "new_retained_bytes": 36839849,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 4107,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 736.4169999999999,
+          "new_p99_us": 713.208,
+          "old_max_us": 6271.625,
+          "new_max_us": 6402.167,
+          "old_misses": 63,
+          "new_misses": 63
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 2056,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 717.4580000000001,
+          "new_p99_us": 719.875,
+          "old_max_us": 6136.0,
+          "new_max_us": 6244.417,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 514,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3061.208,
+          "new_p99_us": 3187.875,
+          "old_max_us": 6169.542,
+          "new_max_us": 6362.166,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 18401,
+      "old_retained_bytes": 238776359,
+      "new_retained_bytes": 238776361,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 17889,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 14264.042,
+          "new_p99_us": 1991.8750000000002,
+          "old_max_us": 29611.584,
+          "new_max_us": 8696.792,
+          "old_misses": 2236,
+          "new_misses": 17889
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 14034.0,
+          "new_p99_us": 1778.5,
+          "old_max_us": 14418.959,
+          "new_max_us": 1792.541,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 14861.917000000001,
+          "new_p99_us": 6886.917,
+          "old_max_us": 14885.5,
+          "new_max_us": 6989.6669999999995,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 55,
+      "new_misses": 55,
+      "old_retained_bytes": 68120185,
+      "new_retained_bytes": 68120275,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1143.0,
+          "new_p99_us": 1163.791,
+          "old_max_us": 5484.0,
+          "new_max_us": 5440.625,
+          "old_misses": 31,
+          "new_misses": 31
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1133.125,
+          "new_p99_us": 1133.2079999999999,
+          "old_max_us": 5401.666,
+          "new_max_us": 5363.875,
+          "old_misses": 16,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 5627.25,
+          "new_p99_us": 5675.875,
+          "old_max_us": 5721.958,
+          "new_max_us": 5964.792,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 207,
+      "new_misses": 217,
+      "old_retained_bytes": 69831225,
+      "new_retained_bytes": 69831227,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4311.4169999999995,
+          "new_p99_us": 4448.625,
+          "old_max_us": 18257.5,
+          "new_max_us": 18617.959,
+          "old_misses": 127,
+          "new_misses": 127
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4422.25,
+          "new_p99_us": 4452.291,
+          "old_max_us": 18550.375,
+          "new_max_us": 18458.583000000002,
+          "old_misses": 64,
+          "new_misses": 64
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 18397.625,
+          "new_p99_us": 18881.125,
+          "old_max_us": 18464.625,
+          "new_max_us": 19255.75,
+          "old_misses": 16,
+          "new_misses": 26
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 10201,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948467,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 9689,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 7405.5830000000005,
+          "new_p99_us": 1109.042,
+          "old_max_us": 21229.333,
+          "new_max_us": 21398.416,
+          "old_misses": 1211,
+          "new_misses": 9689
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 7717.75,
+          "new_p99_us": 1020.042,
+          "old_max_us": 7963.625,
+          "new_max_us": 1039.208,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7843.915999999999,
+          "new_p99_us": 5534.458,
+          "old_max_us": 8289.042,
+          "new_max_us": 6383.25,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 24,
+      "new_misses": 23,
+      "old_retained_bytes": 46685105,
+      "new_retained_bytes": 46685107,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 745,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1228.458,
+          "new_p99_us": 1193.0420000000001,
+          "old_max_us": 2616.917,
+          "new_max_us": 2590.3340000000003,
+          "old_misses": 11,
+          "new_misses": 11
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1190.5,
+          "new_p99_us": 1114.458,
+          "old_max_us": 2613.2909999999997,
+          "new_max_us": 2544.208,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 2702.042,
+          "new_p99_us": 2716.792,
+          "old_max_us": 2758.1670000000004,
+          "new_max_us": 2902.791,
+          "old_misses": 5,
+          "new_misses": 4
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 107,
+      "new_misses": 103,
+      "old_retained_bytes": 48779489,
+      "new_retained_bytes": 48779491,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4526.6669999999995,
+          "new_p99_us": 4445.958,
+          "old_max_us": 9210.958999999999,
+          "new_max_us": 9969.291,
+          "old_misses": 47,
+          "new_misses": 48
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4474.5,
+          "new_p99_us": 4427.625,
+          "old_max_us": 9106.0,
+          "new_max_us": 9137.291000000001,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 9545.708,
+          "new_p99_us": 9532.459,
+          "old_max_us": 10339.75,
+          "new_max_us": 9655.625,
+          "old_misses": 28,
+          "new_misses": 23
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 7553,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844299,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 7041,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 14141.417,
+          "new_p99_us": 2312.75,
+          "old_max_us": 22979.083000000002,
+          "new_max_us": 9203.332999999999,
+          "old_misses": 880,
+          "new_misses": 7041
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 13977.25,
+          "new_p99_us": 1987.291,
+          "old_max_us": 14586.875,
+          "new_max_us": 2313.25,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 14798.083,
+          "new_p99_us": 7641.292,
+          "old_max_us": 15584.417,
+          "new_max_us": 8055.166000000001,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 102,
+      "new_misses": 96,
+      "old_retained_bytes": 81707961,
+      "new_retained_bytes": 81707963,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 873,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3094.125,
+          "new_p99_us": 3051.041,
+          "old_max_us": 6738.0,
+          "new_max_us": 6981.0,
+          "old_misses": 54,
+          "new_misses": 50
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 512,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 3038.375,
+          "new_p99_us": 3064.625,
+          "old_max_us": 6596.0,
+          "new_max_us": 6805.666,
+          "old_misses": 32,
+          "new_misses": 30
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7176.584,
+          "new_p99_us": 7167.0830000000005,
+          "old_max_us": 7232.8330000000005,
+          "new_max_us": 7282.375,
+          "old_misses": 16,
+          "new_misses": 16
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 445,
+      "new_misses": 445,
+      "old_retained_bytes": 81147065,
+      "new_retained_bytes": 81147067,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 766,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 11607.625,
+          "new_p99_us": 11852.625,
+          "old_max_us": 24502.5,
+          "new_max_us": 24691.792,
+          "old_misses": 190,
+          "new_misses": 190
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 514,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 11567.209,
+          "new_p99_us": 12064.417,
+          "old_max_us": 23516.208,
+          "new_max_us": 24415.459,
+          "old_misses": 128,
+          "new_misses": 128
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 25524.125,
+          "new_p99_us": 25501.916999999998,
+          "old_max_us": 25912.917,
+          "new_max_us": 25543.541999999998,
+          "old_misses": 127,
+          "new_misses": 127
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 4145,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048853,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 3633,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 7506.333,
+          "new_p99_us": 1289.917,
+          "old_max_us": 8402.958,
+          "new_max_us": 1513.458,
+          "old_misses": 454,
+          "new_misses": 3633
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 7815.791000000001,
+          "new_p99_us": 1244.375,
+          "old_max_us": 8399.0,
+          "new_max_us": 1281.458,
+          "old_misses": 32,
+          "new_misses": 256
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 8023.667,
+          "new_p99_us": 5936.666,
+          "old_max_us": 8967.042,
+          "new_max_us": 7400.834,
+          "old_misses": 128,
+          "new_misses": 256
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 45,
+      "new_misses": 48,
+      "old_retained_bytes": 55597299,
+      "new_retained_bytes": 55597301,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 297,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 2894.167,
+          "new_p99_us": 2915.416,
+          "old_max_us": 2947.125,
+          "new_max_us": 3214.958,
+          "old_misses": 15,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 2915.125,
+          "new_p99_us": 2885.75,
+          "old_max_us": 2927.416,
+          "new_max_us": 2928.333,
+          "old_misses": 14,
+          "new_misses": 16
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 3355.0,
+          "new_p99_us": 3429.4159999999997,
+          "old_max_us": 3391.25,
+          "new_max_us": 3642.958,
+          "old_misses": 16,
+          "new_misses": 16
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 253,
+      "new_misses": 252,
+      "old_retained_bytes": 36406899,
+      "new_retained_bytes": 36406901,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 252,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 5960.375,
+          "new_p99_us": 5818.9169999999995,
+          "old_max_us": 6051.1669999999995,
+          "new_max_us": 6167.541,
+          "old_misses": 62,
+          "new_misses": 62
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 5923.291,
+          "new_p99_us": 6134.375,
+          "old_max_us": 6433.583,
+          "new_max_us": 6549.333,
+          "old_misses": 64,
+          "new_misses": 64
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 7396.625,
+          "new_p99_us": 7428.708,
+          "old_max_us": 7424.375,
+          "new_max_us": 7576.125,
+          "old_misses": 127,
+          "new_misses": 126
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 5006,
+      "new_misses": 297,
+      "old_retained_bytes": 239063873,
+      "new_retained_bytes": 239063875,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 38769,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4470.25,
+          "new_p99_us": 650.208,
+          "old_max_us": 13213.208,
+          "new_max_us": 2437.7090000000003,
+          "old_misses": 4846,
+          "new_misses": 294
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 256,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 4438.0419999999995,
+          "new_p99_us": 599.2080000000001,
+          "old_max_us": 4524.7919999999995,
+          "new_max_us": 604.708,
+          "old_misses": 32,
+          "new_misses": 0
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 4792.959,
+          "new_p99_us": 2814.875,
+          "old_max_us": 5073.417,
+          "new_max_us": 2929.833,
+          "old_misses": 128,
+          "new_misses": 3
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 35935857,
+      "new_retained_bytes": 35935859,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2025,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 376.041,
+          "new_p99_us": 397.5,
+          "old_max_us": 1795.125,
+          "new_max_us": 1877.417,
+          "old_misses": 15,
+          "new_misses": 15
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1024,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 365.95799999999997,
+          "new_p99_us": 377.125,
+          "old_max_us": 1730.5,
+          "new_max_us": 1763.792,
+          "old_misses": 8,
+          "new_misses": 8
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 256,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 1763.291,
+          "new_p99_us": 1845.25,
+          "old_max_us": 1864.3329999999999,
+          "new_max_us": 1906.25,
+          "old_misses": 0,
+          "new_misses": 0
+        }
+      ]
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 103,
+      "new_misses": 103,
+      "old_retained_bytes": 36759761,
+      "new_retained_bytes": 36759763,
+      "phases": [
+        {
+          "callback_frames": 128,
+          "callbacks": 2051,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1426.417,
+          "new_p99_us": 1472.0,
+          "old_max_us": 5995.25,
+          "new_max_us": 6208.375,
+          "old_misses": 63,
+          "new_misses": 63
+        },
+        {
+          "callback_frames": 128,
+          "callbacks": 1028,
+          "budget_us": 666.6666666666666,
+          "old_p99_us": 1478.375,
+          "new_p99_us": 1471.208,
+          "old_max_us": 6196.833,
+          "new_max_us": 6190.25,
+          "old_misses": 32,
+          "new_misses": 32
+        },
+        {
+          "callback_frames": 512,
+          "callbacks": 257,
+          "budget_us": 2666.6666666666665,
+          "old_p99_us": 6240.75,
+          "new_p99_us": 6311.625,
+          "old_max_us": 6337.375,
+          "new_max_us": 6339.916,
+          "old_misses": 8,
+          "new_misses": 8
+        }
+      ]
+    }
+  ],
+  "scope": "Full local Plugin workload at unchanged admitted geometries. Historical timing is unmatched. No device deadline or new linear-EQ timing acceptance claim."
+}

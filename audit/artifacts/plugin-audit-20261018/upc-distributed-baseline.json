@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-convolution",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--lib",
+    "upc_prepares_older_input_tail",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nupc_early_tail frames=128 maximum_error=3.050537109375e-1\ntest convolution_plugin::upc_real_tests::upc_prepares_older_input_tail_before_the_next_partition_boundary ... FAILED\n\nfailures:\n\nfailures:\n    convolution_plugin::upc_real_tests::upc_prepares_older_input_tail_before_the_next_partition_boundary\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 76 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 22.10s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9ed77c4cd73a9f6e)\n\nthread 'convolution_plugin::upc_real_tests::upc_prepares_older_input_tail_before_the_next_partition_boundary' (341546430) panicked at crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs:171:5:\nolder-input work is still deferred to the boundary\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-convolution --lib`\n"
+}

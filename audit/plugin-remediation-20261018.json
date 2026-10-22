@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Latest unchanged 63-geometry UPC real-FFT run still fails in 58 geometries with 43,053 misses across 532,086 callbacks. Prior direct-head run: 58 / 43,261; coalesced: 59 / 45,578; NUPC real-FFT: 62 / 48,377; original complex: 61 / 51,122. Preserve all results and strict deadlines. UPC retained storage falls to about 50.1%, but partition-boundary compute bursts and native deadline compliance remain unresolved."
+          "evidence": "Latest unchanged 63-geometry UPC real-FFT run still fails in 58 geometries with 43,053 misses across 532,086 callbacks. Prior direct-head run: 58 / 43,261; coalesced: 59 / 45,578; NUPC real-FFT: 62 / 48,377; original complex: 61 / 51,122. Preserve all results and strict deadlines. UPC retained storage falls to about 50.1%, but partition-boundary compute bursts and native deadline compliance remain unresolved. A later distributed-tail candidate was rejected: 54/63 failing geometries but 69,510 total misses (six UPC geometries worse), versus accepted 58/63 and 43,053. Production DSP was restored exactly; reduced burst percentiles alone are insufficient."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1178,7 +1178,21 @@
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs",
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs",
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs",
-        "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-upc_real_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate.patch",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-focused.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-restored-validation.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-source.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-upc-distributed.py"
       ]
     },
     {
@@ -3976,6 +3990,31 @@
         "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
       ],
       "limitations": "Strict Convolution capacity remains red in 58/63 geometries. Historical local timing is unmatched and not native-device acceptance. Linear-phase EQ remains at its prior 28/108 failing rows. Broader plugin scope remains open."
+    },
+    {
+      "name": "Rejected distributed UPC tail scheduling after full strict-load regression",
+      "state": "candidate_rejected",
+      "plugin_ids": [
+        14
+      ],
+      "result": "Rejected a deterministic UPC tail-distribution candidate after preserving and checking the complete unchanged capacity matrix. The candidate prepared p>=1 terms from older FDL history during the existing 1024-frame input interval, reused the single sum and overlap buffers, and left H0 plus input FFT at the boundary. It added one inverse per multi-partition output, no vector payload, workers or latency. A real-file early-tail regression fails before (0.3050537 error) and passes on the candidate (7.45059e-8 under 2e-5); four populated partial-sum reset/reload cases match fresh streams exactly across callback partitions. Candidate release selection: 268 passed, seven retained ignores; strict all-target QA Clippy, formatting and standard Convolution QA pass. All 63 maximum-load geometries retain identical admission lengths, estimates, latency, budgets and 532,086 callbacks; output is finite, callback allocation/free-free and within conservative retained estimates. However the strict gate still exits 1, and aggregate physical misses increase from the accepted baseline 43,053 to 69,510 despite failed geometries falling from 58 to 54. UPC misses rise from 40,164 to 66,626; 13 UPC geometries record fewer misses, two equal and six more. NUPC is unchanged and records 2,884 versus 2,889. Lower p99 bursts do not establish capacity when average work remains over budget. The candidate is not shipped as default. Production DSP and tests are restored byte-for-byte to 221669a; snapshots of the candidate and regression tests, complete patch, raw red results, source hashes and consistency verifier are retained. No causal timing or native compliance claim. Accepted production baseline remains 58/63 failing geometries and 43,053 misses; overall production completion stays 35/45. Restored production Convolution tests pass 105 with four existing ignores, and strict all-target QA Clippy passes.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-upc_real_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate.patch",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-focused.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-restored-validation.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-source.json",
+        "audit/artifacts/plugin-audit-20261018/upc-distributed-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-upc-distributed.py"
+      ],
+      "limitations": "The rejected candidate does not change production. Accepted UPC capacity remains unresolved at 58/63 failed geometries; throughput must improve before work distribution can satisfy those physical budgets. Broader plugin requirements and the prior linear-phase EQ failures remain pending."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

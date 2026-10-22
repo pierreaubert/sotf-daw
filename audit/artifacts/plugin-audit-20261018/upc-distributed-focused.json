@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-convolution",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--lib",
+    "upc_real_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 2 tests\nupc_early_tail frames=128 maximum_error=7.450580596923828e-8\ntest convolution_plugin::upc_real_tests::upc_prepares_older_input_tail_before_the_next_partition_boundary ... ok\nupc_real_cache cases=12 checks=140 failures=0 dft_checks=240 maximum_error=1.3089011696757862e-6\ntest convolution_plugin::upc_real_tests::real_file_upc_uses_half_spectra_and_matches_independent_f64_dft ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 75 filtered out; finished in 0.19s\n\n",
+  "stderr": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 21.85s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9ed77c4cd73a9f6e)\n"
+}

@@ -296,3 +296,24 @@ Historical timings are unmatched; maximum-load scheduling remains open. Full
 raw results and their consistency verifier are retained in
 `audit/artifacts/plugin-audit-20261018/upc-real-fft-*` and
 `verify-upc-real-fft.py`. Linear-phase EQ has no new load acceptance result.
+
+### Rejected tail-distribution candidate
+
+An evaluated candidate prepared older-input UPC partitions during the existing
+1,024-frame latency interval, then added the first partition at the boundary.
+It reused existing buffers and passed waveform, full-tail, partial reset/reload,
+heap and admission checks, at the cost of one extra inverse per multi-partition
+output. It is not the production implementation.
+
+The unchanged 63-case diagnostic recorded 54 failing geometries versus 58, but
+69,510 physical misses versus 43,053 across the same 532,086 callbacks. Thirteen
+UPC geometries recorded fewer misses, two equal and six more. Smaller p99 bursts
+therefore did not establish deadline capacity: spreading work exposed sustained
+over-budget callbacks in six heavy configurations. Historical local timings are
+unmatched and do not establish causal or native-device behavior.
+
+Production DSP and tests were restored exactly to the preceding real-FFT commit.
+Candidate snapshots, regressions, patch and complete failed results remain under
+`audit/artifacts/plugin-audit-20261018/upc-distributed-*`, with
+`verify-upc-distributed.py`. Production capacity remains at the preceding red
+baseline; the candidate is evidence for further throughput work, not acceptance.

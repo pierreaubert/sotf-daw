@@ -1,0 +1,284 @@
+--- a/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs
+@@ -274,0 +275,2 @@
++    /// Completed older-input UPC partitions for the block being collected.
++    pub(super) upc_tail_jobs_done: usize,
+@@ -793,0 +796 @@
++            upc_tail_jobs_done: 0,
+@@ -1270,0 +1274,2 @@
++        self.upc_tail_jobs_done = 0;
++        self.fft_sum.fill(Complex::new(0.0, 0.0));
+@@ -1689,0 +1695,2 @@
++        self.upc_tail_jobs_done = 0;
++        self.fft_sum.fill(Complex::new(0.0, 0.0));
+@@ -1903,0 +1911,76 @@
++            }
++        }
++    }
++
++    fn accumulate_upc_partition(
++        &mut self,
++        state: &ConvolutionState,
++        output_ch: usize,
++        partition: usize,
++        fdl_partition: usize,
++    ) {
++        if self.true_stereo {
++            for input_ch in 0..2 {
++                let ir_ch = input_ch * 2 + output_ch;
++                let offset = (fdl_partition * self.channels + input_ch) * FFT_BINS;
++                complex_mul_add_simd(
++                    &mut self.fft_sum,
++                    &self.ir_runtime.fdl_flat[offset..offset + FFT_BINS],
++                    &state.partitions[ir_ch][partition],
++                );
++            }
++        } else {
++            let offset = (fdl_partition * self.channels + output_ch) * FFT_BINS;
++            let ir_ch = output_ch % state.ir_channels;
++            complex_mul_add_simd(
++                &mut self.fft_sum,
++                &self.ir_runtime.fdl_flat[offset..offset + FFT_BINS],
++                &state.partitions[ir_ch][partition],
++            );
++        }
++    }
++
++    fn add_upc_sum_to_overlap(&mut self, state: &ConvolutionState, output_ch: usize) {
++        // DC and Nyquist are real in the implicit Hermitian spectrum.
++        self.fft_sum[0].im = 0.0;
++        self.fft_sum[FFT_BINS - 1].im = 0.0;
++        state
++            .fft_inverse
++            .as_ref()
++            .expect("UPC state must have an inverse FFT plan")
++            .process_with_scratch(
++                &mut self.fft_sum,
++                &mut self.fft_time,
++                &mut self.ir_runtime.fft_scratch,
++            )
++            .expect("prepared UPC inverse dimensions and real endpoints");
++        let inv_n = 1.0 / FFT_SIZE as f32;
++        for i in 0..FFT_SIZE {
++            self.output_accum[output_ch][i] += self.fft_time[i] * inv_n;
++        }
++        self.fft_sum.fill(Complex::new(0.0, 0.0));
++    }
++
++    fn prepare_upc_tail(&mut self, state: &ConvolutionState, input_frames: usize) {
++        let tail_partitions = state.num_partitions - 1;
++        if tail_partitions == 0 {
++            return;
++        }
++        // Every term p>=1 for output block n uses an older X[n-p]. Those
++        // spectra are stable while collecting X[n]. Spread a deterministic
++        // prefix over that existing latency interval, without worker dispatch.
++        // The admitted 512 MiB geometry bounds this product well below usize.
++        let target = self.channels * tail_partitions * input_frames / PARTITION_SIZE;
++        while self.upc_tail_jobs_done < target {
++            let output_ch = self.upc_tail_jobs_done / tail_partitions;
++            let p = self.upc_tail_jobs_done % tail_partitions + 1;
++            // fdl_head still identifies X[n-1]; it decrements only at the
++            // boundary when X[n] replaces the oldest slot.
++            let fdl_partition = (self.fdl_head + p - 1) % state.num_partitions;
++            self.accumulate_upc_partition(state, output_ch, p, fdl_partition);
++            self.upc_tail_jobs_done += 1;
++            if p == tail_partitions {
++                // Existing overlap storage is free while output_ring drains.
++                // Linearity lets us add the tail now and H0*X[n] at the
++                // boundary, using one shared sum and no new vector payload.
++                self.add_upc_sum_to_overlap(state, output_ch);
+@@ -2034,0 +2118 @@
++        let mut scheduled_until = 0;
+@@ -2035,0 +2120,5 @@
++            if in_pos == scheduled_until {
++                let frames = (nf - in_pos).min(PARTITION_SIZE - self.input_fill);
++                self.prepare_upc_tail(state, self.input_fill + frames);
++                scheduled_until += frames;
++            }
+@@ -2072,2 +2160,0 @@
+-                let inv_n = 1.0 / FFT_SIZE as f32;
+-
+@@ -2100,47 +2187,5 @@
+-                    self.fft_sum.fill(Complex::new(0.0, 0.0));
+-                    // Keep the audio callback on its current thread. Dispatching
+-                    // short FFT work to Rayon’s global pool introduces
+-                    // unbounded scheduling and wake-up latency.
+-                    for p in 0..num_partitions {
+-                        let fdl_p = (self.fdl_head + p) % num_partitions;
+-                        if self.true_stereo {
+-                            for input_ch in 0..2 {
+-                                let ir_ch = input_ch * 2 + output_ch;
+-                                let fdl_off = (fdl_p * self.channels + input_ch) * FFT_BINS;
+-                                complex_mul_add_simd(
+-                                    &mut self.fft_sum,
+-                                    &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+-                                    &state.partitions[ir_ch][p],
+-                                );
+-                            }
+-                        } else {
+-                            let fdl_off = (fdl_p * self.channels + output_ch) * FFT_BINS;
+-                            let ir_ch = if state.ir_channels == 1 {
+-                                0
+-                            } else {
+-                                output_ch % state.ir_channels
+-                            };
+-                            complex_mul_add_simd(
+-                                &mut self.fft_sum,
+-                                &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+-                                &state.partitions[ir_ch][p],
+-                            );
+-                        }
+-                    }
+-                    // DC and Nyquist are real in the implicit Hermitian spectrum.
+-                    self.fft_sum[0].im = 0.0;
+-                    self.fft_sum[FFT_BINS - 1].im = 0.0;
+-                    state
+-                        .fft_inverse
+-                        .as_ref()
+-                        .expect("UPC state must have an inverse FFT plan")
+-                        .process_with_scratch(
+-                            &mut self.fft_sum,
+-                            &mut self.fft_time,
+-                            &mut self.ir_runtime.fft_scratch,
+-                        )
+-                        .expect("prepared UPC inverse dimensions and real endpoints");
+-
+-                    for i in 0..FFT_SIZE {
+-                        self.output_accum[output_ch][i] += self.fft_time[i] * inv_n;
+-                    }
++                    // Older-input terms have already reached the overlap
++                    // accumulator. Only the newly available first partition
++                    // remains on this boundary; latency stays PARTITION_SIZE.
++                    self.accumulate_upc_partition(state, output_ch, 0, self.fdl_head);
++                    self.add_upc_sum_to_overlap(state, output_ch);
+@@ -2147,0 +2193 @@
++                self.upc_tail_jobs_done = 0;
+--- a/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs
+@@ -129,0 +130,125 @@
++
++#[test]
++fn upc_prepares_older_input_tail_before_the_next_partition_boundary() {
++    // Five IR partitions, twelve outputs: the first 128 frames can finish
++    // one output's four older-input partitions before the next input FFT.
++    let file = fixture(4099, 1);
++    let mut plugin = ConvolutionPlugin::from_params(
++        12,
++        48000,
++        ConvolutionPluginParams {
++            ir_file: file.0.to_string_lossy().into_owned(),
++            use_nupc: false,
++            ..Default::default()
++        },
++    )
++    .unwrap();
++    let mut input = vec![0.0; PARTITION_SIZE * 12];
++    input[..12].fill(1.0);
++    plugin
++        .process_in_place(&mut input, &ProcessContext::new(48000, PARTITION_SIZE))
++        .unwrap();
++    let before = plugin.output_accum[0].clone();
++    let mut next = vec![0.0; 128 * 12];
++    plugin
++        .process_in_place(&mut next, &ProcessContext::new(48000, 128))
++        .unwrap();
++    assert_eq!(plugin.input_fill, 128);
++    let mut maximum_error = 0.0_f64;
++    for (i, previous) in before.iter().enumerate() {
++        // Only partition one has populated history in this second block.
++        // The impulse input makes its independent time-domain result literal.
++        let expected = if i < PARTITION_SIZE {
++            f64::from(coefficient(PARTITION_SIZE + i, 0)) / 32768.0
++        } else {
++            0.0
++        };
++        let delta = f64::from(plugin.output_accum[0][i]) - f64::from(*previous);
++        maximum_error = maximum_error.max((delta - expected).abs());
++    }
++    println!("upc_early_tail frames=128 maximum_error={maximum_error:e}");
++    assert!(
++        maximum_error < 2e-5,
++        "older-input work is still deferred to the boundary"
++    );
++}
++
++#[test]
++fn upc_partial_tail_reset_and_reload_match_fresh_callback_partitions() {
++    let mut cases = 0;
++    for matrix in [false, true] {
++        let outputs = if matrix { 2 } else { 12 };
++        let file = fixture(4099, if matrix { 4 } else { 1 });
++        let make = || {
++            ConvolutionPlugin::from_params_with_routing(
++                outputs,
++                48000,
++                ConvolutionPluginParams {
++                    ir_file: file.0.to_string_lossy().into_owned(),
++                    use_nupc: false,
++                    ..Default::default()
++                },
++                matrix,
++            )
++            .unwrap()
++        };
++        for reload in [false, true] {
++            let mut subject = make();
++            let mut warm: Vec<f32> = (0..1152 * outputs)
++                .map(|i| ((i * 13 % 71) as f32 - 35.0) / 128.0)
++                .collect();
++            subject
++                .process_in_place(&mut warm, &ProcessContext::new(48000, 1152))
++                .unwrap();
++            assert!(subject.fft_sum.iter().any(|v| v.norm_sqr() > 1e-12));
++            if reload {
++                subject.load_ir(file.0.to_str().unwrap()).unwrap();
++            } else {
++                subject.reset();
++            }
++            let mut fresh = make();
++            fresh.reset();
++            let input_frames = 6144 + 33;
++            let frames = input_frames + PARTITION_SIZE + 4099 - 1;
++            let input: Vec<f32> = (0..frames * outputs)
++                .map(|i| {
++                    if i / outputs < input_frames {
++                        ((i * 29 % 113) as f32 - 56.0) / 256.0
++                    } else {
++                        0.0
++                    }
++                })
++                .collect();
++            let render = |plugin: &mut ConvolutionPlugin, pattern: &[usize]| {
++                let mut output = input.clone();
++                let mut offset = 0;
++                let mut call = 0;
++                while offset < frames {
++                    let count = pattern[call % pattern.len()].min(frames - offset);
++                    plugin
++                        .process_in_place(
++                            &mut output[offset * outputs..(offset + count) * outputs],
++                            &ProcessContext::new(48000, count),
++                        )
++                        .unwrap();
++                    offset += count;
++                    call += 1;
++                }
++                output
++            };
++            let actual = render(&mut subject, &[1, 127, 257, 2049]);
++            let expected = render(&mut fresh, &[1024]);
++            // Synchronous replacement retains the existing 128-frame held-output
++            // fade. Its remaining stream must equal a fresh IR exactly.
++            let skip = if reload { 128 * outputs } else { 0 };
++            assert_eq!(
++                actual[skip..],
++                expected[skip..],
++                "matrix={matrix} reload={reload}"
++            );
++            cases += 1;
++        }
++    }
++    println!("upc_partial_tail_recovery cases={cases} bit_exact=true");
++    assert_eq!(cases, 4);
++}

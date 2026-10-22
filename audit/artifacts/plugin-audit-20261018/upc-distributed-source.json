@@ -1,0 +1,40 @@
+{
+  "base_commit": "221669a07cbe07ee09ab1a6c45e7afe9e5505769",
+  "source_sha256": {
+    "Cargo.lock": "8214e358c13655280a7eab0dc02de2e3df72d1efcae178e2a5ff15585289742c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "dc41f69c154393ab455f35d09316a6c7d7b5a6f50b370ba067a0fcafc140c0fb",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs": "d55af70e46b207324831ad759858d1f1aeca3b53fafbf79287cfc53bf3562747",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "81c7ed36dffe8459a823621ffd8ff99387303d41cf5bb3b1e0fb77bd5a0694f1",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "0800810039b6c888fa3188945370618dcdfb639e5999f5bc7a1b03963c64457b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "b5fdb80bd89e250a09f02784ad16811e1d34d1ae21946f578b727f50f0dacec5",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/Cargo.toml": "1f95133ba21929a2c05ad27fd0b0eb2f7fd70997f6808006b8cae80b554aaa79",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "96c9ed826d1c52cec7ce50a52f5cb07608b0c1f26922fae0c040cd94a71a974e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs": "5e027d5c953935d825791a816fb4618cf00903082403ea0987dc2c2012ba9b3e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs": "6b2eeba3681ae27e9d0172a773185fce638a0d7c264fd444007013735c1f12ed",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests.rs": "3011183bfdd4f6ea2a15c09cda2bc5864eb18e5c5ab3d219736eefbce61cc6b4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/misc.rs": "0ce81ad3257c60661f5dd47f6ba3dd1bfdc3f3be165ebd145f740fbed7320f30",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs": "e8ffe06bdd13211504a634b00fc2c3d0588200ff66b619e1b13b3e8a55ddc171",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs": "38c403550ac0e040864be5e43ba2387fa1ca411dc78de977aa9d283598192611",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs": "76fa9909c9bf0d8c297e56aeddbe0c9885a4c7d6972ca02b046ea9454d72570f"
+  },
+  "baseline_artifact_sha256": {
+    "upc-real-fft-load.json": "3b04a6c4dd4689139e3eef1124bce8902067555b21e73b01330743a05e9fe183",
+    "upc-distributed-baseline.json": "3e17cb8e2ae1bd17dde326c27b8f22d6b9a2fecd043d7c680179e647839824f1"
+  },
+  "hashes_unchanged_after_load": true,
+  "candidate_snapshot_paths": {
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-convolution_plugin.rs.txt",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs": "audit/artifacts/plugin-audit-20261018/upc-distributed-candidate-upc_real_tests.rs.txt"
+  },
+  "restored_baseline_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "053a53ed50caa492d76b0a2f2da5d2adce8cf5336f24dfe05af053a6cb52121c",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs": "e4b83754d07d8e762f004d2192bc91ea5e1be0c7f4450b98d1f5566519a422a4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/README.md": "a0cb9ca3c4f877232cc4ba20fd13eb638068a4f22357b630c2ec8693200a8d00",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/AGENTS.md": "74601398aaf080a1dcf053eab00a30da9d85eab60aaa4385be35279e73cd8a77"
+  },
+  "candidate_rejected": true,
+  "rejection_reason": "The unchanged full matrix has fewer failed geometries (58 to 54) and lower UPC p99 bursts, but total physical misses increase from 43,053 to 69,510, with six UPC geometries recording more misses. Work distribution does not resolve average compute capacity; do not ship this as a default without addressing throughput and verifying the full gate.",
+  "candidate_patch_sha256": "aeed40e0b08911a88b4db5d895b5ab4379784e2bb36fabfcb2e64f6947867de2"
+}

@@ -128,3 +128,10 @@ cargo test -p sotf-plugin-convolution
 - `upc_real_tests.rs` checks real-file half-spectrum storage against independent
   f64 DFT probes. Preserve all existing streaming stimuli and accuracy gates
   when changing synthetic cache fixtures to a new transform representation.
+
+- The distributed UPC tail candidate was rejected and is retained only in
+  `audit/artifacts/plugin-audit-20261018/upc-distributed-*`. It reduced bursts
+  but increased total physical misses (43,053 to 69,510). Preserve all failed
+  geometries; do not accept a scheduling change from percentiles or fewer
+  failing rows alone. Future partial-sum scheduling must also clear progress
+  and sums on reset/adoption and prove callback-partition invariance.
