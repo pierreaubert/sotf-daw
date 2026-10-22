@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Latest unchanged 63-geometry UPC real-FFT run still fails in 58 geometries with 43,053 misses across 532,086 callbacks. Prior direct-head run: 58 / 43,261; coalesced: 59 / 45,578; NUPC real-FFT: 62 / 48,377; original complex: 61 / 51,122. Preserve all results and strict deadlines. UPC retained storage falls to about 50.1%, but partition-boundary compute bursts and native deadline compliance remain unresolved. A later distributed-tail candidate was rejected: 54/63 failing geometries but 69,510 total misses (six UPC geometries worse), versus accepted 58/63 and 43,053. Production DSP was restored exactly; reduced burst percentiles alone are insufficient."
+          "evidence": "Latest selected ordinary-NUPC phase run still fails in 43/63 geometries with 42,605 misses across 532,086 callbacks. Prior accepted UPC real-FFT baseline: 58 / 43,053. Ordinary NUPC misses fall 525 to 94 with no geometry recording more; UPC and direct-head schedules remain unchanged and still require capacity work. The all-engine phase trial was rejected because head misses rose 2,364 to 3,547 despite fewer failing rows; all raw results remain. Earlier rejected UPC tail distribution produced 69,510 misses. Preserve every geometry, strict deadline and finite/zero-heap/admission gate. Local unmatched timings do not establish native-device compliance."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1100,6 +1100,35 @@
             "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs"
           ],
           "result": "UPC now uses real forward/inverse 2048-point transforms and 1025-bin prepared IR spectra, FDLs and sums, with a preallocated real workspace and one 1/N inverse scale. Ordinary/cyclic and true-stereo routing, 1024-frame latency, automation clocks, async retirement, complete native tails, callback scheduling and conservative admission arithmetic remain unchanged. The real-file structural regression fails 140 checks before and zero after across 12 geometries; 240 independent f64 DFT probes have maximum error 1.30891e-6 under the unchanged 2e-5 gate. Actual real FFT plan allocations are 91,348 bytes within the retained 430,080-byte reserve, with zero extra complex scratch. The selected shared/Convolution/linear-phase EQ release suite passes 266 tests with seven retained ignores (six existing functional ignores and the separately executed prior head-cost diagnostic). Strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter recording zero local physical misses. The complete unchanged 63-case strict load run retains 532,086 callbacks, identical admitted lengths/estimates/latencies/budgets, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. UPC retained requested bytes are 50.087\u201350.172% of preceding values. The gate still exits 1: 58 failed geometries and 43,053 misses, versus 58 / 43,261 previously. UPC misses change from 40,357 to 40,164; NUPC from 2,904 to 2,889. These are unmatched local timing observations, not causal speedup or native-device compliance. Full raw rows, failures, source hashes and an independent consistency verifier are retained. Linear-phase EQ uses the unchanged shared NUPC path; its prior 28/108 failed-row result remains pending, with no new EQ load claim. Convolution remains partial and overall production completion stays 35/45."
+        },
+        {
+          "task": "Stagger ordinary NUPC channel FFT boundaries with preserved zero-prehistory timing and reset phase",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-convolution_plugin.rs.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-validation.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-selection.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-phase-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-phase.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs",
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs"
+          ],
+          "result": "Add preparation-time NupcKernel::instantiate_with_phase(index,count), retaining default instantiate at phase zero. Each level starts with floor(B*index/count) zero-prehistory input samples and the same output-queue cursor; reset restores both. Widen the product to u128 to handle valid extreme usize fractions. Convolution staggers ordinary NUPC mapped output/path engines, including four-path true stereo. Direct heads and linear-phase EQ retain phase zero. Absolute IR offsets, level delay, signal latency, direct taps, normalization, automation, native finite support, kernel/plan sharing, callback-thread execution and conservative admission arithmetic are unchanged. No new vector buffers/plans/workers/dependencies/parameters; one phase scalar per level is retained within the metadata reserve. Steady transform rate and per-block work are unchanged, although a finite interval may contain one extra earlier boundary per level. Structural regression across 1176 configurations fails 15120/16464 checks with a zero-phase stub, then zero after implementation. Thirty-six independent dense/sparse f64 full-tail cases cover phase zero, half, 11/12, 31/32, B-1 and extreme usize fractions, with maximum error 1.58325e-8 at unchanged 2e-5 gate; dirty partial reset and irregular callback replay are bit-exact. Complete shared/Convolution/linear-phase EQ release selection: 269 passed/seven retained ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; standard QA records zero physical misses. The initial all-engine phase policy passes functional/resource checks but is rejected: 37/63 failed geometries and 43808 total misses, with direct-head misses 2364 to 3547 (ordinary NUPC 525 to 98). Preserve its complete raw data, source snapshot and validation. The selected ordinary-only policy retains all 63 geometries, 532086 callbacks, identical admitted lengths/estimates/latencies/budgets and strict margin 1.0. It still exits 1: 43 failed geometries and 42605 misses, versus accepted baseline 58 / 43053. Ordinary NUPC misses are 94 versus 525, with no geometry recording more; unchanged UPC totals 40161 versus 40164 and phase-zero heads 2350 versus 2364. All rows remain finite, allocation/free-free in callbacks and within conservative retained bounds. These development-matrix-guided, unmatched local timings are not causal/generalized/native-device acceptance. Full source/baseline hashes, both complete red matrices, selection rationale and independent verifier are retained. UPC/direct-head throughput and full capacity remain pending; no new linear-phase EQ maximum-load or FIR-M1 claim. Convolution remains partial, overall production completion 35/45."
         }
       ],
       "evidence": [
@@ -1192,7 +1221,25 @@
         "audit/artifacts/plugin-audit-20261018/upc-distributed-restored-validation.json",
         "audit/artifacts/plugin-audit-20261018/upc-distributed-source.json",
         "audit/artifacts/plugin-audit-20261018/upc-distributed-validation.json",
-        "audit/artifacts/plugin-audit-20261018/verify-upc-distributed.py"
+        "audit/artifacts/plugin-audit-20261018/verify-upc-distributed.py",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-selection.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-phase.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs"
       ]
     },
     {
@@ -4015,6 +4062,39 @@
         "audit/artifacts/plugin-audit-20261018/verify-upc-distributed.py"
       ],
       "limitations": "The rejected candidate does not change production. Accepted UPC capacity remains unresolved at 58/63 failed geometries; throughput must improve before work distribution can satisfy those physical budgets. Broader plugin requirements and the prior linear-phase EQ failures remain pending."
+    },
+    {
+      "name": "Staggered ordinary NUPC channel boundaries with explicit fractional preparation and reset phase",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14
+      ],
+      "result": "Add preparation-time NupcKernel::instantiate_with_phase(index,count), retaining default instantiate at phase zero. Each level starts with floor(B*index/count) zero-prehistory input samples and the same output-queue cursor; reset restores both. Widen the product to u128 to handle valid extreme usize fractions. Convolution staggers ordinary NUPC mapped output/path engines, including four-path true stereo. Direct heads and linear-phase EQ retain phase zero. Absolute IR offsets, level delay, signal latency, direct taps, normalization, automation, native finite support, kernel/plan sharing, callback-thread execution and conservative admission arithmetic are unchanged. No new vector buffers/plans/workers/dependencies/parameters; one phase scalar per level is retained within the metadata reserve. Steady transform rate and per-block work are unchanged, although a finite interval may contain one extra earlier boundary per level. Structural regression across 1176 configurations fails 15120/16464 checks with a zero-phase stub, then zero after implementation. Thirty-six independent dense/sparse f64 full-tail cases cover phase zero, half, 11/12, 31/32, B-1 and extreme usize fractions, with maximum error 1.58325e-8 at unchanged 2e-5 gate; dirty partial reset and irregular callback replay are bit-exact. Complete shared/Convolution/linear-phase EQ release selection: 269 passed/seven retained ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; standard QA records zero physical misses. The initial all-engine phase policy passes functional/resource checks but is rejected: 37/63 failed geometries and 43808 total misses, with direct-head misses 2364 to 3547 (ordinary NUPC 525 to 98). Preserve its complete raw data, source snapshot and validation. The selected ordinary-only policy retains all 63 geometries, 532086 callbacks, identical admitted lengths/estimates/latencies/budgets and strict margin 1.0. It still exits 1: 43 failed geometries and 42605 misses, versus accepted baseline 58 / 43053. Ordinary NUPC misses are 94 versus 525, with no geometry recording more; unchanged UPC totals 40161 versus 40164 and phase-zero heads 2350 versus 2364. All rows remain finite, allocation/free-free in callbacks and within conservative retained bounds. These development-matrix-guided, unmatched local timings are not causal/generalized/native-device acceptance. Full source/baseline hashes, both complete red matrices, selection rationale and independent verifier are retained. UPC/direct-head throughput and full capacity remain pending; no new linear-phase EQ maximum-load or FIR-M1 claim. Convolution remains partial, overall production completion 35/45.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-convolution_plugin.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-selection.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-phase-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-phase.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs"
+      ],
+      "limitations": "Full strict Convolution capacity still fails in 43/63 cases. Ordinary-only policy was selected using development matrix observations; no native or held-out acceptance. Direct-head and UPC throughput remain open, as do prior linear-phase EQ 28/108 failures and FIR-M1. Overall completion remains 35/45."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

@@ -30,6 +30,8 @@ pub(super) struct PartitionLevel {
     /// Input block accumulator
     pub(super) input_accum: Vec<f32>,
     pub(super) input_fill: usize,
+    /// Zero prehistory prefix restored together with the output-queue cursor.
+    pub(super) initial_phase: usize,
     /// Scratch buffers
     pub(super) fft_time: Vec<f32>,
     pub(super) fft_scratch: Vec<Complex<f32>>,
@@ -96,6 +98,7 @@ impl PartitionLevel {
             output_delay_pos: 0,
             input_accum: vec![0.0; block_size],
             input_fill: 0,
+            initial_phase: 0,
             fft_time: vec![0.0; fft_size],
             fft_scratch: vec![Complex::new(0.0, 0.0); scratch_len],
             fft_spectrum: vec![Complex::new(0.0, 0.0); bins],
@@ -200,10 +203,10 @@ impl PartitionLevel {
         self.fdl_head = 0;
         self.output_accum.fill(0.0);
         self.output_queue.fill(0.0);
-        self.output_queue_pos = 0;
+        self.output_queue_pos = self.initial_phase;
         self.output_delay.fill(0.0);
         self.output_delay_pos = 0;
         self.input_accum.fill(0.0);
-        self.input_fill = 0;
+        self.input_fill = self.initial_phase;
     }
 }

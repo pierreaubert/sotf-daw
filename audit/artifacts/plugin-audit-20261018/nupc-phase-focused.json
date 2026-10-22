@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "phase_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 2 tests\nnupc_phase_layout cases=1176 checks=16464 failures=0\ntest nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size ... ok\nnupc_phase_f64 cases=36 maximum_error=1.5832483768463135e-8 exact_replay=true\ntest nupc::phase_tests::phased_engines_match_f64_convolution_and_exact_replay_through_complete_tail ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.37s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.52s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n"
+}

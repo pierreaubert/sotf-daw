@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "phase_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 2 tests\nnupc_phase_layout cases=1176 checks=16464 failures=15120\ntest nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size ... FAILED\nnupc_phase_f64 cases=36 maximum_error=1.4901161193847656e-8 exact_replay=true\ntest nupc::phase_tests::phased_engines_match_f64_convolution_and_exact_replay_through_complete_tail ... ok\n\nfailures:\n\nfailures:\n    nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.36s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 8.62s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size' (341717639) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs:55:5:\nassertion `left == right` failed: nonzero phases still synchronize transforms\n  left: 15120\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

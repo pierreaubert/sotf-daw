@@ -317,3 +317,44 @@ Candidate snapshots, regressions, patch and complete failed results remain under
 `audit/artifacts/plugin-audit-20261018/upc-distributed-*`, with
 `verify-upc-distributed.py`. Production capacity remains at the preceding red
 baseline; the candidate is evidence for further throughput work, not acceptance.
+
+### Staggered NUPC channel boundaries
+
+Convolution prepares each ordinary NUPC channel/path with a fractional initial
+block phase. Direct-head engines retain phase zero. For level size `B`, engine `i` of `C` begins with `floor(B*i/C)` zero
+prehistory samples and the same output-queue cursor. Input and output block
+epochs advance together; the leading zero prefix preserves absolute IR tap
+placement and the original level latency plus output delay. Normal 1,024-frame
+latency and the zero-latency direct head remain unchanged.
+
+This separates transform boundaries across channel/path engines without adding
+FFT plans, vector buffers, worker dispatch, or per-block transforms. The steady
+transform rate is unchanged; shifting a boundary can place one extra transform
+per level inside a finite interval. It does not reduce a single transform's
+cost or the total steady multiply-accumulate work. Reset restores the prepared
+phase, so replay and callback partitioning remain deterministic.
+
+`NupcKernel::instantiate()` keeps phase zero. The explicit preparation-time
+`instantiate_with_phase(index, count)` API requires `count > 0` and `index < count`.
+Ordinary NUPC uses the mapped engine count, including all four true-stereo
+paths. Direct-head engines and linear-phase EQ retain phase zero. Channel waveforms can differ by FFT roundoff
+because block boundaries move. Independent f64 references cover dense and sparse
+responses, complete support, extreme fractions and reset replay. Conservative
+admission arithmetic, routing, automation, tail bounds and the strict 63-case
+load workload remain unchanged.
+
+The all-engine trial is retained but rejected: staggering direct heads raised
+their misses from 2,364 to 3,547. Its complete 63-case run failed in 37 geometries
+with 43,808 total misses. The selected ordinary-only policy keeps head phases
+unchanged and still fails the full strict gate: 43/63 geometries and 42,605
+physical misses across the same 532,086 callbacks, versus 58 / 43,053 previously.
+Ordinary NUPC totals fall from 525 to 94 with no geometry recording more misses;
+unchanged UPC totals 40,161 versus 40,164 and direct heads 2,350 versus 2,364.
+All rows remain finite, callback heap-free and within unchanged estimates.
+
+Policy selection used this development matrix. Timings are unmatched local
+observations, not causal or native-device acceptance. Both full red matrices,
+source hashes, the initial source snapshot and selection rationale are retained
+under `audit/artifacts/plugin-audit-20261018/nupc-phase-*`, with
+`verify-nupc-phase.py`. UPC, direct-head and remaining ordinary NUPC capacity
+work stays open. Linear-phase EQ has no new maximum-load acceptance result.

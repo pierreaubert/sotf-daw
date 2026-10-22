@@ -79,11 +79,48 @@ impl NupcKernel {
     }
 
     pub fn instantiate(&self) -> NupcEngine {
+        self.instantiate_with_phase(0, 1)
+    }
+
+    /// Instantiate independent history with a fractional initial block phase.
+    ///
+    /// Each level starts with `floor(block_size * phase_index / phase_count)`
+    /// zero prehistory samples and the matching output-queue position. This
+    /// shifts transform boundaries without changing absolute tap timing,
+    /// latency, buffers or per-block work. A finite interval can contain one
+    /// more transform per level because its boundary occurs earlier. Reset
+    /// restores the same phase. Construction belongs off the audio thread.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcKernel;
+    /// let kernel = NupcKernel::new(&[1.0], 64);
+    /// let left = kernel.instantiate_with_phase(0, 2);
+    /// let right = kernel.instantiate_with_phase(1, 2);
+    /// assert_eq!(left.latency_samples(), right.latency_samples());
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `phase_count` is zero or `phase_index >= phase_count`.
+    pub fn instantiate_with_phase(&self, phase_index: usize, phase_count: usize) -> NupcEngine {
+        assert!(phase_count > 0 && phase_index < phase_count);
         NupcEngine {
             levels: self
                 .levels
                 .iter()
-                .map(|(kernel, delay)| PartitionLevel::from_kernel(Arc::clone(kernel), *delay))
+                .map(|(kernel, delay)| {
+                    // Widen before multiplying: even valid usize::MAX fractions
+                    // must not overflow before the quotient bounds the phase.
+                    let phase = (kernel.block_size as u128 * phase_index as u128
+                        / phase_count as u128) as usize;
+                    let mut level = PartitionLevel::from_kernel(Arc::clone(kernel), *delay);
+                    level.initial_phase = phase;
+                    level.input_fill = phase;
+                    level.output_queue_pos = phase;
+                    level
+                })
                 .collect(),
             min_block: self.min_block,
             td_head: self

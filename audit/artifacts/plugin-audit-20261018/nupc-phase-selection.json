@@ -1,0 +1,22 @@
+{
+  "initial_policy": "Stagger every NUPC engine, including direct heads.",
+  "initial_load": {
+    "cases": 63,
+    "callbacks": 532086,
+    "failed_cases": 37,
+    "physical_misses": 43808,
+    "deadline_pass": false
+  },
+  "initial_ordinary_misses": {
+    "before": 525,
+    "after": 98
+  },
+  "initial_head_misses": {
+    "before": 2364,
+    "after": 3547
+  },
+  "initial_ordinary_geometries_more_misses": 0,
+  "selected_policy": "Stagger ordinary NUPC engines; retain phase zero for direct-head engines.",
+  "reason": "The full initial dataset regresses aggregate direct-head misses. Retain its existing clock until per-transform/throughput costs are addressed; ordinary NUPC shows no geometry with more misses in that dataset.",
+  "scope": "Development-matrix-guided policy selection. The final unchanged full matrix remains a capacity diagnostic, not held-out or native-device acceptance. UPC and direct-head capacity remain in the original audit scope."
+}

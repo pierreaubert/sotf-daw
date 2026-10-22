@@ -17,13 +17,14 @@ cargo test -p plugins-spatial
 ## Important Notes
 
 - Pure DSP: no `Plugin` trait impls — host integration lives in the per-plugin crates.
-- All public functions are real-time-safe; do not introduce allocations or locks here.
+- Processing and reset must be real-time-safe: no allocation, freeing or locks.
+  Kernel/engine construction allocates prepared storage off the audio thread.
 - Keep dependency surface tight (`sotf-host`, `rustfft` and workspace-existing `realfft`) so spatial plugins can pull this in without dragging the whole plugin tree.
 
 - NUPC transforms real blocks with N=2B and stores bins0..N/2 inclusive. Do not
   duplicate negative-frequency spectra or double interior bins for convolution.
   Preserve one 1/N inverse normalization, absolute partition offsets, overlap-add,
-  direct-head timing and the original callback-thread schedule.
+  direct-head timing and callback-thread execution. Default engine phases stay zero.
 - Every engine owns a prepared real N-sample workspace and half-spectrum FDL,
   input spectrum and sum. Scratch uses the larger forward/inverse requirement.
   The inverse endpoints are real. Shared kernels contain immutable half spectra
@@ -51,3 +52,19 @@ cargo test -p plugins-spatial
   timing diagnostic, ignored by default to avoid CI timing gates. Keep raw ABBA
   trials, symmetric output touching and the old scalar control. Profiling the
   head alone does not replace complete Plugin/native deadline validation.
+
+- `NupcKernel::instantiate_with_phase(index, count)` prepares a fractional initial
+  phase for each level; require count>0 and index<count. Widen the phase product
+  before division so valid large usize fractions cannot overflow.
+- Input zero-prehistory fill and output-queue cursor must have the same phase.
+  Store it and restore both on reset. Keep the existing output-delay length and
+  absolute tap placement: this staggers boundaries without adding signal delay.
+- `instantiate()` is phase zero. Per-block FFT/MAC work and steady rate stay the
+  same, though one shifted boundary can add a transform in a finite interval.
+  Preserve independent f64 dense/sparse full-tail, extreme-fraction and exact
+  reset/partition replay tests; roundoff across phases need not be bit-identical.
+
+- Convolution opts into phases for ordinary NUPC only. Its direct-head engines
+  retain phase zero: the full-matrix all-engine trial increased head deadline
+  misses. The shared API still supports head phases numerically; that does not
+  establish their maximum-load performance.

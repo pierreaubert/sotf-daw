@@ -135,3 +135,13 @@ cargo test -p sotf-plugin-convolution
   geometries; do not accept a scheduling change from percentiles or fewer
   failing rows alone. Future partial-sum scheduling must also clear progress
   and sums on reset/adoption and prove callback-partition invariance.
+
+- Ordinary NUPC construction staggers mapped engine/path boundaries with
+  `instantiate_with_phase(ch, engine_count)`. Direct-head engines retain phase
+  zero: the full-load trial regressed their aggregate misses. The per-level zero prehistory and
+  output-queue cursor must start at the same fractional phase; reset restores
+  both. Keep absolute tap positions, output delay, latency and finite support.
+  Default shared NUPC instantiation remains phase zero for other consumers.
+- This keeps per-block transform work and steady rate unchanged; a finite
+  interval can include one extra shifted boundary per level. Preserve full
+  capacity measurements and f64/reset/callback-partition/zero-heap gates.

@@ -1201,7 +1201,14 @@ impl ConvolutionPlugin {
             let engine_count = if true_stereo { 4 } else { channels };
             for ch in 0..engine_count {
                 let ir_ch = if true_stereo { ch } else { ch % ir_channels };
-                nupc_engines.push(kernels[ir_ch].instantiate());
+                // Stagger ordinary NUPC boundaries without changing latency.
+                // Direct-head levels can exceed a callback budget individually;
+                // retain their original phase until that throughput is resolved.
+                nupc_engines.push(if zero_latency_head {
+                    kernels[ir_ch].instantiate()
+                } else {
+                    kernels[ir_ch].instantiate_with_phase(ch, engine_count)
+                });
             }
             log::info!(
                 "[Convolution] NUPC engines built: {} channels, latency={} samples",
