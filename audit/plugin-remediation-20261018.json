@@ -2655,6 +2655,27 @@
             "audit/artifacts/plugin-audit-20261018/verify-xtc-normalization.py"
           ],
           "result": "Extract one spectral-normalization stage shared by synthetic symmetric/full and measured-HRTF preparation. Unchanged extraction retains all4100previous coefficient words exactly, then new regressions expose11/28fixed-point/skip coefficient failures(maxerror0.47681165),5/20non-worsening gain failures(maxworsening0.0252553) and672/1944actual prepared regularized-column failures(maxworsening0.00525455). Replace repeated inverse soft compression with one ceiling-capped real correction gain; widen response/gain arithmetic. Keep90%correction,0.5..4targetclamp,tiny-response threshold/skip,first inverse soft knee,final common row-power cap,all3frequencyblend blocks andbeta function unchanged. Final fixed28/control20/reachable1944cases have0failures(maxreachableworsening4.905e-8rounding). New default fixture changes1549/4100words(maxcomponentdelta0.0822219); earlier fixtures remain. Fullrelease lib/integration256passed/1existingignore,strictalltargetQAClippy,format andstandardprocessingQA pass. Stored-filter replay spans16rate/FFT/head-model/LF-mode conditions,96frequencycases and576six-stage rows; Python independently recomputes every metric/power and stored coefficient with0observederror. At nominal93.75Hz,rawcancellation25.811dB after normalization becomes4.81058dB after alpha0.447944identityblend;final effort cap makes no further change. The preblend rowpower18.37075 exceeds its15.8489budget, so removing that blend alone is not a validated fix. Unbounded/refined rows are counterfactuals and may select different refinement candidates. Discovered historical rendered360mismatch/120pose checks forced spectral_normalization=false; they did not validate default-on normalization. Expanded public Rust renderer now records10frequencybins incl23.4375/46.875/93.75/187.5Hz,explicit on/off modes,rawspeaker matrices,fixed/irregular callbacks and independent point-source/echo metrics:600rows/mode,146degraded/mode,worstabout-5.382084dB. All360historical off rows are preserved exactly. Both modes now cover120pose renders each(total240),zero mirror/partition error; existing60pose/resetheapcases retain0alloc/free and2048samplelatency. Identical expanded diagnostic passes on isolated49aec9ebaseline; onlymissing external-sotf-capture rustix lockentry repaired,withallpackagekeys/versionsunchanged,thenownedtest/lockrestoredandcleanworktreeremoved. Baseline initiallockedfailure and exactrepair retained;activeuserlock untouched. Normalization-off600rows unchanged;normalization-on separation changes-6.167e-6..+0.361713dB. Nominal rendered93.75Hz/on intendedgain-0.234376to-0.101900dB,normalizedseparation4.491244to4.613235dB,rawdepth4.725621to4.715136dB. Current shared-model report16/17,selected93.75Hz raw4.811dB stillbelow5dB;allolderfailuresretained. No parameter/schema/dependency/FFTlatency/callbackownership/nativeABI changes. Shared-model stage causality and controlled rendered fields are not measured/native robustness,loadedupdate deadlines,truepeaks orlistening acceptance. XTCpartial,overall35/45complete."
+        },
+        {
+          "requirement": "Evaluate LF blend remedies against predeclared modeled-mismatch acceptance guards and reject regressions.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/verify-xtc-modal-lf.py",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-acceptance-failure.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-default-change.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-candidate.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-validation.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-reference-candidate.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected-fixture.txt",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected.patch",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejection.md",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restoration.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restored-production-validation.json",
+            "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-validation.json"
+          ],
+          "result": "Rejected the mode-aware LF identity blend under the predeclared controlled-mismatch guard. Nominal analytical targets improve16/17to17/17 and261tests/1existingignore,strictClippy/processingQA pass, but degraded separation rises146to152of600rows in EACH normalization mode. Sixnewfailures/mode occur187.5Hz,echo0.4,lateralhead+/-0.1,yaw-0.3/0/+0.3. Independent reconstruction reproduces all1200renderedmetrics exactly. Minimum modeled singular gain does not bound transfer-model error. Preserve reproducible rejected patch,fixture,allfailures,fullanalysis and verifier that deliberately exits1;restore allfiveownedRustfiles byte-for-byte to7165135 and remove candidate fixture. No candidate DSP ships. XTCremains partial,productionnominal4.811dBstillbelow5dB;35/45complete."
         }
       ],
       "evidence": [
@@ -2693,7 +2714,21 @@
         "audit/artifacts/plugin-audit-20261018/xtc-normalization-rendered-baseline.json",
         "audit/artifacts/plugin-audit-20261018/xtc-normalization-baseline-lock-resolution.json",
         "audit/artifacts/plugin-audit-20261018/xtc-normalization-analysis.json",
-        "audit/artifacts/plugin-audit-20261018/verify-xtc-normalization.py"
+        "audit/artifacts/plugin-audit-20261018/verify-xtc-normalization.py",
+        "audit/artifacts/plugin-audit-20261018/verify-xtc-modal-lf.py",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-acceptance-failure.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-default-change.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-reference-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected-fixture.txt",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected.patch",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejection.md",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restoration.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restored-production-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-validation.json"
       ],
       "remaining": [
         "Extend controlled rendered/supplied-matrix evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Historical normalization-off six-frequency subset retains140/360degraded rows; expanded10frequency matrices have146/600degraded rows in each explicit normalization mode,worstabout-5.382084dB. Correcting normalization improves some rendered on-mode separation but does not establish measured robustness.",
@@ -2701,7 +2736,8 @@
         "Resolve nominal100Hz cancellation: selected93.75Hz shared-model bin now4.811dB versus unchanged5dB minimum; prior4.822/4.954/4.986 failures retained. Stage replay locates25.811to4.811dB loss at the unchanged identity blend;preblend rowpower exceeds budget,which any remedy must retain. Rendered normalization-on nominal point-field rawdepth4.715dB is a different measurement. No threshold widening.",
         "Extend frequency-dependent regularization, inverse gain limits and robustness regions to measured transfer data; verify dynamic updates/head tracking under load.",
         "Transient sample-peak linkage does not establish reconstructed true peaks, psychoacoustic artifacts or hardware acoustic quality.",
-        "Continuous four-path ear ownership, shared references and rear spherical extra paths now pass independent geometry/crossing/mirror tests. Exact finite-distance ear-surface paths, measured calibration, worker update response under load and native/head-tracking acceptance remain open."
+        "Continuous four-path ear ownership, shared references and rear spherical extra paths now pass independent geometry/crossing/mirror tests. Exact finite-distance ear-surface paths, measured calibration, worker update response under load and native/head-tracking acceptance remain open.",
+        "The rejected mode-aware LF candidate increases degraded controlled-field counts146to152permode despite nominal17/17. A supported-mode singular value is not a transfer-error bound. Preserve this rejection and develop an explicit uncertainty/robustness model or measured transfer evidence before replacing the production LF blend; do not tune to this matrix or weaken the acceptance guard."
       ],
       "evidence_scope_corrections": [
         {
@@ -3471,6 +3507,31 @@
       ],
       "result": "Extract one spectral-normalization stage shared by synthetic symmetric/full and measured-HRTF preparation. Unchanged extraction retains all4100previous coefficient words exactly, then new regressions expose11/28fixed-point/skip coefficient failures(maxerror0.47681165),5/20non-worsening gain failures(maxworsening0.0252553) and672/1944actual prepared regularized-column failures(maxworsening0.00525455). Replace repeated inverse soft compression with one ceiling-capped real correction gain; widen response/gain arithmetic. Keep90%correction,0.5..4targetclamp,tiny-response threshold/skip,first inverse soft knee,final common row-power cap,all3frequencyblend blocks andbeta function unchanged. Final fixed28/control20/reachable1944cases have0failures(maxreachableworsening4.905e-8rounding). New default fixture changes1549/4100words(maxcomponentdelta0.0822219); earlier fixtures remain. Fullrelease lib/integration256passed/1existingignore,strictalltargetQAClippy,format andstandardprocessingQA pass. Stored-filter replay spans16rate/FFT/head-model/LF-mode conditions,96frequencycases and576six-stage rows; Python independently recomputes every metric/power and stored coefficient with0observederror. At nominal93.75Hz,rawcancellation25.811dB after normalization becomes4.81058dB after alpha0.447944identityblend;final effort cap makes no further change. The preblend rowpower18.37075 exceeds its15.8489budget, so removing that blend alone is not a validated fix. Unbounded/refined rows are counterfactuals and may select different refinement candidates. Discovered historical rendered360mismatch/120pose checks forced spectral_normalization=false; they did not validate default-on normalization. Expanded public Rust renderer now records10frequencybins incl23.4375/46.875/93.75/187.5Hz,explicit on/off modes,rawspeaker matrices,fixed/irregular callbacks and independent point-source/echo metrics:600rows/mode,146degraded/mode,worstabout-5.382084dB. All360historical off rows are preserved exactly. Both modes now cover120pose renders each(total240),zero mirror/partition error; existing60pose/resetheapcases retain0alloc/free and2048samplelatency. Identical expanded diagnostic passes on isolated49aec9ebaseline; onlymissing external-sotf-capture rustix lockentry repaired,withallpackagekeys/versionsunchanged,thenownedtest/lockrestoredandcleanworktreeremoved. Baseline initiallockedfailure and exactrepair retained;activeuserlock untouched. Normalization-off600rows unchanged;normalization-on separation changes-6.167e-6..+0.361713dB. Nominal rendered93.75Hz/on intendedgain-0.234376to-0.101900dB,normalizedseparation4.491244to4.613235dB,rawdepth4.725621to4.715136dB. Current shared-model report16/17,selected93.75Hz raw4.811dB stillbelow5dB;allolderfailuresretained. No parameter/schema/dependency/FFTlatency/callbackownership/nativeABI changes. Shared-model stage causality and controlled rendered fields are not measured/native robustness,loadedupdate deadlines,truepeaks orlistening acceptance. XTCpartial,overall35/45complete.",
       "limitations": "Shared-model raw target remains failed;expandedcontrolled matrices retain146/600degraded rows per mode. Historical norm-off evidence corrected explicitly. Preblend stage exceeds row-power budget. Measured/native/headtracking/load/truepeak/listener acceptance remains unverified."
+    },
+    {
+      "name": "XTC mode-aware LF blend guarded evaluation",
+      "state": "candidate_rejected",
+      "plugin_ids": [
+        44
+      ],
+      "result": "Rejected the mode-aware LF identity blend under the predeclared controlled-mismatch guard. Nominal analytical targets improve16/17to17/17 and261tests/1existingignore,strictClippy/processingQA pass, but degraded separation rises146to152of600rows in EACH normalization mode. Sixnewfailures/mode occur187.5Hz,echo0.4,lateralhead+/-0.1,yaw-0.3/0/+0.3. Independent reconstruction reproduces all1200renderedmetrics exactly. Minimum modeled singular gain does not bound transfer-model error. Preserve reproducible rejected patch,fixture,allfailures,fullanalysis and verifier that deliberately exits1;restore allfiveownedRustfiles byte-for-byte to7165135 and remove candidate fixture. No candidate DSP ships. XTCremains partial,productionnominal4.811dBstillbelow5dB;35/45complete.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/verify-xtc-modal-lf.py",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-acceptance-failure.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-default-change.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-reference-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected-fixture.txt",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejected.patch",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-rejection.md",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restoration.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-restored-production-validation.json",
+        "audit/artifacts/plugin-audit-20261018/xtc-modal-lf-validation.json"
+      ],
+      "limitations": "Production unchanged from7165135; all XTC remaining scope and overall35/45completion unchanged."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

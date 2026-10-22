@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-xtc-modal-lf.py"
+  ],
+  "exit_code": 1,
+  "verifier_sha256": "2966c8d31a3e6b8c6695de725dbd849da90eda65acac3e154c3c985d92c67c4a",
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/artifacts/plugin-audit-20261018/verify-xtc-modal-lf.py\", line 106, in <module>\n    assert degraded<=old_degraded,(mode,degraded,old_degraded)\n           ^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: (False, 152, 146)\n"
+}

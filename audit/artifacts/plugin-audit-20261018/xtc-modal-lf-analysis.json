@@ -1,0 +1,374 @@
+{
+  "accepted": false,
+  "candidate_status": "rejected",
+  "guard_failures": [
+    {
+      "mode": false,
+      "guard": "degraded_count",
+      "actual": 152,
+      "maximum": 146
+    },
+    {
+      "mode": true,
+      "guard": "degraded_count",
+      "actual": 152,
+      "maximum": 146
+    }
+  ],
+  "passed_tests": 261,
+  "existing_ignored": 1,
+  "modal_oracle_cases": 24,
+  "stage_records": 672,
+  "stage_frequency_cases": 96,
+  "maximum_metric_error_db": 0.0,
+  "maximum_power_error": 0.0,
+  "maximum_stored_error": 0.0,
+  "maximum_prepared_budget_error": 0.0,
+  "maximum_independent_mode_error": 2.9203072404726527e-08,
+  "maximum_independent_weight_error": 7.101329702052794e-08,
+  "maximum_blend_error": 0.0,
+  "nominal_selected_bin": [
+    {
+      "stage": "regularized_unbounded",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        19.217862443142174,
+        19.217862443142174
+      ],
+      "desired_gain_db": [
+        -0.9775991989700252,
+        -0.9775991989700252
+      ],
+      "row_powers": [
+        12.862222462445633,
+        12.862222462445633
+      ]
+    },
+    {
+      "stage": "refined_unbounded",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        26.17241841405002,
+        26.17241841405002
+      ],
+      "desired_gain_db": [
+        -0.42310358564947537,
+        -0.42310358564947537
+      ],
+      "row_powers": [
+        16.904801485957638,
+        16.904801485957638
+      ]
+    },
+    {
+      "stage": "inverse_limited",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        26.38946459927549,
+        26.38946459927549
+      ],
+      "desired_gain_db": [
+        -0.6401607547626921,
+        -0.6401607547626921
+      ],
+      "row_powers": [
+        16.080676014343926,
+        16.080676014343926
+      ]
+    },
+    {
+      "stage": "normalized_capped",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        25.81123441618509,
+        25.81123441618509
+      ],
+      "desired_gain_db": [
+        -0.06193380714463862,
+        -0.06193380714463862
+      ],
+      "row_powers": [
+        18.370753942424273,
+        18.370753942424273
+      ]
+    },
+    {
+      "stage": "prepared_effort_limited",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        26.452511685354846,
+        26.452511685354846
+      ],
+      "desired_gain_db": [
+        -0.7032037028537846,
+        -0.7032037028537846
+      ],
+      "row_powers": [
+        15.848932962308115,
+        15.848932962308115
+      ]
+    },
+    {
+      "stage": "identity_blended",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        18.985689890307523,
+        18.985689890307523
+      ],
+      "desired_gain_db": [
+        -0.6532600368843344,
+        -0.6532600368843344
+      ],
+      "row_powers": [
+        13.915406269424466,
+        13.915406269424466
+      ]
+    },
+    {
+      "stage": "effort_limited",
+      "frequency_hz": 93.75,
+      "mode_gain": 0.8766958713531494,
+      "alpha": 0.9316163659095764,
+      "raw_depth_db": [
+        18.985689890307523,
+        18.985689890307523
+      ],
+      "desired_gain_db": [
+        -0.6532600368843344,
+        -0.6532600368843344
+      ],
+      "row_powers": [
+        13.915406269424466,
+        13.915406269424466
+      ]
+    }
+  ],
+  "rendered_cohorts": {
+    "False": {
+      "newly_degraded": [
+        {
+          "key": [
+            false,
+            187.5,
+            -0.1,
+            -0.3,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.181628183138459,
+          "candidate_separation_db": -0.9173612580038206
+        },
+        {
+          "key": [
+            false,
+            187.5,
+            -0.1,
+            0.0,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.3526678690164964,
+          "candidate_separation_db": -0.6974897847460015
+        },
+        {
+          "key": [
+            false,
+            187.5,
+            -0.1,
+            0.3,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.6671648143557247,
+          "candidate_separation_db": -0.5256700574651116
+        },
+        {
+          "key": [
+            false,
+            187.5,
+            0.1,
+            -0.3,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.6671648143557247,
+          "candidate_separation_db": -0.5256700574651116
+        },
+        {
+          "key": [
+            false,
+            187.5,
+            0.1,
+            0.0,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.3526678690164964,
+          "candidate_separation_db": -0.6974897847460015
+        },
+        {
+          "key": [
+            false,
+            187.5,
+            0.1,
+            0.3,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.181628183138459,
+          "candidate_separation_db": -0.9173612580038206
+        }
+      ],
+      "cases": 600,
+      "degraded": 152,
+      "baseline_degraded": 146,
+      "worst_normalized_db": -5.3820832850867,
+      "baseline_worst_normalized_db": -5.382083283837915,
+      "minimum_change_db": -9.80055876935241,
+      "maximum_change_db": 35.82948568510062,
+      "nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.8530677638567588,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 16.892757508904374,
+        "separation_improvement_db": 16.039689745047614,
+        "spectral_normalization": false,
+        "yaw_rad": 0.0
+      }
+    },
+    "True": {
+      "newly_degraded": [
+        {
+          "key": [
+            true,
+            187.5,
+            -0.1,
+            -0.3,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.1753278173300181,
+          "candidate_separation_db": -0.9243251597721338
+        },
+        {
+          "key": [
+            true,
+            187.5,
+            -0.1,
+            0.0,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.3465027616472502,
+          "candidate_separation_db": -0.7042666088285863
+        },
+        {
+          "key": [
+            true,
+            187.5,
+            -0.1,
+            0.3,
+            0.4,
+            1
+          ],
+          "baseline_separation_db": 1.6605558824496436,
+          "candidate_separation_db": -0.5328932201379928
+        },
+        {
+          "key": [
+            true,
+            187.5,
+            0.1,
+            -0.3,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.6605558824496436,
+          "candidate_separation_db": -0.5328932201379928
+        },
+        {
+          "key": [
+            true,
+            187.5,
+            0.1,
+            0.0,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.3465027616472502,
+          "candidate_separation_db": -0.7042666088285863
+        },
+        {
+          "key": [
+            true,
+            187.5,
+            0.1,
+            0.3,
+            0.4,
+            0
+          ],
+          "baseline_separation_db": 1.1753278173300181,
+          "candidate_separation_db": -0.9243251597721338
+        }
+      ],
+      "cases": 600,
+      "degraded": 152,
+      "baseline_degraded": 146,
+      "worst_normalized_db": -5.382084105725877,
+      "baseline_worst_normalized_db": -5.382084138159015,
+      "minimum_change_db": -9.792172552557581,
+      "maximum_change_db": 35.16201736975096,
+      "nominal_rendered_93_75hz": {
+        "cue": 0,
+        "desired_gain_db": -0.8205412271301913,
+        "echo_gain": 0.0,
+        "frequency_hz": 93.75,
+        "head_x_m": 0.0,
+        "measurement": "rendered_xtc_mismatch",
+        "raw_depth_db": 16.937594738947134,
+        "separation_improvement_db": 16.11705351181694,
+        "spectral_normalization": true,
+        "yaw_rad": 0.0
+      }
+    }
+  },
+  "maximum_independent_render_metric_error_db": 0.0,
+  "default_coefficient_change": {
+    "words": 4100,
+    "changed_words": 105,
+    "maximum_component_difference": 1.1903457641601562,
+    "previous_fixture_sha256": "53b901e3c32ed7811009d98a0b7efb72dd871560dfd74f8bcfcc98ad684adc25",
+    "current_fixture_sha256": "e355c2cc72a901fa19a0a5ef9c84116ebbdb71b469aa5f519150f13ea847437d",
+    "unchanged_functions": {
+      "fn apply_beta_freq_boosts": true,
+      "fn normalize_filter_columns": true,
+      "fn apply_effort_constraint": true,
+      "fn compute_full_2x2_inverse": true
+    },
+    "rendered_diagnostic_sha256": "e102bdee176c3c1a1635962edeacc5a7ef8a91851a42b0775422960bb1e3a105",
+    "base_commit": "7165135",
+    "frequency_curve_constants": {
+      "low_center_hz": 100,
+      "low_width_hz": 30,
+      "high_center_hz": 12000,
+      "high_width_hz": 1500
+    },
+    "scope": "LF identity rescue now follows bounded modeled minimum-mode gain; row budgets, first inverse knee, normalization and frequency-curve constants remain unchanged."
+  },
+  "scope": "Retained nominal analytical targets and declared controlled-mismatch guards; measured HRTF/room/native/load/listening and true-peak acceptance remain unproven."
+}

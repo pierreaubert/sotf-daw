@@ -1,0 +1,22 @@
+{
+  "production_base": "7165135",
+  "candidate_source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/apply.rs": "2efa48906403618e65f8e2f07889c1e84e40c7f1f75302503f74e1f8ec8d0ad7",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": "8fb1b7a89ad283c041a9e3a38f4e9ea38ce9c68955a9a1c3afcbead0ee770ffd",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/stage_audit_tests.rs": "224b29d98a1c32566474b99b021e6ef6430312cc576543595d2c8dc339978f44",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs": "c46d81365cabc752546af184b2e4507925b2e01c4a57e288a4ab734b6d2e2e23",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/xtc_validation.rs": "34129a5278e290320bde8dd1d69b1bda81b3776dc74d1c1d35747828120ff286",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/centered_modal_lf_bits.txt": "e355c2cc72a901fa19a0a5ef9c84116ebbdb71b469aa5f519150f13ea847437d"
+  },
+  "restored_source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/apply.rs": "f6e0992eb3c4c9093bcc332dd01b6b62a4adc52c0287782cc251e9df3e43780f",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": "6a030c0f30c6831fd9edcac60c1ae1c7b3004ff587eb17030125f7a43dd88259",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/stage_audit_tests.rs": "2552ceefa700bb0203a790109685cba241f00d2e1c2cef0d91651bef7b65da03",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/lateral_pose_tests.rs": "88f68423a6160fb5fa2bd18ac8b4fd3d63abe66bdbd64a1de7eee0488fa127da",
+    "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/xtc_validation.rs": "6a50aa31f524ee6b3e63f32eecf839c14f81dd68523838c093a4310bf26699c7"
+  },
+  "patch_sha256": "df3e58cb96c125b14d4ca98e34ba848151b7997f9db55e3f9a7a8dbaafd324a5",
+  "patch_applies_cleanly": true,
+  "source_diff_empty": true,
+  "reason": "Reject:152degraded controlled-field cases per mode versus146baseline; retain all proof and restore only owned experiment source changes."
+}
