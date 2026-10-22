@@ -1,0 +1,30 @@
+{
+  "base_commit": "ce4d0d9",
+  "source_sha256": {
+    "Cargo.lock": "1626aeacf36592d56c64eda81ff1019f37225d0dcda0c77f46c1db9ff3d7687e",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "b57bea5dfe30b147ca34cd44c95110d95042a4bfbf3948171f03c01faf47833b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "81c7ed36dffe8459a823621ffd8ff99387303d41cf5bb3b1e0fb77bd5a0694f1",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "0800810039b6c888fa3188945370618dcdfb639e5999f5bc7a1b03963c64457b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "c116bae540d928e76b763de9c9174ea1889b640bfb9b55c204d17d196928d14b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "05fac3e49c2dd26d318bd2430b5e2b8d54473574d5d7450db3953218dc6e5903",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "2ed4a53c0d9870bebace3f343163d8c98d161dd8a2a80a390f021a27d90e9d9e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs": "40f6e532ad30a918bd979a96347039056a84bd779a89a7c50f5ebba11b9f9215"
+  },
+  "unchanged_from_real_fft_baseline": {
+    "Cargo.lock": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": true,
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": true,
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": true
+  },
+  "baseline_artifact_sha256": {
+    "nupc-real-fft-load.json": "1345c072070ff41185920f5d0cb24bc7bd6eb1f9cf6cff8e894610f9fa225e93",
+    "nupc-real-fft-load.jsonl": "def6b55ac7a2da522ba66797f48af70d54d76f44efe7dc38fb93b5e38b87784e",
+    "nupc-real-fft-source.json": "430121bbdf5ff1c1ed85a3283f5fc04b243360690f98d027a0bd2ea1026cccf6",
+    "linear-phase-eq-load.json": "2a71dc642a874f89c391e8cbfdd064f8ade95e76b64a25f49e6092f4a8575d19"
+  },
+  "linear_eq_harness_unchanged_from_historical": true
+}

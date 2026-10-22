@@ -242,6 +242,18 @@ compliance; the small two-channel/two-stage release result is not a substitute.
 See `audit/artifacts/plugin-audit-20261018/linear-phase-eq-load.json`,
 `linear-phase-eq-load-ring-spans.json`, `linear-phase-eq-load-comparison.json`
 and `linear-phase-eq-load-checks.json` for commands, rows and verification.
+
+The current full matrix after the shared real-FFT and equal-size-level NUPC
+changes still fails: 28/108 rows and 9237 physical/reported misses across 32958
+callbacks. All 108 configurations, tap counts, phase callback counts, generations
+and deadline budgets match the historical harness; output is finite, settlement
+and replay bounds hold, and allocation/free counts are zero. Forty-five rows
+record fewer misses and 63 the same count, with none higher. These are unmatched
+historical observations, not a causal speedup or native-device compliance result.
+The full data and independent verifier are retained as
+`nupc-coalesced-linear-eq-load.json` and `verify-nupc-coalesced-linear-eq.py` in the
+same audit artifact directory. FIR-M1 response accuracy remains a separate open
+requirement; this backend optimization does not change FIR design or latency.
 The ignored legacy convolution array replay was not executed: its preserved
 pre-edit baseline directories are absent, and no replacement arrays were made.
 

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "coalesced_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 2 tests\nnupc_coalesced_coverage cases=120 failures=60 original_levels=437 actual_levels=437\ntest nupc::coalesced_tests::runtime_has_one_level_per_block_size_with_unchanged_partition_coverage ... FAILED\nnupc_coalesced_unmerged cases=45 maximum_error=0e0\ntest nupc::coalesced_tests::merged_levels_match_separate_delayed_groups_through_reset_and_complete_tail ... ok\n\nfailures:\n\nfailures:\n    nupc::coalesced_tests::runtime_has_one_level_per_block_size_with_unchanged_partition_coverage\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.13s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.98s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::coalesced_tests::runtime_has_one_level_per_block_size_with_unchanged_partition_coverage' (341010532) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs:100:5:\nassertion `left == right` failed: each source block needs one transform pair per block size\n  left: 60\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

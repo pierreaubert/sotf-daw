@@ -1,8 +1,35 @@
 use super::partition_level::{PartitionKernel, PartitionLevel};
 use super::time_domain_head::TimeDomainHead;
-use super::types::plan_partitions;
+use super::types::{PartitionSpec, plan_partitions};
 use realfft::RealFftPlanner;
 use std::sync::Arc;
+
+// Equal-size adjacent groups consume the same source blocks. Concatenating
+// their IR partitions into one FDL expresses the later group's output delay as
+// older input spectra, avoiding duplicate forward/inverse transforms and OLA.
+// Keep the public/admission plan unchanged; this is preparation-only grouping.
+fn coalesce_partition_levels(specs: Vec<PartitionSpec>) -> Vec<PartitionSpec> {
+    let mut combined: Vec<PartitionSpec> = Vec::with_capacity(specs.len());
+    for spec in specs {
+        if let Some(previous) = combined.last_mut()
+            && previous.block_size == spec.block_size
+            && previous.fft_size == spec.fft_size
+            && previous
+                .count
+                .checked_mul(previous.block_size)
+                .and_then(|span| previous.offset.checked_add(span))
+                == Some(spec.offset)
+        {
+            previous.count = previous
+                .count
+                .checked_add(spec.count)
+                .expect("planned NUPC partition count fits its IR coverage");
+        } else {
+            combined.push(spec);
+        }
+    }
+    combined
+}
 
 pub struct NupcKernel {
     levels: Vec<(Arc<PartitionKernel>, usize)>,
@@ -12,7 +39,7 @@ pub struct NupcKernel {
 
 impl NupcKernel {
     pub fn new(ir: &[f32], min_block: usize) -> Self {
-        let specs = plan_partitions(ir.len(), min_block);
+        let specs = coalesce_partition_levels(plan_partitions(ir.len(), min_block));
         let mut planner = RealFftPlanner::new();
         let levels = specs
             .iter()
@@ -34,7 +61,7 @@ impl NupcKernel {
             return Self::new(ir, min_block);
         }
         let tail = &ir[head_len..];
-        let specs = plan_partitions(tail.len(), min_block.min(head_len));
+        let specs = coalesce_partition_levels(plan_partitions(tail.len(), min_block.min(head_len)));
         let mut planner = RealFftPlanner::new();
         let levels = specs
             .iter()

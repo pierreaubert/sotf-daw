@@ -10,3 +10,6 @@ pub use types::*;
 
 #[cfg(test)]
 mod real_fft_tests;
+
+#[cfg(test)]
+mod coalesced_tests;

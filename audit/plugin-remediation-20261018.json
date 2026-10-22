@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Real-FFT NUPC reduces redundant storage, but strict maximum-load capacity still fails: 62/63 geometries and 48,377 misses across 532,086 callbacks, versus historical 61/51,122. Of 42 NUPC geometries, 39 record fewer misses and three the same count. The additional failed geometry uses unchanged UPC DSP. Preserve these unmatched observations; no deadline, matrix or tolerance reduction and no support expansion. Further structural convolution/scheduling mitigation and loaded native validation remain required."
+          "evidence": "Latest unchanged 63-geometry coalesced NUPC run still fails in 59 geometries with 45,578 physical misses across 532,086 callbacks. Prior real-FFT run: 62 / 48,377; original full-complex run: 61 / 51,122. Every run and raw deadline criterion is retained. Memory and redundant-transform reductions do not establish full capacity or loaded native compliance. Further structural DSP/scheduling work remains."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1024,6 +1024,30 @@
             "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
           ],
           "result": "Shared NUPC now uses the existing workspace realfft 3.5.0 dependency, real forward/inverse plans and N/2+1-bin kernels, FDLs and sums. Each engine adds a prepared N-sample real workspace and uses the larger transform scratch requirement. N=2B padding, single 1/N normalization, absolute offsets, direct head, latency, reset, callback-thread scheduling and public parameters are preserved. DC/Nyquist imaginary components are explicitly zero before the real inverse. The baseline storage regression fails 120/132 spectra; the candidate has zero failures and stores 43,812 complex values instead of 87,360. Independent f64 references cover 54 dense cases and four 262,147-tap sparse cases, including power/non-power block sizes, DC/Nyquist, direct heads, reset, irregular rendering and complete last-tap support. Maximum errors are 2.26244e-8 and 2.42072e-8 under the unchanged 2e-5 gates. The full shared/Convolution suite passes 115 tests with four existing ignores; three final FFT regressions pass. The corrected half-spectrum resource assertion passes. All 145 linear-phase EQ consumer tests pass with two existing ignores. Strict all-target QA Clippy and formatting pass. Standard Convolution QA records zero physical misses, which is separate from maximum-load acceptance. The unchanged 63-geometry strict load matrix covers 532,086 callbacks: zero boundary errors, zero callback allocations/frees, finite output and retained bytes within every conservative estimate. It still exits 1: 62 failed geometries and 48,377 physical misses, versus historical 61 and 51,122. Of 42 NUPC geometries, 39 record fewer misses and three the same count; NUPC totals change from 10,771 to 7,976. Unchanged UPC totals change from 40,351 to 40,401, including one additional failed geometry with six misses. These are unmatched historical timing observations, not causal or native-device compliance evidence. Retained NUPC requested bytes are 62.25\u201364.29% of their historical values; these counters are not RSS or aggregate process bounds. Admission arithmetic, source lengths, estimates, latency, callback counts/horizons and the load harness are unchanged. The conservative full-complex allowance is deliberately retained to avoid expanding admitted workloads. The stale FDL-alone resource assertion now counts actual half spectra while preserving rejection. Historical backend hashes and outer audio functions were checked. Only the plugins-spatial dependency edge to already-locked realfft is added; no package version changes. Convolution and linear-phase EQ remain partial; overall completion remains 35/45. Maximum-load deadlines remain failed."
+        },
+        {
+          "task": "Coalesce equal-size NUPC runtime levels and revalidate unchanged maximum workloads and consumer contracts.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
+          ],
+          "result": "Preparation coalesces only contiguous equal-block/equal-FFT NUPC groups. Their IR partitions concatenate into one kernel/FDL; older input spectra replace the later group output delay. The first offset/delay is retained. Public partition plans, admission arithmetic/limits, complete tap coverage, direct heads, latency, callback scheduling, parameters and dependencies are unchanged. A 120-case structural regression fails 60 cases before and zero after; runtime levels fall from 437 to 248 with the same total partition count. The explicit unmerged reference covers 45 reset/complete-tail cases and matches within 2.23518e-8. Existing independent f64 dense 54 cases and 262,147-tap sparse four cases retain errors below 2.43e-8 under unchanged 2e-5 gates, with exact reset/partition behavior. The complete shared/Convolution/linear-phase EQ release selection passes 263 tests with six existing ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; the latter records zero physical misses. The unchanged 63-geometry strict load matrix retains 532,086 callbacks, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. It still exits 1: 59 failed geometries / 45,578 misses, versus the immediately preceding real-FFT run at 62 / 48,377. Of 42 NUPC geometries, 40 record fewer misses and two the same count, with none higher; totals change from 7,976 to 5,206. Unchanged UPC totals change from 40,401 to 40,372. Retained NUPC requested bytes are 58.06\u201381.66% of preceding values, not RSS or aggregate bounds. Rerunning the unchanged 108-row maximum-load linear-phase EQ harness also exits 1: 28 failed rows and 9,237 physical/reported misses across 32,958 callbacks, versus historical 49 rows / 14,635 misses. All 108 rows are finite, settled, replay-bounded and allocation/free-free; configurations, taps, callback counts, generations and budgets match. There are 45 rows with fewer misses, 63 equal and none higher. Historical measurements are unmatched and the older EQ baseline precedes intervening changes, so no causal or native-device compliance claim. Both full red datasets, source hashes, baseline artifact hashes and independent verifiers remain. This reduces redundant work but does not distribute remaining large FFT bursts or resolve direct-head cost. Maximum capacity and native validation remain pending; FIR-M1 is separate. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
         }
       ],
       "evidence": [
@@ -1051,7 +1075,22 @@
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
-        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
       ]
     },
     {
@@ -1934,7 +1973,7 @@
         {
           "task": "Address measured full-load deadline failures and native callback compliance",
           "status": "pending",
-          "evidence": "Full-load measurement is complete but capacity remains failing: baseline strict 108-row release matrix misses in 49 rows/14635 callbacks; high-load medians can exceed budgets even before updates. Do not infer broad support from earlier two-channel/two-stage zero-miss runs. The tested micro-optimization was rejected and source restored. No quantum/deadline/tolerance/matrix reduction. Structural workload/convolution scheduling mitigation and loaded native/FFI device gates remain outstanding."
+          "evidence": "Current unchanged 108-row release matrix after shared NUPC optimizations still fails: 28 rows and 9,237 physical/reported misses over 32,958 callbacks. Historical baseline: 49 rows / 14,635 misses. All rows remain finite, settled, replay-bounded and zero-heap, with unchanged configurations, tap counts, callback counts and budgets. These unmatched timing observations do not certify device/native capacity. Keep both datasets; further capacity mitigation and loaded native/FFI checks remain required."
         },
         {
           "task": "Resolve deferred FIR-M1 response limitation without weakening contracts",
@@ -1991,6 +2030,30 @@
             "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
           ],
           "result": "All 145 release consumer tests pass with two existing ignores after the shared NUPC real-FFT conversion, including response, dynamic updates, replay, stale/revision ownership, channel routing, reset/heap and finite EOF. Strict all-target QA Clippy passes. FIR coefficients, phase, public latency, controls and quantum are unchanged; processing roundoff may change. This does not rerun or resolve the 108-row maximum-load failure or FIR-M1 response limitation."
+        },
+        {
+          "task": "Coalesce equal-size NUPC runtime levels and revalidate unchanged maximum workloads and consumer contracts.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-focused.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
+          ],
+          "result": "Preparation coalesces only contiguous equal-block/equal-FFT NUPC groups. Their IR partitions concatenate into one kernel/FDL; older input spectra replace the later group output delay. The first offset/delay is retained. Public partition plans, admission arithmetic/limits, complete tap coverage, direct heads, latency, callback scheduling, parameters and dependencies are unchanged. A 120-case structural regression fails 60 cases before and zero after; runtime levels fall from 437 to 248 with the same total partition count. The explicit unmerged reference covers 45 reset/complete-tail cases and matches within 2.23518e-8. Existing independent f64 dense 54 cases and 262,147-tap sparse four cases retain errors below 2.43e-8 under unchanged 2e-5 gates, with exact reset/partition behavior. The complete shared/Convolution/linear-phase EQ release selection passes 263 tests with six existing ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; the latter records zero physical misses. The unchanged 63-geometry strict load matrix retains 532,086 callbacks, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. It still exits 1: 59 failed geometries / 45,578 misses, versus the immediately preceding real-FFT run at 62 / 48,377. Of 42 NUPC geometries, 40 record fewer misses and two the same count, with none higher; totals change from 7,976 to 5,206. Unchanged UPC totals change from 40,401 to 40,372. Retained NUPC requested bytes are 58.06\u201381.66% of preceding values, not RSS or aggregate bounds. Rerunning the unchanged 108-row maximum-load linear-phase EQ harness also exits 1: 28 failed rows and 9,237 physical/reported misses across 32,958 callbacks, versus historical 49 rows / 14,635 misses. All 108 rows are finite, settled, replay-bounded and allocation/free-free; configurations, taps, callback counts, generations and budgets match. There are 45 rows with fewer misses, 63 equal and none higher. Historical measurements are unmatched and the older EQ baseline precedes intervening changes, so no causal or native-device compliance claim. Both full red datasets, source hashes, baseline artifact hashes and independent verifiers remain. This reduces redundant work but does not distribute remaining large FFT bursts or resolve direct-head cost. Maximum capacity and native validation remain pending; FIR-M1 is separate. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
         }
       ],
       "evidence": [
@@ -2000,7 +2063,24 @@
         "Load follow-up: two full 108-row release measurements intentionally exit 1; data and rejected candidate retained. No production DSP runtime change accepted in this follow-up. Static QA reporting corrected. Final restored shared/FIR/convolution/crossover verification recorded separately; legacy ignored capture/replay inventory preserved and required AUD134 replay folders absent (not regenerated).",
         "Final restored-source combined run: 365 passed, 1 failed, 8 existing ignored. Convolution capacity_partitions_and_midstream_controls_match_zero_padded_reference returns 2044 extra tail frames for nupc=false/head=false/capacity=1, with exact overlapping samples; aggregate failure repeated. Isolated Cargo target (7 tests), eight exact-binary full-suite reruns and a package-cwd exact-test rerun passed. Cause unresolved; no convolution edits or weakened assertions. Scoped shared/FIR all-targets QA Clippy passes. See linear-phase-eq-load-checks.json and full regression log.",
         "Follow-up resolves the previous combined Convolution failure: timestamp-only parallel fixture names collided. Exclusive-create diagnostic proves AlreadyExists; sequence IDs plus exclusive creation pass 40 parallel suites and final four-crate regression 366 passed/8 existing ignored. See convolution-fixture-isolation.json. Full-load deadline and FIR-M1 limits remain unchanged.",
-        "audit/artifacts/plugin-audit-20261018/fir-centered-phase-validation.json"
+        "audit/artifacts/plugin-audit-20261018/fir-centered-phase-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
       ]
     },
     {
@@ -3718,6 +3798,35 @@
         "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs"
       ],
       "limitations": "Strictload remains failed62/63; unmatched historical timing is not device compliance. LinearEQ load108matrix andFIR-M1 remain open. No goal completion claim."
+    },
+    {
+      "name": "Coalesced equal-size NUPC levels and refreshed convolution/EQ capacity matrices",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14,
+        30
+      ],
+      "result": "Preparation coalesces only contiguous equal-block/equal-FFT NUPC groups. Their IR partitions concatenate into one kernel/FDL; older input spectra replace the later group output delay. The first offset/delay is retained. Public partition plans, admission arithmetic/limits, complete tap coverage, direct heads, latency, callback scheduling, parameters and dependencies are unchanged. A 120-case structural regression fails 60 cases before and zero after; runtime levels fall from 437 to 248 with the same total partition count. The explicit unmerged reference covers 45 reset/complete-tail cases and matches within 2.23518e-8. Existing independent f64 dense 54 cases and 262,147-tap sparse four cases retain errors below 2.43e-8 under unchanged 2e-5 gates, with exact reset/partition behavior. The complete shared/Convolution/linear-phase EQ release selection passes 263 tests with six existing ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; the latter records zero physical misses. The unchanged 63-geometry strict load matrix retains 532,086 callbacks, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. It still exits 1: 59 failed geometries / 45,578 misses, versus the immediately preceding real-FFT run at 62 / 48,377. Of 42 NUPC geometries, 40 record fewer misses and two the same count, with none higher; totals change from 7,976 to 5,206. Unchanged UPC totals change from 40,401 to 40,372. Retained NUPC requested bytes are 58.06\u201381.66% of preceding values, not RSS or aggregate bounds. Rerunning the unchanged 108-row maximum-load linear-phase EQ harness also exits 1: 28 failed rows and 9,237 physical/reported misses across 32,958 callbacks, versus historical 49 rows / 14,635 misses. All 108 rows are finite, settled, replay-bounded and allocation/free-free; configurations, taps, callback counts, generations and budgets match. There are 45 rows with fewer misses, 63 equal and none higher. Historical measurements are unmatched and the older EQ baseline precedes intervening changes, so no causal or native-device compliance claim. Both full red datasets, source hashes, baseline artifact hashes and independent verifiers remain. This reduces redundant work but does not distribute remaining large FFT bursts or resolve direct-head cost. Maximum capacity and native validation remain pending; FIR-M1 is separate. Convolution and linear-phase EQ remain partial; overall completion stays 35/45.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-focused.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-linear-eq-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
+      ],
+      "limitations": "Current strict capacity gates remain red: Convolution 59/63 and linear-phase EQ 28/108. Local historical timing is not causal/device compliance. FIR-M1 and broader plugin scope remain open."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

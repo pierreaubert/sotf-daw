@@ -1,0 +1,995 @@
+{
+  "functional_verified": true,
+  "deadline_pass": false,
+  "rows": 108,
+  "callbacks": 32958,
+  "failed_rows": 28,
+  "physical_misses": 9237,
+  "reported_misses": 9237,
+  "historical_summary": {
+    "deadline_margin": 1.0,
+    "failed_rows": 49,
+    "physical_misses": 14635,
+    "reported_misses": 14635,
+    "rows": 108,
+    "timing_scope": "complete default-host callbacks, local wall-clock observation"
+  },
+  "fewer_misses": 45,
+  "equal_misses": 63,
+  "more_misses": 0,
+  "comparisons": [
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 661,
+      "new_misses": 121
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 162,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 661,
+      "new_misses": 120
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 162,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 679,
+      "new_misses": 584
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 207,
+      "new_misses": 160
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 679,
+      "new_misses": 498
+    },
+    {
+      "rate_hz": 48000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 207,
+      "new_misses": 160
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 191,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 165,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 4,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 2,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 697,
+      "new_misses": 652
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 254,
+      "new_misses": 162
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 696,
+      "new_misses": 655
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 261,
+      "new_misses": 162
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 53,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 29,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 51,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 25,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 663
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 195
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 667
+    },
+    {
+      "rate_hz": 96000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 194
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 660,
+      "new_misses": 120
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 162,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 660,
+      "new_misses": 122
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 2,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 162,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 1,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 0,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 126,
+      "new_misses": 2
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 32,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 132,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 32,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 680
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 224
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 679
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 8,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 226
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 32,
+      "new_misses": 1
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 8,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 24,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 1,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 2,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 149,
+      "new_misses": 33
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 34,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 149,
+      "new_misses": 27
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 2,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 34,
+      "new_misses": 0
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 775
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "linear",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 290
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 128,
+      "old_misses": 775,
+      "new_misses": 775
+    },
+    {
+      "rate_hz": 192000,
+      "channels": 12,
+      "stages": 10,
+      "phase": "minimum",
+      "callback_frames": 512,
+      "old_misses": 290,
+      "new_misses": 290
+    }
+  ],
+  "scope": "Unchanged 108-row harness, configurations, callbacks and deadline margin. Historical measurements precede both shared NUPC changes and may include other intervening implementation changes; no causal speedup, native-device or FIR-M1 acceptance claim."
+}

@@ -194,7 +194,7 @@ Consequently the admitted source lengths and full load diagnostic matrix do not
 change with this implementation. The estimate is an upper bound, not a statement
 of actual half-spectrum storage or total process RSS.
 
-The retained strict 63-geometry load run still fails: 62 geometries and 48,377
+Before level coalescing, the retained strict 63-geometry load run failed: 62 geometries and 48,377
 physical deadline misses over 532,086 complete callbacks, versus the historical
 61 geometries / 51,122 misses. Of 42 NUPC geometries, 39 record fewer misses and three the same count; the
 additional failed geometry is an unchanged UPC route. The observations are not
@@ -204,3 +204,32 @@ retained requested bytes below the conservative estimate. NUPC retained backend
 allocation is about 62.25–64.29% of the historical value at the same geometry;
 these counters are not RSS or an aggregate process-memory bound. Large inline
 FFT bursts and full maximum-load deadline compliance remain open.
+
+### Coalesced equal-size NUPC levels
+
+Preparation combines adjacent equal-block partition groups with contiguous IR
+coverage into one runtime level. Both groups originally transformed identical
+source blocks. Keeping the first offset and concatenating their IR partitions
+lets older FDL spectra express the second group's delay, with one forward FFT,
+one inverse FFT and one overlap-add accumulator per block size. Total partition
+coverage and tap positions stay the same. Direct-head taps, public latency,
+callback-thread execution and finite tail policy are unchanged.
+
+The public partition planner and conservative admission estimate still describe
+the original groups, so admitted workloads do not expand. Numerical comparisons
+use the explicitly unmerged construction and independent f64 convolution; bit
+identity with the earlier accumulation order is not required. Each current
+renderer still has exact reset and callback-partition invariance. This reduces
+redundant transforms and per-sample bookkeeping, but does not distribute a large
+remaining FFT across callbacks or establish maximum-load deadline compliance.
+
+With coalesced levels, the complete unchanged load matrix still fails in 59/63
+geometries, with 45,578 physical misses over 532,086 callbacks. The preceding
+real-FFT run failed in 62 geometries with 48,377 misses. Forty NUPC geometries
+record fewer misses and two the same count; none record more. Retained NUPC
+requested bytes are 58.06–81.66% of the preceding values. These are unmatched
+local observations, not causal timing or native-device acceptance. All cases
+remain finite and within the conservative retained-storage bound, with zero
+callback allocations/frees. The shared linear-phase EQ 108-row matrix also
+remains red: 28 failed rows / 9,237 misses. Both complete datasets and independent
+consistency verifiers are retained under `audit/artifacts/plugin-audit-20261018/`.

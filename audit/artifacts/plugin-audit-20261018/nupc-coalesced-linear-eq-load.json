@@ -1,0 +1,5975 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-dynamic-linear-phase-eq",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 1,
+  "elapsed_seconds": 89.8809452499263,
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "records": [
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 27.667,
+          "p50_us": 22.834,
+          "p95_us": 27.667,
+          "p99_us": 27.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 77.791,
+          "p50_us": 41.0,
+          "p95_us": 71.75,
+          "p99_us": 77.791,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 50.5,
+          "p50_us": 10.209,
+          "p95_us": 47.458,
+          "p99_us": 50.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 47.583,
+          "p50_us": 11.75,
+          "p95_us": 45.708999999999996,
+          "p99_us": 47.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 115.875,
+          "p50_us": 115.875,
+          "p95_us": 115.875,
+          "p99_us": 115.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 203.833,
+          "p50_us": 192.083,
+          "p95_us": 203.833,
+          "p99_us": 203.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 83.875,
+          "p50_us": 56.125,
+          "p95_us": 82.041,
+          "p99_us": 83.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 81.417,
+          "p50_us": 51.709,
+          "p95_us": 81.25,
+          "p99_us": 81.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 30.790999999999997,
+          "p50_us": 23.791999999999998,
+          "p95_us": 30.790999999999997,
+          "p99_us": 30.790999999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 82.875,
+          "p50_us": 42.75,
+          "p95_us": 75.16699999999999,
+          "p99_us": 82.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 50.208,
+          "p50_us": 11.875,
+          "p95_us": 46.625,
+          "p99_us": 50.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 51.041999999999994,
+          "p50_us": 12.208,
+          "p95_us": 47.208,
+          "p99_us": 51.041999999999994,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 108.5,
+          "p50_us": 108.5,
+          "p95_us": 108.5,
+          "p99_us": 108.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 192.708,
+          "p50_us": 180.542,
+          "p95_us": 192.708,
+          "p99_us": 192.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 79.292,
+          "p50_us": 50.25,
+          "p95_us": 75.958,
+          "p99_us": 79.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 83.583,
+          "p50_us": 53.708,
+          "p95_us": 82.209,
+          "p99_us": 83.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 54.625,
+          "p50_us": 41.833,
+          "p95_us": 54.625,
+          "p99_us": 54.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 152.208,
+          "p50_us": 78.042,
+          "p95_us": 141.875,
+          "p99_us": 148.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 91.667,
+          "p50_us": 19.583,
+          "p95_us": 90.292,
+          "p99_us": 91.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 93.334,
+          "p50_us": 21.792,
+          "p95_us": 88.958,
+          "p99_us": 93.334,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 219.042,
+          "p50_us": 219.042,
+          "p95_us": 219.042,
+          "p99_us": 219.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 469.584,
+          "p50_us": 364.0,
+          "p95_us": 458.0,
+          "p99_us": 469.584,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 159.916,
+          "p50_us": 103.25,
+          "p95_us": 156.958,
+          "p99_us": 159.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 162.875,
+          "p50_us": 101.75,
+          "p95_us": 159.917,
+          "p99_us": 162.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 53.875,
+          "p50_us": 46.833,
+          "p95_us": 53.875,
+          "p99_us": 53.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 151.25,
+          "p50_us": 80.125,
+          "p95_us": 143.167,
+          "p99_us": 146.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 94.916,
+          "p50_us": 22.041,
+          "p95_us": 92.791,
+          "p99_us": 94.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 98.791,
+          "p50_us": 22.584,
+          "p95_us": 93.20899999999999,
+          "p99_us": 98.791,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 216.208,
+          "p50_us": 216.208,
+          "p95_us": 216.208,
+          "p99_us": 216.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 403.25,
+          "p50_us": 372.20899999999995,
+          "p95_us": 401.541,
+          "p99_us": 403.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 157.75,
+          "p50_us": 98.04199999999999,
+          "p95_us": 155.458,
+          "p99_us": 157.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 163.958,
+          "p50_us": 103.25,
+          "p95_us": 160.333,
+          "p99_us": 163.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 405.45799999999997,
+          "p50_us": 241.0,
+          "p95_us": 405.45799999999997,
+          "p99_us": 405.45799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 802.709,
+          "p50_us": 407.042,
+          "p95_us": 749.583,
+          "p99_us": 782.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 478.95799999999997,
+          "p50_us": 116.5,
+          "p95_us": 476.5,
+          "p99_us": 478.95799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 454.792,
+          "p50_us": 102.584,
+          "p95_us": 449.70799999999997,
+          "p99_us": 454.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1271.9579999999999,
+          "p50_us": 1271.9579999999999,
+          "p95_us": 1271.9579999999999,
+          "p99_us": 1271.9579999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 2161.0420000000004,
+          "p50_us": 1909.583,
+          "p95_us": 2096.0,
+          "p99_us": 2151.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 874.4580000000001,
+          "p50_us": 524.834,
+          "p95_us": 842.0,
+          "p99_us": 874.4580000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 808.333,
+          "p50_us": 503.917,
+          "p95_us": 800.292,
+          "p99_us": 808.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 387.333,
+          "p50_us": 230.917,
+          "p95_us": 387.333,
+          "p99_us": 387.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 775.125,
+          "p50_us": 403.292,
+          "p95_us": 722.75,
+          "p99_us": 755.166,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 488.042,
+          "p50_us": 104.75,
+          "p95_us": 473.25,
+          "p99_us": 488.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 451.33299999999997,
+          "p50_us": 96.75,
+          "p95_us": 447.167,
+          "p99_us": 451.33299999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1115.167,
+          "p50_us": 1115.167,
+          "p95_us": 1115.167,
+          "p99_us": 1115.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 2021.75,
+          "p50_us": 1821.209,
+          "p95_us": 1964.458,
+          "p99_us": 2007.6249999999998,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 759.4169999999999,
+          "p50_us": 472.459,
+          "p95_us": 755.708,
+          "p99_us": 759.4169999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 802.4580000000001,
+          "p50_us": 489.333,
+          "p95_us": 762.083,
+          "p99_us": 802.4580000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 106.375,
+          "p50_us": 87.583,
+          "p95_us": 106.375,
+          "p99_us": 106.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 271.75,
+          "p50_us": 150.083,
+          "p95_us": 267.333,
+          "p99_us": 271.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 181.875,
+          "p50_us": 38.042,
+          "p95_us": 179.16699999999997,
+          "p99_us": 181.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 185.084,
+          "p50_us": 40.25,
+          "p95_us": 181.375,
+          "p99_us": 185.084,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 427.875,
+          "p50_us": 427.875,
+          "p95_us": 427.875,
+          "p99_us": 427.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 741.042,
+          "p50_us": 688.375,
+          "p95_us": 741.042,
+          "p99_us": 741.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 306.541,
+          "p50_us": 195.25,
+          "p95_us": 302.75,
+          "p99_us": 306.541,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 316.708,
+          "p50_us": 199.459,
+          "p95_us": 306.20799999999997,
+          "p99_us": 316.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 105.208,
+          "p50_us": 87.0,
+          "p95_us": 105.208,
+          "p99_us": 105.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 270.0,
+          "p50_us": 147.042,
+          "p95_us": 266.584,
+          "p99_us": 270.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 181.875,
+          "p50_us": 37.875,
+          "p95_us": 178.792,
+          "p99_us": 181.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 180.875,
+          "p50_us": 39.125,
+          "p95_us": 179.209,
+          "p99_us": 180.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 426.292,
+          "p50_us": 426.292,
+          "p95_us": 426.292,
+          "p99_us": 426.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 756.791,
+          "p50_us": 689.209,
+          "p95_us": 756.791,
+          "p99_us": 756.791,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 305.5,
+          "p50_us": 188.458,
+          "p95_us": 300.20799999999997,
+          "p99_us": 305.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 315.083,
+          "p50_us": 198.834,
+          "p95_us": 306.584,
+          "p99_us": 315.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 218.333,
+          "p50_us": 179.042,
+          "p95_us": 218.333,
+          "p99_us": 218.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 554.333,
+          "p50_us": 305.45799999999997,
+          "p95_us": 543.333,
+          "p99_us": 546.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 368.375,
+          "p50_us": 76.625,
+          "p95_us": 365.875,
+          "p99_us": 368.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 367.95799999999997,
+          "p50_us": 79.708,
+          "p95_us": 360.709,
+          "p99_us": 367.95799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 868.375,
+          "p50_us": 868.375,
+          "p95_us": 868.375,
+          "p99_us": 868.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1501.333,
+          "p50_us": 1405.2920000000001,
+          "p95_us": 1495.0,
+          "p99_us": 1501.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 607.542,
+          "p50_us": 389.042,
+          "p95_us": 599.875,
+          "p99_us": 607.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 612.5,
+          "p50_us": 391.0,
+          "p95_us": 608.0830000000001,
+          "p99_us": 612.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 218.667,
+          "p50_us": 178.667,
+          "p95_us": 218.667,
+          "p99_us": 218.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 578.791,
+          "p50_us": 303.75,
+          "p95_us": 547.125,
+          "p99_us": 559.0830000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 368.0,
+          "p50_us": 76.083,
+          "p95_us": 364.958,
+          "p99_us": 368.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 362.875,
+          "p50_us": 77.625,
+          "p95_us": 359.75,
+          "p99_us": 362.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 878.875,
+          "p50_us": 878.875,
+          "p95_us": 878.875,
+          "p99_us": 878.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1624.167,
+          "p50_us": 1484.041,
+          "p95_us": 1608.9579999999999,
+          "p99_us": 1624.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 701.708,
+          "p50_us": 450.208,
+          "p95_us": 639.125,
+          "p99_us": 701.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 789.2090000000001,
+          "p50_us": 460.25,
+          "p95_us": 711.5,
+          "p99_us": 789.2090000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 1840.959,
+          "p50_us": 1048.5,
+          "p95_us": 1840.959,
+          "p99_us": 1840.959,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 3811.0,
+          "p50_us": 1915.041,
+          "p95_us": 3303.917,
+          "p99_us": 3572.625,
+          "physical_misses": 121,
+          "reported_misses": 121
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2204.8329999999996,
+          "p50_us": 542.083,
+          "p95_us": 2053.208,
+          "p99_us": 2204.8329999999996,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2206.042,
+          "p50_us": 493.08299999999997,
+          "p95_us": 2046.9170000000001,
+          "p99_us": 2206.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5615.25,
+          "p50_us": 5615.25,
+          "p95_us": 5615.25,
+          "p99_us": 5615.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 9758.667000000001,
+          "p50_us": 8647.291,
+          "p95_us": 9268.292,
+          "p99_us": 9663.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3790.958,
+          "p50_us": 2450.166,
+          "p95_us": 3638.375,
+          "p99_us": 3790.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3740.458,
+          "p50_us": 2391.3329999999996,
+          "p95_us": 3515.542,
+          "p99_us": 3740.458,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 1850.125,
+          "p50_us": 1050.042,
+          "p95_us": 1850.125,
+          "p99_us": 1850.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 3572.917,
+          "p50_us": 1885.25,
+          "p95_us": 3264.2090000000003,
+          "p99_us": 3336.125,
+          "physical_misses": 120,
+          "reported_misses": 120
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2129.5,
+          "p50_us": 475.292,
+          "p95_us": 2059.5409999999997,
+          "p99_us": 2129.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2159.417,
+          "p50_us": 487.20799999999997,
+          "p95_us": 2051.167,
+          "p99_us": 2159.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5249.625,
+          "p50_us": 5249.625,
+          "p95_us": 5249.625,
+          "p99_us": 5249.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 9478.333999999999,
+          "p50_us": 8454.458,
+          "p95_us": 9025.625,
+          "p99_us": 9403.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3797.916,
+          "p50_us": 2366.625,
+          "p95_us": 3705.7079999999996,
+          "p99_us": 3797.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3597.125,
+          "p50_us": 2290.041,
+          "p95_us": 3556.708,
+          "p99_us": 3597.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 175.875,
+          "p50_us": 145.583,
+          "p95_us": 175.875,
+          "p99_us": 175.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 442.209,
+          "p50_us": 242.416,
+          "p95_us": 435.958,
+          "p99_us": 442.209,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 289.45799999999997,
+          "p50_us": 63.75000000000001,
+          "p95_us": 272.666,
+          "p99_us": 289.45799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 293.0,
+          "p50_us": 66.95899999999999,
+          "p95_us": 276.084,
+          "p99_us": 293.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 666.459,
+          "p50_us": 666.459,
+          "p95_us": 666.459,
+          "p99_us": 666.459,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1212.375,
+          "p50_us": 1134.459,
+          "p95_us": 1212.375,
+          "p99_us": 1212.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 564.1669999999999,
+          "p50_us": 310.91700000000003,
+          "p95_us": 488.5,
+          "p99_us": 564.1669999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 510.292,
+          "p50_us": 326.0,
+          "p95_us": 506.334,
+          "p99_us": 510.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 174.875,
+          "p50_us": 146.75,
+          "p95_us": 174.875,
+          "p99_us": 174.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 436.875,
+          "p50_us": 240.041,
+          "p95_us": 422.75,
+          "p99_us": 436.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 293.66700000000003,
+          "p50_us": 65.542,
+          "p95_us": 288.375,
+          "p99_us": 293.66700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 292.041,
+          "p50_us": 67.91600000000001,
+          "p95_us": 273.167,
+          "p99_us": 292.041,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 698.542,
+          "p50_us": 698.542,
+          "p95_us": 698.542,
+          "p99_us": 698.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1213.333,
+          "p50_us": 1125.584,
+          "p95_us": 1213.333,
+          "p99_us": 1213.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 496.79200000000003,
+          "p50_us": 311.459,
+          "p95_us": 489.459,
+          "p99_us": 496.79200000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 504.125,
+          "p50_us": 326.083,
+          "p95_us": 502.54200000000003,
+          "p99_us": 504.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 364.542,
+          "p50_us": 302.58299999999997,
+          "p95_us": 364.542,
+          "p99_us": 364.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 914.3340000000001,
+          "p50_us": 491.916,
+          "p95_us": 871.2919999999999,
+          "p99_us": 897.291,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 566.291,
+          "p50_us": 125.33299999999998,
+          "p95_us": 555.4590000000001,
+          "p99_us": 566.291,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 582.25,
+          "p50_us": 128.667,
+          "p95_us": 546.5840000000001,
+          "p99_us": 582.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1380.416,
+          "p50_us": 1380.416,
+          "p95_us": 1380.416,
+          "p99_us": 1380.416,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2495.7920000000004,
+          "p50_us": 2289.792,
+          "p95_us": 2492.625,
+          "p99_us": 2495.7920000000004,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 984.0000000000001,
+          "p50_us": 617.2909999999999,
+          "p95_us": 966.625,
+          "p99_us": 984.0000000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 991.0419999999999,
+          "p50_us": 630.7090000000001,
+          "p95_us": 963.834,
+          "p99_us": 991.0419999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 344.125,
+          "p50_us": 295.95799999999997,
+          "p95_us": 344.125,
+          "p99_us": 344.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 990.583,
+          "p50_us": 511.66700000000003,
+          "p95_us": 920.0,
+          "p99_us": 946.4169999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 595.417,
+          "p50_us": 129.54199999999997,
+          "p95_us": 580.583,
+          "p99_us": 595.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 585.4159999999999,
+          "p50_us": 127.291,
+          "p95_us": 580.7909999999999,
+          "p99_us": 585.4159999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1453.833,
+          "p50_us": 1453.833,
+          "p95_us": 1453.833,
+          "p99_us": 1453.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2546.666,
+          "p50_us": 2330.042,
+          "p95_us": 2494.5420000000004,
+          "p99_us": 2546.666,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 986.6659999999999,
+          "p50_us": 624.083,
+          "p95_us": 978.167,
+          "p99_us": 986.6659999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2145.4579999999996,
+          "p50_us": 706.667,
+          "p95_us": 1145.9160000000002,
+          "p99_us": 2145.4579999999996,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 3092.625,
+          "p50_us": 1740.875,
+          "p95_us": 3092.625,
+          "p99_us": 3092.625,
+          "physical_misses": 2,
+          "reported_misses": 2
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 6679.7080000000005,
+          "p50_us": 3108.792,
+          "p95_us": 5314.125,
+          "p99_us": 5548.2919999999995,
+          "physical_misses": 574,
+          "reported_misses": 574
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3563.625,
+          "p50_us": 764.333,
+          "p95_us": 3355.792,
+          "p99_us": 3563.625,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3347.542,
+          "p50_us": 757.458,
+          "p95_us": 3180.208,
+          "p99_us": 3347.542,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 8684.75,
+          "p50_us": 8684.75,
+          "p95_us": 8684.75,
+          "p99_us": 8684.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 15749.75,
+          "p50_us": 13681.792,
+          "p95_us": 14898.541,
+          "p99_us": 15610.707999999999,
+          "physical_misses": 160,
+          "reported_misses": 160
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 5835.042,
+          "p50_us": 3670.917,
+          "p95_us": 5762.834,
+          "p99_us": 5835.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 5961.1669999999995,
+          "p50_us": 3850.9579999999996,
+          "p95_us": 5868.458,
+          "p99_us": 5961.1669999999995,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2869.708,
+          "p50_us": 1634.4160000000002,
+          "p95_us": 2869.708,
+          "p99_us": 2869.708,
+          "physical_misses": 2,
+          "reported_misses": 2
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 5364.375,
+          "p50_us": 2924.042,
+          "p95_us": 5025.667,
+          "p99_us": 5218.0830000000005,
+          "physical_misses": 488,
+          "reported_misses": 488
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3280.041,
+          "p50_us": 711.7090000000001,
+          "p95_us": 3177.792,
+          "p99_us": 3280.041,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3379.375,
+          "p50_us": 747.8330000000001,
+          "p95_us": 3170.5840000000003,
+          "p99_us": 3379.375,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 8667.916,
+          "p50_us": 8667.916,
+          "p95_us": 8667.916,
+          "p99_us": 8667.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 10666.667,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 15878.667,
+          "p50_us": 13497.458,
+          "p95_us": 14836.458999999999,
+          "p99_us": 15651.208,
+          "physical_misses": 160,
+          "reported_misses": 160
+        },
+        "rate_hz": 48000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 10666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 5994.625,
+          "p50_us": 3747.125,
+          "p95_us": 5809.084,
+          "p99_us": 5994.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 6240.042,
+          "p50_us": 4109.25,
+          "p95_us": 5860.042,
+          "p99_us": 6240.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 27.625,
+          "p50_us": 23.042,
+          "p95_us": 27.625,
+          "p99_us": 27.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 76.542,
+          "p50_us": 41.5,
+          "p95_us": 73.291,
+          "p99_us": 76.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 49.958,
+          "p50_us": 10.792,
+          "p95_us": 45.333,
+          "p99_us": 49.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 45.833,
+          "p50_us": 11.25,
+          "p95_us": 45.291,
+          "p99_us": 45.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 109.0,
+          "p50_us": 109.0,
+          "p95_us": 109.0,
+          "p99_us": 109.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 195.416,
+          "p50_us": 185.334,
+          "p95_us": 195.416,
+          "p99_us": 195.416,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 77.75,
+          "p50_us": 47.583999999999996,
+          "p95_us": 76.667,
+          "p99_us": 77.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 78.083,
+          "p50_us": 51.375,
+          "p95_us": 77.75,
+          "p99_us": 78.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 27.541,
+          "p50_us": 21.875,
+          "p95_us": 27.541,
+          "p99_us": 27.541,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 71.083,
+          "p50_us": 39.667,
+          "p95_us": 70.25,
+          "p99_us": 71.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 46.041999999999994,
+          "p50_us": 10.792,
+          "p95_us": 44.333999999999996,
+          "p99_us": 46.041999999999994,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 46.875,
+          "p50_us": 10.5,
+          "p95_us": 44.666999999999994,
+          "p99_us": 46.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 116.166,
+          "p50_us": 116.166,
+          "p95_us": 116.166,
+          "p99_us": 116.166,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 204.708,
+          "p50_us": 186.875,
+          "p95_us": 204.708,
+          "p99_us": 204.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 81.792,
+          "p50_us": 55.875,
+          "p95_us": 78.0,
+          "p99_us": 81.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 78.291,
+          "p50_us": 50.75,
+          "p95_us": 77.791,
+          "p99_us": 78.291,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 50.542,
+          "p50_us": 42.75,
+          "p95_us": 50.542,
+          "p99_us": 50.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 143.0,
+          "p50_us": 78.208,
+          "p95_us": 137.583,
+          "p99_us": 141.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 96.541,
+          "p50_us": 22.291,
+          "p95_us": 90.208,
+          "p99_us": 96.541,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 94.042,
+          "p50_us": 22.916,
+          "p95_us": 89.583,
+          "p99_us": 94.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 205.0,
+          "p50_us": 205.0,
+          "p95_us": 205.0,
+          "p99_us": 205.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 379.54200000000003,
+          "p50_us": 344.79200000000003,
+          "p95_us": 374.084,
+          "p99_us": 379.54200000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 148.833,
+          "p50_us": 100.084,
+          "p95_us": 147.084,
+          "p99_us": 148.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 159.417,
+          "p50_us": 98.375,
+          "p95_us": 157.125,
+          "p99_us": 159.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 51.25,
+          "p50_us": 42.083,
+          "p95_us": 51.25,
+          "p99_us": 51.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 136.458,
+          "p50_us": 75.25,
+          "p95_us": 133.333,
+          "p99_us": 136.041,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 89.458,
+          "p50_us": 19.167,
+          "p95_us": 88.54199999999999,
+          "p99_us": 89.458,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 89.792,
+          "p50_us": 19.791,
+          "p95_us": 89.0,
+          "p99_us": 89.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 204.584,
+          "p50_us": 204.584,
+          "p95_us": 204.584,
+          "p99_us": 204.584,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 372.875,
+          "p50_us": 344.958,
+          "p95_us": 369.0,
+          "p99_us": 372.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 147.541,
+          "p50_us": 91.042,
+          "p95_us": 146.584,
+          "p99_us": 147.541,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 152.5,
+          "p50_us": 94.875,
+          "p95_us": 150.875,
+          "p99_us": 152.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 386.79200000000003,
+          "p50_us": 232.833,
+          "p95_us": 386.79200000000003,
+          "p99_us": 386.79200000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 800.8330000000001,
+          "p50_us": 404.41700000000003,
+          "p95_us": 739.541,
+          "p99_us": 763.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 489.74999999999994,
+          "p50_us": 100.125,
+          "p95_us": 450.83299999999997,
+          "p99_us": 489.74999999999994,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 482.75,
+          "p50_us": 103.084,
+          "p95_us": 475.958,
+          "p99_us": 482.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1138.792,
+          "p50_us": 1138.792,
+          "p95_us": 1138.792,
+          "p99_us": 1138.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 2319.25,
+          "p50_us": 1873.625,
+          "p95_us": 2059.667,
+          "p99_us": 2192.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 803.0,
+          "p50_us": 491.791,
+          "p95_us": 794.0,
+          "p99_us": 803.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 899.125,
+          "p50_us": 544.375,
+          "p95_us": 865.917,
+          "p99_us": 899.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 391.709,
+          "p50_us": 229.583,
+          "p95_us": 391.709,
+          "p99_us": 391.709,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 783.75,
+          "p50_us": 399.791,
+          "p95_us": 711.8330000000001,
+          "p99_us": 735.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 462.959,
+          "p50_us": 95.45800000000001,
+          "p95_us": 452.125,
+          "p99_us": 462.959,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 464.70799999999997,
+          "p50_us": 98.375,
+          "p95_us": 455.41700000000003,
+          "p99_us": 464.70799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1106.625,
+          "p50_us": 1106.625,
+          "p95_us": 1106.625,
+          "p99_us": 1106.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 1979.5,
+          "p50_us": 1822.542,
+          "p95_us": 1960.1670000000001,
+          "p99_us": 1979.3329999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 822.2080000000001,
+          "p50_us": 500.0,
+          "p95_us": 761.1659999999999,
+          "p99_us": 822.2080000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 763.5,
+          "p50_us": 474.875,
+          "p95_us": 758.4580000000001,
+          "p99_us": 763.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 113.625,
+          "p50_us": 94.458,
+          "p95_us": 113.625,
+          "p99_us": 113.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 281.5,
+          "p50_us": 151.75,
+          "p95_us": 265.541,
+          "p99_us": 281.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 183.417,
+          "p50_us": 41.791,
+          "p95_us": 179.875,
+          "p99_us": 183.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 187.042,
+          "p50_us": 39.625,
+          "p95_us": 181.0,
+          "p99_us": 187.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 440.75,
+          "p50_us": 440.75,
+          "p95_us": 440.75,
+          "p99_us": 440.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 746.334,
+          "p50_us": 694.25,
+          "p95_us": 746.334,
+          "p99_us": 746.334,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 306.709,
+          "p50_us": 189.958,
+          "p95_us": 304.166,
+          "p99_us": 306.709,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 312.16700000000003,
+          "p50_us": 207.667,
+          "p95_us": 308.084,
+          "p99_us": 312.16700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 105.958,
+          "p50_us": 87.08300000000001,
+          "p95_us": 105.958,
+          "p99_us": 105.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 276.0,
+          "p50_us": 148.917,
+          "p95_us": 268.875,
+          "p99_us": 276.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 181.292,
+          "p50_us": 38.125,
+          "p95_us": 179.33399999999997,
+          "p99_us": 181.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 187.667,
+          "p50_us": 42.833,
+          "p95_us": 179.833,
+          "p99_us": 187.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 425.29200000000003,
+          "p50_us": 425.29200000000003,
+          "p95_us": 425.29200000000003,
+          "p99_us": 425.29200000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 741.583,
+          "p50_us": 692.542,
+          "p95_us": 741.583,
+          "p99_us": 741.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 311.0,
+          "p50_us": 190.5,
+          "p95_us": 301.0,
+          "p99_us": 311.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 308.91700000000003,
+          "p50_us": 198.875,
+          "p95_us": 305.292,
+          "p99_us": 308.91700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 221.54100000000003,
+          "p50_us": 181.334,
+          "p95_us": 221.54100000000003,
+          "p99_us": 221.54100000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 579.375,
+          "p50_us": 310.25,
+          "p95_us": 551.083,
+          "p99_us": 568.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 372.0,
+          "p50_us": 77.708,
+          "p95_us": 364.084,
+          "p99_us": 372.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 362.084,
+          "p50_us": 90.75,
+          "p95_us": 360.542,
+          "p99_us": 362.084,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 876.5,
+          "p50_us": 876.5,
+          "p95_us": 876.5,
+          "p99_us": 876.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1541.25,
+          "p50_us": 1432.291,
+          "p95_us": 1538.5,
+          "p99_us": 1541.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 625.9590000000001,
+          "p50_us": 388.166,
+          "p95_us": 613.417,
+          "p99_us": 625.9590000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 629.958,
+          "p50_us": 387.58299999999997,
+          "p95_us": 623.375,
+          "p99_us": 629.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 222.584,
+          "p50_us": 179.75,
+          "p95_us": 222.584,
+          "p99_us": 222.584,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 617.75,
+          "p50_us": 312.958,
+          "p95_us": 583.083,
+          "p99_us": 614.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 377.79200000000003,
+          "p50_us": 77.542,
+          "p95_us": 366.375,
+          "p99_us": 377.79200000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 369.5,
+          "p50_us": 79.292,
+          "p95_us": 362.66700000000003,
+          "p99_us": 369.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 883.0840000000001,
+          "p50_us": 883.0840000000001,
+          "p95_us": 883.0840000000001,
+          "p99_us": 883.0840000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1564.7079999999999,
+          "p50_us": 1445.792,
+          "p95_us": 1558.8329999999999,
+          "p99_us": 1564.7079999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 619.125,
+          "p50_us": 386.375,
+          "p95_us": 613.0,
+          "p99_us": 619.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 632.333,
+          "p50_us": 398.334,
+          "p95_us": 629.459,
+          "p99_us": 632.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 1844.2079999999999,
+          "p50_us": 1053.958,
+          "p95_us": 1844.2079999999999,
+          "p99_us": 1844.2079999999999,
+          "physical_misses": 2,
+          "reported_misses": 2
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 3489.875,
+          "p50_us": 1880.958,
+          "p95_us": 3252.708,
+          "p99_us": 3336.875,
+          "physical_misses": 642,
+          "reported_misses": 642
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2105.5,
+          "p50_us": 463.333,
+          "p95_us": 2068.0,
+          "p99_us": 2105.5,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2111.834,
+          "p50_us": 470.292,
+          "p95_us": 2067.291,
+          "p99_us": 2111.834,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5886.0830000000005,
+          "p50_us": 5886.0830000000005,
+          "p95_us": 5886.0830000000005,
+          "p99_us": 5886.0830000000005,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 9765.457999999999,
+          "p50_us": 8744.792,
+          "p95_us": 9385.707999999999,
+          "p99_us": 9576.334,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 4099.3330000000005,
+          "p50_us": 2809.542,
+          "p95_us": 3885.292,
+          "p99_us": 4099.3330000000005,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3808.708,
+          "p50_us": 2394.667,
+          "p95_us": 3733.4159999999997,
+          "p99_us": 3808.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2005.8329999999999,
+          "p50_us": 1159.7079999999999,
+          "p95_us": 2005.8329999999999,
+          "p99_us": 2005.8329999999999,
+          "physical_misses": 2,
+          "reported_misses": 2
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 5259.792,
+          "p50_us": 1946.125,
+          "p95_us": 3392.334,
+          "p99_us": 3780.5,
+          "physical_misses": 642,
+          "reported_misses": 642
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2359.5,
+          "p50_us": 490.75,
+          "p95_us": 2167.792,
+          "p99_us": 2359.5,
+          "physical_misses": 7,
+          "reported_misses": 7
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2165.7920000000004,
+          "p50_us": 478.166,
+          "p95_us": 2110.542,
+          "p99_us": 2165.7920000000004,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5652.209,
+          "p50_us": 5652.209,
+          "p95_us": 5652.209,
+          "p99_us": 5652.209,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 10137.5,
+          "p50_us": 8907.458999999999,
+          "p95_us": 9688.583,
+          "p99_us": 9991.042,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3972.375,
+          "p50_us": 2410.666,
+          "p95_us": 3796.958,
+          "p99_us": 3972.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3813.083,
+          "p50_us": 2432.125,
+          "p95_us": 3696.5,
+          "p99_us": 3813.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 169.333,
+          "p50_us": 137.458,
+          "p95_us": 169.333,
+          "p99_us": 169.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 442.625,
+          "p50_us": 240.75,
+          "p95_us": 435.416,
+          "p99_us": 442.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 288.583,
+          "p50_us": 63.416000000000004,
+          "p95_us": 283.0,
+          "p99_us": 288.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 290.625,
+          "p50_us": 68.208,
+          "p95_us": 286.875,
+          "p99_us": 290.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 703.7080000000001,
+          "p50_us": 703.7080000000001,
+          "p95_us": 703.7080000000001,
+          "p99_us": 703.7080000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1206.542,
+          "p50_us": 1127.958,
+          "p95_us": 1206.542,
+          "p99_us": 1206.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 493.87499999999994,
+          "p50_us": 306.166,
+          "p95_us": 484.583,
+          "p99_us": 493.87499999999994,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 501.167,
+          "p50_us": 329.917,
+          "p95_us": 498.87499999999994,
+          "p99_us": 501.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 174.291,
+          "p50_us": 142.5,
+          "p95_us": 174.291,
+          "p99_us": 174.291,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 436.167,
+          "p50_us": 238.666,
+          "p95_us": 421.16700000000003,
+          "p99_us": 436.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 288.875,
+          "p50_us": 63.208,
+          "p95_us": 276.416,
+          "p99_us": 288.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 294.916,
+          "p50_us": 67.709,
+          "p95_us": 287.125,
+          "p99_us": 294.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 675.0830000000001,
+          "p50_us": 675.0830000000001,
+          "p95_us": 675.0830000000001,
+          "p99_us": 675.0830000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1188.2920000000001,
+          "p50_us": 1082.625,
+          "p95_us": 1188.2920000000001,
+          "p99_us": 1188.2920000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 497.708,
+          "p50_us": 311.166,
+          "p95_us": 488.95799999999997,
+          "p99_us": 497.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 498.167,
+          "p50_us": 323.041,
+          "p95_us": 494.125,
+          "p99_us": 498.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 375.167,
+          "p50_us": 308.41700000000003,
+          "p95_us": 375.167,
+          "p99_us": 375.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 950.5,
+          "p50_us": 506.167,
+          "p95_us": 917.3340000000001,
+          "p99_us": 942.7090000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 632.6669999999999,
+          "p50_us": 129.625,
+          "p95_us": 563.791,
+          "p99_us": 632.6669999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 579.875,
+          "p50_us": 125.83399999999999,
+          "p95_us": 567.833,
+          "p99_us": 579.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1465.75,
+          "p50_us": 1465.75,
+          "p95_us": 1465.75,
+          "p99_us": 1465.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2483.292,
+          "p50_us": 2334.334,
+          "p95_us": 2477.542,
+          "p99_us": 2483.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 1067.667,
+          "p50_us": 663.0409999999999,
+          "p95_us": 1021.917,
+          "p99_us": 1067.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 1038.4579999999999,
+          "p50_us": 676.1659999999999,
+          "p95_us": 1021.042,
+          "p99_us": 1038.4579999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 352.209,
+          "p50_us": 289.959,
+          "p95_us": 352.209,
+          "p99_us": 352.209,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 1002.417,
+          "p50_us": 491.0,
+          "p95_us": 893.75,
+          "p99_us": 969.9580000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 568.9169999999999,
+          "p50_us": 123.58399999999999,
+          "p95_us": 552.917,
+          "p99_us": 568.9169999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 565.083,
+          "p50_us": 134.125,
+          "p95_us": 551.7919999999999,
+          "p99_us": 565.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1458.0839999999998,
+          "p50_us": 1458.0839999999998,
+          "p95_us": 1458.0839999999998,
+          "p99_us": 1458.0839999999998,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2456.625,
+          "p50_us": 2292.167,
+          "p95_us": 2456.125,
+          "p99_us": 2456.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 984.75,
+          "p50_us": 611.5419999999999,
+          "p95_us": 966.0,
+          "p99_us": 984.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 973.875,
+          "p50_us": 640.7080000000001,
+          "p95_us": 946.916,
+          "p99_us": 973.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2927.0,
+          "p50_us": 1646.291,
+          "p95_us": 2927.0,
+          "p99_us": 2927.0,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 5501.791,
+          "p50_us": 3000.1659999999997,
+          "p95_us": 5187.0,
+          "p99_us": 5375.459,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3327.042,
+          "p50_us": 740.709,
+          "p95_us": 3233.958,
+          "p99_us": 3327.042,
+          "physical_misses": 8,
+          "reported_misses": 8
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3329.167,
+          "p50_us": 741.667,
+          "p95_us": 3204.875,
+          "p99_us": 3329.167,
+          "physical_misses": 8,
+          "reported_misses": 8
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 8424.582999999999,
+          "p50_us": 8424.582999999999,
+          "p95_us": 8424.582999999999,
+          "p99_us": 8424.582999999999,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 21276.875,
+          "p50_us": 13730.042,
+          "p95_us": 15146.583,
+          "p99_us": 18743.040999999997,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 7103.5,
+          "p50_us": 4365.083,
+          "p95_us": 6048.6669999999995,
+          "p99_us": 7103.5,
+          "physical_misses": 17,
+          "reported_misses": 17
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 6192.708,
+          "p50_us": 4022.7090000000003,
+          "p95_us": 5996.334,
+          "p99_us": 6192.708,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2951.083,
+          "p50_us": 1707.2910000000002,
+          "p95_us": 2951.083,
+          "p99_us": 2951.083,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 1333.3329999999999,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 5744.458,
+          "p50_us": 3047.125,
+          "p95_us": 5207.875,
+          "p99_us": 5449.625,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 1333.3329999999999,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3362.459,
+          "p50_us": 728.625,
+          "p95_us": 3281.6659999999997,
+          "p99_us": 3362.459,
+          "physical_misses": 8,
+          "reported_misses": 8
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3796.083,
+          "p50_us": 829.6669999999999,
+          "p95_us": 3460.542,
+          "p99_us": 3796.083,
+          "physical_misses": 12,
+          "reported_misses": 12
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 9042.75,
+          "p50_us": 9042.75,
+          "p95_us": 9042.75,
+          "p99_us": 9042.75,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 5333.333,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 17067.334,
+          "p50_us": 13959.292,
+          "p95_us": 15323.791,
+          "p99_us": 16232.208,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 96000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 5333.333,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 6413.9169999999995,
+          "p50_us": 4267.1669999999995,
+          "p95_us": 6253.125,
+          "p99_us": 6413.9169999999995,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 5759.5,
+          "p50_us": 3750.417,
+          "p95_us": 5701.0,
+          "p99_us": 5759.5,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 27.458000000000002,
+          "p50_us": 22.375,
+          "p95_us": 27.458000000000002,
+          "p99_us": 27.458000000000002,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 76.45800000000001,
+          "p50_us": 41.5,
+          "p95_us": 71.667,
+          "p99_us": 76.45800000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 49.5,
+          "p50_us": 9.875,
+          "p95_us": 47.125,
+          "p99_us": 49.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 46.417,
+          "p50_us": 11.708,
+          "p95_us": 44.375,
+          "p99_us": 46.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 114.75,
+          "p50_us": 114.75,
+          "p95_us": 114.75,
+          "p99_us": 114.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 200.833,
+          "p50_us": 188.209,
+          "p95_us": 200.833,
+          "p99_us": 200.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 150.33399999999997,
+          "p50_us": 49.625,
+          "p95_us": 78.208,
+          "p99_us": 150.33399999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 92.917,
+          "p50_us": 58.208000000000006,
+          "p95_us": 81.708,
+          "p99_us": 92.917,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 30.875,
+          "p50_us": 23.5,
+          "p95_us": 30.875,
+          "p99_us": 30.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 80.875,
+          "p50_us": 43.708000000000006,
+          "p95_us": 76.791,
+          "p99_us": 80.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 49.25,
+          "p50_us": 11.708,
+          "p95_us": 45.833,
+          "p99_us": 49.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 46.25,
+          "p50_us": 10.375,
+          "p95_us": 45.708,
+          "p99_us": 46.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 114.125,
+          "p50_us": 114.125,
+          "p95_us": 114.125,
+          "p99_us": 114.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 211.75,
+          "p50_us": 189.291,
+          "p95_us": 211.75,
+          "p99_us": 211.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 84.0,
+          "p50_us": 57.166000000000004,
+          "p95_us": 79.66600000000001,
+          "p99_us": 84.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 86.917,
+          "p50_us": 54.167,
+          "p95_us": 82.333,
+          "p99_us": 86.917,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 53.916,
+          "p50_us": 47.459,
+          "p95_us": 53.916,
+          "p99_us": 53.916,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 157.792,
+          "p50_us": 80.417,
+          "p95_us": 143.417,
+          "p99_us": 152.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 99.584,
+          "p50_us": 22.833,
+          "p95_us": 93.042,
+          "p99_us": 99.584,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 92.292,
+          "p50_us": 20.0,
+          "p95_us": 91.666,
+          "p99_us": 92.292,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 219.541,
+          "p50_us": 219.541,
+          "p95_us": 219.541,
+          "p99_us": 219.541,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 450.208,
+          "p50_us": 364.5,
+          "p95_us": 409.917,
+          "p99_us": 450.208,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 180.166,
+          "p50_us": 99.25,
+          "p95_us": 155.75,
+          "p99_us": 180.166,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 162.08300000000003,
+          "p50_us": 115.375,
+          "p95_us": 155.875,
+          "p99_us": 162.08300000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 55.458000000000006,
+          "p50_us": 42.416999999999994,
+          "p95_us": 55.458000000000006,
+          "p99_us": 55.458000000000006,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 149.75,
+          "p50_us": 79.083,
+          "p95_us": 141.45800000000003,
+          "p99_us": 146.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 95.917,
+          "p50_us": 22.709,
+          "p95_us": 91.29100000000001,
+          "p99_us": 95.917,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 97.291,
+          "p50_us": 21.584,
+          "p95_us": 94.584,
+          "p99_us": 97.291,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 215.666,
+          "p50_us": 215.666,
+          "p95_us": 215.666,
+          "p99_us": 215.666,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 411.791,
+          "p50_us": 367.625,
+          "p95_us": 405.917,
+          "p99_us": 411.791,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 160.875,
+          "p50_us": 109.95899999999999,
+          "p95_us": 157.083,
+          "p99_us": 160.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 192.666,
+          "p50_us": 105.416,
+          "p95_us": 157.708,
+          "p99_us": 192.666,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 398.167,
+          "p50_us": 240.0,
+          "p95_us": 398.167,
+          "p99_us": 398.167,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 899.833,
+          "p50_us": 422.5,
+          "p95_us": 774.75,
+          "p99_us": 842.375,
+          "physical_misses": 120,
+          "reported_misses": 120
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 516.5,
+          "p50_us": 115.917,
+          "p95_us": 455.5,
+          "p99_us": 516.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 565.625,
+          "p50_us": 113.125,
+          "p95_us": 445.20799999999997,
+          "p99_us": 565.625,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1205.334,
+          "p50_us": 1205.334,
+          "p95_us": 1205.334,
+          "p99_us": 1205.334,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 2163.6659999999997,
+          "p50_us": 1891.917,
+          "p95_us": 2044.667,
+          "p99_us": 2139.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2499.875,
+          "p50_us": 593.792,
+          "p95_us": 1274.9160000000002,
+          "p99_us": 2499.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 926.5,
+          "p50_us": 555.209,
+          "p95_us": 871.375,
+          "p99_us": 926.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 424.958,
+          "p50_us": 240.375,
+          "p95_us": 424.958,
+          "p99_us": 424.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 972.75,
+          "p50_us": 441.666,
+          "p95_us": 818.0,
+          "p99_us": 894.125,
+          "physical_misses": 122,
+          "reported_misses": 122
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 500.584,
+          "p50_us": 94.791,
+          "p95_us": 443.625,
+          "p99_us": 500.584,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 516.5830000000001,
+          "p50_us": 114.875,
+          "p95_us": 494.95799999999997,
+          "p99_us": 516.5830000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1340.4160000000002,
+          "p50_us": 1340.4160000000002,
+          "p95_us": 1340.4160000000002,
+          "p99_us": 1340.4160000000002,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 2,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 2365.25,
+          "p50_us": 2024.4999999999998,
+          "p95_us": 2231.666,
+          "p99_us": 2349.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 920.0830000000001,
+          "p50_us": 555.542,
+          "p95_us": 863.583,
+          "p99_us": 920.0830000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 1037.25,
+          "p50_us": 550.2919999999999,
+          "p95_us": 878.125,
+          "p99_us": 1037.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 129.042,
+          "p50_us": 99.833,
+          "p95_us": 129.042,
+          "p99_us": 129.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 309.875,
+          "p50_us": 168.625,
+          "p95_us": 299.375,
+          "p99_us": 309.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 206.125,
+          "p50_us": 47.042,
+          "p95_us": 205.291,
+          "p99_us": 206.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 217.917,
+          "p50_us": 47.667,
+          "p95_us": 216.25,
+          "p99_us": 217.917,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 488.25,
+          "p50_us": 488.25,
+          "p95_us": 488.25,
+          "p99_us": 488.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 860.375,
+          "p50_us": 794.25,
+          "p95_us": 860.375,
+          "p99_us": 860.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 369.333,
+          "p50_us": 229.375,
+          "p95_us": 361.417,
+          "p99_us": 369.333,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 357.458,
+          "p50_us": 233.458,
+          "p95_us": 350.875,
+          "p99_us": 357.458,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 117.417,
+          "p50_us": 97.791,
+          "p95_us": 117.417,
+          "p99_us": 117.417,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 312.375,
+          "p50_us": 171.042,
+          "p95_us": 307.333,
+          "p99_us": 312.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 207.0,
+          "p50_us": 42.916000000000004,
+          "p95_us": 197.625,
+          "p99_us": 207.0,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 215.459,
+          "p50_us": 45.916,
+          "p95_us": 205.458,
+          "p99_us": 215.459,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 487.791,
+          "p50_us": 487.791,
+          "p95_us": 487.791,
+          "p99_us": 487.791,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 877.875,
+          "p50_us": 795.291,
+          "p95_us": 877.875,
+          "p99_us": 877.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 356.66700000000003,
+          "p50_us": 218.292,
+          "p95_us": 347.08299999999997,
+          "p99_us": 356.66700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 365.042,
+          "p50_us": 234.125,
+          "p95_us": 355.04200000000003,
+          "p99_us": 365.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 250.45900000000003,
+          "p50_us": 205.625,
+          "p95_us": 250.45900000000003,
+          "p99_us": 250.45900000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 671.417,
+          "p50_us": 348.66600000000005,
+          "p95_us": 628.5830000000001,
+          "p99_us": 667.583,
+          "physical_misses": 2,
+          "reported_misses": 2
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 421.958,
+          "p50_us": 91.75,
+          "p95_us": 414.375,
+          "p99_us": 421.958,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 425.25,
+          "p50_us": 90.25,
+          "p95_us": 408.416,
+          "p99_us": 425.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1004.4590000000001,
+          "p50_us": 1004.4590000000001,
+          "p95_us": 1004.4590000000001,
+          "p99_us": 1004.4590000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1805.458,
+          "p50_us": 1608.0829999999999,
+          "p95_us": 1737.833,
+          "p99_us": 1805.458,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 722.917,
+          "p50_us": 456.542,
+          "p95_us": 718.167,
+          "p99_us": 722.917,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 747.583,
+          "p50_us": 449.791,
+          "p95_us": 667.333,
+          "p99_us": 747.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 248.833,
+          "p50_us": 203.917,
+          "p95_us": 248.833,
+          "p99_us": 248.833,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 666.084,
+          "p50_us": 349.416,
+          "p95_us": 618.2909999999999,
+          "p99_us": 632.875,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 414.95799999999997,
+          "p50_us": 85.25,
+          "p95_us": 411.125,
+          "p99_us": 414.95799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 444.91700000000003,
+          "p50_us": 95.0,
+          "p95_us": 395.125,
+          "p99_us": 444.91700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1000.25,
+          "p50_us": 1000.25,
+          "p95_us": 1000.25,
+          "p99_us": 1000.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 1737.25,
+          "p50_us": 1573.0,
+          "p95_us": 1733.375,
+          "p99_us": 1737.25,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 718.667,
+          "p50_us": 455.667,
+          "p95_us": 699.083,
+          "p99_us": 718.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 771.792,
+          "p50_us": 456.166,
+          "p95_us": 697.792,
+          "p99_us": 771.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2021.208,
+          "p50_us": 1161.5,
+          "p95_us": 2021.208,
+          "p99_us": 2021.208,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 3750.125,
+          "p50_us": 2030.708,
+          "p95_us": 3494.292,
+          "p99_us": 3642.7909999999997,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2365.958,
+          "p50_us": 523.166,
+          "p95_us": 2012.3749999999998,
+          "p99_us": 2365.958,
+          "physical_misses": 17,
+          "reported_misses": 17
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2337.417,
+          "p50_us": 528.458,
+          "p95_us": 2227.208,
+          "p99_us": 2337.417,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5788.334,
+          "p50_us": 5788.334,
+          "p95_us": 5788.334,
+          "p99_us": 5788.334,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 10573.582999999999,
+          "p50_us": 8950.542000000001,
+          "p95_us": 9658.542000000001,
+          "p99_us": 10392.667,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3901.792,
+          "p50_us": 2506.2079999999996,
+          "p95_us": 3799.5,
+          "p99_us": 3901.792,
+          "physical_misses": 31,
+          "reported_misses": 31
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3963.0000000000005,
+          "p50_us": 2520.875,
+          "p95_us": 3755.375,
+          "p99_us": 3963.0000000000005,
+          "physical_misses": 31,
+          "reported_misses": 31
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2075.041,
+          "p50_us": 1172.75,
+          "p95_us": 2075.041,
+          "p99_us": 2075.041,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 3722.375,
+          "p50_us": 1972.625,
+          "p95_us": 3446.8340000000003,
+          "p99_us": 3618.0829999999996,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 2346.5,
+          "p50_us": 526.5,
+          "p95_us": 2128.875,
+          "p99_us": 2346.5,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 2247.3329999999996,
+          "p50_us": 503.458,
+          "p95_us": 2143.584,
+          "p99_us": 2247.3329999999996,
+          "physical_misses": 16,
+          "reported_misses": 16
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 5859.0,
+          "p50_us": 5859.0,
+          "p95_us": 5859.0,
+          "p99_us": 5859.0,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 8,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 12749.082999999999,
+          "p50_us": 9118.375,
+          "p95_us": 9848.917000000001,
+          "p99_us": 10868.707999999999,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3924.042,
+          "p50_us": 2505.75,
+          "p95_us": 3877.875,
+          "p99_us": 3924.042,
+          "physical_misses": 32,
+          "reported_misses": 32
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 4143.042,
+          "p50_us": 2631.625,
+          "p95_us": 3990.833,
+          "p99_us": 4143.042,
+          "physical_misses": 32,
+          "reported_misses": 32
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 167.125,
+          "p50_us": 137.917,
+          "p95_us": 167.125,
+          "p99_us": 167.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 463.95799999999997,
+          "p50_us": 240.875,
+          "p95_us": 422.70799999999997,
+          "p99_us": 463.95799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 284.708,
+          "p50_us": 62.74999999999999,
+          "p95_us": 273.458,
+          "p99_us": 284.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 843.083,
+          "p50_us": 170.083,
+          "p95_us": 456.0,
+          "p99_us": 843.083,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 701.125,
+          "p50_us": 701.125,
+          "p95_us": 701.125,
+          "p99_us": 701.125,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1232.0829999999999,
+          "p50_us": 1137.0,
+          "p95_us": 1232.0829999999999,
+          "p99_us": 1232.0829999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 504.792,
+          "p50_us": 318.75,
+          "p95_us": 501.04200000000003,
+          "p99_us": 504.792,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 502.583,
+          "p50_us": 321.375,
+          "p95_us": 495.083,
+          "p99_us": 502.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 180.375,
+          "p50_us": 145.125,
+          "p95_us": 180.375,
+          "p99_us": 180.375,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 65,
+          "max_us": 499.62499999999994,
+          "p50_us": 259.70799999999997,
+          "p95_us": 454.95799999999997,
+          "p99_us": 499.62499999999994,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 331.166,
+          "p50_us": 71.45800000000001,
+          "p95_us": 275.542,
+          "p99_us": 331.166,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 308.70799999999997,
+          "p50_us": 68.375,
+          "p95_us": 291.25,
+          "p99_us": 308.70799999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 723.667,
+          "p50_us": 723.667,
+          "p95_us": 723.667,
+          "p99_us": 723.667,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 17,
+          "max_us": 1273.5,
+          "p50_us": 1167.208,
+          "p95_us": 1273.5,
+          "p99_us": 1273.5,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 1,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 576.6659999999999,
+          "p50_us": 339.709,
+          "p95_us": 513.291,
+          "p99_us": 576.6659999999999,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 696.042,
+          "p50_us": 377.458,
+          "p95_us": 574.542,
+          "p99_us": 696.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 342.58299999999997,
+          "p50_us": 279.33299999999997,
+          "p95_us": 342.58299999999997,
+          "p99_us": 342.58299999999997,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 986.8329999999999,
+          "p50_us": 515.875,
+          "p95_us": 926.7919999999999,
+          "p99_us": 977.9999999999999,
+          "physical_misses": 33,
+          "reported_misses": 33
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 630.583,
+          "p50_us": 140.208,
+          "p95_us": 545.583,
+          "p99_us": 630.583,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 648.8330000000001,
+          "p50_us": 141.375,
+          "p95_us": 553.042,
+          "p99_us": 648.8330000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1450.542,
+          "p50_us": 1450.542,
+          "p95_us": 1450.542,
+          "p99_us": 1450.542,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2660.042,
+          "p50_us": 2427.5,
+          "p95_us": 2604.459,
+          "p99_us": 2660.042,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 1053.5410000000002,
+          "p50_us": 667.709,
+          "p95_us": 1043.0839999999998,
+          "p99_us": 1053.5410000000002,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 1076.708,
+          "p50_us": 677.9590000000001,
+          "p95_us": 1067.583,
+          "p99_us": 1076.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 379.41700000000003,
+          "p50_us": 308.958,
+          "p95_us": 379.41700000000003,
+          "p99_us": 379.41700000000003,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 129,
+          "max_us": 983.167,
+          "p50_us": 503.0,
+          "p95_us": 919.042,
+          "p99_us": 972.958,
+          "physical_misses": 27,
+          "reported_misses": 27
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 625.708,
+          "p50_us": 134.25,
+          "p95_us": 571.792,
+          "p99_us": 625.708,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 605.083,
+          "p50_us": 137.708,
+          "p95_us": 558.5409999999999,
+          "p99_us": 605.083,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 1456.084,
+          "p50_us": 1456.084,
+          "p95_us": 1456.084,
+          "p99_us": 1456.084,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 33,
+          "max_us": 2578.2079999999996,
+          "p50_us": 2377.167,
+          "p95_us": 2568.084,
+          "p99_us": 2578.2079999999996,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 2,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 1017.8340000000001,
+          "p50_us": 639.417,
+          "p95_us": 1011.7909999999999,
+          "p99_us": 1017.8340000000001,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 1061.75,
+          "p50_us": 671.208,
+          "p95_us": 1024.083,
+          "p99_us": 1061.75,
+          "physical_misses": 0,
+          "reported_misses": 0
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 2876.917,
+          "p50_us": 1673.042,
+          "p95_us": 2876.917,
+          "p99_us": 2876.917,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 7094.375,
+          "p50_us": 2980.083,
+          "p95_us": 5087.666,
+          "p99_us": 5353.916,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3281.5,
+          "p50_us": 735.75,
+          "p95_us": 3167.833,
+          "p99_us": 3281.5,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3560.0409999999997,
+          "p50_us": 794.7909999999999,
+          "p95_us": 3363.291,
+          "p99_us": 3560.0409999999997,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 8144.9169999999995,
+          "p50_us": 8144.9169999999995,
+          "p95_us": 8144.9169999999995,
+          "p99_us": 8144.9169999999995,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "linear",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 14988.458,
+          "p50_us": 13280.542,
+          "p95_us": 14386.457999999999,
+          "p99_us": 14709.625,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 5962.7919999999995,
+          "p50_us": 3742.875,
+          "p95_us": 5829.667,
+          "p99_us": 5962.7919999999995,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 5712.791,
+          "p50_us": 3639.167,
+          "p95_us": 5591.4169999999995,
+          "p99_us": 5712.791,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 4,
+          "max_us": 3227.042,
+          "p50_us": 1751.042,
+          "p95_us": 3227.042,
+          "p99_us": 3227.042,
+          "physical_misses": 4,
+          "reported_misses": 4
+        },
+        "callback_frames": 128,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 666.667,
+        "priming_or_acceptance": {
+          "callbacks": 643,
+          "max_us": 7092.165999999999,
+          "p50_us": 3039.25,
+          "p95_us": 5218.917,
+          "p99_us": 5461.75,
+          "physical_misses": 643,
+          "reported_misses": 643
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 666.667,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 3490.542,
+          "p50_us": 830.75,
+          "p95_us": 3394.166,
+          "p99_us": 3490.542,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 3398.75,
+          "p50_us": 818.208,
+          "p95_us": 3243.625,
+          "p99_us": 3398.75,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "row": {
+        "accepted_generation": 1,
+        "allocations": 0,
+        "blend": {
+          "callbacks": 1,
+          "max_us": 8609.125,
+          "p50_us": 8609.125,
+          "p95_us": 8609.125,
+          "p99_us": 8609.125,
+          "physical_misses": 1,
+          "reported_misses": 1
+        },
+        "callback_frames": 512,
+        "channels": 12,
+        "finite_output": true,
+        "frees": 0,
+        "phase": "minimum",
+        "physical_budget_us": 2666.6670000000004,
+        "priming_or_acceptance": {
+          "callbacks": 161,
+          "max_us": 17555.083,
+          "p50_us": 13594.875,
+          "p95_us": 14818.332999999999,
+          "p99_us": 15428.875,
+          "physical_misses": 161,
+          "reported_misses": 161
+        },
+        "rate_hz": 192000,
+        "replay_bound_ok": true,
+        "reported_budget_us": 2666.6670000000004,
+        "reported_quantum_frames": 128,
+        "settled": true,
+        "stages": 10,
+        "steady_after": {
+          "callbacks": 64,
+          "max_us": 5921.542,
+          "p50_us": 3747.167,
+          "p95_us": 5783.959,
+          "p99_us": 5921.542,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "steady_before": {
+          "callbacks": 64,
+          "max_us": 6095.292,
+          "p50_us": 3777.125,
+          "p95_us": 5631.291,
+          "p99_us": 6095.292,
+          "physical_misses": 64,
+          "reported_misses": 64
+        },
+        "taps_per_stage": 8192
+      }
+    },
+    {
+      "summary": {
+        "deadline_margin": 1.0,
+        "failed_rows": 28,
+        "physical_misses": 9237,
+        "reported_misses": 9237,
+        "rows": 108,
+        "timing_scope": "complete default-host callbacks, local wall-clock observation"
+      }
+    }
+  ],
+  "other_stdout": []
+}

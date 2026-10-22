@@ -31,3 +31,12 @@ cargo test -p plugins-spatial
 - Keep independent f64 convolution, DC/Nyquist, non-power-of-two block, direct-head,
   complete-tail and partition/reset references. FFT changes may alter roundoff;
   do not impose historical bit identity across different FFT algorithms.
+
+- Preparation coalesces only adjacent same-block, same-FFT groups with contiguous
+  IR coverage. Concatenate their partition spectra into one FDL: older input
+  spectra account for the later group's delay. Keep the public/admission plan
+  unchanged and retain the first group's output delay.
+- Preserve the explicitly unmerged delayed-group reference, independent f64
+  convolution, structural tap-count checks, complete tails and reset/partition
+  invariants. Coalescing changes floating-point accumulation order; it does not
+  add a worker or distribute the remaining FFT bursts over callbacks.
