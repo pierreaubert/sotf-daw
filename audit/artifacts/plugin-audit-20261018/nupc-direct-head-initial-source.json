@@ -1,0 +1,4 @@
+{
+  "test_sha256": "fea24639afebe95454e873b8ce2227da67069c00500b1316f5724102e54b4639",
+  "scope": "Initial allocated-only diagnostic; retained before symmetric explicit output touching and matching inline annotations."
+}

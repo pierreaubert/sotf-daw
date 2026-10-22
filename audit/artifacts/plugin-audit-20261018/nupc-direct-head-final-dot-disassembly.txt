@@ -1,0 +1,356 @@
+
+/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c:	file format mach-o arm64
+
+Disassembly of section __TEXT,__text:
+
+0000000100070590 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot>:
+100070590:     	sub	sp, sp, #0x80
+100070594:     	stp	d15, d14, [sp, #0x30]
+100070598:     	stp	d13, d12, [sp, #0x40]
+10007059c:     	stp	d11, d10, [sp, #0x50]
+1000705a0:     	stp	d9, d8, [sp, #0x60]
+1000705a4:     	stp	x29, x30, [sp, #0x70]
+1000705a8:     	add	x29, sp, #0x70
+1000705ac:     	mov	x8, x1
+1000705b0:     	and	x1, x1, #0x3
+1000705b4:     	lsr	x9, x8, #2
+1000705b8:     	lsr	x10, x3, #2
+1000705bc:     	cmp	x10, x9
+1000705c0:     	csel	x9, x10, x9, lo
+1000705c4:     	cbz	x9, 0x1000705e4 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x54>
+1000705c8:     	and	x11, x3, #0x3
+1000705cc:     	lsl	x11, x11, #2
+1000705d0:     	cmp	x9, #0x4
+1000705d4:     	b.hs	0x1000705ec <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x5c>
+1000705d8:     	mov	x12, #0x0               ; =0
+1000705dc:     	movi.2d	v4, #0000000000000000
+1000705e0:     	b	0x100070a24 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x494>
+1000705e4:     	movi.2d	v0, #0000000000000000
+1000705e8:     	b	0x100070a78 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x4e8>
+1000705ec:     	cmp	x9, #0x10
+1000705f0:     	b.hs	0x10007060c <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x7c>
+1000705f4:     	mov	x12, #0x0               ; =0
+1000705f8:     	movi.2d	v28, #0000000000000000
+1000705fc:     	movi.2d	v3, #0000000000000000
+100070600:     	movi.2d	v27, #0000000000000000
+100070604:     	movi.2d	v26, #0000000000000000
+100070608:     	b	0x100070930 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x3a0>
+10007060c:     	and	x13, x9, #0xc
+100070610:     	and	x12, x9, #0x7fffffffffffff0
+100070614:     	orr	x14, x11, x10, lsl #4
+100070618:     	add	x14, x14, x2
+10007061c:     	sub	x14, x14, #0x80
+100070620:     	add	x15, x0, #0x80
+100070624:     	movi.2d	v28, #0000000000000000
+100070628:     	and	x16, x9, #0x7fffffffffffff0
+10007062c:     	movi.2d	v3, #0000000000000000
+100070630:     	movi.2d	v27, #0000000000000000
+100070634:     	movi.2d	v26, #0000000000000000
+100070638:     	stp	q28, q27, [sp]
+10007063c:     	str	q26, [sp, #0x20]
+100070640:     	mov	x17, x14
+100070644:     	ld4.4s	{ v12, v13, v14, v15 }, [x17], #64
+100070648:     	ld4.4s	{ v4, v5, v6, v7 }, [x17]
+10007064c:     	sub	x17, x15, #0x80
+100070650:     	ld4.4s	{ v24, v25, v26, v27 }, [x17]
+100070654:     	sub	x17, x15, #0x40
+100070658:     	ld4.4s	{ v20, v21, v22, v23 }, [x17]
+10007065c:     	mov	x17, x15
+100070660:     	sub	x4, x14, #0x40
+100070664:     	ld4.4s	{ v16, v17, v18, v19 }, [x17], #64
+100070668:     	ld4.4s	{ v28, v29, v30, v31 }, [x4]
+10007066c:     	sub	x4, x14, #0x80
+100070670:     	rev64.4s	v0, v4
+100070674:     	rev64.4s	v1, v5
+100070678:     	rev64.4s	v2, v6
+10007067c:     	rev64.4s	v4, v7
+100070680:     	rev64.4s	v5, v12
+100070684:     	rev64.4s	v7, v13
+100070688:     	rev64.4s	v6, v14
+10007068c:     	ld4.4s	{ v8, v9, v10, v11 }, [x4]
+100070690:     	rev64.4s	v13, v15
+100070694:     	ext.16b	v15, v0, v0, #0x8
+100070698:     	ext.16b	v1, v1, v1, #0x8
+10007069c:     	ext.16b	v2, v2, v2, #0x8
+1000706a0:     	ext.16b	v4, v4, v4, #0x8
+1000706a4:     	ext.16b	v0, v5, v5, #0x8
+1000706a8:     	ext.16b	v14, v7, v7, #0x8
+1000706ac:     	fmul.4s	v4, v24, v4
+1000706b0:     	fmul.4s	v5, v25, v2
+1000706b4:     	fmul.4s	v12, v26, v1
+1000706b8:     	fmul.4s	v1, v27, v15
+1000706bc:     	ext.16b	v2, v6, v6, #0x8
+1000706c0:     	ld4.4s	{ v24, v25, v26, v27 }, [x17]
+1000706c4:     	ext.16b	v6, v13, v13, #0x8
+1000706c8:     	fmul.4s	v6, v20, v6
+1000706cc:     	fmul.4s	v2, v21, v2
+1000706d0:     	fmul.4s	v13, v22, v14
+1000706d4:     	fmul.4s	v0, v23, v0
+1000706d8:     	rev64.4s	v7, v28
+1000706dc:     	rev64.4s	v20, v29
+1000706e0:     	rev64.4s	v21, v30
+1000706e4:     	rev64.4s	v22, v31
+1000706e8:     	ext.16b	v23, v7, v7, #0x8
+1000706ec:     	ext.16b	v28, v20, v20, #0x8
+1000706f0:     	ext.16b	v20, v21, v21, #0x8
+1000706f4:     	ext.16b	v7, v22, v22, #0x8
+1000706f8:     	fmul.4s	v7, v16, v7
+1000706fc:     	fmul.4s	v20, v17, v20
+100070700:     	fmul.4s	v21, v18, v28
+100070704:     	fmul.4s	v22, v19, v23
+100070708:     	rev64.4s	v16, v8
+10007070c:     	rev64.4s	v17, v9
+100070710:     	rev64.4s	v18, v10
+100070714:     	rev64.4s	v19, v11
+100070718:     	ext.16b	v23, v16, v16, #0x8
+10007071c:     	ext.16b	v28, v17, v17, #0x8
+100070720:     	ext.16b	v17, v18, v18, #0x8
+100070724:     	ext.16b	v16, v19, v19, #0x8
+100070728:     	fmul.4s	v16, v24, v16
+10007072c:     	fmul.4s	v17, v25, v17
+100070730:     	fmul.4s	v18, v26, v28
+100070734:     	fmul.4s	v19, v27, v23
+100070738:     	mov	s23, v1[1]
+10007073c:     	ldr	q24, [sp]
+100070740:     	fadd	s24, s24, s1
+100070744:     	fadd	s23, s24, s23
+100070748:     	mov	s24, v1[2]
+10007074c:     	fadd	s23, s23, s24
+100070750:     	mov	s1, v1[3]
+100070754:     	fadd	s1, s23, s1
+100070758:     	mov	s23, v0[1]
+10007075c:     	fadd	s1, s1, s0
+100070760:     	fadd	s1, s1, s23
+100070764:     	mov	s23, v0[2]
+100070768:     	fadd	s1, s1, s23
+10007076c:     	mov	s0, v0[3]
+100070770:     	fadd	s0, s1, s0
+100070774:     	mov	s1, v22[1]
+100070778:     	fadd	s0, s0, s22
+10007077c:     	fadd	s0, s0, s1
+100070780:     	mov	s1, v22[2]
+100070784:     	fadd	s0, s0, s1
+100070788:     	mov	s1, v22[3]
+10007078c:     	fadd	s0, s0, s1
+100070790:     	mov	s1, v12[1]
+100070794:     	fadd	s3, s3, s12
+100070798:     	fadd	s1, s3, s1
+10007079c:     	mov	s3, v12[2]
+1000707a0:     	fadd	s1, s1, s3
+1000707a4:     	mov	s3, v12[3]
+1000707a8:     	fadd	s1, s1, s3
+1000707ac:     	mov	s3, v19[1]
+1000707b0:     	fadd	s0, s0, s19
+1000707b4:     	fadd	s0, s0, s3
+1000707b8:     	mov	s3, v13[1]
+1000707bc:     	fadd	s1, s1, s13
+1000707c0:     	fadd	s1, s1, s3
+1000707c4:     	mov	s3, v13[2]
+1000707c8:     	fadd	s1, s1, s3
+1000707cc:     	mov	s3, v13[3]
+1000707d0:     	fadd	s1, s1, s3
+1000707d4:     	mov	s3, v21[1]
+1000707d8:     	fadd	s1, s1, s21
+1000707dc:     	fadd	s1, s1, s3
+1000707e0:     	mov	s3, v19[2]
+1000707e4:     	fadd	s0, s0, s3
+1000707e8:     	mov	s3, v21[2]
+1000707ec:     	fadd	s1, s1, s3
+1000707f0:     	mov	s3, v21[3]
+1000707f4:     	fadd	s1, s1, s3
+1000707f8:     	mov	s3, v18[1]
+1000707fc:     	fadd	s1, s1, s18
+100070800:     	fadd	s1, s1, s3
+100070804:     	mov	s3, v5[1]
+100070808:     	ldr	q21, [sp, #0x10]
+10007080c:     	fadd	s21, s21, s5
+100070810:     	fadd	s3, s21, s3
+100070814:     	mov	s21, v18[2]
+100070818:     	fadd	s1, s1, s21
+10007081c:     	mov	s21, v5[2]
+100070820:     	fadd	s3, s3, s21
+100070824:     	mov	s5, v5[3]
+100070828:     	fadd	s3, s3, s5
+10007082c:     	mov	s5, v2[1]
+100070830:     	fadd	s3, s3, s2
+100070834:     	fadd	s3, s3, s5
+100070838:     	mov	s5, v2[2]
+10007083c:     	fadd	s3, s3, s5
+100070840:     	mov	s2, v2[3]
+100070844:     	fadd	s2, s3, s2
+100070848:     	mov	s3, v20[1]
+10007084c:     	fadd	s2, s2, s20
+100070850:     	fadd	s2, s2, s3
+100070854:     	mov	s3, v20[2]
+100070858:     	fadd	s2, s2, s3
+10007085c:     	mov	s3, v19[3]
+100070860:     	fadd	s28, s0, s3
+100070864:     	mov	s0, v20[3]
+100070868:     	fadd	s0, s2, s0
+10007086c:     	mov	s2, v17[1]
+100070870:     	fadd	s0, s0, s17
+100070874:     	fadd	s0, s0, s2
+100070878:     	mov	s2, v17[2]
+10007087c:     	fadd	s0, s0, s2
+100070880:     	mov	s2, v4[1]
+100070884:     	ldr	q3, [sp, #0x20]
+100070888:     	fadd	s3, s3, s4
+10007088c:     	fadd	s2, s3, s2
+100070890:     	mov	s3, v18[3]
+100070894:     	fadd	s3, s1, s3
+100070898:     	mov	s1, v4[2]
+10007089c:     	fadd	s1, s2, s1
+1000708a0:     	mov	s2, v4[3]
+1000708a4:     	fadd	s1, s1, s2
+1000708a8:     	fadd	s1, s1, s6
+1000708ac:     	mov	s2, v6[1]
+1000708b0:     	fadd	s1, s1, s2
+1000708b4:     	mov	s2, v6[2]
+1000708b8:     	fadd	s1, s1, s2
+1000708bc:     	mov	s2, v6[3]
+1000708c0:     	fadd	s1, s1, s2
+1000708c4:     	mov	s2, v7[1]
+1000708c8:     	fadd	s1, s1, s7
+1000708cc:     	fadd	s1, s1, s2
+1000708d0:     	mov	s2, v7[2]
+1000708d4:     	fadd	s1, s1, s2
+1000708d8:     	mov	s2, v17[3]
+1000708dc:     	fadd	s27, s0, s2
+1000708e0:     	mov	s0, v7[3]
+1000708e4:     	fadd	s0, s1, s0
+1000708e8:     	mov	s1, v16[1]
+1000708ec:     	fadd	s0, s0, s16
+1000708f0:     	fadd	s0, s0, s1
+1000708f4:     	mov	s1, v16[2]
+1000708f8:     	fadd	s0, s0, s1
+1000708fc:     	mov	s1, v16[3]
+100070900:     	fadd	s26, s0, s1
+100070904:     	sub	x14, x14, #0x100
+100070908:     	add	x15, x15, #0x100
+10007090c:     	subs	x16, x16, #0x10
+100070910:     	b.ne	0x100070638 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0xa8>
+100070914:     	mov.16b	v4, v26
+100070918:     	mov.s	v4[1], v27[0]
+10007091c:     	mov.s	v4[2], v3[0]
+100070920:     	mov.s	v4[3], v28[0]
+100070924:     	cmp	x9, x12
+100070928:     	b.eq	0x100070a60 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x4d0>
+10007092c:     	cbz	x13, 0x100070a24 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x494>
+100070930:     	mov	x14, x12
+100070934:     	and	x12, x9, #0x7fffffffffffffc
+100070938:     	sub	x13, x14, x12
+10007093c:     	lsl	x15, x14, #4
+100070940:     	add	x14, x0, x15
+100070944:     	orr	x16, x11, x10, lsl #4
+100070948:     	sub	x15, x16, x15
+10007094c:     	add	x15, x15, x2
+100070950:     	sub	x15, x15, #0x10
+100070954:     	ld4.4s	{ v4, v5, v6, v7 }, [x14], #64
+100070958:     	sub	x16, x15, #0x30
+10007095c:     	ld4.4s	{ v16, v17, v18, v19 }, [x16]
+100070960:     	rev64.4s	v0, v16
+100070964:     	ext.16b	v0, v0, v0, #0x8
+100070968:     	rev64.4s	v1, v17
+10007096c:     	ext.16b	v1, v1, v1, #0x8
+100070970:     	rev64.4s	v2, v18
+100070974:     	ext.16b	v2, v2, v2, #0x8
+100070978:     	rev64.4s	v16, v19
+10007097c:     	ext.16b	v16, v16, v16, #0x8
+100070980:     	fmul.4s	v16, v4, v16
+100070984:     	mov	s17, v16[3]
+100070988:     	mov	s18, v16[2]
+10007098c:     	mov	s19, v16[1]
+100070990:     	fmul.4s	v2, v5, v2
+100070994:     	mov	s20, v2[3]
+100070998:     	mov	s21, v2[2]
+10007099c:     	mov	s22, v2[1]
+1000709a0:     	fmul.4s	v1, v6, v1
+1000709a4:     	mov	s23, v1[3]
+1000709a8:     	mov	s24, v1[2]
+1000709ac:     	mov	s25, v1[1]
+1000709b0:     	fmul.4s	v0, v7, v0
+1000709b4:     	mov	s4, v0[3]
+1000709b8:     	mov	s5, v0[2]
+1000709bc:     	mov	s6, v0[1]
+1000709c0:     	fadd	s0, s28, s0
+1000709c4:     	fadd	s0, s0, s6
+1000709c8:     	fadd	s0, s0, s5
+1000709cc:     	fadd	s28, s0, s4
+1000709d0:     	fadd	s0, s3, s1
+1000709d4:     	fadd	s0, s0, s25
+1000709d8:     	fadd	s0, s0, s24
+1000709dc:     	fadd	s3, s0, s23
+1000709e0:     	fadd	s0, s27, s2
+1000709e4:     	fadd	s0, s0, s22
+1000709e8:     	fadd	s0, s0, s21
+1000709ec:     	fadd	s27, s0, s20
+1000709f0:     	fadd	s0, s26, s16
+1000709f4:     	fadd	s0, s0, s19
+1000709f8:     	fadd	s0, s0, s18
+1000709fc:     	fadd	s26, s0, s17
+100070a00:     	sub	x15, x15, #0x40
+100070a04:     	add	x13, x13, #0x4
+100070a08:     	cbnz	x13, 0x100070954 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x3c4>
+100070a0c:     	mov.s	v26[1], v27[0]
+100070a10:     	mov.s	v26[2], v3[0]
+100070a14:     	mov.s	v26[3], v28[0]
+100070a18:     	mov.16b	v4, v26
+100070a1c:     	cmp	x9, x12
+100070a20:     	b.eq	0x100070a60 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x4d0>
+100070a24:     	orr	x10, x11, x10, lsl #4
+100070a28:     	lsl	x11, x12, #4
+100070a2c:     	sub	x10, x10, x11
+100070a30:     	add	x10, x10, x2
+100070a34:     	sub	x10, x10, #0x10
+100070a38:     	add	x11, x0, x11
+100070a3c:     	sub	x9, x9, x12
+100070a40:     	ldr	q0, [x11], #0x10
+100070a44:     	ldr	q1, [x10], #-0x10
+100070a48:     	rev64.4s	v1, v1
+100070a4c:     	ext.16b	v1, v1, v1, #0x8
+100070a50:     	fmul.4s	v0, v0, v1
+100070a54:     	fadd.4s	v4, v4, v0
+100070a58:     	subs	x9, x9, #0x1
+100070a5c:     	b.ne	0x100070a40 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x4b0>
+100070a60:     	dup.4s	v0, v4[1]
+100070a64:     	fadd.4s	v0, v4, v0
+100070a68:     	dup.4s	v1, v4[2]
+100070a6c:     	fadd.4s	v0, v0, v1
+100070a70:     	dup.4s	v1, v4[3]
+100070a74:     	fadd.4s	v0, v0, v1
+100070a78:     	cmp	x1, x3
+100070a7c:     	b.hi	0x100070af0 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x560>
+100070a80:     	cbz	x1, 0x100070ad4 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x544>
+100070a84:     	and	x8, x8, #0x1ffffffffffffffc
+100070a88:     	add	x8, x0, x8, lsl #2
+100070a8c:     	lsl	x9, x1, #2
+100070a90:     	subs	x9, x9, #0x4
+100070a94:     	add	x9, x2, x9
+100070a98:     	ldr	s1, [x8]
+100070a9c:     	ldr	s2, [x9]
+100070aa0:     	fmul	s1, s1, s2
+100070aa4:     	fadd	s0, s0, s1
+100070aa8:     	b.eq	0x100070ad4 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x544>
+100070aac:     	ldr	s1, [x8, #0x4]
+100070ab0:     	ldur	s2, [x9, #-0x4]
+100070ab4:     	fmul	s1, s1, s2
+100070ab8:     	fadd	s0, s0, s1
+100070abc:     	cmp	x1, #0x2
+100070ac0:     	b.eq	0x100070ad4 <__RNvNtNtCsc0RWBReJJjJ_15plugins_spatial4nupc16time_domain_head12reversed_dot+0x544>
+100070ac4:     	ldr	s1, [x8, #0x8]
+100070ac8:     	ldur	s2, [x9, #-0x8]
+100070acc:     	fmul	s1, s1, s2
+100070ad0:     	fadd	s0, s0, s1
+100070ad4:     	ldp	x29, x30, [sp, #0x70]
+100070ad8:     	ldp	d9, d8, [sp, #0x60]
+100070adc:     	ldp	d11, d10, [sp, #0x50]
+100070ae0:     	ldp	d13, d12, [sp, #0x40]
+100070ae4:     	ldp	d15, d14, [sp, #0x30]
+100070ae8:     	add	sp, sp, #0x80
+100070aec:     	ret
+100070af0:     	adrp	x8, 0x10011c000 <_anon.6e9eb5ee385756790d1dcb0ac2f2a690.39+0x120>
+100070af4:     	add	x8, x8, #0xfc0
+100070af8:     	mov	x0, #0x0                ; =0
+100070afc:     	mov	x2, x3
+100070b00:     	mov	x3, x8
+100070b04:     	bl	0x1000dd15c <__RNvNtNtCs3bJEMBXHbwl_4core5slice5index16slice_index_fail>

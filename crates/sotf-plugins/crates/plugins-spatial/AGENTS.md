@@ -40,3 +40,14 @@ cargo test -p plugins-spatial
   convolution, structural tap-count checks, complete tails and reset/partition
   invariants. Coalescing changes floating-point accumulation order; it does not
   add a worker or distribute the remaining FFT bursts over callbacks.
+
+- Direct-head history remains one N-sample ring with causal-order shared taps.
+  Split at the current write position and reverse each contiguous history slice
+  against its corresponding taps. Four independent sums remove the per-tap wrap
+  branch; wrap the write position once per input sample. No history duplication
+  or callback allocation is needed. Floating-point accumulation order may change.
+- Preserve the f64 wrap/odd/lane-boundary reference and full tail/reset tests.
+  `direct_head_paired_callback_cost_abba` is an explicitly executed isolated wall
+  timing diagnostic, ignored by default to avoid CI timing gates. Keep raw ABBA
+  trials, symmetric output touching and the old scalar control. Profiling the
+  head alone does not replace complete Plugin/native deadline validation.

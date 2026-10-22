@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Latest unchanged 63-geometry coalesced NUPC run still fails in 59 geometries with 45,578 physical misses across 532,086 callbacks. Prior real-FFT run: 62 / 48,377; original full-complex run: 61 / 51,122. Every run and raw deadline criterion is retained. Memory and redundant-transform reductions do not establish full capacity or loaded native compliance. Further structural DSP/scheduling work remains."
+          "evidence": "The latest unchanged 63-geometry direct-head run still fails in 58 geometries with 43,261 misses across 532,086 callbacks. Prior coalesced run: 59 / 45,578; real-FFT run: 62 / 48,377; original full-complex run: 61 / 51,122. Preserve every result and strict deadline. Isolated head-cost improvement does not establish full capacity or native compliance. Remaining uniform-convolution and large FFT burst costs require further work."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1048,6 +1048,36 @@
             "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
           ],
           "result": "Preparation coalesces only contiguous equal-block/equal-FFT NUPC groups. Their IR partitions concatenate into one kernel/FDL; older input spectra replace the later group output delay. The first offset/delay is retained. Public partition plans, admission arithmetic/limits, complete tap coverage, direct heads, latency, callback scheduling, parameters and dependencies are unchanged. A 120-case structural regression fails 60 cases before and zero after; runtime levels fall from 437 to 248 with the same total partition count. The explicit unmerged reference covers 45 reset/complete-tail cases and matches within 2.23518e-8. Existing independent f64 dense 54 cases and 262,147-tap sparse four cases retain errors below 2.43e-8 under unchanged 2e-5 gates, with exact reset/partition behavior. The complete shared/Convolution/linear-phase EQ release selection passes 263 tests with six existing ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; the latter records zero physical misses. The unchanged 63-geometry strict load matrix retains 532,086 callbacks, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. It still exits 1: 59 failed geometries / 45,578 misses, versus the immediately preceding real-FFT run at 62 / 48,377. Of 42 NUPC geometries, 40 record fewer misses and two the same count, with none higher; totals change from 7,976 to 5,206. Unchanged UPC totals change from 40,401 to 40,372. Retained NUPC requested bytes are 58.06\u201381.66% of preceding values, not RSS or aggregate bounds. Rerunning the unchanged 108-row maximum-load linear-phase EQ harness also exits 1: 28 failed rows and 9,237 physical/reported misses across 32,958 callbacks, versus historical 49 rows / 14,635 misses. All 108 rows are finite, settled, replay-bounded and allocation/free-free; configurations, taps, callback counts, generations and budgets match. There are 45 rows with fewer misses, 63 equal and none higher. Historical measurements are unmatched and the older EQ baseline precedes intervening changes, so no causal or native-device compliance claim. Both full red datasets, source hashes, baseline artifact hashes and independent verifiers remain. This reduces redundant work but does not distribute remaining large FFT bursts or resolve direct-head cost. Maximum capacity and native validation remain pending; FIR-M1 is separate. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
+        },
+        {
+          "task": "Reduce direct-head per-tap wrapping and dependency costs with paired and full-workload verification.",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-assembly.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-candidate.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-assembly.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-dot-disassembly.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-paired-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-profile.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-baseline.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-validation.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-assembly.s",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-dot-assembly.s",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-paired-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-source.json",
+            "audit/artifacts/plugin-audit-20261018/nupc-direct-head-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-nupc-direct-head.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
+          ],
+          "result": "Optimize the direct time-domain head with two contiguous reversed-history dot products, four independent f32 sums and one write-position wrap per source sample. Remove per-tap ring branches without duplicating history, adding persistent storage/dependencies, or changing taps, latency, parameters, partition/admission geometry or callback ownership. Safe portable Rust only. Eighteen independent f64 cases span head lengths 1 through 512 around odd/lane boundaries, every circular phase, zero continuation and exact reset; maximum error is 5.33502e-8 under the unchanged 2e-5 gate (old scalar reference 1.35265e-7). Existing independent dense, large sparse and explicitly unmerged NUPC references remain below their gates. All 264 regular affected tests pass; six existing ignores remain and one new profiling diagnostic is ignored by default but executed explicitly. Strict all-target QA Clippy, formatting and standard Convolution QA pass. Preserve the initial test-only manual-slice-fill lint failure and allocated-only baseline; final symmetric explicit output touching uses fill outside timed callbacks. The predeclared isolated ABBA criterion requires median candidate/legacy p50 <=0.9 at 257/512 taps. Final 32-channel, 128-frame, 32-callback trials produce ratios 0.30449/0.30270 (32 taps: 0.39427), satisfying that criterion. Keep every raw duration and checksum. Pre-link assembly is scalar; final linked ARM64 profiling executable contains packed multiplications, verified by saved disassembly. This does not establish another architecture or full native callback performance. The unchanged complete 63-geometry Plugin load matrix still exits 1: 58 failing geometries and 43,261 physical misses over 532,086 callbacks, versus coalesced baseline 59 / 45,578. Direct-head totals change from 4,678 to 2,379; ten geometries record fewer misses, ten equal and one more (48k true-stereo, 23 to 24). Non-head NUPC 528 to 525 and UPC 40,372 to 40,357 are unmatched observations. All cases remain finite, allocation/free-free in callbacks, within unchanged conservative estimates, and identical in IR lengths, latency, phase callback counts and budgets. Macro timings remain historical unmatched observations, separate from the isolated paired kernel guard. Both failures and independent verification are retained. Linear-phase EQ does not instantiate direct heads; its latest 28/108 failing-row matrix remains pending and no new timing result is claimed. Maximum capacity/native validation, FIR-M1 and wider plugin scope remain open. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
         }
       ],
       "evidence": [
@@ -1090,7 +1120,29 @@
         "audit/artifacts/plugin-audit-20261018/nupc-coalesced-validation.json",
         "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced-linear-eq.py",
         "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
-        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-assembly.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-assembly.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-dot-disassembly.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-profile.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-assembly.s",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-dot-assembly.s",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-direct-head.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
       ]
     },
     {
@@ -3827,6 +3879,41 @@
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
       ],
       "limitations": "Current strict capacity gates remain red: Convolution 59/63 and linear-phase EQ 28/108. Local historical timing is not causal/device compliance. FIR-M1 and broader plugin scope remain open."
+    },
+    {
+      "name": "Portable direct-head accumulation and paired/full-workload verification",
+      "state": "verified_partial",
+      "plugin_ids": [
+        14,
+        30
+      ],
+      "result": "Optimize the direct time-domain head with two contiguous reversed-history dot products, four independent f32 sums and one write-position wrap per source sample. Remove per-tap ring branches without duplicating history, adding persistent storage/dependencies, or changing taps, latency, parameters, partition/admission geometry or callback ownership. Safe portable Rust only. Eighteen independent f64 cases span head lengths 1 through 512 around odd/lane boundaries, every circular phase, zero continuation and exact reset; maximum error is 5.33502e-8 under the unchanged 2e-5 gate (old scalar reference 1.35265e-7). Existing independent dense, large sparse and explicitly unmerged NUPC references remain below their gates. All 264 regular affected tests pass; six existing ignores remain and one new profiling diagnostic is ignored by default but executed explicitly. Strict all-target QA Clippy, formatting and standard Convolution QA pass. Preserve the initial test-only manual-slice-fill lint failure and allocated-only baseline; final symmetric explicit output touching uses fill outside timed callbacks. The predeclared isolated ABBA criterion requires median candidate/legacy p50 <=0.9 at 257/512 taps. Final 32-channel, 128-frame, 32-callback trials produce ratios 0.30449/0.30270 (32 taps: 0.39427), satisfying that criterion. Keep every raw duration and checksum. Pre-link assembly is scalar; final linked ARM64 profiling executable contains packed multiplications, verified by saved disassembly. This does not establish another architecture or full native callback performance. The unchanged complete 63-geometry Plugin load matrix still exits 1: 58 failing geometries and 43,261 physical misses over 532,086 callbacks, versus coalesced baseline 59 / 45,578. Direct-head totals change from 4,678 to 2,379; ten geometries record fewer misses, ten equal and one more (48k true-stereo, 23 to 24). Non-head NUPC 528 to 525 and UPC 40,372 to 40,357 are unmatched observations. All cases remain finite, allocation/free-free in callbacks, within unchanged conservative estimates, and identical in IR lengths, latency, phase callback counts and budgets. Macro timings remain historical unmatched observations, separate from the isolated paired kernel guard. Both failures and independent verification are retained. Linear-phase EQ does not instantiate direct heads; its latest 28/108 failing-row matrix remains pending and no new timing result is claimed. Maximum capacity/native validation, FIR-M1 and wider plugin scope remain open. Convolution and linear-phase EQ remain partial; overall completion stays 35/45.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-assembly.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-candidate.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-assembly.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-dot-disassembly.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-final-profile.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-initial-validation.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-assembly.s",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-native-dot-assembly.s",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-source.json",
+        "audit/artifacts/plugin-audit-20261018/nupc-direct-head-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-nupc-direct-head.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs"
+      ],
+      "limitations": "Strict convolution load remains red in 58/63 geometries. The paired diagnostic measures heads-only wall time. Linear EQ 28/108 remains pending without a new load run; no native/device or cross-architecture acceptance claim."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

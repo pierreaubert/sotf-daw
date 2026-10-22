@@ -1,0 +1,46 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "head_tests",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 2 tests\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... ignored, explicit isolated paired cost diagnostic; not a functional deferral or CI deadline gate\ndirect_head_f64 cases=18 maximum_error=1.3526422455722997e-7\ntest nupc::head_tests::direct_head_matches_f64_convolution_at_every_history_wrap_and_lane_boundary ... ok\n\ntest result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 15 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 8.65s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "direct_head_paired_callback_cost_abba",
+      "--",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 1 test\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... direct_head_cost taps=32 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[69958, 66125, 67542, 63583, 65708, 68500, 65583, 69708, 66041, 69250, 66416, 68875, 66917, 65541, 70125, 65791, 69542, 66209, 69042, 66625, 68041, 67750, 65541, 69917, 65833, 69500, 66250, 69084, 66833, 66917, 68792, 65500]\ndirect_head_cost taps=32 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[69875, 66583, 69417, 66958, 67750, 68459, 65833, 70125, 66167, 69792, 66667, 69375, 67000, 67167, 69125, 65958, 70083, 66333, 69584, 66584, 69167, 70458, 69208, 68291, 65792, 70083, 66083, 69833, 66583, 69333, 67000, 67292]\ndirect_head_cost taps=32 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[67875, 66458, 70417, 66000, 69916, 66500, 69459, 66875, 68292, 67916, 65917, 70167, 66292, 69875, 66459, 69292, 67041, 67583, 68708, 65875, 70125, 66208, 69708, 66666, 69334, 67041, 67042, 69375, 66250, 70042, 66416, 69417]\ndirect_head_cost taps=32 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[66417, 68875, 66917, 65583, 70042, 65709, 69584, 66250, 69125, 66708, 67708, 68000, 65500, 69792, 65916, 69417, 66292, 69000, 66750, 66208, 69500, 65583, 69750, 66083, 69292, 67292, 69041, 67375, 65667, 69959, 65834, 69625]\ndirect_head_cost taps=257 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[828625, 821667, 831833, 797916, 823917, 826667, 822875, 825458, 823000, 827125, 826583, 814042, 822375, 826458, 823541, 821959, 825459, 823833, 826583, 826000, 826625, 825000, 826083, 819459, 824958, 824042, 821750, 825542, 824666, 821792, 825875, 823709]\ndirect_head_cost taps=257 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[827084, 823417, 821792, 825958, 824666, 821958, 825875, 828042, 825292, 825000, 821792, 830250, 825375, 821958, 826708, 831584, 827459, 823708, 823333, 825750, 823333, 821875, 826833, 826958, 839208, 825958, 821958, 830750, 823208, 823500, 828625, 821875]\ndirect_head_cost taps=257 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[823000, 831667, 824625, 830209, 829750, 822291, 827458, 823042, 821875, 826208, 822666, 823792, 827208, 822583, 825000, 824541, 810625, 778125, 807583, 828041, 827917, 826625, 823167, 822541, 825167, 822209, 794000, 799584, 824916, 814792, 778083, 778333]\ndirect_head_cost taps=257 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[778625, 778125, 778166, 789542, 784584, 778625, 780000, 778041, 779125, 778125, 777959, 779834, 778208, 778333, 778459, 779000, 778167, 801750, 780000, 784209, 809292, 821708, 826708, 789083, 778125, 778166, 789792, 779458, 778542, 827083, 823750, 824125]\ndirect_head_cost taps=512 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1664916, 1618667, 1596584, 1647167, 1642750, 1664708, 1662708, 1651916, 1665833, 1666667, 1614625, 1602500, 1664625, 1619042, 1575584, 1632958, 1644416, 1573417, 1617625, 1665917, 1626417, 1579750, 1573542, 1583417, 1603583, 1573000, 1575666, 1573584, 1649292, 1666833, 1590083, 1645334]\ndirect_head_cost taps=512 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1601125, 1593916, 1590833, 1589458, 1590292, 1589000, 1587709, 1588708, 1590791, 1610750, 1588875, 1587916, 1663167, 1682834, 1687459, 1615125, 1588916, 1594083, 1587875, 1588625, 1589333, 1588375, 1591209, 1588042, 1586875, 1588791, 1588042, 1589209, 1588000, 1587875, 1594292, 1603750]\ndirect_head_cost taps=512 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1599334, 1593416, 1594458, 1590459, 1595625, 1597459, 1602792, 1602708, 1601000, 1617292, 1697041, 1604750, 1610250, 1622000, 1619417, 1670917, 1652375, 1609250, 1607250, 1644125, 1671041, 1572708, 1573709, 1574750, 1579834, 1658625, 1577708, 1613458, 1604542, 1596625, 1576375, 1614583]\ndirect_head_cost taps=512 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1640167, 1684209, 1679209, 1639250, 1596292, 1580250, 1574334, 1573417, 1575417, 1577459, 1572542, 1576542, 1588875, 1588833, 1583875, 1577916, 1572917, 1572417, 1571958, 1571917, 1576750, 1584167, 1571917, 1590125, 1579542, 1573833, 1578333, 1577958, 1581084, 1573791, 1573375, 1578667]\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.35s\n\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.21s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n"
+  }
+]

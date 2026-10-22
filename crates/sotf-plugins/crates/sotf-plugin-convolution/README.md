@@ -233,3 +233,33 @@ remain finite and within the conservative retained-storage bound, with zero
 callback allocations/frees. The shared linear-phase EQ 108-row matrix also
 remains red: 28 failed rows / 9,237 misses. Both complete datasets and independent
 consistency verifiers are retained under `audit/artifacts/plugin-audit-20261018/`.
+
+### Direct-head accumulation
+
+The zero-latency head retains its original causal taps and one circular history.
+Each sample splits that history into two contiguous slices and computes reversed
+four-lane dot products, then wraps the write position once. This removes per-tap
+ring branches without adding persistent storage, latency or dependencies. The
+portable Rust implementation permits compiler SIMD; final linked ARM64 release
+profiling code contains packed multiplications. Accumulation order can change,
+so accuracy is checked against f64 convolution across short, odd and lane-boundary
+lengths, all history positions, reset and complete tails.
+
+An explicit ignored-by-default diagnostic can be run with
+`cargo test --release -p plugins-spatial direct_head_paired_callback_cost_abba -- --ignored --nocapture --test-threads=1`.
+It compares the original scalar loop and current head in ABBA order using
+preallocated, explicitly touched output buffers, populated history and 32-channel
+128-frame callbacks. The captured 257/512-tap median p50 ratios are about
+0.3045/0.3027 against the original loop, satisfying the predeclared 0.9 criterion.
+These isolated wall-clock measurements do not include the rest of the plugin or
+a device callback. The regular test suite skips the diagnostic; it is executed
+separately for this optimization, while existing functional ignores are retained.
+
+The complete unchanged direct-head load run remains red: 58/63 geometries and
+43,261 physical misses over 532,086 callbacks, versus 59 / 45,578 in the prior
+coalesced run. Direct-head cases total 2,379 misses versus 4,678: ten geometries
+record fewer, ten equal and one more (23 to 24). These full-load comparisons are
+unmatched wall-clock observations. Every case is finite, fits its conservative
+retained-storage estimate and records zero callback allocations/frees. The
+captured linear-phase EQ 28/108 failing-row result remains pending; its ordinary
+path does not instantiate direct heads, and no new EQ load result is claimed.

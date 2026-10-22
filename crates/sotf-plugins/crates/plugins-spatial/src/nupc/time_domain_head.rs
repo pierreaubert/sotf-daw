@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 pub(super) struct TimeDomainHead {
-    /// First N samples of the IR (reversed for direct convolution)
+    /// First N IR samples in causal tap order
     pub(super) ir_taps: Arc<[f32]>,
     /// Circular input history buffer
     pub(super) history: Vec<f32>,
@@ -13,6 +13,31 @@ pub(super) struct TimeDomainHead {
     pub(super) pos: usize,
     /// Number of taps
     pub(super) n_taps: usize,
+}
+
+// Four independent sums remove the per-tap dependency chain and allow packed
+// arithmetic on supported targets. Reverse the history within each complete
+// chunk; at most three prefix samples remain for the scalar tail. No temporary
+// history copy, extra ring storage or unsafe architecture-specific code is used.
+#[inline]
+fn reversed_dot(taps: &[f32], history: &[f32]) -> f32 {
+    debug_assert_eq!(taps.len(), history.len());
+    let (chunks, remainder) = taps.as_chunks::<4>();
+    let mut lanes = [0.0_f32; 4];
+    for (taps, samples) in chunks.iter().zip(history.rchunks_exact(4)) {
+        lanes[0] += taps[0] * samples[3];
+        lanes[1] += taps[1] * samples[2];
+        lanes[2] += taps[2] * samples[1];
+        lanes[3] += taps[3] * samples[0];
+    }
+    let mut sum = ((lanes[0] + lanes[1]) + lanes[2]) + lanes[3];
+    for (&tap, &sample) in remainder
+        .iter()
+        .zip(history[..remainder.len()].iter().rev())
+    {
+        sum += tap * sample;
+    }
+    sum
 }
 
 impl TimeDomainHead {
@@ -29,17 +54,14 @@ impl TimeDomainHead {
     #[inline]
     pub(super) fn process_sample(&mut self, sample: f32) -> f32 {
         self.history[self.pos] = sample;
-        let mut output = 0.0;
-        let mut read = self.pos;
-        for &tap in self.ir_taps.iter() {
-            output += tap * self.history[read];
-            if read == 0 {
-                read = self.n_taps - 1;
-            } else {
-                read -= 1;
-            }
+        let split = self.pos + 1;
+        let (recent, older) = self.history.split_at(split);
+        let (recent_taps, older_taps) = self.ir_taps.split_at(split);
+        let output = reversed_dot(recent_taps, recent) + reversed_dot(older_taps, older);
+        self.pos += 1;
+        if self.pos == self.n_taps {
+            self.pos = 0;
         }
-        self.pos = (self.pos + 1) % self.n_taps;
         output
     }
 

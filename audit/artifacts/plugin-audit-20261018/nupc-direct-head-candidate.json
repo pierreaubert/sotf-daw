@@ -1,0 +1,45 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 17 tests\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... ignored, explicit isolated paired cost diagnostic; not a functional deferral or CI deadline gate\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\nnupc_half_spectra checks=108 failures=0 legacy_complex_values=70980 actual_complex_values=35598\ntest nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins ... ok\nnupc_coalesced_coverage cases=120 failures=0 original_levels=437 actual_levels=248\ntest nupc::coalesced_tests::runtime_has_one_level_per_block_size_with_unchanged_partition_coverage ... ok\ndirect_head_f64 cases=18 maximum_error=5.3350127399154346e-8\ntest nupc::head_tests::direct_head_matches_f64_convolution_at_every_history_wrap_and_lane_boundary ... ok\nnupc_real_direct_reference cases=54 maximum_error=1.5679317962036254e-8\ntest nupc::real_fft_tests::real_fft_render_matches_independent_f64_direct_convolution_through_complete_tail ... ok\nnupc_coalesced_unmerged cases=45 maximum_error=2.2351741790771484e-8\ntest nupc::coalesced_tests::merged_levels_match_separate_delayed_groups_through_reset_and_complete_tail ... ok\nnupc_large_sparse_reference cases=4 maximum_error=2.420713940409769e-8\ntest nupc::real_fft_tests::large_partition_levels_preserve_sparse_absolute_taps_and_last_tail_sample ... ok\n\ntest result: ok. 16 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.23s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+    "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 10.15s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n   Doc-tests plugins_spatial\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "direct_head_paired_callback_cost_abba",
+      "--",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 1 test\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... direct_head_cost taps=32 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[67625, 64500, 67792, 68750, 65834, 64791, 65458, 65167, 64542, 66083, 64500, 65750, 64833, 65250, 65167, 64458, 66083, 65041, 65667, 64916, 65292, 66291, 65292, 65958, 64458, 65708, 64958, 65208, 65333, 64417, 65959, 65666]\ndirect_head_cost taps=32 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=-2.9931389835837763e-2 ns=[28458, 25292, 26084, 25666, 25667, 25250, 25250, 25209, 26042, 25625, 25584, 25292, 25292, 25166, 25958, 25625, 25708, 25208, 25250, 25292, 26125, 25666, 25750, 25167, 25208, 25167, 25917, 25666, 25667, 25584, 25375, 25250]\ndirect_head_cost taps=32 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=-2.9931389835837763e-2 ns=[25417, 26292, 25666, 25375, 25250, 25250, 25209, 26250, 25542, 25292, 25292, 25250, 25208, 26291, 25584, 25250, 25250, 25167, 25209, 26375, 25625, 25334, 25250, 25167, 25291, 26375, 25625, 25375, 25250, 25208, 25292, 26292]\ndirect_head_cost taps=32 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=-2.993145821346843e-2 ns=[66167, 66333, 65458, 64625, 66125, 64666, 65667, 65042, 65250, 65500, 65583, 71166, 65667, 65708, 65000, 65375, 65459, 64584, 66166, 64709, 65750, 65084, 65333, 65375, 64542, 66000, 64750, 65625, 65166, 64625, 66083, 64541]\ndirect_head_cost taps=257 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[785917, 787166, 789333, 788042, 785834, 791916, 785584, 791167, 815083, 785875, 791084, 792292, 791208, 787250, 788209, 786292, 792583, 786042, 787375, 786041, 786417, 786500, 797958, 786083, 790000, 805292, 786541, 788167, 787916, 808958, 786875, 786208]\ndirect_head_cost taps=257 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=-1.4809675401920686e-1 ns=[234542, 238167, 239042, 238167, 242625, 241833, 244250, 242625, 242333, 241583, 239250, 240250, 236792, 241250, 240750, 238375, 245667, 238291, 242625, 238916, 246625, 239875, 244708, 240208, 239250, 237875, 235833, 237834, 246375, 247000, 239334, 238208]\ndirect_head_cost taps=257 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=-1.4809675401920686e-1 ns=[244000, 239542, 241708, 243000, 241167, 242542, 239916, 238167, 244333, 241292, 240000, 238042, 240917, 238709, 241417, 241458, 237958, 238958, 240333, 236250, 238917, 242417, 244666, 237709, 240709, 240041, 239000, 238667, 238750, 240666, 239167, 240791]\ndirect_head_cost taps=257 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=-1.4809571639807473e-1 ns=[787500, 795958, 794000, 794958, 795083, 813292, 823375, 824042, 821833, 818750, 836709, 818667, 821500, 825875, 890417, 797125, 797875, 791750, 818708, 791708, 797834, 791875, 791625, 796958, 791625, 798250, 802792, 789833, 791291, 793667, 784458, 807500]\ndirect_head_cost taps=512 trial=0 candidate=false channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1589417, 1589958, 1587958, 1590375, 1588583, 1588916, 1596000, 1587791, 1590083, 1588208, 1603000, 1590750, 1595208, 1593833, 1590042, 1588250, 1590041, 1588959, 1589000, 1590250, 1589166, 1588167, 1589042, 1589958, 1592167, 1588292, 1592917, 1598125, 1588834, 1587625, 1591334, 1587750]\ndirect_head_cost taps=512 trial=1 candidate=true channels=32 frames=128 calls=32 checksum=2.472262544943078e-1 ns=[486583, 481292, 481000, 483417, 484333, 487208, 490500, 486541, 485083, 483000, 483208, 491625, 490583, 480167, 490708, 482333, 479667, 485833, 483792, 484125, 485250, 483125, 488958, 482458, 490542, 481250, 487042, 490291, 481917, 485209, 481459, 483125]\ndirect_head_cost taps=512 trial=2 candidate=true channels=32 frames=128 calls=32 checksum=2.472262544943078e-1 ns=[483167, 485208, 495166, 480792, 484584, 483084, 481291, 488250, 487916, 481167, 493167, 481167, 482916, 481500, 482375, 490250, 482667, 483959, 485958, 486458, 501666, 486417, 492500, 484916, 481292, 484958, 481167, 481500, 491375, 486083, 489459, 485083]\ndirect_head_cost taps=512 trial=3 candidate=false channels=32 frames=128 calls=32 checksum=2.4722725676679147e-1 ns=[1598041, 1588459, 1594500, 1596459, 1588917, 1596250, 1593834, 1597750, 1588708, 1587500, 1590875, 1595250, 1587333, 1589083, 1588083, 1587333, 1599708, 1603708, 1588167, 1588791, 1588667, 1607625, 1600959, 1588000, 1589375, 1587917, 1589833, 1589958, 1589083, 1590625, 1588083, 1587833]\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.23s\n\n",
+    "stderr": "    Finished `release` profile [optimized] target(s) in 0.20s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n"
+  }
+]

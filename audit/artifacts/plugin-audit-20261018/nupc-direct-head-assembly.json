@@ -1,0 +1,87 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "rustc",
+    "-p",
+    "plugins-spatial",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--emit=asm"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 4.42s\n",
+  "assembly_sha256": "9f8bb0bdd049e11e7d21bfc3c74db5b66f2b61fa9d721eeaf1409c61aa948bd0",
+  "assembly_file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.00.rcgu.s",
+  "codegen_units": [
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.00.rcgu.s",
+      "sha256": "9f8bb0bdd049e11e7d21bfc3c74db5b66f2b61fa9d721eeaf1409c61aa948bd0"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.01.rcgu.s",
+      "sha256": "1177a4dde579d3280dcb5e328f630890d7eaaae8d74dd469493ee3b864b56b50"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.02.rcgu.s",
+      "sha256": "2db00bd54da848ac66d9a8d34e0e1ea9cd44b3317fee2fd1ec10a13e9c8f5e0b"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.03.rcgu.s",
+      "sha256": "329b298cc8614d6e904a5a51baef549e734af9c4d66cfb0e8edfee14892332a3"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.04.rcgu.s",
+      "sha256": "ddfa5b9c74a8bc76271918f8a708425d0f1046b57eda09b2d180b4fa36447542"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.05.rcgu.s",
+      "sha256": "e4a5f20dce701e64d9537d470b5f3e580575b5d41aaa24299ab4e82eacae4ab5"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.06.rcgu.s",
+      "sha256": "5521fdf0272d6ca9bfa32b477a98ad8f90aa8dfb93661d0b9c2cfd36398d31d4"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.07.rcgu.s",
+      "sha256": "722a711aad954e1f85aa17adc4f715e73e67bc028afe2beae512a66084c869ad"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.08.rcgu.s",
+      "sha256": "23e373a8d73d0930ac9dab66bc80394c8a264d0e148a04ac66bcc29e4032fddb"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.09.rcgu.s",
+      "sha256": "8c82f508e3b742557c404730a94615d7957c755419e9237886196478fa39ca97"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.10.rcgu.s",
+      "sha256": "e3e1f6e02333b00108058f4b690c48181bf7faeee70052a42cb3ce69d6b85ef9"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.11.rcgu.s",
+      "sha256": "716415d409181673b4aca1ce987cdc220f82d926388ca5925d6854458a962047"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.12.rcgu.s",
+      "sha256": "64ebbbd05f99a07b56d3235e2f6cf32d345f327fe416967ff7ed8775e92f05fc"
+    },
+    {
+      "file": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-1b1945806f6f295e.plugins_spatial.262d4a63d47b20cc-cgu.13.rcgu.s",
+      "sha256": "bd7e3e722059bcf9c900c408bb83cf4aab30acd7416a2e991537f73479d9af0f"
+    }
+  ],
+  "packed_multiply_add_lines": [],
+  "excerpt_sha256": "c0d79900881a79f59c50e4943a4d91194aabd24f9ee1164bffa1c4e7c768a9b1",
+  "initial_extraction_note": "Initial search inspected only the latest codegen unit; complete unit inventory now searched.",
+  "dot_excerpt_sha256": "5a06ca6a6b4a7ffaa5a32bf5fe980256131c2e30f7f62524a19707abae5a93fe",
+  "extraction_note": "All codegen units searched, including the private reversed_dot label.",
+  "scope": "Pre-link crate codegen units before executable ThinLTO; not proof of final call-site instructions."
+}

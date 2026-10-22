@@ -1,0 +1,26 @@
+{
+  "base_commit": "3e5cf20",
+  "source_sha256": {
+    "Cargo.lock": "1626aeacf36592d56c64eda81ff1019f37225d0dcda0c77f46c1db9ff3d7687e",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "dc41f69c154393ab455f35d09316a6c7d7b5a6f50b370ba067a0fcafc140c0fb",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "b5fdb80bd89e250a09f02784ad16811e1d34d1ae21946f578b727f50f0dacec5",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs": "d55af70e46b207324831ad759858d1f1aeca3b53fafbf79287cfc53bf3562747",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "81c7ed36dffe8459a823621ffd8ff99387303d41cf5bb3b1e0fb77bd5a0694f1",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "0800810039b6c888fa3188945370618dcdfb639e5999f5bc7a1b03963c64457b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "2ed4a53c0d9870bebace3f343163d8c98d161dd8a2a80a390f021a27d90e9d9e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "89e0df3895dcbe507813931ac06419fa616256a879ec6a041ea5ebc9f90afe28"
+  },
+  "unchanged_from_coalesced_baseline": {
+    "Cargo.lock": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": true,
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": true,
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": true,
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": true
+  },
+  "baseline_artifact_sha256": {
+    "nupc-coalesced-load.json": "eeea4cbc6ef6a9491274f8b22f4d2125620a7b9c48a6bcba94e0c1fad2cba6c3",
+    "nupc-direct-head-baseline.json": "edf508d97a230759303909b3b098b40bdd3180ef1fd55582bd7803d3ef13c6c7"
+  }
+}
