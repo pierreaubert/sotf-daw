@@ -1,0 +1,150 @@
+{
+  "baseline_stage_artifact_sha256": "af78195c6e7e41ab2a1c43afaf9825700cbff4e770fe2618a1dccd6045da0b0f",
+  "modal_reference_cases": 96,
+  "maximum_modal_coefficient_error": 1.112004465474323e-07,
+  "selected_frequency_hz": 93.75,
+  "stages": {
+    "regularized_unbounded": {
+      "raw_depth_db": [
+        19.217862443142174,
+        19.217862443142174
+      ],
+      "desired_gain_db": [
+        -0.9775991989700252,
+        -0.9775991989700252
+      ],
+      "row_powers": [
+        12.862222462445633,
+        12.862222462445633
+      ]
+    },
+    "refined_unbounded": {
+      "raw_depth_db": [
+        26.17241841405002,
+        26.17241841405002
+      ],
+      "desired_gain_db": [
+        -0.42310358564947537,
+        -0.42310358564947537
+      ],
+      "row_powers": [
+        16.904801485957638,
+        16.904801485957638
+      ]
+    },
+    "inverse_limited": {
+      "raw_depth_db": [
+        26.38946459927549,
+        26.38946459927549
+      ],
+      "desired_gain_db": [
+        -0.6401607547626921,
+        -0.6401607547626921
+      ],
+      "row_powers": [
+        16.080676014343926,
+        16.080676014343926
+      ]
+    },
+    "normalized_capped": {
+      "raw_depth_db": [
+        25.81123441618509,
+        25.81123441618509
+      ],
+      "desired_gain_db": [
+        -0.06193380714463862,
+        -0.06193380714463862
+      ],
+      "row_powers": [
+        18.370753942424273,
+        18.370753942424273
+      ]
+    },
+    "identity_blended": {
+      "raw_depth_db": [
+        4.810583311011987,
+        4.810583311011987
+      ],
+      "desired_gain_db": [
+        -0.027688108592580203,
+        -0.027688108592580203
+      ],
+      "row_powers": [
+        4.639932439127784,
+        4.639932439127784
+      ]
+    },
+    "effort_limited": {
+      "raw_depth_db": [
+        4.810583311011987,
+        4.810583311011987
+      ],
+      "desired_gain_db": [
+        -0.027688108592580203,
+        -0.027688108592580203
+      ],
+      "row_powers": [
+        4.639932439127784,
+        4.639932439127784
+      ]
+    }
+  },
+  "existing_row_power_ceiling": 15.84893386315548,
+  "baseline_nominal_desired_gain": 0.9968173640524011,
+  "maximum_equal_row_L2_error_radius_for_5dB_absolute_separation_any_direction": 0.07931867338410344,
+  "equal_ear_rank_one_witness_radius": 0.11053771859540866,
+  "regions": [
+    {
+      "name": "small_explicit_region",
+      "lateral_radius_m": 0.005,
+      "yaw_limit_rad": 0.017453292519943295,
+      "echo_max": 0,
+      "model_offset_from_declared_point_field": 0.03018208540831997,
+      "continuous_row_error_radius": 0.05128023655332721,
+      "contains_equal_ear_rows_in_overapproximation": false,
+      "absolute_separation_only": {
+        "feasible_direction": true,
+        "parallel_fraction": 0.07063904270917286,
+        "nominal_desired_per_unit_column": 0.31635304489975935,
+        "guaranteed_desired_per_unit_column": 0.26507280834643215,
+        "guaranteed_leakage_per_unit_column": 0.14906139431746007,
+        "boundary_ratio": 1.778279410038923,
+        "pythagorean_error": 3.5388358909926865e-16,
+        "maximum_guaranteed_desired_with_row_budget": 1.055273921751993,
+        "baseline_nominal_gain_floor_feasible": true
+      },
+      "conservative_independent_amplitude_raw_certificate": {
+        "feasible_direction": true,
+        "parallel_fraction": 0.05100392606568479,
+        "nominal_desired_per_unit_column": 0.289783705770588,
+        "guaranteed_desired_per_unit_column": 0.2385034692172608,
+        "guaranteed_leakage_per_unit_column": 0.12188174458553154,
+        "boundary_ratio": 1.956843250220208,
+        "pythagorean_error": 3.5388358909926865e-16,
+        "required_row_power": 17.46794388094804,
+        "required_nominal_desired_amplitude": 1.21114141726987,
+        "gain_and_power_feasible": false,
+        "effective_required_absolute_ratio": 1.9568432502202076
+      }
+    },
+    {
+      "name": "wide_explicit_region",
+      "lateral_radius_m": 0.1,
+      "yaw_limit_rad": 0.3,
+      "echo_max": 0.4,
+      "model_offset_from_declared_point_field": 0.03018208540831997,
+      "continuous_row_error_radius": 0.7755774840935533,
+      "contains_equal_ear_rows_in_overapproximation": true,
+      "absolute_separation_only": {
+        "feasible_direction": false
+      },
+      "conservative_independent_amplitude_raw_certificate": {
+        "feasible_direction": false,
+        "effective_required_absolute_ratio": 9.763295975197561
+      }
+    }
+  ],
+  "metric_correction": "The retained nominal5dB test is raw residual attenuation relative to passthrough. The initial feasibility report described absolute desired/undesired separation only; it did not certify that retained raw gate. Both constraints are separate here, with unchanged original physical regions and gain/power bounds.",
+  "raw_certificate_scope": "The independent numerator/denominator amplitude comparison is sufficient but conservative; it discards the same-row ratio correlation. Exact correlated raw-ratio feasibility is separately tested in raw-ratio-reference.json and final-reference.json. No conservative failure here establishes physical or original-contract impossibility.",
+  "scope": "Exact scalar row-ball geometry and continuous controlled point-field bound; overapproximation infeasibility is not physical-set impossibility or measured provenance."
+}

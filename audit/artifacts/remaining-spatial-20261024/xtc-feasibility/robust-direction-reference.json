@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "validation::robust::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.4097480773925781,
+  "stdout": "\nrunning 6 tests\ntest validation::robust::tests::invalid_rank_one_and_wide_error_requests_are_rejected_without_muting ... ok\ntest validation::robust::tests::exact_identity_and_orthogonal_plant_match_scalar_gain_reference ... ok\nBOUNDED_LF absolute_separation=[[5.0010133011511995, 17.965377699188604], [5.0010133011511995, 17.965377699188604]] nominal_gain=[1.1896862590090722, 1.1896862590090722] row_power=[14.145689536090657, 14.145689536090657]\ntest validation::robust::tests::independent_adversarial_rows_attain_quantized_response_envelope ... ok\nBOUNDED_LF_RAW feasible_raw=[Some(5.001458583256408), Some(5.001458583256408)] absolute=[[5.279199584226069, 19.84354105701977], [5.279199584226069, 19.84354105701977]] desired=[[0.9968173641760522, 1.3973610992172423], [0.9968173641760522, 1.3973610992172423]] nominal_gain=[1.1970892316966473, 1.1970892316966473] power=[15.252458619717089, 15.252458619717089]\ntest validation::robust::tests::actual_lf_absolute_separation_matches_independent_closed_form_and_budget ... ok\ntest validation::robust::tests::raw_depth_constraint_has_independent_power_bounded_feasibility_witness ... ok\ntest validation::robust::tests::independent_row_phase_gauges_and_binary_scaling_preserve_filter ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 203 filtered out; finished in 0.00s\n\n",
+  "stderr": "    Finished `release` profile [optimized] target(s) in 0.35s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c038924d1b565e5)\n"
+}

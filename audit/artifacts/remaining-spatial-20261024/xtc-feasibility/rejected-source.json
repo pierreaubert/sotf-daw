@@ -1,0 +1,22 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation.rs": {
+    "sha256": "5fd36182202ed59bd6ec59377447d0206ec9d0f1addcc87ef2a0b5f455527f8f",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/rejected-source/validation.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/raw_uncertainty.rs": {
+    "sha256": "0ed235c1b6f287d15dd7a0de44d1f957abb904c80623b255304758f0d58c8fa7",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/rejected-source/validation__raw_uncertainty.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/raw_uncertainty_tests.rs": {
+    "sha256": "0e13afecacc36755660d73ba447addd74f0878e7d1a0130041e73f4b9fa76001",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/rejected-source/validation__raw_uncertainty_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust.rs": {
+    "sha256": "b8b3e80c2ec7e4277940bd8e608b5f2f48270158130023b2a391c67c388b1140",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/rejected-source/validation__robust.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust_tests.rs": {
+    "sha256": "4084fd0e9fed3c341dd871cfbc09ebcb05091a362c65f59c513ee13faa0fc85b",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/rejected-source/validation__robust_tests.rs.txt"
+  }
+}

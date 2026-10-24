@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-xtc",
+    "--all-targets",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 6.954411029815674,
+  "stdout": "",
+  "stderr": "    Checking symphonia-metadata v0.6.1\n    Checking sofa-reader v0.2.1 (https://github.com/pierreaubert/sofa-reader#c2ba490d)\n    Checking symphonia-format-riff v0.6.1\n    Checking symphonia v0.6.1\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\nerror: the loop variable `cue` is used to index `raw_depth_lower_db`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust.rs:382:16\n    |\n382 |     for cue in 0..2 {\n    |                ^^^^\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_range_loop\n    = note: `-D clippy::needless-range-loop` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`\nhelp: consider using an iterator and enumerate()\n    |\n382 -     for cue in 0..2 {\n382 +     for (cue, <item>) in raw_depth_lower_db.iter().enumerate() {\n    |\n\nerror: could not compile `sotf-plugin-xtc` (lib) due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\nerror: the loop variable `speaker` is only used to index `transformed`\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust_tests.rs:193:36\n    |\n193 |                     for speaker in 0..2 {\n    |                                    ^^^^\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_range_loop\nhelp: consider using an iterator\n    |\n193 -                     for speaker in 0..2 {\n193 +                     for <item> in &mut transformed {\n    |\n\nerror: could not compile `sotf-plugin-xtc` (lib test) due to 2 previous errors\n"
+}

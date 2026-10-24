@@ -1,0 +1,15 @@
+{
+  "candidate_rejected_as_unchanged_nominal_gain_remedy": true,
+  "prototype_wired_to_production": false,
+  "production_restored": true,
+  "exploratory_nominal_amplitude_ceiling": 1.25,
+  "legacy_nominal_intended_amplitude": 0.9968173640524011,
+  "new_worst_case_intended_floor": 0.9968173640524011,
+  "unit_nominal_ceiling": 1.0,
+  "maximum_guaranteed_intended_under_unit_ceiling": 0.962954142670668,
+  "new_stronger_contract_infeasible_under_unit_ceiling": true,
+  "original_nominal_LF_or_mismatch_infeasibility_proved": false,
+  "final_reference_tests_passed": 29,
+  "strict_all_target_clippy_passed": true,
+  "all_three_plugin_scopes_remain_partial": true
+}

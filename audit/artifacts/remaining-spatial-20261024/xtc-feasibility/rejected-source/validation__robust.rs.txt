@@ -1,0 +1,403 @@
+//! Caller-bound preparation with explicit separation, gain and effort constraints.
+
+// Rust guideline compliant 2026-02-21
+use super::raw_uncertainty::{RatioDisk, ratio_disk};
+use super::{
+    CancellationEnvelope, ComplexTransferMatrix, bound_cancellation, bound_raw_cancellation,
+};
+use rustfft::num_complex::Complex;
+use serde::{Deserialize, Serialize};
+
+/// Requested absolute separation and amplitude limits for a linear filter.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct RobustCancellationTarget {
+    /// Minimum desired/undesired amplitude ratio in dB, for both input cues.
+    pub minimum_separation_db: f64,
+    /// Optional raw attenuation relative to the same plant's passthrough leakage.
+    ///
+    /// This is distinct from absolute desired/undesired separation. The exact
+    /// ratio disk retains correlation with the same uncertain passthrough row.
+    #[serde(default)]
+    pub minimum_raw_depth_db: Option<f64>,
+    /// Minimum intended-ear amplitude throughout the supplied row-error balls.
+    pub minimum_desired_amplitude: f64,
+    /// Maximum intended-ear amplitude at the supplied nominal plant.
+    pub maximum_nominal_desired_amplitude: f64,
+    /// Maximum sum of squared input coefficients in either loudspeaker row.
+    pub maximum_row_power: f64,
+}
+
+/// Quantized filter coefficients with recomputed row-ball and effort certificates.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BoundedCancellationDesign {
+    /// Speaker-by-input coefficients, exactly representable as finite f32 values.
+    pub filters: ComplexTransferMatrix,
+    /// Bounds for those quantized coefficients and the supplied nominal plant.
+    pub envelope: CancellationEnvelope,
+    /// Actual loudspeaker-row powers after f32 quantization.
+    pub row_powers: [f64; 2],
+    /// Actual intended-ear amplitudes at the supplied nominal plant.
+    pub nominal_desired_amplitude: [f64; 2],
+    /// Conservative raw attenuation lower bounds; absent when the reference is undefined.
+    pub raw_depth_lower_db: [Option<f64>; 2],
+}
+
+type Column = [Complex<f64>; 2];
+
+fn amplitude(value: Complex<f64>) -> f64 {
+    value.re.hypot(value.im)
+}
+
+fn length(values: Column) -> f64 {
+    amplitude(values[0]).hypot(amplitude(values[1]))
+}
+
+fn response(row: Column, column: Column) -> Complex<f64> {
+    row[0] * column[0] + row[1] * column[1]
+}
+
+fn finite(value: Complex<f64>) -> bool {
+    value.re.is_finite() && value.im.is_finite()
+}
+
+fn aligned(value: Complex<f64>) -> Complex<f64> {
+    let magnitude = amplitude(value);
+    if magnitude > 0.0 {
+        value.conj() / magnitude
+    } else {
+        Complex::new(1.0, 0.0)
+    }
+}
+
+struct ColumnRequest {
+    cue: usize,
+    ratio: f64,
+    errors: [f64; 2],
+    minimum_gain: f64,
+    maximum_nominal_gain: f64,
+    raw: Option<(RatioDisk, f64)>,
+}
+
+fn feasible_interval(f: impl Fn(f64) -> f64, lower: f64, upper: f64) -> Option<(f64, f64)> {
+    // Every constraint below is convex on this response-normalized affine
+    // coordinate. Fixed iteration counts depend on f64 precision, not data.
+    const STEPS: usize = 96;
+    if lower == upper {
+        let value = f(lower);
+        return (value.is_finite() && value <= 0.0).then_some((lower, upper));
+    }
+    let mut lo = lower;
+    let mut hi = upper;
+    for _ in 0..STEPS {
+        let left = lo + (hi - lo) / 3.0;
+        let right = hi - (hi - lo) / 3.0;
+        let a = f(left);
+        let b = f(right);
+        if !a.is_finite() || !b.is_finite() {
+            return None;
+        }
+        if a <= b {
+            hi = right;
+        } else {
+            lo = left;
+        }
+    }
+    let candidates = [lower, (lo + hi) * 0.5, upper];
+    let center = *candidates.iter().min_by(|&&a, &&b| f(a).total_cmp(&f(b)))?;
+    let minimum = f(center);
+    if !minimum.is_finite() || minimum > 0.0 {
+        return None;
+    }
+    let mut accepted_lower = lower;
+    if f(lower) > 0.0 {
+        let mut rejected = lower;
+        let mut accepted = center;
+        for _ in 0..STEPS {
+            let midpoint = (rejected + accepted) * 0.5;
+            if f(midpoint) <= 0.0 {
+                accepted = midpoint;
+            } else {
+                rejected = midpoint;
+            }
+        }
+        accepted_lower = accepted;
+    }
+    let mut accepted_upper = upper;
+    if f(upper) > 0.0 {
+        let mut accepted = center;
+        let mut rejected = upper;
+        for _ in 0..STEPS {
+            let midpoint = (accepted + rejected) * 0.5;
+            if f(midpoint) <= 0.0 {
+                accepted = midpoint;
+            } else {
+                rejected = midpoint;
+            }
+        }
+        accepted_upper = accepted;
+    }
+    Some((accepted_lower, accepted_upper))
+}
+
+fn column_shape(a: Column, b: Column, request: &ColumnRequest) -> Option<Column> {
+    let b_length = length(b);
+    let a_length = length(a);
+    if !b_length.is_finite() || b_length == 0.0 || !a_length.is_finite() || a_length == 0.0 {
+        return None;
+    }
+    let along = b.map(|v| v.conj() / b_length);
+    let across = [b[1] / b_length, -b[0] / b_length];
+    let a_along = response(a, along);
+    let a_across = response(a, across);
+    if !finite(a_along) || !finite(a_across) {
+        return None;
+    }
+    let parallel = amplitude(a_along);
+    let perpendicular = amplitude(a_across);
+    let u = if parallel > 0.0 {
+        along.map(|v| v * aligned(a_along) / parallel)
+    } else {
+        [Complex::new(0.0, 0.0); 2]
+    };
+    let v = if perpendicular > 0.0 {
+        across.map(|v| v * aligned(a_across) / perpendicular)
+    } else {
+        [Complex::new(0.0, 0.0); 2]
+    };
+    let shape = |s: f64| std::array::from_fn(|i| u[i] * (1.0 - s) + v[i] * s);
+    let max_norm = length(u).max(length(v));
+    if !max_norm.is_finite() || max_norm == 0.0 {
+        return None;
+    }
+    let (mut lower, mut upper) = if parallel == 0.0 {
+        (1.0, 1.0)
+    } else if perpendicular == 0.0 {
+        (0.0, 0.0)
+    } else {
+        (0.0, 1.0)
+    };
+    // a*shape(s)=1; both basis phases align with a. The coordinates are affine,
+    // so norm constraints yield convex scalar functions and interval feasibility.
+    // This margin covers only f32 quantization, not unprovided physical error.
+    const ROUNDING_MARGIN: f64 = 64.0 * f32::EPSILON as f64;
+    let margin = ROUNDING_MARGIN
+        * (1.0
+            + (request.ratio * b_length + request.errors[0] + request.ratio * request.errors[1])
+                * max_norm);
+    if !margin.is_finite() {
+        return None;
+    }
+    (lower, upper) = feasible_interval(
+        |s| {
+            let w = shape(s);
+            request.ratio * amplitude(response(b, w))
+                + (request.errors[0] + request.ratio * request.errors[1]) * length(w)
+                - response(a, w).re
+                + margin
+        },
+        lower,
+        upper,
+    )?;
+    if let Some((disk, maximum_ratio)) = &request.raw {
+        let margin = ROUNDING_MARGIN
+            * (maximum_ratio
+                + request.minimum_gain * (1.0 + amplitude(disk.center) + disk.radius) * max_norm
+                + maximum_ratio * request.errors[0] * max_norm);
+        if !margin.is_finite() {
+            return None;
+        }
+        (lower, upper) = feasible_interval(
+            |s| {
+                let w = shape(s);
+                let residual = amplitude(w[request.cue] + disk.center * w[1 - request.cue])
+                    + disk.radius * amplitude(w[1 - request.cue]);
+                request.minimum_gain * residual + maximum_ratio * request.errors[0] * length(w)
+                    - maximum_ratio * response(a, w).re
+                    + margin
+            },
+            lower,
+            upper,
+        )?;
+    }
+    (lower, upper) = feasible_interval(
+        |s| {
+            let w = shape(s);
+            request.minimum_gain * amplitude(response(a, w))
+                + request.maximum_nominal_gain * request.errors[0] * length(w)
+                - request.maximum_nominal_gain * response(a, w).re
+        },
+        lower,
+        upper,
+    )?;
+    // The aligned basis axes are orthogonal. Minimize norm over the feasible
+    // interval, equivalently minimum gain/effort at the requested lower response.
+    let nu = length(u);
+    let nv = length(v);
+    let unconstrained = if nu >= nv {
+        1.0 / (1.0 + (nv / nu).powi(2))
+    } else {
+        let ratio = nu / nv;
+        ratio * ratio / (1.0 + ratio * ratio)
+    };
+    Some(shape(unconstrained.clamp(lower, upper)))
+}
+
+/// Prepare f32 coefficients certified for explicitly supplied transfer errors.
+///
+/// Each column minimizes effort in a response-aligned two-axis family within
+/// its absolute-separation, correlated raw-residual and nominal-gain intervals,
+/// then uses the minimum gain meeting the requested lower amplitude. Its nominal intended phase follows `reference_filter`. The final
+/// joint loudspeaker-row budget and quantized coefficients are checked directly.
+///
+/// Returns `None` for invalid inputs, insufficient directional/gain authority,
+/// a joint row-budget violation, or failed quantized certification. Columnwise
+/// minimum effort can conservatively reject an asymmetric coupled-row problem;
+/// rejection is not a general infeasibility proof. This function allocates nothing.
+///
+/// Error bounds and amplitude references belong to the caller. No listening
+/// radius, head pose, measured provenance or calibration is inferred. The bounds
+/// concern the supplied linear matrices, not STFT interpolation, limiter,
+/// AutoGain, device timing, or listener acceptance.
+pub fn design_bounded_cancellation(
+    plant: ComplexTransferMatrix,
+    reference_filter: ComplexTransferMatrix,
+    row_error: [f64; 2],
+    target: RobustCancellationTarget,
+) -> Option<BoundedCancellationDesign> {
+    if [
+        target.minimum_separation_db,
+        target.minimum_desired_amplitude,
+        target.maximum_nominal_desired_amplitude,
+        target.maximum_row_power,
+    ]
+    .iter()
+    .any(|v| !v.is_finite())
+        || target.minimum_separation_db < 0.0
+        || target.minimum_desired_amplitude <= 0.0
+        || target.maximum_nominal_desired_amplitude < target.minimum_desired_amplitude
+        || target.maximum_row_power <= 0.0
+        || target
+            .minimum_raw_depth_db
+            .is_some_and(|v| !v.is_finite() || v < 0.0)
+        || row_error.iter().any(|v| !v.is_finite() || *v < 0.0)
+        || plant
+            .iter()
+            .chain(&reference_filter)
+            .flatten()
+            .flatten()
+            .any(|v| !v.is_finite())
+    {
+        return None;
+    }
+    let unpack =
+        |matrix: ComplexTransferMatrix| matrix.map(|row| row.map(|[re, im]| Complex::new(re, im)));
+    let h = unpack(plant);
+    let reference = unpack(reference_filter);
+    let ratio = 10.0_f64.powf(target.minimum_separation_db / 20.0);
+    if !ratio.is_finite() {
+        return None;
+    }
+    let mut filters = [[Complex::new(0.0, 0.0); 2]; 2];
+    for cue in 0..2 {
+        let raw = if let Some(raw_db) = target.minimum_raw_depth_db {
+            let maximum_ratio = 10.0_f64.powf(-raw_db / 20.0);
+            if !maximum_ratio.is_finite() || maximum_ratio <= 0.0 {
+                return None;
+            }
+            Some((
+                ratio_disk(h[1 - cue], cue, row_error[1 - cue])?,
+                maximum_ratio,
+            ))
+        } else {
+            None
+        };
+        let request = ColumnRequest {
+            cue,
+            ratio,
+            errors: [row_error[cue], row_error[1 - cue]],
+            minimum_gain: target.minimum_desired_amplitude,
+            maximum_nominal_gain: target.maximum_nominal_desired_amplitude,
+            raw,
+        };
+        let direction = column_shape(h[cue], h[1 - cue], &request)?;
+        let response_per_unit = amplitude(response(h[cue], direction));
+        let lower = response_per_unit - row_error[cue] * length(direction);
+        if !lower.is_finite() || lower <= 0.0 {
+            return None;
+        }
+        let original = response(h[cue], [reference[0][cue], reference[1][cue]]);
+        if !finite(original) {
+            return None;
+        }
+        // Align only a common column phase, preserving every amplitude bound.
+        let phase = aligned(original).conj();
+        let gain = target.minimum_desired_amplitude / lower;
+        let quantize = |gain: f64| {
+            direction.map(|v| {
+                let value = v * phase * gain;
+                Complex::new(f64::from(value.re as f32), f64::from(value.im as f32))
+            })
+        };
+        let mut column = quantize(gain);
+        if column.iter().any(|v| !finite(*v)) {
+            return None;
+        }
+        let actual_lower = amplitude(response(h[cue], column)) - row_error[cue] * length(column);
+        if actual_lower < target.minimum_desired_amplitude {
+            // Add rounding slack only if quantization lost the requested gain;
+            // exact representable unity designs need no gratuitous boost.
+            column = quantize(gain * (1.0 + 64.0 * f64::from(f32::EPSILON)));
+        }
+        for speaker in 0..2 {
+            // Certify actual stored precision, not a stronger f64-only filter.
+            filters[speaker][cue] = column[speaker];
+            if !finite(filters[speaker][cue]) {
+                return None;
+            }
+        }
+    }
+    let row_powers = filters.map(|row| length(row).powi(2));
+    if row_powers
+        .iter()
+        .any(|power| !power.is_finite() || *power > target.maximum_row_power)
+    {
+        return None;
+    }
+    let nominal_desired_amplitude =
+        std::array::from_fn(|cue| amplitude(response(h[cue], [filters[0][cue], filters[1][cue]])));
+    if nominal_desired_amplitude
+        .iter()
+        .any(|v| !v.is_finite() || *v > target.maximum_nominal_desired_amplitude)
+    {
+        return None;
+    }
+    let filters = filters.map(|row| row.map(|v| [v.re, v.im]));
+    let envelope = bound_cancellation(plant, filters, row_error)?;
+    let raw_envelope = bound_raw_cancellation(plant, filters, row_error);
+    let raw_depth_lower_db = std::array::from_fn(|cue| {
+        raw_envelope
+            .as_ref()
+            .map(|envelope| envelope.raw_depth_db[cue][0])
+    });
+    for (cue, raw_lower) in raw_depth_lower_db.iter().enumerate() {
+        if envelope.desired_amplitude[cue][0] < target.minimum_desired_amplitude
+            || envelope.separation_db[cue][0] < target.minimum_separation_db
+            || target
+                .minimum_raw_depth_db
+                .is_some_and(|minimum| raw_lower.is_none_or(|value| value < minimum))
+        {
+            return None;
+        }
+    }
+    Some(BoundedCancellationDesign {
+        filters,
+        envelope,
+        row_powers,
+        nominal_desired_amplitude,
+        raw_depth_lower_db,
+    })
+}
+
+#[cfg(test)]
+#[path = "robust_tests.rs"]
+mod tests;

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "validation::raw_uncertainty::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 2.2866110801696777,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\nerror[E0282]: type annotations needed\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust.rs:337:21\n    |\n337 |                 let value = v * phase * gain;\n    |                     ^^^^^\n338 |                 Complex::new(f64::from(value.re as f32), f64::from(value.im as f32))\n    |                                        ----- type must be known at this point\n    |\nhelp: consider giving `value` an explicit type\n    |\n337 |                 let value: /* Type */ = v * phase * gain;\n    |                          ++++++++++++\n\nFor more information about this error, try `rustc --explain E0282`.\nerror: could not compile `sotf-plugin-xtc` (lib test) due to 1 previous error\n"
+}

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "validation::raw_uncertainty::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 27.29952836036682,
+  "stdout": "\nrunning 2 tests\nRAW_RATIO_DISK_BOUNDARY cases=8 maximum_depth_error_db=7.33464844415721e-10\ntest validation::raw_uncertainty::tests::zero_error_and_reference_boundary_keep_raw_metric_and_mute_ambiguity ... ok\ntest validation::raw_uncertainty::tests::complex_boundary_rows_attain_exact_raw_ratio_for_both_cues ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 207 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 27.23s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c038924d1b565e5)\n"
+}

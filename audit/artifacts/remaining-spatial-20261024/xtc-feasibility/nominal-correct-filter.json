@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "xtc_validation",
+    "default_report_stability_and_symmetry",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 40.270967960357666,
+  "stdout": "\nrunning 1 test\n\n=== XTC Validation Report (Default Params) ===\nPASS: ITD (ms) - Geometry Check (expected 0.261, measured 0.261, tolerance 0.020)\nPASS: ILD @ 250Hz (dB) (expected 0.500, measured -0.000, tolerance 20.000)\nPASS: ILD @ 500Hz (dB) (expected 1.500, measured 0.178, tolerance 20.000)\nPASS: ILD @ 1000Hz (dB) (expected 3.000, measured 3.002, tolerance 20.000)\nPASS: ILD @ 2000Hz (dB) (expected 5.500, measured 7.648, tolerance 20.000)\nPASS: ILD @ 4000Hz (dB) (expected 8.000, measured 15.295, tolerance 20.000)\nPASS: ILD @ 8000Hz (dB) (expected 12.000, measured 28.627, tolerance 20.000)\nFAIL: Cancellation @ 100Hz (bin 93.75Hz, dB) (expected 5.000, measured 4.811, tolerance 0.000)\nPASS: Cancellation @ 200Hz (bin 187.5Hz, dB) (expected 20.000, measured 25.345, tolerance 0.000)\nPASS: Cancellation @ 500Hz (bin 492.1875Hz, dB) (expected 25.000, measured 63.822, tolerance 0.000)\nPASS: Cancellation @ 1000Hz (bin 984.375Hz, dB) (expected 25.000, measured 63.785, tolerance 0.000)\nPASS: Cancellation @ 2000Hz (bin 1992.1875Hz, dB) (expected 25.000, measured 53.545, tolerance 0.000)\nPASS: Cancellation @ 4000Hz (bin 3984.375Hz, dB) (expected 25.000, measured 45.393, tolerance 0.000)\nPASS: Cancellation @ 8000Hz (bin 7992.1875Hz, dB) (expected 20.000, measured 23.697, tolerance 0.000)\nPASS: Filter Symmetry (expected 1.000, measured 1.000, tolerance 0.000)\nPASS: Filter Stability (max magnitude) (expected 0.000, measured 1.858, tolerance 0.000)\nPASS: Filter Gain Limit (expected 3.981, measured 1.858, tolerance 3.981)\n\nSummary: 16/17 tests passed\ntest default_report_stability_and_symmetry ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 40.20s\n     Running tests/xtc_validation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/xtc_validation-9642d97d1f5f9501)\n"
+}

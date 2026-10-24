@@ -1,0 +1,7 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation.rs": "5fd36182202ed59bd6ec59377447d0206ec9d0f1addcc87ef2a0b5f455527f8f",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/raw_uncertainty.rs": "0ed235c1b6f287d15dd7a0de44d1f957abb904c80623b255304758f0d58c8fa7",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/raw_uncertainty_tests.rs": "0e13afecacc36755660d73ba447addd74f0878e7d1a0130041e73f4b9fa76001",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust.rs": "fe7cdfc274e992074b6d53dc3e8975c81cff217c890c9be69dc10eaccdb142f9",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/validation/robust_tests.rs": "c4d2fc9927472fc37a695cd2c66a90a2729949a0e7baa19c4167c06d631a05c1"
+}

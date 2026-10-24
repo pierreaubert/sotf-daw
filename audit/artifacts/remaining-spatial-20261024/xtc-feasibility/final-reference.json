@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--lib",
+    "validation::",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 31.387699842453003,
+  "stdout": "\nrunning 29 tests\ntest validation::diagnostic_audit_tests::attenuation_and_muting_are_not_credited_as_separation ... ok\ntest validation::diagnostic_audit_tests::independent_metrics_retain_large_signed_values_and_scale_invariance ... ok\ntest validation::diagnostic_audit_tests::invalid_frequency_is_not_reported_as_cancellation ... ok\nsame_bin a=63.784645 b=63.784645\nsigned_diagnostic depth_db=-9.501458\nquarter_turn cases=80 failed_values=0 maximum_error=0\nRAW_RATIO_DISK_BOUNDARY cases=8 maximum_depth_error_db=7.33464844415721e-10\nsource_crossings cases=240 maximum_ear_error=0.0000063620914 maximum_pose_difference=0.000015705617\nBOUNDED_LF absolute_separation=[[5.0010133011511995, 17.965377699188604], [5.0010133011511995, 17.965377699188604]] nominal_gain=[1.1896862590090722, 1.1896862590090722] row_power=[14.145689536090657, 14.145689536090657]\ntest validation::diagnostic_audit_tests::one_filter_bin_uses_one_acoustic_frequency ... ok\ntest validation::diagnostic_audit_tests::invalid_matrices_and_resource_predictions_remain_explicit ... ok\ntest validation::diagnostic_audit_tests::supplied_complex_matrix_matches_closed_form_and_ear_permutation ... ok\ntest validation::diagnostic_audit_tests::worsening_crosstalk_keeps_its_negative_sign ... ok\ntest validation::measure::source_crossing_tests::quarter_turn_spherical_sources_have_equal_transfer_columns ... ok\ntest validation::raw_uncertainty::tests::complex_boundary_rows_attain_exact_raw_ratio_for_both_cues ... ok\ntest validation::raw_uncertainty::tests::zero_error_and_reference_boundary_keep_raw_metric_and_mute_ambiguity ... ok\ntest validation::measure::source_crossing_tests::both_ear_paths_converge_at_front_and_rear_source_crossings ... ok\ntest validation::robust::tests::actual_lf_absolute_separation_matches_independent_closed_form_and_budget ... ok\ntest validation::robust::tests::exact_identity_and_orthogonal_plant_match_scalar_gain_reference ... ok\ntest validation::robust::tests::independent_adversarial_rows_attain_quantized_response_envelope ... ok\nBOUNDED_LF_UNIT_CEILING nominal_ceiling=1 maximum_guaranteed_intended=0.962954142670668 requested_new_worst_case_floor=0.9968173640524011 original_nominal_floor_is_not_a_worst_case_contract=true\nBOUNDED_LF_RAW feasible_raw=[Some(5.001458583256408), Some(5.001458583256408)] absolute=[[5.279199584226069, 19.84354105701977], [5.279199584226069, 19.84354105701977]] desired=[[0.9968173641760522, 1.3973610992172423], [0.9968173641760522, 1.3973610992172423]] nominal_gain=[1.1970892316966473, 1.1970892316966473] power=[15.252458619717089, 15.252458619717089]\ntest validation::robust::tests::invalid_rank_one_and_wide_error_requests_are_rejected_without_muting ... ok\ntest validation::robust::tests::unit_nominal_ceiling_cannot_meet_the_new_worst_case_gain_floor ... ok\ntest validation::robust::tests::raw_depth_constraint_has_independent_power_bounded_feasibility_witness ... ok\ntest validation::tests::test_cancellation_depth_reasonable ... ok\ntest validation::tests::test_reference_itd_matches_geometry ... ok\ntest validation::tests::test_reference_itd_values ... ok\ntest validation::tests::test_validation_result_check ... ok\ntest validation::tests::test_validation_result_min ... ok\ntest validation::uncertainty::tests::invalid_error_models_refuse_and_muting_is_not_infinite_separation ... ok\ntest validation::tests::test_full_validation_suite ... ok\nXTC_UNCERTAINTY_BOUNDARY cases=90 maximum_amplitude_error=8.881784197001252e-16\ntest validation::tests::test_measure_itd_from_filters_returns_zero ... ok\ntest validation::uncertainty::tests::row_bounded_adversaries_attain_response_envelope_edges ... ok\ntest validation::robust::tests::independent_row_phase_gauges_and_binary_scaling_preserve_filter ... ok\ntest validation::diagnostic_audit_tests::prediction_uses_the_configured_grid_and_reports_both_inputs ... ok\nindependent_brown_duda_prediction cases=360 maximum_db_error=0.0005007116318012095\ntest validation::diagnostic_audit_tests::selected_brown_duda_model_matches_independent_complex_oracle ... ok\n\ntest result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 181 filtered out; finished in 0.25s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 31.05s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c038924d1b565e5)\n"
+}

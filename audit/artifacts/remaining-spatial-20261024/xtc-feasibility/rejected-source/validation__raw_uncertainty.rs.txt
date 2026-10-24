@@ -1,0 +1,115 @@
+//! Exact passthrough-relative residual bounds for a complex transfer-row ball.
+
+// Rust guideline compliant 2026-02-21
+use super::ComplexTransferMatrix;
+use rustfft::num_complex::Complex;
+
+/// Raw residual attenuation intervals relative to the same uncertain plant.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RawCancellationEnvelope {
+    /// Left/right input-cue raw depth `[lower, upper]` in dB.
+    ///
+    /// A zero filter column is marked undefined, not perfect cancellation.
+    pub raw_depth_db: [[f64; 2]; 2],
+}
+
+pub(super) struct RatioDisk {
+    pub(super) center: Complex<f64>,
+    pub(super) radius: f64,
+}
+
+pub(super) fn ratio_disk(row: [Complex<f64>; 2], cue: usize, error: f64) -> Option<RatioDisk> {
+    let reference = row[cue];
+    let reference_amplitude = reference.re.hypot(reference.im);
+    if !error.is_finite()
+        || error < 0.0
+        || !reference_amplitude.is_finite()
+        || reference_amplitude <= error
+        || row.iter().any(|v| !v.re.is_finite() || !v.im.is_finite())
+    {
+        return None;
+    }
+    // Normalization avoids squaring the original transfer scale. The factored
+    // denominator retains precision near the explicitly excluded zero-reference boundary.
+    let relative_error = error / reference_amplitude;
+    let denominator = (1.0 - relative_error) * (1.0 + relative_error);
+    let scale = reference.re.abs().max(reference.im.abs());
+    let normalized = reference / scale;
+    let other = row[1 - cue] / scale;
+    if !other.re.is_finite() || !other.im.is_finite() || (relative_error == 0.0 && error > 0.0) {
+        return None;
+    }
+    let nominal_ratio = other * normalized.conj() / normalized.norm_sqr();
+    if nominal_ratio.re == 0.0
+        && nominal_ratio.im == 0.0
+        && (row[1 - cue].re != 0.0 || row[1 - cue].im != 0.0)
+    {
+        return None;
+    }
+    let ratio_amplitude = nominal_ratio.re.hypot(nominal_ratio.im);
+    let center = nominal_ratio / denominator;
+    let radius = relative_error * denominator.sqrt().hypot(ratio_amplitude) / denominator;
+    if !center.re.is_finite() || !center.im.is_finite() || !radius.is_finite() {
+        return None;
+    }
+    Some(RatioDisk { center, radius })
+}
+
+/// Bound raw cancellation using correlated filtered and passthrough leakage.
+///
+/// For wrong-ear row `b` and input `j`, raw depth is
+/// `20 log10(|h[j]| / |h*w|)`. The same true row `h` occurs in both terms.
+/// With `||h-b||₂ <= error` and `|b[j]| > error`, the ratio `q=h[other]/h[j]`
+/// lies in a complex disk. Its center and radius follow from
+/// `|b[other]-q*b[j]|² <= error²*(1+|q|²)`. Therefore the exact upper residual
+/// ratio is `|w[j]+center*w[other]| + radius*|w[other]|`; the lower ratio is the
+/// corresponding nonnegative difference. This retains the row correlation.
+///
+/// Returns `None` for invalid/non-finite input, overflow, or a reference
+/// coefficient that can be zero inside the error ball. A zero filter column
+/// produces `NaN` endpoints; intended gain still needs a separate constraint.
+/// No finite certificate is inferred across an undefined reference boundary.
+/// Bounds concern these linear matrices; no physical error provenance, STFT,
+/// nonlinear gain, limiter or listener guarantee is inferred.
+pub fn bound_raw_cancellation(
+    plant: ComplexTransferMatrix,
+    filter: ComplexTransferMatrix,
+    row_error: [f64; 2],
+) -> Option<RawCancellationEnvelope> {
+    if plant
+        .iter()
+        .chain(&filter)
+        .flatten()
+        .flatten()
+        .any(|v| !v.is_finite())
+        || row_error.iter().any(|v| !v.is_finite() || *v < 0.0)
+    {
+        return None;
+    }
+    let unpack =
+        |matrix: ComplexTransferMatrix| matrix.map(|row| row.map(|[re, im]| Complex::new(re, im)));
+    let h = unpack(plant);
+    let w = unpack(filter);
+    let mut raw_depth_db = [[f64::NAN; 2]; 2];
+    for cue in 0..2 {
+        let disk = ratio_disk(h[1 - cue], cue, row_error[1 - cue])?;
+        let column = [w[0][cue], w[1][cue]];
+        if column.iter().all(|v| v.re == 0.0 && v.im == 0.0) {
+            continue;
+        }
+        let center = column[cue] + disk.center * column[1 - cue];
+        let amplitude = center.re.hypot(center.im);
+        let spread = disk.radius * column[1 - cue].re.hypot(column[1 - cue].im);
+        let upper = amplitude + spread;
+        if !upper.is_finite() {
+            return None;
+        }
+        let lower = (amplitude - spread).max(0.0);
+        raw_depth_db[cue] = [-20.0 * upper.log10(), -20.0 * lower.log10()];
+    }
+    Some(RawCancellationEnvelope { raw_depth_db })
+}
+
+#[cfg(test)]
+#[path = "raw_uncertainty_tests.rs"]
+mod tests;

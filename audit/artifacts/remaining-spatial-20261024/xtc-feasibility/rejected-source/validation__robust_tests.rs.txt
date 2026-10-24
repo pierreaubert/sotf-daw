@@ -1,0 +1,267 @@
+//! Closed-form direction, adversarial, scaling and metric-distinction references.
+
+// Rust guideline compliant 2026-02-21
+use super::*;
+
+const IDENTITY: ComplexTransferMatrix = [[[1.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [1.0, 0.0]]];
+
+fn target() -> RobustCancellationTarget {
+    RobustCancellationTarget {
+        minimum_separation_db: 5.0,
+        minimum_raw_depth_db: None,
+        minimum_desired_amplitude: 0.9968173640524011,
+        maximum_nominal_desired_amplitude: 1.25,
+        maximum_row_power: 15.84893386315548,
+    }
+}
+
+fn lf_plant() -> ComplexTransferMatrix {
+    // Frozen production model0/48k/N2048, bin4; provenance in the raw stage replay.
+    [
+        [[1.0, 0.0], [0.9458370804786682, -0.14664089679718018]],
+        [[0.9458370804786682, -0.14664089679718018], [1.0, 0.0]],
+    ]
+}
+
+fn unpack(matrix: ComplexTransferMatrix) -> [[Complex<f64>; 2]; 2] {
+    matrix.map(|row| row.map(|[re, im]| Complex::new(re, im)))
+}
+
+#[test]
+fn exact_identity_and_orthogonal_plant_match_scalar_gain_reference() {
+    let exact = RobustCancellationTarget {
+        minimum_desired_amplitude: 1.0,
+        maximum_nominal_desired_amplitude: 1.0,
+        maximum_row_power: 1.0,
+        ..target()
+    };
+    let design = design_bounded_cancellation(IDENTITY, IDENTITY, [0.0; 2], exact).unwrap();
+    assert_eq!(design.filters, IDENTITY);
+    assert_eq!(design.raw_depth_lower_db, [None; 2]);
+    let plant = [[[2.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [1.0, 0.0]]];
+    let request = RobustCancellationTarget {
+        minimum_desired_amplitude: 0.8,
+        maximum_nominal_desired_amplitude: 1.1,
+        maximum_row_power: 1.2,
+        ..target()
+    };
+    let design = design_bounded_cancellation(plant, IDENTITY, [0.1, 0.2], request).unwrap();
+    assert!((design.filters[0][0][0] - 0.8 / 1.9).abs() < 1e-5);
+    assert!((design.filters[1][1][0] - 1.0).abs() < 1e-5);
+    assert_eq!(design.filters[0][1], [0.0, 0.0]);
+    assert_eq!(design.filters[1][0], [0.0, 0.0]);
+}
+
+#[test]
+fn actual_lf_absolute_separation_matches_independent_closed_form_and_budget() {
+    let error = 0.05128023655332721;
+    let design = design_bounded_cancellation(lf_plant(), IDENTITY, [error; 2], target()).unwrap();
+    let [a, b] = unpack(lf_plant());
+    let bn = length(b);
+    let parallel = amplitude(a[0] * b[0].conj() + a[1] * b[1].conj()) / bn;
+    // Determinant is the independent orthogonal component, avoiding the solver basis.
+    let perpendicular = amplitude(a[0] * b[1] - a[1] * b[0]) / bn;
+    let ratio = 10.0_f64.powf(5.0 / 20.0);
+    let q = ratio * bn - parallel;
+    let c = (1.0 + ratio) * error;
+    let denominator = perpendicular * perpendicular + q * q;
+    let t = (-q * c + perpendicular * (denominator - c * c).sqrt()) / denominator;
+    let theoretical_best = parallel * t + perpendicular * (1.0 - t * t).sqrt();
+    let filters = unpack(design.filters);
+    let column = [filters[0][0], filters[1][0]];
+    let observed = amplitude(response(a, column)) / length(column);
+    // The implementation intentionally leaves fixed f32 quantization margin.
+    assert!(observed <= theoretical_best + 1e-6);
+    assert!((theoretical_best - observed) < 1e-4);
+    for cue in 0..2 {
+        assert!(design.envelope.separation_db[cue][0] >= 5.0);
+        assert!(design.envelope.desired_amplitude[cue][0] >= target().minimum_desired_amplitude);
+        assert!(design.row_powers[cue] <= target().maximum_row_power);
+        assert!(design.nominal_desired_amplitude[cue] <= 1.25);
+    }
+    println!(
+        "BOUNDED_LF absolute_separation={:?} nominal_gain={:?} row_power={:?}",
+        design.envelope.separation_db, design.nominal_desired_amplitude, design.row_powers
+    );
+}
+
+#[test]
+fn raw_depth_constraint_has_independent_power_bounded_feasibility_witness() {
+    let error = 0.05128023655332721;
+    let absolute = design_bounded_cancellation(lf_plant(), IDENTITY, [error; 2], target()).unwrap();
+    assert!(
+        absolute
+            .raw_depth_lower_db
+            .iter()
+            .all(|raw| raw.unwrap() < 5.0)
+    );
+    let request = RobustCancellationTarget {
+        minimum_raw_depth_db: Some(5.0),
+        ..target()
+    };
+    let [a, b] = unpack(lf_plant());
+    let bn = length(b);
+    let along = b.map(|v| v.conj() / bn);
+    let across = [b[1] / bn, -b[0] / bn];
+    let pa = response(a, along);
+    let pp = response(a, across);
+    let parallel = amplitude(pa);
+    let perpendicular = amplitude(pp);
+    // An independent boundary-of-effort witness fixes column norm first, then
+    // solves its intended-gain equation as a scalar quadratic. The fixed tiny
+    // effort/gain margins cover f32 rounding, not measured acceptance scores.
+    let effort = request.maximum_row_power.sqrt() * (1.0 - 1e-4);
+    let desired =
+        request.minimum_desired_amplitude * (1.0 + 16.0 * f64::from(f32::EPSILON)) / effort + error;
+    let an2 = parallel * parallel + perpendicular * perpendicular;
+    let t = (parallel * desired - perpendicular * (an2 - desired * desired).sqrt()) / an2;
+    let column: Column = std::array::from_fn(|i| {
+        effort
+            * (along[i] * pa.conj() / parallel * t
+                + across[i] * pp.conj() / perpendicular * (1.0 - t * t).sqrt())
+    });
+    let narrow = |v: Complex<f64>| [f64::from(v.re as f32), f64::from(v.im as f32)];
+    let witness = [
+        [narrow(column[0]), narrow(column[1])],
+        [narrow(column[1]), narrow(column[0])],
+    ];
+    let envelope = bound_cancellation(lf_plant(), witness, [error; 2]).unwrap();
+    let raw = bound_raw_cancellation(lf_plant(), witness, [error; 2]).unwrap();
+    for cue in 0..2 {
+        assert!(envelope.desired_amplitude[cue][0] >= request.minimum_desired_amplitude);
+        assert!(envelope.separation_db[cue][0] >= 5.0);
+        assert!(raw.raw_depth_db[cue][0] >= 5.0);
+        assert!(length(unpack(witness)[cue]).powi(2) <= request.maximum_row_power);
+    }
+    let design = design_bounded_cancellation(lf_plant(), IDENTITY, [error; 2], request).unwrap();
+    for cue in 0..2 {
+        assert!(design.raw_depth_lower_db[cue].unwrap() >= 5.0);
+        assert!(design.envelope.separation_db[cue][0] >= 5.0);
+        assert!(design.envelope.desired_amplitude[cue][0] >= request.minimum_desired_amplitude);
+    }
+    println!(
+        "BOUNDED_LF_RAW feasible_raw={:?} absolute={:?} desired={:?} nominal_gain={:?} power={:?}",
+        design.raw_depth_lower_db,
+        design.envelope.separation_db,
+        design.envelope.desired_amplitude,
+        design.nominal_desired_amplitude,
+        design.row_powers
+    );
+}
+
+#[test]
+fn independent_adversarial_rows_attain_quantized_response_envelope() {
+    let plant = lf_plant();
+    let errors = [0.05128023655332721; 2];
+    let design = design_bounded_cancellation(plant, IDENTITY, errors, target()).unwrap();
+    let h = unpack(plant);
+    let w = unpack(design.filters);
+    for cue in 0..2 {
+        let column = [w[0][cue], w[1][cue]];
+        let norm = length(column);
+        let actual: [f64; 2] = std::array::from_fn(|ear| {
+            let nominal = response(h[ear], column);
+            let direction = if amplitude(nominal) > 0.0 {
+                nominal / amplitude(nominal)
+            } else {
+                Complex::new(1.0, 0.0)
+            };
+            let sign = if ear == cue { -1.0 } else { 1.0 };
+            let error = column.map(|v| v.conj() * direction * (sign * errors[ear] / norm));
+            assert!((length(error) - errors[ear]).abs() < 1e-12);
+            amplitude(response(
+                std::array::from_fn(|i| h[ear][i] + error[i]),
+                column,
+            ))
+        });
+        assert!((actual[cue] - design.envelope.desired_amplitude[cue][0]).abs() < 1e-12);
+        assert!((actual[1 - cue] - design.envelope.undesired_amplitude[cue][1]).abs() < 1e-12);
+        assert!(20.0 * (actual[cue] / actual[1 - cue]).log10() >= 5.0);
+    }
+}
+
+#[test]
+fn independent_row_phase_gauges_and_binary_scaling_preserve_filter() {
+    let plant = lf_plant();
+    let errors = [0.04; 2];
+    let design = design_bounded_cancellation(plant, IDENTITY, errors, target()).unwrap();
+    for left in [-2.5_f64, 0.0, 0.7] {
+        for right in [-1.3_f64, 0.0, 2.1] {
+            for scale in [1.0 / 256.0, 1.0, 256.0] {
+                let mut transformed = unpack(plant);
+                for (ear, row) in transformed.iter_mut().enumerate() {
+                    for value in row {
+                        *value *= Complex::from_polar(scale, [left, right][ear]);
+                    }
+                }
+                let transformed = transformed.map(|row| row.map(|v| [v.re, v.im]));
+                let reference = IDENTITY.map(|row| row.map(|v| v.map(|x| x / scale)));
+                let request = RobustCancellationTarget {
+                    maximum_row_power: target().maximum_row_power / (scale * scale),
+                    ..target()
+                };
+                let candidate = design_bounded_cancellation(
+                    transformed,
+                    reference,
+                    errors.map(|v| v * scale),
+                    request,
+                )
+                .unwrap();
+                for (actual, expected) in candidate
+                    .filters
+                    .iter()
+                    .flatten()
+                    .flatten()
+                    .zip(design.filters.iter().flatten().flatten())
+                {
+                    assert!((actual * scale - expected).abs() < 2e-6);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn invalid_rank_one_and_wide_error_requests_are_rejected_without_muting() {
+    let rank_one = [[[1.0, 0.0]; 2]; 2];
+    assert!(design_bounded_cancellation(rank_one, IDENTITY, [0.0; 2], target()).is_none());
+    assert!(
+        design_bounded_cancellation(lf_plant(), IDENTITY, [0.7755774840935533; 2], target())
+            .is_none()
+    );
+    for bad in [-1.0, f64::NAN, f64::INFINITY] {
+        assert!(design_bounded_cancellation(lf_plant(), IDENTITY, [bad; 2], target()).is_none());
+        let request = RobustCancellationTarget {
+            minimum_desired_amplitude: bad,
+            ..target()
+        };
+        assert!(design_bounded_cancellation(lf_plant(), IDENTITY, [0.0; 2], request).is_none());
+    }
+    let muted = RobustCancellationTarget {
+        minimum_desired_amplitude: 0.0,
+        ..target()
+    };
+    assert!(design_bounded_cancellation(lf_plant(), IDENTITY, [0.0; 2], muted).is_none());
+}
+
+#[test]
+fn unit_nominal_ceiling_cannot_meet_the_new_worst_case_gain_floor() {
+    let error = 0.05128023655332721;
+    let nominal_ceiling = 1.0;
+    let nominal_row_norm = length(unpack(lf_plant())[0]);
+    // If nominal gain <=M, Cauchy requires ||w||>=nominal_gain/||a||.
+    // Therefore its worst-row-ball intended amplitude is at most
+    // M*(1-error/||a||), regardless of raw depth or available output effort.
+    let universal_upper = nominal_ceiling * (1.0 - error / nominal_row_norm);
+    assert!(universal_upper < target().minimum_desired_amplitude);
+    let request = RobustCancellationTarget {
+        minimum_raw_depth_db: Some(5.0),
+        maximum_nominal_desired_amplitude: nominal_ceiling,
+        ..target()
+    };
+    assert!(design_bounded_cancellation(lf_plant(), IDENTITY, [error; 2], request).is_none());
+    println!(
+        "BOUNDED_LF_UNIT_CEILING nominal_ceiling={nominal_ceiling} maximum_guaranteed_intended={universal_upper} requested_new_worst_case_floor={} original_nominal_floor_is_not_a_worst_case_contract=true",
+        request.minimum_desired_amplitude
+    );
+}

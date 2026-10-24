@@ -1,0 +1,82 @@
+//! Independent ratio-disk boundary projections and zero-reference handling.
+
+// Rust guideline compliant 2026-02-21
+use super::*;
+
+fn amplitude(z: Complex<f64>) -> f64 {
+    z.re.hypot(z.im)
+}
+
+#[test]
+fn complex_boundary_rows_attain_exact_raw_ratio_for_both_cues() {
+    let plant = [[[1.0, 0.4], [0.5, -0.2]], [[0.7, 0.6], [1.1, -0.3]]];
+    let filter = [[[0.9, -0.3], [-0.2, 0.5]], [[-0.4, 0.6], [1.0, 0.1]]];
+    let h = plant.map(|row| row.map(|[re, im]| Complex::new(re, im)));
+    let w = filter.map(|row| row.map(|[re, im]| Complex::new(re, im)));
+    let mut maximum_error = 0.0_f64;
+    let mut cases = 0;
+    for fraction in [0.0, 0.01, 0.3, 1.0 - 2.0_f64.powi(-20)] {
+        let errors = [amplitude(h[0][1]) * fraction, amplitude(h[1][0]) * fraction];
+        let bounds = bound_raw_cancellation(plant, filter, errors).unwrap();
+        for cue in 0..2 {
+            let row = h[1 - cue];
+            let error = errors[1 - cue];
+            let reference = row[cue];
+            let other = row[1 - cue];
+            // Unscaled quadratic-disk oracle, independent of the production
+            // normalized/factored denominator implementation.
+            let denominator = reference.norm_sqr() - error * error;
+            let center = other * reference.conj() / denominator;
+            let radius = error * ((row[0].norm_sqr() + row[1].norm_sqr()) - error * error).sqrt()
+                / denominator;
+            let column = [w[0][cue], w[1][cue]];
+            let c = column[cue] + center * column[1 - cue];
+            let outward = c / amplitude(c) * column[1 - cue].conj() / amplitude(column[1 - cue]);
+            let q = center + outward * radius;
+            // Minimum-norm projection onto delta_other-q*delta_reference
+            // = q*b_reference-b_other. Boundary q must require exactly error.
+            let n = if cue == 0 {
+                [-q, Complex::new(1.0, 0.0)]
+            } else {
+                [Complex::new(1.0, 0.0), -q]
+            };
+            let residual = q * reference - other;
+            let delta = if error == 0.0 {
+                [Complex::new(0.0, 0.0); 2]
+            } else {
+                n.map(|v| v.conj() * residual / (1.0 + q.norm_sqr()))
+            };
+            let delta_norm = amplitude(delta[0]).hypot(amplitude(delta[1]));
+            assert!((delta_norm - error).abs() < 2e-10);
+            let actual = [row[0] + delta[0], row[1] + delta[1]];
+            let ratio =
+                amplitude(actual[0] * column[0] + actual[1] * column[1]) / amplitude(actual[cue]);
+            let depth = -20.0 * ratio.log10();
+            maximum_error = maximum_error.max((depth - bounds.raw_depth_db[cue][0]).abs());
+            assert!(depth >= bounds.raw_depth_db[cue][0] - 2e-6);
+            cases += 1;
+        }
+    }
+    println!("RAW_RATIO_DISK_BOUNDARY cases={cases} maximum_depth_error_db={maximum_error:e}");
+    assert!(maximum_error <= 2e-6);
+}
+
+#[test]
+fn zero_error_and_reference_boundary_keep_raw_metric_and_mute_ambiguity() {
+    let plant = [[[1.0, 0.0], [0.3, 0.2]], [[0.4, -0.2], [1.0, 0.0]]];
+    let identity = [[[1.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [1.0, 0.0]]];
+    let bounds = bound_raw_cancellation(plant, identity, [0.0; 2]).unwrap();
+    assert_eq!(bounds.raw_depth_db, [[0.0; 2]; 2]);
+    let muted = [[[0.0; 2]; 2]; 2];
+    let bounds = bound_raw_cancellation(plant, muted, [0.0; 2]).unwrap();
+    assert!(bounds.raw_depth_db.iter().flatten().all(|v| v.is_nan()));
+    let reference = 0.4_f64.hypot(0.2);
+    assert!(bound_raw_cancellation(plant, identity, [0.0, reference]).is_none());
+    assert!(bound_raw_cancellation(plant, identity, [0.0, reference.next_up()]).is_none());
+    let almost = bound_raw_cancellation(plant, identity, [0.0, reference.next_down()]).unwrap();
+    // An identity column's other coefficient is zero, so its ratio remains1.
+    assert_eq!(almost.raw_depth_db[0], [0.0; 2]);
+    for error in [-1.0, f64::NAN, f64::INFINITY] {
+        assert!(bound_raw_cancellation(plant, identity, [error; 2]).is_none());
+    }
+}
