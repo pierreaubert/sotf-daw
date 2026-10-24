@@ -116,6 +116,8 @@ pub(super) struct DenoiserGains {
     pub smoothed_gain: Vec<Vec<f32>>,        // Temporally smoothed gains
     pub freq_smooth_temp: Vec<f32>,          // [spectrum_size] scratch for smoothing across bins
     pub freq_smooth_kernel: (f32, f32, f32), // Precomputed (c0, c1, c2) Gaussian weights
+    pub zero_mix: f32, // Global unity endpoint after optional gain combination
+    pub zero_mix_initialized: bool,
 }
 
 /// Spectral subtraction parameters.
@@ -448,6 +450,8 @@ impl DenoiserPlugin {
             },
 
             gains: DenoiserGains {
+                zero_mix: 0.0,
+                zero_mix_initialized: false,
                 gain,
                 smoothed_gain,
                 freq_smooth_temp: vec![0.0_f32; spectrum_size],
@@ -1114,6 +1118,10 @@ impl DenoiserPlugin {
             );
         }
 
+        // Zero requested attenuation owns the final gain endpoint, including
+        // every optional path. Estimation/analysis above stays warm.
+        self.apply_zero_reduction_endpoint();
+
         // Phase 4: Apply gains and inverse FFT
         self.apply_gains_and_inverse_fft()?;
 
@@ -1486,6 +1494,8 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
     }
 
     fn reset(&mut self) {
+        self.gains.zero_mix = 0.0;
+        self.gains.zero_mix_initialized = false;
         // Reset MCRA state
         for ch in 0..self.config.channels {
             self.reset_mcra(ch);

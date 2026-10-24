@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 6.123885154724121,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\nerror[E0502]: cannot borrow `block` as immutable because it is also borrowed as mutable\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/estimator_component_tests.rs:100:80\n    |\n100 |                     .process_in_place(&mut block, &ProcessContext::new(48_000, block.len() / 2))\n    |                      ---------------- ---------- mutable borrow occurs here    ^^^^^ immutable borrow occurs here\n    |                      |\n    |                      mutable borrow later used by call\n\nFor more information about this error, try `rustc --explain E0502`.\nerror: could not compile `sotf-plugin-denoiser` (lib test) due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\n"
+}

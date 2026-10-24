@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 32.426778078079224,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\nerror[E0425]: cannot find function `assert_no_allocs_or_deallocs` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/audit_zero_reduction.rs:197:24\n    |\n197 |             sotf_host::assert_no_allocs_or_deallocs(\n    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in `sotf_host`\n\nFor more information about this error, try `rustc --explain E0425`.\nerror: could not compile `sotf-plugin-denoiser` (test \"audit_zero_reduction\") due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\n"
+}

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 17.733436107635498,
+  "stdout": "",
+  "stderr": "   Compiling find-msvc-tools v0.1.15\n   Compiling crc32fast v1.5.3\n   Compiling cc v1.10.0\n    Checking smallvec v1.16.4\n    Checking rusqlite v0.38.0\n    Checking gpui-pretext v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n   Compiling alloca v0.4.0\n    Checking sotf-nalgebra v0.35.0 (https://github.com/pierreaubert/sotf-3rdparties#1fe02c0b)\n    Checking flate2 v1.1.10\n    Checking criterion v0.8.2\n    Checking sotf-rubato v5.0.0 (https://github.com/pierreaubert/sotf-3rdparties#1fe02c0b)\n    Checking sofa-reader v0.2.1 (https://github.com/pierreaubert/sofa-reader#c2ba490d)\n    Checking gpui-builder v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n    Checking gpui-design v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n    Checking memmap2 v0.9.12\n    Checking math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 17.60s\n"
+}

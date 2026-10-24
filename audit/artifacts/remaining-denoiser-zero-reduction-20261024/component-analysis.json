@@ -1,0 +1,96 @@
+{
+  "records": 720,
+  "summary": [
+    {
+      "low_latency": false,
+      "variant": "default",
+      "vowel_clean_selected_snr_db": 8.128758183856391,
+      "estimated_to_true_noise_ratio": 1.475269500704471,
+      "clean_weighted_raw_gain": 0.10000000149011612,
+      "clean_weighted_final_gain": 0.10418173705774543,
+      "mean_speech_probability": 0.952447754641374
+    },
+    {
+      "low_latency": false,
+      "variant": "instantaneous_snr",
+      "vowel_clean_selected_snr_db": 8.128758183856391,
+      "estimated_to_true_noise_ratio": 1.475269500704471,
+      "clean_weighted_raw_gain": 0.4093673569429178,
+      "clean_weighted_final_gain": 0.38902465915940276,
+      "mean_speech_probability": 0.952447754641374
+    },
+    {
+      "low_latency": false,
+      "variant": "no_gaussian_smoothing",
+      "vowel_clean_selected_snr_db": 8.128758183856391,
+      "estimated_to_true_noise_ratio": 1.475269500704471,
+      "clean_weighted_raw_gain": 0.10000000149011612,
+      "clean_weighted_final_gain": 0.10418173483240888,
+      "mean_speech_probability": 0.952447754641374
+    },
+    {
+      "low_latency": false,
+      "variant": "instantaneous_no_gaussian",
+      "vowel_clean_selected_snr_db": 8.128758183856391,
+      "estimated_to_true_noise_ratio": 1.475269500704471,
+      "clean_weighted_raw_gain": 0.4093673569429178,
+      "clean_weighted_final_gain": 0.38825066531770874,
+      "mean_speech_probability": 0.952447754641374
+    },
+    {
+      "low_latency": false,
+      "variant": "formant",
+      "vowel_clean_selected_snr_db": 8.128758183856391,
+      "estimated_to_true_noise_ratio": 1.475269500704471,
+      "clean_weighted_raw_gain": 0.10123164539869045,
+      "clean_weighted_final_gain": 0.28281437088470124,
+      "mean_speech_probability": 0.952447754641374
+    },
+    {
+      "low_latency": true,
+      "variant": "default",
+      "vowel_clean_selected_snr_db": -0.6277153139247618,
+      "estimated_to_true_noise_ratio": 0.847171500891662,
+      "clean_weighted_raw_gain": 0.15100895706069062,
+      "clean_weighted_final_gain": 0.14745174730902272,
+      "mean_speech_probability": 0.673003166836376
+    },
+    {
+      "low_latency": true,
+      "variant": "instantaneous_snr",
+      "vowel_clean_selected_snr_db": -0.6277153139247618,
+      "estimated_to_true_noise_ratio": 0.847171500891662,
+      "clean_weighted_raw_gain": 0.4562153574104955,
+      "clean_weighted_final_gain": 0.5348426169862674,
+      "mean_speech_probability": 0.673003166836376
+    },
+    {
+      "low_latency": true,
+      "variant": "no_gaussian_smoothing",
+      "vowel_clean_selected_snr_db": -0.6277153139247618,
+      "estimated_to_true_noise_ratio": 0.847171500891662,
+      "clean_weighted_raw_gain": 0.17208967389406576,
+      "clean_weighted_final_gain": 0.15790083109199327,
+      "mean_speech_probability": 0.673003166836376
+    },
+    {
+      "low_latency": true,
+      "variant": "instantaneous_no_gaussian",
+      "vowel_clean_selected_snr_db": -0.6277153139247618,
+      "estimated_to_true_noise_ratio": 0.847171500891662,
+      "clean_weighted_raw_gain": 0.4562153574104955,
+      "clean_weighted_final_gain": 0.5720938098345446,
+      "mean_speech_probability": 0.673003166836376
+    },
+    {
+      "low_latency": true,
+      "variant": "formant",
+      "vowel_clean_selected_snr_db": -0.6277153139247618,
+      "estimated_to_true_noise_ratio": 0.847171500891662,
+      "clean_weighted_raw_gain": 0.21667036955934138,
+      "clean_weighted_final_gain": 0.3336692789326684,
+      "mean_speech_probability": 0.673003166836376
+    }
+  ],
+  "scope": "Component ablations on the original40dBnoise-step fixture; clean-ranked independent spectral ground truth, not held-out or whole-clip quality acceptance."
+}

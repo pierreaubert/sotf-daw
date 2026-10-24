@@ -1,0 +1,183 @@
+# sotf-plugin-denoiser
+
+SOTF broadband spectral denoiser using IMCRA/MCRA noise estimation and Wiener filtering.
+
+It provides 2048-point quality and 512-point low-latency STFT modes, decision-directed SNR,
+captured noise profiles, psychoacoustic masking, spectral subtraction, formant and transient
+protection, an editable three-knot frequency-dependent reduction curve, aligned residual
+audition with click-free switching, and optional dual-resolution analysis. Reported latency
+is one FFT (2048 or 512 samples); processing is preallocated and allocation-free after
+construction.
+
+Spatial mode processes coherent channel pairs. Stereo and 3.0 use the front L/R pair. Standard
+5.1 adds side L/R, and standard 7.1 adds side and rear L/R. Centre, LFE, and any unmatched channel
+remain on the ordinary per-channel denoising path.
+
+Each channel owns its IMCRA quiet-frame/fast-adaptation history. The shared
+`learning_active` display is true when any channel is learning; it does not
+feed another channel's estimator. With spatial and other cross-channel modes
+disabled, changing channel order preserves the corresponding audio exactly.
+Reset and explicit noise-profile learning restart each channel's history.
+
+When the preceding frame was mostly quiet and the current speech probability is
+below 0.3, fast adaptation performs the equivalent of two ordinary noise-PSD
+updates with the observation and probability frozen. For ordinary retention
+`a = alpha_s + (1-alpha_s)*p`, the fast update retains `a*a` of the previous PSD.
+This doubles its exponential tracking rate. The former `a/2` retained only 0.45
+at the default quiet-bin coefficient of 0.9, rather than 0.81, accelerating the
+rate by about 7.6 times. This correction keeps the trigger, probability, minimum
+tracking and bootstrap rules unchanged. It adds one scalar multiplication and
+no storage or allocations. It does not infer that a quiet-bin label is correct
+or prevent stationary speech/music from entering the noise estimate.
+
+Bootstrap uses a prepared observation span of at least 106.6667 ms, rounded
+up to complete analysis hops. This retains the historical five-hop bootstrap
+at 48 kHz in 2048-point mode; 512-point mode now uses twenty hops there.
+The nominal observation span varies by less than one hop across clocks. WOLA
+support still gives the two FFT modes different audible gain-onset shapes.
+This longer low-latency warm-up passes more initial noise before suppression;
+it does not identify speech within the initial noise estimate. Signal latency
+and the explicit frame-based MCRA smoothing/window controls are unchanged.
+Adaptive bootstrap/IMCRA processing continues during EOF zero continuation;
+explicit captured-profile measurement remains frozen.
+
+The channel-learning audit reuses the attributed 48 kHz `/s/` recording in
+`../sotf-plugin-de-esser/tests/fixtures/recorded/manifest.json` (Peter Isotalo,
+CC BY-SA 3.0), starting 0.25 seconds into the source PCM and applying gain 0.2.
+It adds seeded noise with an abrupt change on one channel and slow drift on
+the other. Latency-aligned error, first-100-ms clean projection and noise-only
+channel attenuation are measurements of this one speaker, not population,
+held-out-training, intelligibility or listening-quality acceptance.
+
+A captured profile applies to both FFT resolutions. Each grid captures its own
+windowed powers over the same source epoch; no main-to-small PSD scaling is
+assumed. Both grids publish together when the main capture completes. A valid
+profile is used from the first processed frame after reset, with the configured
+gain smoothing still applied. Reset and canceled replacement captures retain the
+published profile; clear and a real sample-rate change invalidate both grids.
+Same-clock reinitialization retains them, and rejected clocks change neither.
+Incomplete capture cannot advance or publish during EOF padding. Parameter
+getters reflect automatic capture completion/profile selection immediately.
+
+The fixed-profile audit uses controlled captured silence on one channel and
+seeded noise on another. It verifies profile ownership and reduction, not blind
+speech preservation: recorded later-vowel projections remain about 0.0946/0.1243
+in the two blind FFT modes after the fast-adaptation correction (previously
+0.0946/0.1212). Held-out music/speech/noise and device-load deadline
+evidence remain open; optional learned models are separate work.
+
+Serialized percentage-like values are normalized fractions (`0.70` means 70%); UI scaling is
+presentation only. Noise-profile learning lasts approximately one second at every sample rate and
+in both FFT modes.
+
+See `USAGE.md` for parameters and examples and `UI.md` for the compiled layout contract.
+
+## Finite streams and startup
+
+With FFT size `N` and hop `H=N/2`, startup includes the zero-padded window at
+origin `-H`. Its negative synthesis prefix is discarded, and public latency
+remains `N` frames. At unity gain, every source sample is reconstructed, including
+the first sample. Note detection consumes source slices through each large FFT
+boundary, so its decisions are independent of callback size. The optional small
+FFT computes gains and does not add a separate audio delay or tail.
+
+For `T>0` source frames, `drain` emits
+`2N + floor((T-1)/H)*H - T` frames of zero-input continuation. Native tail metadata
+reports the phase-independent maximum `2N-1`. Positive channel-aligned drain
+capacities of any size are accepted; a prepared one-hop cache preserves internal
+processing order and leaves unused destination samples untouched. Empty streams
+complete without output.
+
+The first successful drain closes the stream. Nonempty input and parameter
+changes then require reset or reinitialization. Invalid rates/capacities consume
+no history, completion is stable, and reset/reinitialization restores the startup
+scheduler. Process contexts must match the initialized sample rate.
+
+Explicit noise-profile capture is frozen at the accepted end of the stream:
+padding cannot advance its count, finish capture, or replace the stored profile.
+Ordinary adaptive noise and gain updates continue to render retained audio. A
+partial capture keeps its owned storage and active flag until reset; reset clears
+that incomplete capture while preserving the existing profile and its settings.
+
+## Recorded estimator diagnostics
+
+`tests/audit_recorded_estimator.rs` measures six preselected existing recordings:
+three English LibriSpeech speakers, the original `/s/` phoneme crop, a violin and
+a cymbal. Their original PCM hashes, licenses, attribution and transformations
+remain in the speech-denoiser and de-esser fixture manifests. No new PCM copies or
+learned models are added. These are development measurements, not an independent
+held-out population or listening panel.
+
+Each source runs clean, with stationary colored noise and with a fixed noise
+step, in both FFT modes (36 rows). Added-noise mixtures have whole-clip 0 dB SNR;
+the step occupies the middle third with a 16:1 amplitude change. The same seed
+and boundaries apply to every source. Latency-aligned onset, early, body and full
+source windows report clean/output energy, dot product, error energy, clean
+projection and ordinary SDR. Gain loss is therefore visible rather than hidden
+by a scale-invariant score. Trailing synthesis energy is recorded separately.
+All complete EOF waveforms agree after reset at fixed/irregular callback sizes;
+three-speaker stereo polarity tests match independent mono processing exactly.
+These controlled relationships do not establish arbitrary stereo image quality.
+
+The exact two-update correction makes only small, mixed changes in this matrix:
+full-clip SDR changes span about -0.00052 to +0.0499 dB. The original low-latency
+later-vowel projection rises from 0.12125 to 0.12429, still far below unity.
+No metric threshold or source was selected to turn that into quality acceptance.
+Noise adaptation, initial-speech contamination, steady music attenuation,
+held-out mixtures, perceptual quality and device-load timing remain open.
+
+
+### Optional analysis clock and gain-grid alignment
+
+The optional 512-point analysis arm prepares its bootstrap hop count from the
+host sample clock using the same 106.6667 ms observation span as the main noise
+estimator. It no longer begins live reduction after a fixed five hops at every
+rate. Bootstrap completion can apply the finalized estimate on that frame, as
+in the main arm; reset retains the prepared target and initialization prepares
+the new clock. A published captured profile still overrides live warm-up.
+
+Gain transfer uses physical FFT frequency spacing, including DC and Nyquist,
+when selecting the nearest small-grid bin. Stored spectrum lengths include both
+endpoints, so using their ratio biased the previous mapping by one bin in 255
+quality-mode positions. An independent Hz-based reference covers every bin in
+both supported FFT modes; ten rate/mode cases verify the physical bootstrap
+span and exact reset. These corrections affect the optional arm and add no
+parameter, latency, allocation or dependency. Blind bootstrap speech contamination,
+later vowel loss, held-out quality and loaded/native deadline validation remain
+open; the unchanged main estimator is not classified as speech-preserving.
+
+
+A separate blind spectral-bootstrap prior was evaluated and rejected. Its local
+median cap retained settled noise reduction and kept all 36 development full-
+source SDR deltas within the predeclared regression guard, but it failed the
+existing tone-energy reduction test and did not resolve the original later-
+vowel projections (about 0.095 / 0.124 against the candidate's 0.5 guard).
+The main estimator is restored exactly; source snapshots and every failed guard
+remain in the audit artifacts. Final validation passes 129 release tests with
+four existing ignores, strict all-target QA Clippy and the 48-row optional QA.
+
+
+### Zero requested attenuation
+
+`Reduction = 0 dB` now preserves the complete input at the reported FFT latency,
+including optional analysis modes and selected captured profiles. Noise learning
+and analysis continue to advance. Fresh/reset streams start at the exact unity
+gain endpoint; live zero/nonzero transitions use the existing prepared gain
+recovery/attenuation clocks and finish at exact endpoints. No extra dry delay,
+parameter, dependency or callback allocation is introduced.
+
+All 48 independent rate/FFT/channel/optional-mode unity cases failed before
+(maximum absolute error 0.21195) and pass after (maximum 1.044e-7 at the original
+2e-6 gate). Both captured-profile cases pass, as do 16 physical-clock transition
+checks, exact reset/partition/full-tail references and cold/live/reset allocation
+and free checks. The 134-test release suite passes with four existing ignores;
+strict all-target QA Clippy passes. All 36 previous default positive-depth
+recorded estimator measurements and the original onset/noise diagnostics remain
+exact. This endpoint fix does not resolve positive-depth low-SNR vowel loss.
+
+The nonexclusive optional profiler retains five rows with over-budget wall
+maxima despite its exit status 0. Its output is preserved as diagnostic data;
+it is not native deadline acceptance. New component traces independently retain
+clean/noise spectral ground truth around the original 40 dB noise step and
+separate decision-directed prediction from later smoothing. Further estimator,
+held-out quality, listening and loaded/native evidence remain open.

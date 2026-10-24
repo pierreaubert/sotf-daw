@@ -155,3 +155,29 @@ vowel projections (about 0.095 / 0.124 against the candidate's 0.5 guard).
 The main estimator is restored exactly; source snapshots and every failed guard
 remain in the audit artifacts. Final validation passes 129 release tests with
 four existing ignores, strict all-target QA Clippy and the 48-row optional QA.
+
+
+### Zero requested attenuation
+
+`Reduction = 0 dB` now preserves the complete input at the reported FFT latency,
+including optional analysis modes and selected captured profiles. Noise learning
+and analysis continue to advance. Fresh/reset streams start at the exact unity
+gain endpoint; live zero/nonzero transitions use the existing prepared gain
+recovery/attenuation clocks and finish at exact endpoints. No extra dry delay,
+parameter, dependency or callback allocation is introduced.
+
+All 48 independent rate/FFT/channel/optional-mode unity cases failed before
+(maximum absolute error 0.21195) and pass after (maximum 1.044e-7 at the original
+2e-6 gate). Both captured-profile cases pass, as do 16 physical-clock transition
+checks, exact reset/partition/full-tail references and cold/live/reset allocation
+and free checks. The 134-test release suite passes with four existing ignores;
+strict all-target QA Clippy passes. All 36 previous default positive-depth
+recorded estimator measurements and the original onset/noise diagnostics remain
+exact. This endpoint fix does not resolve positive-depth low-SNR vowel loss.
+
+The nonexclusive optional profiler retains five rows with over-budget wall
+maxima despite its exit status 0. Its output is preserved as diagnostic data;
+it is not native deadline acceptance. New component traces independently retain
+clean/noise spectral ground truth around the original 40 dB noise step and
+separate decision-directed prediction from later smoothing. Further estimator,
+held-out quality, listening and loaded/native evidence remain open.

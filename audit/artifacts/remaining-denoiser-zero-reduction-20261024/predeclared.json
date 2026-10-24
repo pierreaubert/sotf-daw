@@ -1,0 +1,13 @@
+{
+  "base_commit": "78eb434",
+  "public_contract": "Reduction is documented as Noise attenuation amount,0\u201340dB. Zero requested attenuation must produce a unity transfer at the unchanged public FFT latency, including optional modes and captured profiles.",
+  "implementation_plan": "Keep all estimation/analysis warm. A fixed scalar unity mix after optional gain combination snaps to its target on fresh/reset streams and uses prepared attack/release coefficients for live zero/nonzero transitions. The ordinary positive-reduction path remains bit-identical.",
+  "acceptance": [
+    "Independent complete-stream delayed-input oracle at2e-6 across4rates,2FFTs,1/2/6channels and optional modes.",
+    "Captured profiles do not override zero attenuation.",
+    "Exact reset/irregular partitions and existing finite-stream/heap gates.",
+    "All36 preexisting positive-default recorded estimator rows remain exact.",
+    "Existing tone-energy characterization remains unchanged."
+  ],
+  "limits": "This fixes a public zero-depth endpoint; it does not claim that default positive-reduction startup or low-SNR vowel preservation is resolved."
+}

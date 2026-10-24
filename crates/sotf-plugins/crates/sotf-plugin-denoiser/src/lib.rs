@@ -12,6 +12,7 @@ mod polyphonic;
 mod reduction_curve;
 mod spectral_sub;
 mod wiener;
+mod zero_reduction;
 
 #[cfg(test)]
 mod captured_profile_tests;
@@ -27,3 +28,6 @@ mod tests;
 
 pub use denoiser_data::*;
 pub use denoiser_plugin::*;
+
+#[cfg(test)]
+mod estimator_component_tests;

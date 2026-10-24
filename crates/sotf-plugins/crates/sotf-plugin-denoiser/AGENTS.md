@@ -72,3 +72,17 @@ cargo test -p sotf-plugin-denoiser
 - Map gain grids by FFT frequency intervals (stored bin count minus one), not
   stored spectrum lengths. Keep every-bin independent Hz references and both
   endpoints. This fixes optional-arm timing/mapping, not blind speech quality.
+
+- Zero requested reduction owns the final unity gain endpoint after every
+  optional gain combination and before inverse FFT. Keep estimation/analysis
+  warm, cold/reset endpoint snap, prepared-clock live transitions and exact
+  positive-default renders. Do not introduce a separate dry delay or allocation.
+- Preserve complete delayed-input zero-depth oracles across rate/FFT/layout,
+  optional modes and captured profiles, physical-clock transitions, allocation
+  and free checks, and the old positive-depth tone characterization unchanged.
+- Optional QA exit 0 does not certify its printed profiling deadlines; retain
+  the five nonexclusive over-budget rows and require loaded/native evidence.
+- Component traces choose clean-ranked bins before examining gains, retain all
+  five existing configurations and both FFTs, and verify independent f64 DFT
+  power plus exact noise-estimator invariance. They diagnose the 40 dB noise
+  step and decision-directed feedback; they do not establish held-out quality.
