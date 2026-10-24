@@ -92,3 +92,11 @@ from the workspace root). The generator uses fixed seeds, so output is byte-stab
 - Output channel count changes dynamically based on selected speaker configuration. The engine must handle channel count changes between plugins.
 - VBAP uses triangulated speaker layouts for 3D panning (including height channels).
 - Has benchmarks: `cargo bench -p sotf-plugin-upmixer --bench upmixer-benchmark`.
+
+- Seed coherence median history and its smoothed value from the first covariance
+  above the existing reliable-energy threshold. Prepare/reset a flag per ERB
+  band; silent initial history is not a diffuse observation. Preserve subsequent
+  smoothing, cold/reset regressions and the unchanged AUD132 archive controls.
+- Recorded center-source tests retain the existing 5% complete-source SL/C guard
+  across three speakers/two instruments, two layouts and HR off/on. First 100 ms
+  metrics are separate observations; do not infer listener acceptance.

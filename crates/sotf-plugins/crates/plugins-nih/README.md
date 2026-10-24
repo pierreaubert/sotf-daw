@@ -27,7 +27,7 @@ cargo build --release -p plugins-nih --features compressor --no-default-features
 just build-nih-plugins
 ```
 
-The resulting `.dylib` files can be loaded by any VST3 or CLAP compatible DAW.
+The `.dylib` files are build intermediates. Use the packaging recipes for DAW loading: macOS CLAP requires a `.clap` bundle containing `Contents/MacOS` and `Info.plist`; Linux and Windows retain their flat CLAP shared-library artifacts.
 
 ## Available Plugins
 
@@ -106,7 +106,7 @@ separate DSP references exactly. Active-load refusal preserves audio history;
 inactive retry succeeds. Live scalar events use VST3 parameter queues and retain
 prepared latency. The packaged VST3 also passes pluginval 1.0.4 strictness 5 with
 editor tests enabled across four rates and five block sizes. External DAW PDC,
-CLAP artifact loading and non-macOS native validation remain separate.
+The freshly packaged macOS Upmixer CLAP artifact now passes 15 functional validator checks, with five unsupported optional checks skipped. The former raw renamed dylib failed bundle loading. Scan-time was excluded during concurrent builds. External DAW restart/PDC and non-macOS native callback/loading validation remain separate.
 
 ```bash
 cargo build -p plugins-nih --release --features upmixer --lib --example upmixer_vst3_host

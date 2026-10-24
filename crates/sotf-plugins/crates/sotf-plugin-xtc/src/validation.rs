@@ -18,6 +18,7 @@ mod run;
 #[cfg(test)]
 mod tests;
 mod types;
+mod uncertainty;
 mod validation_report;
 mod validation_result;
 
@@ -27,6 +28,8 @@ pub use misc::*;
 pub use reference::*;
 pub use run::*;
 pub use types::*;
+#[doc(inline)]
+pub use uncertainty::{CancellationEnvelope, bound_cancellation};
 pub use validation_report::*;
 pub use validation_result::*;
 

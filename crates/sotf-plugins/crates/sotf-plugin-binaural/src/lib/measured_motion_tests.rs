@@ -1,0 +1,188 @@
+//! Explicit paced software head-motion observations using measured KEMAR data.
+
+// Rust guideline compliant 2026-02-21
+use crate::{BinauralDecoderPlugin, RoomModel};
+use sotf_host::{ParameterValue, Plugin, ProcessContext};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+#[test]
+#[ignore = "Explicit paced measured-data motion/callback diagnostic; requires an isolated timing slot"]
+fn measured_kemar_paced_motion_reaches_audio_without_callback_heap_work() {
+    const RATE: u32 = 44_100;
+    const FRAMES: usize = 128;
+    const CALLS: usize = 128;
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/kemar/mit_kemar_normal_pinna.sofa");
+    for (channels, design) in [(1, 1024), (8, 4096)] {
+        for angles in [
+            (30.0_f32, 0.0, 0.0),
+            (-45.0, 15.0, -10.0),
+            (10.0, -20.0, 15.0),
+        ] {
+            let make = || {
+                let mut p = BinauralDecoderPlugin::new(
+                    channels,
+                    design,
+                    Some(path.clone()),
+                    1.0,
+                    0.0,
+                    false,
+                    120.0,
+                    2.0,
+                    0.0,
+                    RoomModel {
+                        max_order: 0,
+                        ..Default::default()
+                    },
+                );
+                p.initialize(f64::from(RATE)).unwrap();
+                p.set_parameter("crossfade_ms".into(), ParameterValue::Float(10.0))
+                    .unwrap();
+                p
+            };
+            let mut moving = make();
+            let mut held = make();
+            assert_eq!(
+                moving
+                    .crossfade
+                    .current_state_snapshot
+                    ._hrtf_data
+                    .as_ref()
+                    .unwrap()
+                    .num_measurements,
+                710
+            );
+            let inputs: Vec<Vec<f32>> = (0..17)
+                .map(|block| {
+                    (0..FRAMES * channels)
+                        .map(|i| (((i * 37 + block * 31) % 127) as f32 - 63.25) * 0.0002)
+                        .collect()
+                })
+                .collect();
+            let mut moving_output = vec![0.0; FRAMES * 2];
+            let mut held_output = vec![0.0; FRAMES * 2];
+            let context = ProcessContext::new(RATE, FRAMES);
+            let mut warm_calls = 8 * design / FRAMES;
+            for block in 0..warm_calls {
+                let input = &inputs[block % inputs.len()];
+                moving.process(input, &mut moving_output, &context).unwrap();
+                held.process(input, &mut held_output, &context).unwrap();
+                assert_eq!(moving_output, held_output);
+            }
+            // Complete both startup zero-pose publications before timing motion.
+            // Their generations/owners are not responses to the event below.
+            for plugin in [&moving, &held] {
+                let wanted = plugin.head_requests.snapshot().unwrap().generation;
+                let deadline = Instant::now() + Duration::from_secs(2);
+                loop {
+                    if let Ok(guard) = plugin.state.try_lock() {
+                        let (_, generation) = plugin.state.head_publication();
+                        drop(guard);
+                        if generation >= wanted {
+                            break;
+                        }
+                    }
+                    assert!(Instant::now() < deadline, "startup pose did not publish");
+                    std::thread::sleep(Duration::from_millis(1));
+                }
+            }
+            for _ in 0..4 * design / FRAMES {
+                let input = &inputs[warm_calls % inputs.len()];
+                moving.process(input, &mut moving_output, &context).unwrap();
+                held.process(input, &mut held_output, &context).unwrap();
+                assert_eq!(moving_output, held_output);
+                warm_calls += 1;
+            }
+            assert_eq!(moving.crossfade.crossfade_remaining, 0);
+            let initial = Arc::clone(&moving.crossfade.current_state_snapshot);
+            let guard = moving.state.try_lock().unwrap();
+            let (_, baseline_generation) = moving.state.head_publication();
+            assert!(Arc::ptr_eq(&guard, &initial));
+            drop(guard);
+            let mut times = Vec::with_capacity(CALLS);
+            let mut publication_ns = None;
+            let mut adoption_ns = None;
+            let mut audio_ns = None;
+            let mut audio_frame = None;
+            let mut last_generation = baseline_generation;
+            let mut late_ns = 0;
+            let mut misses = 0;
+            let start = Instant::now();
+            for (id, angle) in ["head_yaw_deg", "head_pitch_deg", "head_roll_deg"]
+                .into_iter()
+                .zip([angles.0, angles.1, angles.2])
+            {
+                moving
+                    .set_parameter(id.into(), ParameterValue::Float(angle))
+                    .unwrap();
+            }
+            for block in 0..CALLS {
+                let expected_start =
+                    start + Duration::from_secs_f64((block * FRAMES) as f64 / f64::from(RATE));
+                late_ns = late_ns.max(
+                    Instant::now()
+                        .saturating_duration_since(expected_start)
+                        .as_nanos(),
+                );
+                let input = &inputs[(warm_calls + block) % inputs.len()];
+                moving_output.fill(0.0);
+                held_output.fill(0.0);
+                let begin = Instant::now();
+                let heap = crate::realtime_tests::callback_counts(|| {
+                    assert_eq!(
+                        moving.process(input, &mut moving_output, &context).unwrap(),
+                        FRAMES
+                    );
+                });
+                let elapsed = begin.elapsed().as_nanos();
+                assert_eq!(heap, (0, 0));
+                assert!(moving_output.iter().all(|x| x.is_finite()));
+                misses += usize::from(elapsed as f64 > FRAMES as f64 / f64::from(RATE) * 1e9);
+                times.push(elapsed);
+                held.process(input, &mut held_output, &context).unwrap();
+                if let Ok(guard) = moving.state.try_lock() {
+                    let (_, generation) = moving.state.head_publication();
+                    assert!(generation >= last_generation);
+                    last_generation = generation;
+                    if generation > baseline_generation && publication_ns.is_none() {
+                        publication_ns = Some(start.elapsed().as_nanos());
+                    }
+                    drop(guard);
+                }
+                if adoption_ns.is_none()
+                    && !Arc::ptr_eq(&initial, &moving.crossfade.current_state_snapshot)
+                {
+                    adoption_ns = Some(start.elapsed().as_nanos());
+                }
+                if audio_ns.is_none()
+                    && let Some(index) = moving_output
+                        .iter()
+                        .zip(&held_output)
+                        .position(|(a, b)| (a - b).abs() > 1e-7)
+                {
+                    audio_ns = Some(start.elapsed().as_nanos());
+                    audio_frame = Some(block * FRAMES + index / 2);
+                }
+                let deadline = start
+                    + Duration::from_secs_f64(((block + 1) * FRAMES) as f64 / f64::from(RATE));
+                if let Some(remaining) = deadline.checked_duration_since(Instant::now()) {
+                    std::thread::sleep(remaining);
+                }
+            }
+            assert!(
+                publication_ns.is_some() && adoption_ns.is_some() && audio_ns.is_some(),
+                "measured head motion did not reach output"
+            );
+            println!(
+                "MEASURED_MOTION channels={channels} design={design} measurements=710 rate={RATE} callback_frames={FRAMES} callbacks={CALLS} angles={angles:?} publication_observed_ns={} adoption_observed_ns={} numerical_audio_observed_ns={} numerical_audio_source_frame={} baseline_generation={baseline_generation} final_generation={last_generation} maximum_schedule_late_ns={late_ns} physical_callback_misses={misses} durations_ns={times:?} scope=local_software_with_held_pose_reference_not_hardware_or_audibility",
+                publication_ns.unwrap(),
+                adoption_ns.unwrap(),
+                audio_ns.unwrap(),
+                audio_frame.unwrap()
+            );
+            moving.shutdown_hrtf_update_thread();
+            held.shutdown_hrtf_update_thread();
+        }
+    }
+}

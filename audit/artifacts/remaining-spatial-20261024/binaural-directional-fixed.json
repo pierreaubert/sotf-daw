@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--lib",
+    "directional_weight_tests",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 3 tests\ntest hrtf::misc::directional_weight_tests::dense_measurement_triangles_do_not_snap_to_one_neighbor ... ok\ntest hrtf::misc::directional_weight_tests::outside_simplex_weights_are_nonnegative_and_preserve_constant_fields ... ok\ntest hrtf::misc::directional_weight_tests::directional_weights_reconstruct_unequal_full_sphere_simplexes ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 133 filtered out; finished in 0.00s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 2m 27s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-2a5024dc18849ab3)\nDIRECTIONAL_WEIGHTS cases=60 maximum_error=1.6391277e-7\n"
+}

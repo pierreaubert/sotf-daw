@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--lib",
+    "measured_sofa_lookup_tracks",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 1 test\nMEASURED_XTC_POSE yaw=0 head_x=0 head_z=0 maximum_dft_error=1.6070801994489998e-7\nMEASURED_XTC_POSE yaw=45 head_x=0 head_z=0 maximum_dft_error=2.507275213482482e-7\nMEASURED_XTC_POSE yaw=-45 head_x=0 head_z=0 maximum_dft_error=2.507275213482482e-7\nMEASURED_XTC_POSE yaw=179 head_x=0 head_z=0 maximum_dft_error=8.002473131795831e-8\nMEASURED_XTC_POSE yaw=-179 head_x=0 head_z=0 maximum_dft_error=8.002473131795831e-8\nMEASURED_XTC_POSE yaw=0 head_x=0.2 head_z=0 maximum_dft_error=2.4814632625940053e-7\nMEASURED_XTC_POSE yaw=0 head_x=-0.2 head_z=0 maximum_dft_error=2.4814632625940053e-7\nMEASURED_XTC_POSE yaw=0 head_x=0 head_z=0.3 maximum_dft_error=2.4814632625940053e-7\nMEASURED_XTC_POSE yaw=30 head_x=0.1 head_z=0.2 maximum_dft_error=1.4703726792370109e-7\nMEASURED_XTC_POSE_SUMMARY cases=9 failures=0 maximum_error=2.507275213482482e-7\ntest measured_kemar_tests::measured_sofa_lookup_tracks_yaw_and_head_translation ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 200 filtered out; finished in 0.11s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 16.51s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n"
+}

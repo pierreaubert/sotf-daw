@@ -1,113 +1,53 @@
 use rustfft::num_complex::Complex;
 use sotf_host::sofa::{SofaFile, SourcePosition};
 
-/// Calculate VBAP gains using barycentric interpolation
+/// Calculates nonnegative directional interpolation weights for three HRTFs.
 ///
-/// Uses barycentric coordinates to interpolate between 3 source positions.
-/// This is more numerically stable than matrix inversion and provides better
-/// spatial accuracy.
+/// Intersect the target ray with the measurement chord plane, then normalize
+/// its cone coordinates to unit sum. Orthogonally projecting a unit target onto
+/// that plane changes its direction and biases unequal full-sphere weights.
+/// Negative coordinates are clamped for an uncovered target; a singular or
+/// opposite-facing simplex falls back to the first supplied neighbor. This is
+/// HRTF field interpolation, not energy-normalized loudspeaker VBAP panning.
 ///
-/// Reference: Pulkki, "Virtual Sound Source Positioning Using Vector Base Amplitude Panning"
+/// # Panics
+/// Panics if a supplied neighbor index is outside `sofa.positions`.
 pub fn calculate_vbap_gains(
     target: &SourcePosition,
     nearest: &[(usize, f32); 3],
     sofa: &SofaFile,
 ) -> [f32; 3] {
-    let p = target.to_cartesian_unit_vector();
-
-    let v0 = sofa.positions[nearest[0].0].to_cartesian_unit_vector();
-    let v1 = sofa.positions[nearest[1].0].to_cartesian_unit_vector();
-    let v2 = sofa.positions[nearest[2].0].to_cartesian_unit_vector();
-
-    // Calculate barycentric coordinates using cross products
-    // This is more stable than matrix inversion
-    //
-    // The barycentric coordinates (w0, w1, w2) satisfy:
-    // p = w0*v0 + w1*v1 + w2*v2
-    // w0 + w1 + w2 = 1
-    //
-    // Using the formula:
-    // w0 = area(p,v1,v2) / area(v0,v1,v2)
-    // w1 = area(v0,p,v2) / area(v0,v1,v2)
-    // w2 = area(v0,v1,p) / area(v0,v1,v2)
-    //
-    // Where area is computed using cross product magnitude
-
-    // Helper to compute cross product
-    let cross = |a: [f32; 3], b: [f32; 3]| -> [f32; 3] {
+    let p = target.to_cartesian_unit_vector().map(f64::from);
+    let vertices = nearest.map(|(index, _)| {
+        sofa.positions[index]
+            .to_cartesian_unit_vector()
+            .map(f64::from)
+    });
+    let cross = |a: [f64; 3], b: [f64; 3]| {
         [
             a[1] * b[2] - a[2] * b[1],
             a[2] * b[0] - a[0] * b[2],
             a[0] * b[1] - a[1] * b[0],
         ]
     };
-
-    // Helper to compute dot product
-    let dot = |a: [f32; 3], b: [f32; 3]| -> f32 { a[0] * b[0] + a[1] * b[1] + a[2] * b[2] };
-
-    // Compute edge vectors
-    let v01 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
-    let v02 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
-    let v0p = [p[0] - v0[0], p[1] - v0[1], p[2] - v0[2]];
-
-    // Normal of triangle (v0, v1, v2)
-    let n = cross(v01, v02);
-    let n_dot_n = dot(n, n);
-
-    // Check for degenerate triangle (collinear points)
-    if n_dot_n < 1e-6 {
-        log::warn!("[BinauralDecoder] Degenerate triangle detected, using nearest neighbor");
+    let dot = |a: [f64; 3], b: [f64; 3]| a.into_iter().zip(b).map(|(x, y)| x * y).sum::<f64>();
+    let determinant = dot(vertices[0], cross(vertices[1], vertices[2]));
+    // Unit vectors bound the matrix scale. Use f64 arithmetic to retain dense
+    // measurement triangles that the old absolute chord-area test discarded.
+    if determinant.abs() <= 64.0 * f64::EPSILON {
         return [1.0, 0.0, 0.0];
     }
-
-    // Calculate barycentric coordinates
-    // w1 corresponds to v1, w2 corresponds to v2
-    let v02_cross_n = cross(v02, n);
-    let n_cross_v01 = cross(n, v01);
-
-    let w1 = dot(v02_cross_n, v0p) / n_dot_n;
-    let w2 = dot(n_cross_v01, v0p) / n_dot_n;
-    let w0 = 1.0 - w1 - w2;
-
-    // Check if point is inside triangle (all weights non-negative)
-    // If outside, clamp to valid range and warn
-    let mut weights = [w0, w1, w2];
-    if weights.iter().any(|&w| w < -0.01) {
-        // Point is significantly outside triangle
-        // This can happen with sparse HRTF measurements
-        log::debug!(
-            "[BinauralDecoder] Target outside triangle: weights=[{:.3}, {:.3}, {:.3}], clamping to boundary",
-            w0,
-            w1,
-            w2
-        );
-        // Clamp negative weights to zero
-        for w in &mut weights {
-            if *w < 0.0 {
-                *w = 0.0;
-            }
-        }
-
-        // Renormalize so the clamped weights sum to 1.0.
-        let sum: f32 = weights.iter().sum();
-        if sum > 1e-6 {
-            for w in &mut weights {
-                *w /= sum;
-            }
-        } else {
-            // All weights were negative, use nearest neighbor
-            weights = [1.0, 0.0, 0.0];
-        }
+    let weights = [
+        dot(p, cross(vertices[1], vertices[2])) / determinant,
+        dot(vertices[0], cross(p, vertices[2])) / determinant,
+        dot(vertices[0], cross(vertices[1], p)) / determinant,
+    ]
+    .map(|weight| weight.max(0.0));
+    let sum: f64 = weights.iter().sum();
+    if !sum.is_finite() || sum <= f64::EPSILON {
+        return [1.0, 0.0, 0.0];
     }
-
-    // These are interpolation weights for an HRTF field, not loudspeaker VBAP
-    // gains. Preserve affine/constant fields by normalizing to unit sum.
-    let sum: f32 = weights.iter().sum();
-    if sum > 1e-6 {
-        [weights[0] / sum, weights[1] / sum, weights[2] / sum]
-    } else {
-        [1.0, 0.0, 0.0]
-    }
+    weights.map(|weight| (weight / sum) as f32)
 }
 
 /// Applies a normalized contralateral head-shadow magnitude profile.
@@ -319,3 +259,7 @@ pub fn find_hrtf_neighbors(
     let gains = calculate_vbap_gains(target, &near, sofa);
     (near, gains)
 }
+
+#[cfg(test)]
+#[path = "directional_weight_tests.rs"]
+mod directional_weight_tests;

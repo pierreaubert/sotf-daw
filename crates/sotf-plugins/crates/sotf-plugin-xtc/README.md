@@ -259,3 +259,44 @@ normalization-on intended gain improves from about -0.234 to -0.102 dB and
 normalized separation from 4.491 to 4.613 dB, while raw attenuation changes from
 4.726 to 4.715 dB. The 5 dB nominal raw target remains open. These are controlled
 rendered measurements, not native ABI/device or listener evidence.
+
+
+### Supplied transfer-error envelopes
+
+`validation::bound_cancellation` accepts explicit per-ear row-L2 bounds on
+speaker-to-ear transfer error. For each filter column, Cauchy–Schwarz bounds
+response error by the row radius times the column norm. The returned desired/
+undesired amplitude and absolute separation intervals retain unbounded and
+undefined values; muting is not infinite useful separation. Negative/non-finite
+bounds or arithmetic overflow refuse the calculation. The function allocates
+nothing and is intended for prepared-filter analysis.
+
+The caller owns calibration and error provenance. A singular value or physical
+listening radius alone does not supply a transfer-error bound. Comparing two
+lower separation bounds cannot establish no degradation; a filtered lower bound
+above the passthrough upper bound is a conservative sufficient comparison.
+
+Ninety independent adversarial boundary cases attain the amplitude limits within
+8.89e-16. A separate test renders actual production filters in both normalization
+modes, derives continuous Lipschitz bounds for the stated independent point/echo
+field, and verifies 432 sampled input cues and the existing row-power budget.
+Eight of its 32 column/region cases conservatively certify improvement. The other
+cases do not supply that certificate. These controlled-field bounds neither
+calibrate a measured human HRTF nor change default model 0, the LF identity blend,
+or the retained nominal/mismatch failures.
+
+### Measured HRTF head-relative lookup
+
+Measured SOFA resources now transform fixed world speaker positions by listener
+translation and yaw before selecting each ear pair. SOFA azimuth is positive
+left; the existing XTC yaw convention is positive right. The former fixed
+`+/-speaker_angle` lookup ignored pose changes in measured-HRTF mode. Source
+columns/ear ownership, rate/delay support, inverse normalization and gain budgets
+are unchanged. A direction exactly at the listener position is refused.
+
+The measured MIT KEMAR fixture reproduces 8 failures in 9 pose cases before the fix;
+afterward all 9 match independent selected-HRIR DFTs within 2.51e-7 at the unchanged
+2e-5 numerical gate. See the shared Binaural fixture attribution for Gardner and
+Martin/MIT Media Laboratory and the unmodified file digest. A single-distance
+mannequin dataset does not calibrate human anatomy, radial HRTF changes,
+continuous pose interpolation, native head-tracking latency or listener quality.

@@ -118,3 +118,10 @@ cargo bench -p sotf-plugin-binaural --bench binaural-decoder-benchmark
 - Retarget effective previous reflection gains together with direct-filter scratch, committing both only after retirement succeeds. No gain-vector resizing or destruction belongs in callbacks.
 - Account for cached log magnitudes in the prepared-cache cap. Horizontal datasets use circular azimuth brackets; do not reintroduce projected third-neighbor ties.
 - Cached reflection metadata describes world geometry and initial gains. Live pose gains are state-owned; no full reflection ITD/pinna claim is made.
+
+- Spatial HRTF weights solve the target ray as a cone combination in f64, then
+  clamp every negative coordinate and normalize to unit sum. Do not reintroduce
+  orthogonal chord-plane projection or the absolute chord-area rejection of
+  dense triangles. Keep rotated unequal-weight, dense and uncovered-direction
+  references. Three-nearest selection does not establish a full spherical mesh
+  or measured continuously moving cue quality.

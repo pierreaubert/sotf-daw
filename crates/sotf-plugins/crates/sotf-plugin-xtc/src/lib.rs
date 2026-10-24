@@ -74,3 +74,7 @@ mod bypass_tests;
 #[cfg(test)]
 #[path = "lib/autogain_tests.rs"]
 mod autogain_tests;
+
+#[cfg(test)]
+#[path = "lib/measured_kemar_tests.rs"]
+mod measured_kemar_tests;

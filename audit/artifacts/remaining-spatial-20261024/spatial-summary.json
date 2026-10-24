@@ -1,0 +1,155 @@
+{
+  "current_source_verified": true,
+  "all_three_plugins_remain_partial": true,
+  "binaural_tests": [
+    172,
+    0,
+    4
+  ],
+  "upmixer_tests": [
+    229,
+    0,
+    3
+  ],
+  "xtc_tests": [
+    263,
+    0,
+    1
+  ],
+  "strict_clippy_passed": true,
+  "native_clap": {
+    "success": 15,
+    "unsupported_skips": 5,
+    "scan_time_evaluated": false
+  },
+  "recorded_center_max_ratio_before": 0.048396865622118146,
+  "recorded_center_max_ratio_after": 0.02450152503066464,
+  "measured_binaural_quality": {
+    "held_out_directions": 43,
+    "legacy_max_band_ild_error_db": 1.2642868940204028,
+    "directional_max_band_ild_error_db": 1.5801768539843568,
+    "legacy_max_wrapped_ipd_error_rad": 2.947626039425671,
+    "directional_max_wrapped_ipd_error_rad": 2.9478853950050214,
+    "quality_improvement_established": false
+  },
+  "measured_xtc": {
+    "pose_lookup_failures_before": 8,
+    "pose_lookup_failures_after": 0,
+    "cases": 9,
+    "rendered_cues": 140,
+    "degraded_cues": 4,
+    "worst_separation_improvement_db": -1.516376941042497
+  },
+  "default_synthetic_xtc_filter_code_unchanged": true,
+  "motion": {
+    "trials": 6,
+    "callbacks": 768,
+    "physical_callback_misses": 0,
+    "heap_events": 0,
+    "startup_contaminated_trial_accepted": false,
+    "rows": [
+      {
+        "channels": 1,
+        "design": 1024,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 6349750,
+        "adoption_observed_ns": 9163375,
+        "numerical_audio_observed_ns": 34967125,
+        "numerical_audio_source_frame": 1541,
+        "baseline_generation": 12,
+        "final_generation": 26,
+        "maximum_schedule_late_ns": 728023,
+        "physical_callback_misses": 0
+      },
+      {
+        "channels": 1,
+        "design": 1024,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 6528500,
+        "adoption_observed_ns": 9279875,
+        "numerical_audio_observed_ns": 34957625,
+        "numerical_audio_source_frame": 1536,
+        "baseline_generation": 12,
+        "final_generation": 28,
+        "maximum_schedule_late_ns": 11052183,
+        "physical_callback_misses": 0
+      },
+      {
+        "channels": 1,
+        "design": 1024,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 6347375,
+        "adoption_observed_ns": 9330208,
+        "numerical_audio_observed_ns": 35406583,
+        "numerical_audio_source_frame": 1541,
+        "baseline_generation": 12,
+        "final_generation": 24,
+        "maximum_schedule_late_ns": 11128176,
+        "physical_callback_misses": 0
+      },
+      {
+        "channels": 8,
+        "design": 4096,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 23740916,
+        "adoption_observed_ns": 43901250,
+        "numerical_audio_observed_ns": 139335250,
+        "numerical_audio_source_frame": 6145,
+        "baseline_generation": 12,
+        "final_generation": 16,
+        "maximum_schedule_late_ns": 753468,
+        "physical_callback_misses": 0
+      },
+      {
+        "channels": 8,
+        "design": 4096,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 23741708,
+        "adoption_observed_ns": 44886958,
+        "numerical_audio_observed_ns": 139953083,
+        "numerical_audio_source_frame": 6144,
+        "baseline_generation": 12,
+        "final_generation": 16,
+        "maximum_schedule_late_ns": 10192324,
+        "physical_callback_misses": 0
+      },
+      {
+        "channels": 8,
+        "design": 4096,
+        "measurements": 710,
+        "rate": 44100,
+        "callback_frames": 128,
+        "callbacks": 128,
+        "publication_observed_ns": 23743000,
+        "adoption_observed_ns": 44413583,
+        "numerical_audio_observed_ns": 139842208,
+        "numerical_audio_source_frame": 6145,
+        "baseline_generation": 12,
+        "final_generation": 16,
+        "maximum_schedule_late_ns": 731214,
+        "physical_callback_misses": 0
+      }
+    ],
+    "scope": "Paced software output with held-pose reference; not hardware or audibility acceptance."
+  },
+  "remaining": [
+    "Binaural enclosing mesh, donor/null/delay analysis, measured continuous-motion/listening and native/max-dataset validation",
+    "Upmixer mixed-programme/downmix/onset/listening, external DAW PDC, non-macOS native and loaded worst-layout timing",
+    "XTC existing LF5dB and146/600mismatch failures, calibrated/measured robustness, native/head-tracking/listening"
+  ]
+}

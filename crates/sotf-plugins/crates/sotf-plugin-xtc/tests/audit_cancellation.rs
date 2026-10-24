@@ -2,7 +2,9 @@
 
 // Rust guideline compliant 2026-02-21
 use sotf_host::{Plugin, ProcessContext};
-use sotf_plugin_xtc::validation::{ComplexTransferMatrix, evaluate_cancellation};
+use sotf_plugin_xtc::validation::{
+    ComplexTransferMatrix, bound_cancellation, evaluate_cancellation,
+};
 use sotf_plugin_xtc::{XtcPlugin, XtcPluginParams};
 use std::f64::consts::TAU;
 
@@ -259,4 +261,106 @@ fn rendered_pose_mirrors_both_columns_and_keeps_callback_partition_invariance() 
     }
     assert_eq!(total, 240);
     println!("rendered_pose_total cases={total}");
+}
+
+#[test]
+fn rendered_filters_obey_continuous_controlled_field_error_envelopes() {
+    let response =
+        |plant: ComplexTransferMatrix, filter: ComplexTransferMatrix, ear: usize, cue: usize| {
+            let mut value = [0.0_f64; 2];
+            for speaker in 0..2 {
+                let [a, b] = plant[ear][speaker];
+                let [c, d] = filter[speaker][cue];
+                value[0] += a * c - b * d;
+                value[1] += a * d + b * c;
+            }
+            value[0].hypot(value[1])
+        };
+    let params = XtcPluginParams::default();
+    let identity = [[[1.0, 0.0], [0.0, 0.0]], [[0.0, 0.0], [1.0, 0.0]]];
+    let mut cases = 0;
+    let mut certified = 0;
+    for normalization in [false, true] {
+        for bin in [4, 22, 85, 341] {
+            let frequency = 48_000.0 * bin as f64 / 2048.0;
+            let filter = measured_pose_filter(bin, &[1, 127, 512], &params, normalization);
+            let nominal = acoustic_plant(frequency, 0.0, 0.0, 0.0);
+            for (radius, yaw_limit, echo_limit) in
+                [(0.005_f64, 1.0_f64.to_radians(), 0.0), (0.1, 0.3, 0.4)]
+            {
+                // Independent continuous bound for this specified point/echo field:
+                // ear displacement <= lateral radius + 2a sin(yaw_limit/2).
+                // For H(r)=2 exp(-ikr)/r, |dH/dr| <= 2/r_min² + 2k/r_min.
+                // The added image source contributes <= 2 echo_limit/r_image_min.
+                // This bounds every pose in the stated box, not only sampled rows.
+                let displacement = radius + 2.0 * 0.0875 * (yaw_limit * 0.5).sin();
+                let minimum_range = 2.0 - 0.0875 - displacement;
+                let image_range =
+                    (1.0 + (3.0_f64.sqrt() + 2.0).powi(2)).sqrt() - 0.0875 - displacement;
+                let k = TAU * frequency / 343.0;
+                let error = std::f64::consts::SQRT_2
+                    * (displacement * (2.0 / minimum_range.powi(2) + 2.0 * k / minimum_range)
+                        + 2.0 * echo_limit / image_range);
+                let envelope = bound_cancellation(nominal, filter, [error; 2]).unwrap();
+                let passthrough = bound_cancellation(nominal, identity, [error; 2]).unwrap();
+                for cue in 0..2 {
+                    certified += usize::from(
+                        envelope.separation_db[cue][0] >= passthrough.separation_db[cue][1],
+                    );
+                }
+                for row in filter {
+                    let power: f64 = row.into_iter().map(|[re, im]| re * re + im * im).sum();
+                    assert!(
+                        power <= 10.0_f64.powf(f64::from(params.max_gain_db) / 10.0) * 1.000002
+                    );
+                }
+                let echoes: &[f64] = if echo_limit == 0.0 {
+                    &[0.0]
+                } else {
+                    &[0.0, echo_limit]
+                };
+                for x in [-radius, 0.0, radius] {
+                    for yaw in [-yaw_limit, 0.0, yaw_limit] {
+                        for &echo in echoes {
+                            let plant = acoustic_plant(frequency, x, yaw, echo);
+                            for ear in 0..2 {
+                                let row_error = (0..2)
+                                    .map(|speaker| {
+                                        let [a, b] = plant[ear][speaker];
+                                        let [c, d] = nominal[ear][speaker];
+                                        (a - c).powi(2) + (b - d).powi(2)
+                                    })
+                                    .sum::<f64>()
+                                    .sqrt();
+                                assert!(row_error <= error + 1e-12);
+                            }
+                            for cue in 0..2 {
+                                let wanted = response(plant, filter, cue, cue);
+                                let unwanted = response(plant, filter, 1 - cue, cue);
+                                for (actual, bounds) in [
+                                    (wanted, envelope.desired_amplitude[cue]),
+                                    (unwanted, envelope.undesired_amplitude[cue]),
+                                ] {
+                                    let slack = 1e-10 * (1.0 + bounds[1]);
+                                    assert!(
+                                        actual + slack >= bounds[0] && actual <= bounds[1] + slack
+                                    );
+                                }
+                                cases += 1;
+                            }
+                        }
+                    }
+                }
+                println!(
+                    "XTC_REGION_BOUND normalization={normalization} frequency={frequency} lateral_radius_m={radius} yaw_limit_rad={yaw_limit} echo_limit={echo_limit} row_error_bound={error:e} separation_lower_db={:?} separation_upper_db={:?}",
+                    envelope.separation_db.map(|b| b[0]),
+                    envelope.separation_db.map(|b| b[1])
+                );
+            }
+        }
+    }
+    println!(
+        "XTC_REGION_BOUND_SUMMARY sampled_cues={cases} conservatively_certified_columns={certified} scope=controlled_point_echo_field_not_measured_HRTF"
+    );
+    assert_eq!(cases, 432);
 }

@@ -239,3 +239,61 @@ real datasets remain open.
 FFT design grids must be powers of two of at least four samples, with a
 representable doubled transform size. This guarantees a nonzero quarter-frame
 source hop before allocation/planning; invalid serialized grids return an error.
+
+
+### Directional triangle interpolation
+
+Spatial datasets now solve the target ray in the three measurement directions
+before normalizing the resulting coordinates to unit sum. The previous
+orthogonal chord-plane projection changed the reconstructed direction for
+unequal full-sphere weights. Every negative coordinate is clamped before
+normalization, including small negatives previously left for the renderer to
+skip. Calculations use f64 so dense valid triangles are not discarded by an
+absolute chord-area threshold. Singular/opposite-facing simplexes retain the
+nearest supplied neighbor fallback; horizontal-ring bracketing is unchanged.
+
+Independent tests construct target rays from known unequal weights across
+60 rotated full-sphere cases (maximum error 1.64e-7), four dense 0.01–5 degree
+triangles and six uncovered directions. Full unit validation passes 133 tests
+with four retained ignores, including the explicitly executed measured-motion
+diagnostic and existing SOFA, fade, worker, support and
+EOF references. No callback work or prepared storage is added. Selecting three
+nearest measurements still does not guarantee an enclosing spherical mesh
+triangle. Measured full-sphere motion cues, head-motion latency and subjective
+transition quality remain open.
+
+
+### Measured KEMAR validation and software head-motion observation
+
+The unmodified 710-position MIT KEMAR normal-pinna dataset is retained with its
+SHA-256 and Gardner/Martin attribution in `tests/fixtures/kemar`. Its documented
+elevation coverage is -40 through +90 degrees at 44.1 kHz. It supplies measured
+mannequin responses; it does not supply lower-hemisphere or individualized-human
+coverage. Independent DFT checks at 43 measured nodes, including zenith, compare
+688 complex values with maximum error 5.82e-6 under the unchanged 2e-5 gate.
+
+A separate leave-one-out diagnostic removes each of those 43 directions before
+neighbor selection and compares both the frozen historical chord policy and the
+correct directional policy. No excluded HRIR is used for interpolation. Worst
+200–8k band ILD errors are 1.2643 dB and 1.5802 dB respectively; maximum wrapped
+interaural phase errors are 2.94763 rad and 2.94789 rad. These retained observations
+do not establish a measured cue-quality win for directional geometry alone.
+Enclosing-mesh selection, donor-phase/null/delay analysis and perceptual quality
+remain open; the independent ray-geometry/numerical gates are separate.
+
+The manually executed paced diagnostic uses 128-frame software callbacks and
+paired held-pose reference output with 710 measured responses, three yaw/pitch/roll
+targets, 1 channel/N1024 and 8 channels/N4096. It fences startup zero-pose generations
+and adoption before starting the motion clock. Six trials retain 768 callback
+durations, zero callback heap events and zero strict 128/44100-second callback
+misses. New-generation publication is observed around 6.3–6.5 ms /23.74 ms,
+adoption around 9 ms /44 ms and first numerical output change around 35 ms /139–140 ms
+for the two configurations. Numerical change means an absolute difference above
+1e-7 from held-pose output; it is not an audibility threshold. OS pacing lateness
+reaches 11.1 ms. The first unfenced startup-contaminated trial is retained separately
+and is not accepted as motion-publication timing.
+
+This is local software output observation with a reference processor, not an
+actual device motion-to-headphone measurement or a maximum-capacity guarantee.
+Continuous-motion listening quality, larger/other datasets and loaded native
+scheduling remain validation requirements.

@@ -1,0 +1,40 @@
+{
+  "source_library": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/libplugins_nih.dylib",
+  "library_sha256": "57e8b0577195ad03617f5fa33e02bcc45addd1ebf5808657307b4d12c408ce38",
+  "justfile_sha256": "4a4663b9d1b6dec56e9f4c7d97311372aebe81308a7c587e0a1277058d4bd186",
+  "commands": [
+    {
+      "recipe": "prod-clap",
+      "exit_code": 0,
+      "stdout": "Bundled 1 CLAP plugins\n",
+      "stderr": ""
+    },
+    {
+      "recipe": "install-clap",
+      "exit_code": 0,
+      "stdout": "Installed 1 CLAP plugins to /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/clap-packaging/isolated-install\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "rtk",
+        "proxy",
+        "clap-validator",
+        "validate",
+        "--json",
+        "--no-parallel",
+        "--test-filter",
+        "scan-rtld-now|descriptor-consistency|process-audio-out-of-place-basic",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/clap-packaging/dist/clap/sotf_upmixer.clap"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.04267441714182496,
+      "stdout": "{\n  \"plugin-library-tests\": {\n    \"/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/clap-packaging/dist/clap/sotf_upmixer.clap\": [\n      {\n        \"name\": \"preset-discovery-descriptor-consistency\",\n        \"description\": \"Ensures that all preset provider descriptors from a preset discovery factory match those stored in the providers created by the factory.\",\n        \"status\": {\n          \"code\": \"skipped\",\n          \"details\": \"The plugin does not implement the 'clap.preset-discovery-factory/draft-2' factory.\"\n        }\n      },\n      {\n        \"name\": \"scan-rtld-now\",\n        \"description\": \"Checks whether the plugin loads correctly when loaded using 'dlopen(..., RTLD_LOCAL | RTLD_NOW)'. Only run on Unix-like platforms.\",\n        \"status\": {\n          \"code\": \"success\",\n          \"details\": null\n        }\n      }\n    ]\n  },\n  \"plugin-tests\": {\n    \"org.spinorama.sotf.upmixer\": [\n      {\n        \"name\": \"descriptor-consistency\",\n        \"description\": \"The plugin descriptor returned from the plugin factory and the plugin descriptor stored on the 'clap_plugin object should be equivalent.\",\n        \"status\": {\n          \"code\": \"success\",\n          \"details\": null\n        }\n      },\n      {\n        \"name\": \"process-audio-out-of-place-basic\",\n        \"description\": \"Processes random audio through the plugin with its default parameter values and tests whether the output does not contain any non-finite or subnormal values. Uses out-of-place audio processing.\",\n        \"status\": {\n          \"code\": \"success\",\n          \"details\": null\n        }\n      }\n    ]\n  }\n}\n",
+      "stderr": ""
+    }
+  ],
+  "scope": "Bundle loading of the recorded library bytes; no live install, external DAW/PDC, native timing or other-platform execution claim.",
+  "install_redirect": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/clap-packaging/isolated-install",
+  "bundle": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/clap-packaging/dist/clap/sotf_upmixer.clap",
+  "install_migrates_flat_to_bundle": true
+}

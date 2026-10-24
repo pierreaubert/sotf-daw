@@ -133,3 +133,53 @@ change returns error/silence while retaining the prepared DSP latency; the host
 must deactivate/reactivate before the new latency is published. Automatic host
 reactivation is not implemented. Packaged native bus-layout restrictions remain
 unchanged. These are host integration checks, not an external DAW/device test.
+
+
+### Recorded center-source observations
+
+`tests/audit_recorded_center.rs` extends the existing coherent-source SL/C
+energy guard to three recorded speech speakers, violin and cymbal, in 5.1 and
+9.1.6 with HR disabled/enabled (20 cases). Identical L/R input is processed from
+a cold start in irregular ordinary callbacks. The complete-source surround/center
+energy ratio stays below the unchanged 5% limit. The old maximum was 4.8397%;
+first-reliable coherence initialization reduces it to 2.4502%. All output is
+finite. Source bytes and attribution remain in the existing speech-denoiser
+and de-esser recording manifests.
+
+The first 100 ms after declared latency is also reported separately, without an
+inferred audibility gate. Cold-onset steering is improved, but these observations
+do not establish onset audibility or speech intelligibility. These centered mono recordings do
+not establish separation in mixed stereo programme, downmix compatibility,
+listener localization, external DAW behavior or device deadlines.
+
+
+### Coherence initialization
+
+A band's first reliable covariance seeds all five median-history entries and
+its smoothed coherence. Synthetic zero prehistory no longer describes a new
+coherent source as diffuse while three median frames and the one-pole control
+warm up. Subsequent median filtering, one-pole coefficients and energy threshold
+are unchanged. Initialization/layout rebuild prepares one flag per band; reset
+clears flags and history without heap activity. Empty/unreliable initial frames
+do not complete bootstrap. No parameter, latency or channel-layout contract changes.
+
+The cold/silence/reset reference fails with zero coherence before this fix and
+passes after it. Existing AUD132 archive bytes, digests, comparison controllers
+and error limits are unchanged and pass. Recorded speech0 first-100-ms SL/C drops
+from about 14.73 to 0.1203; this is a numerical energy observation, not an audible
+leakage threshold or a guarantee for mixed programme.
+
+### macOS CLAP packaging
+
+The macOS packaging recipe now writes a `.clap` directory with
+`Contents/MacOS/<executable>` and `Contents/Info.plist`. A raw renamed dylib was
+rejected by the installed CLAP validator as an invalid bundle. Isolated install
+verification also covers replacement of that former flat artifact by a bundle.
+Linux and Windows keep their existing flat shared-library formats.
+
+The fresh Upmixer artifact passes 15 functional CLAP validator checks; five
+unsupported optional checks are skipped. Scan-time is excluded while other
+builds run. This validates native artifact loading, descriptor/audio/state and
+parameter behavior for the stated build, not external DAW restart/PDC,
+non-macOS runtime or device deadlines. No live user plugin folder is modified
+by the audit harness.

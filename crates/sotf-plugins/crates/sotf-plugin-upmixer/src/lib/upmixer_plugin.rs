@@ -212,6 +212,8 @@ pub(super) struct UpmixerSteering {
     pub(super) diffuseness_initialized: Vec<bool>,
     /// Ring buffer for median-filtered coherence (5-element per ERB band)
     pub(super) coherence_history: Vec<[f32; 5]>,
+    /// Whether this band has observed a reliable non-silent coherence value.
+    pub(super) coherence_initialized: Vec<bool>,
     /// Current write index in coherence_history ring buffer
     pub(super) coherence_history_idx: usize,
     // --- Intensity-vector DOA state (per ERB band) ---
@@ -851,6 +853,8 @@ impl UpmixerPlugin {
 
             coherence_history: Vec::new(),
 
+            coherence_initialized: Vec::new(),
+
             coherence_history_idx: 0,
 
             doa_angle: Vec::new(),
@@ -1355,6 +1359,7 @@ impl UpmixerPlugin {
         self.steering.smoothed_diffuseness = vec![0.0; num_bands];
         self.steering.diffuseness_initialized = vec![false; num_bands];
         self.steering.coherence_history = vec![[0.0; 5]; num_bands];
+        self.steering.coherence_initialized = vec![false; num_bands];
         self.steering.doa_angle = vec![0.0; num_bands];
         self.steering.coherence_history_idx = 0;
         self.decorrelation.prev_decorrelation_strength = -1.0;
@@ -2202,6 +2207,7 @@ impl Plugin for UpmixerPlugin {
         self.steering.smoothed_diffuseness = vec![0.0; num_bands];
         self.steering.diffuseness_initialized = vec![false; num_bands];
         self.steering.coherence_history = vec![[0.0; 5]; num_bands];
+        self.steering.coherence_initialized = vec![false; num_bands];
         self.steering.coherence_history_idx = 0;
 
         // Initialize spectral flux buffers
@@ -2440,6 +2446,7 @@ impl Plugin for UpmixerPlugin {
         self.hr_state.prev_hr_scale = 0.0;
         self.steering.coherence_history_idx = 0;
         self.steering.coherence_history.fill([0.0; 5]);
+        self.steering.coherence_initialized.fill(false);
 
         // Force recomputation of blended decorrelation filters
         self.decorrelation.prev_decorrelation_strength = -1.0;

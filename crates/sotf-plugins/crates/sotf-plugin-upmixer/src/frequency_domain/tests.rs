@@ -239,3 +239,43 @@ fn diffuseness_smoothing_limits_block_steps() {
         "narrow-band analysis should not smooth faster than ERB mode"
     );
 }
+
+#[test]
+fn first_reliable_coherence_is_not_diluted_by_synthetic_zero_history() {
+    use crate::{UpmixerPlugin, UpmixerPluginParams};
+    use sotf_host::Plugin;
+    let mut params = UpmixerPluginParams::default();
+    params.core.fft_size = 2048;
+    params.core.enable_hr_direct = false;
+    let mut plugin = UpmixerPlugin::from_params(params);
+    plugin.initialize(48_000.0).unwrap();
+    let silence = vec![0.0_f32; 4096];
+    let source: Vec<_> = (0..2048)
+        .flat_map(|i| {
+            let x = 0.1 * (std::f32::consts::TAU * 997.0 * i as f32 / 48_000.0).sin()
+                + 0.05 * (std::f32::consts::TAU * 3001.0 * i as f32 / 48_000.0).cos();
+            [x, x]
+        })
+        .collect();
+    let mut output = vec![0.0; 2048 * plugin.output_channels()];
+    for round in 0..2 {
+        for _ in 0..4 {
+            plugin.process_fft_block(&silence, &mut output);
+        }
+        plugin.process_fft_block(&source, &mut output);
+        let mut reliable = 0;
+        for band in 0..plugin.steering.smoothed_coherence.len() {
+            let trace = plugin.spectral.pca_cov_xx[band] + plugin.spectral.pca_cov_yy[band];
+            if trace > 1e-9 {
+                reliable += 1;
+                assert!(
+                    (plugin.steering.smoothed_coherence[band] - 1.0).abs() < 2e-6,
+                    "cold coherence round={round} band={band}: {}",
+                    plugin.steering.smoothed_coherence[band]
+                );
+            }
+        }
+        assert!(reliable > 1);
+        plugin.reset();
+    }
+}

@@ -1,0 +1,17 @@
+{
+  "source": "https://sofacoustics.org/data/database/mit/mit_kemar_normal_pinna.sofa",
+  "exit_code": 0,
+  "stderr": "",
+  "bytes": 1171764,
+  "sha256": "e7035994f5fd754058424c061380ee92b1d5ed58fccef2887a4266916616acdf",
+  "authors": [
+    "Bill Gardner",
+    "Keith Martin"
+  ],
+  "copyright": "1994 MIT Media Laboratory",
+  "attribution_terms_source": "https://sound.media.mit.edu/resources/KEMAR.html",
+  "terms": "Custom attribution terms: unrestricted use provided the authors are cited.",
+  "transformation": "None; unmodified downloaded SOFA bytes.",
+  "documented_coverage": "710 measured positions, elevations -40 degrees through +90 degrees; 44.1 kHz original measurements.",
+  "scope": "Measured KEMAR mannequin, not an individualized human HRTF or listener acceptance dataset."
+}

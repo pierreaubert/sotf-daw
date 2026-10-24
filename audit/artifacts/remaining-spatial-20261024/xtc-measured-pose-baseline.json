@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--lib",
+    "measured_sofa_lookup_tracks",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nMEASURED_XTC_POSE yaw=0 head_x=0 head_z=0 maximum_dft_error=1.6070801994489998e-7\nMEASURED_XTC_POSE yaw=45 head_x=0 head_z=0 maximum_dft_error=4.093282313093863e0\nMEASURED_XTC_POSE yaw=-45 head_x=0 head_z=0 maximum_dft_error=4.093282313093863e0\nMEASURED_XTC_POSE yaw=179 head_x=0 head_z=0 maximum_dft_error=3.1715580187666954e0\nMEASURED_XTC_POSE yaw=-179 head_x=0 head_z=0 maximum_dft_error=3.1715580187666954e0\nMEASURED_XTC_POSE yaw=0 head_x=0.2 head_z=0 maximum_dft_error=1.2693280805346476e0\nMEASURED_XTC_POSE yaw=0 head_x=-0.2 head_z=0 maximum_dft_error=1.2693280805346476e0\nMEASURED_XTC_POSE yaw=0 head_x=0 head_z=0.3 maximum_dft_error=1.1420374047978148e0\nMEASURED_XTC_POSE yaw=30 head_x=0.1 head_z=0.2 maximum_dft_error=4.8510603258359035e0\nMEASURED_XTC_POSE_SUMMARY cases=9 failures=8 maximum_error=4.8510603258359035e0\ntest measured_kemar_tests::measured_sofa_lookup_tracks_yaw_and_head_translation ... FAILED\n\nfailures:\n\nfailures:\n    measured_kemar_tests::measured_sofa_lookup_tracks_yaw_and_head_translation\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 200 filtered out; finished in 0.12s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 1m 51s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-88b37aa3c1ef6039)\n\nthread 'measured_kemar_tests::measured_sofa_lookup_tracks_yaw_and_head_translation' (356647729) panicked at crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/measured_kemar_tests.rs:94:5:\nassertion `left == right` failed: measured SOFA lookup ignores or misroutes listener pose\n  left: 8\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-xtc --lib`\n"
+}

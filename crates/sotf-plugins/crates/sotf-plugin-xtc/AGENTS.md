@@ -148,3 +148,14 @@ cargo bench -p sotf-plugin-xtc --bench xtc-validation-benchmark
   Historical six-frequency matrices disabled normalization; they do not validate
   normalization-on behavior. Preserve that subset and retain explicit on/off
   low-frequency renders, raw speaker matrices and independently recomputed metrics.
+
+- Measured SOFA lookup must use fixed world speakers transformed by listener
+  X/Z translation and positive-right yaw, then positive-left SOFA azimuth.
+  Selecting the old fixed +/-speaker angle silently freezes HRTF head tracking.
+  Keep measured nine-pose/seam/translation references and every existing delay,
+  rate, source-column and ear-ownership test. Single-radius measured data does
+  not establish radial or human calibration.
+- `bound_cancellation` consumes explicit row-L2 transfer-error radii; never infer
+  them from singular values or a listening radius. Preserve mute ambiguity and
+  signed/unbounded intervals. Controlled point-field Lipschitz coverage is
+  separate from measured transfer-error provenance and native/listener evidence.

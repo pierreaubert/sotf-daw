@@ -64,3 +64,7 @@ mod reflection_head_tests;
 
 #[path = "lib/reflection_tracking.rs"]
 mod reflection_tracking;
+
+#[cfg(test)]
+#[path = "lib/measured_motion_tests.rs"]
+mod measured_motion_tests;

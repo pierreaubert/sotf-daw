@@ -9,8 +9,9 @@ use sotf_host::sofa::{SourcePosition, load_sofa};
 /// Load HRTF data from a SOFA file and compute frequency-domain transfer functions
 /// for the XTC plant matrix at the configured speaker angles.
 ///
-/// For each speaker position (left at +angle, right at -angle), we extract the
-/// HRTF for both ears, giving us a full 2x2 plant matrix C(f).
+/// Fixed world speaker positions are transformed into the translated/yawed head
+/// frame before selecting each measured response. SOFA azimuth is positive left;
+/// XTC yaw is positive right. Both ears retain ownership within each source column.
 pub(super) fn load_hrtf_for_xtc(
     hrtf_path: &str,
     params: &XtcPluginParams,
@@ -43,10 +44,33 @@ pub(super) fn load_hrtf_for_xtc(
         ));
     }
 
-    // Speaker positions: left speaker at +angle, right speaker at -angle
-    // (azimuth in SOFA convention, elevation 0, distance = speaker distance)
-    let left_speaker = SourcePosition::new(params.speaker_angle_deg, 0.0, params.distance_m);
-    let right_speaker = SourcePosition::new(-params.speaker_angle_deg, 0.0, params.distance_m);
+    // Match the analytical geometry's fixed world speakers and right/forward
+    // listener frame. Loading the same +/- angle at every pose silently froze
+    // measured-HRTF head tracking even while fresh filter epochs were prepared.
+    let distance = f64::from(params.distance_m);
+    let angle = f64::from(params.speaker_angle_deg).to_radians();
+    let (sin_yaw, cos_yaw) = f64::from(params.head_yaw_deg).to_radians().sin_cos();
+    let relative = [-1.0, 1.0].map(|side| {
+        [
+            side * distance * angle.sin() - f64::from(params.head_offset_x),
+            distance * angle.cos() - f64::from(params.head_offset_z),
+        ]
+    });
+    if relative
+        .iter()
+        .any(|p| !p[0].hypot(p[1]).is_finite() || p[0].hypot(p[1]) == 0.0)
+    {
+        return Err("Measured HRTF speaker direction is undefined at the listener position".into());
+    }
+    let [left_speaker, right_speaker] = relative.map(|[x, forward]| {
+        let head_right = x * cos_yaw - forward * sin_yaw;
+        let head_forward = x * sin_yaw + forward * cos_yaw;
+        SourcePosition::new(
+            (-head_right).atan2(head_forward).to_degrees() as f32,
+            0.0,
+            x.hypot(forward) as f32,
+        )
+    });
 
     // Get HRTF for left speaker position (contains left ear + right ear responses)
     let hrtf_left_speaker = sofa

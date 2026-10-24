@@ -1,0 +1,24 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--lib",
+    "first_reliable_coherence_is_not_diluted",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest frequency_domain::tests::first_reliable_coherence_is_not_diluted_by_synthetic_zero_history ... FAILED\n\nfailures:\n\nfailures:\n    frequency_domain::tests::first_reliable_coherence_is_not_diluted_by_synthetic_zero_history\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 152 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 12.52s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_upmixer-18693388ed7ce136)\n\nthread 'frequency_domain::tests::first_reliable_coherence_is_not_diluted_by_synthetic_zero_history' (356421427) panicked at crates/sotf-plugins/crates/sotf-plugin-upmixer/src/frequency_domain/tests.rs:268:17:\ncold coherence round=0 band=0: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-upmixer --lib`\n"
+}

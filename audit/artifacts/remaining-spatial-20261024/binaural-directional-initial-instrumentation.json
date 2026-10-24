@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--lib",
+    "directional_weight_tests",
+    "--offline",
+    "--locked",
+    "--release",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling math-rir v0.5.13 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-rir)\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/realtime_tests.rs:68:29\n    |\n 68 |         unsafe { sotf_host::CountingAlloc.alloc(layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nerror[E0425]: cannot find value `CountingAlloc` in crate `sotf_host`\n   --> crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/realtime_tests.rs:79:29\n    |\n 79 |         unsafe { sotf_host::CountingAlloc.dealloc(ptr, layout) }\n    |                             ^^^^^^^^^^^^^ not found in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:170:23\n    |\n168 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n169 | pub use test_utils::{\n170 |     BufferComparison, CountingAlloc, PerformanceProfiler, SignalGen, assert_no_allocs,\n    |                       ^^^^^^^^^^^^^\n\nFor more information about this error, try `rustc --explain E0425`.\nerror: could not compile `sotf-plugin-binaural` (lib test) due to 2 previous errors\n"
+}

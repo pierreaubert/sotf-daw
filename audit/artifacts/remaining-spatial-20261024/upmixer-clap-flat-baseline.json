@@ -1,0 +1,19 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "clap-validator",
+    "validate",
+    "--json",
+    "--no-parallel",
+    "--test-filter",
+    "scan-rtld-now",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/sotf_upmixer_flat.clap"
+  ],
+  "exit_code": 1,
+  "elapsed_seconds": 0.014795064926147461,
+  "library_sha256": "8790f927a4894724e8aadb920b8760e74579ce5cf5744a68acd827f48221c930",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "stdout": "",
+  "stderr": "11:12:58 [ERROR] Could not run the validator\n\nCaused by:\n    0: Could not load '/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-spatial/sotf_upmixer_flat.clap'\n    1: Could not open bundle\n"
+}

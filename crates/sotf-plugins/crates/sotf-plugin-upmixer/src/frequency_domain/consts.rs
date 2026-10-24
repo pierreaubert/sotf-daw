@@ -179,12 +179,22 @@ impl UpmixerPlugin {
             self.steering.coherence_instant[band_idx] = coherence;
 
             if band_idx < self.steering.coherence_history.len() {
-                let idx = self.steering.coherence_history_idx % 5;
-                self.steering.coherence_history[band_idx][idx] = coherence;
-                let median = median5(self.steering.coherence_history[band_idx]);
-                let prev = self.steering.smoothed_coherence[band_idx];
-                self.steering.smoothed_coherence[band_idx] =
-                    prev + coherence_smoothing_alpha * (median - prev);
+                if !self.steering.coherence_initialized[band_idx] && trace > 1e-9 {
+                    // Synthetic zero prehistory is not an observation of a diffuse
+                    // source. Seed from the first reliable covariance so a cold
+                    // coherent onset is not sent to surrounds while the median
+                    // and one-pole control warm up. Later smoothing is unchanged.
+                    self.steering.coherence_history[band_idx].fill(coherence);
+                    self.steering.smoothed_coherence[band_idx] = coherence;
+                    self.steering.coherence_initialized[band_idx] = true;
+                } else {
+                    let idx = self.steering.coherence_history_idx % 5;
+                    self.steering.coherence_history[band_idx][idx] = coherence;
+                    let median = median5(self.steering.coherence_history[band_idx]);
+                    let prev = self.steering.smoothed_coherence[band_idx];
+                    self.steering.smoothed_coherence[band_idx] =
+                        prev + coherence_smoothing_alpha * (median - prev);
+                }
                 coherence = self.steering.smoothed_coherence[band_idx];
             }
 
