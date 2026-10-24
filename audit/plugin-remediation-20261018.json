@@ -2662,6 +2662,21 @@
             "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
             "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
           ]
+        },
+        {
+          "requirement": "Quantify the fixed-support response/RMS tradeoff independently and compare existing longer FIR choices.",
+          "status": "verified_numerical_feasibility_analysis",
+          "result": "Independent scalar cosine verification agrees with finite-grid weighted-L2 dual evidence: at96k/1024centered support, the single natural500Hz ±0.05dB constraint has RMS lowerbound0.002925658206 versus baseline0.002707278157,8.0664%higher. This conflicts with the pilot RMS guard, not a proof the originalfourprobesalone areinfeasible; floating numerical evidence,notintervalproof. Bothsignedintervalschecked,normalresidual<1.48e-13. Independent existinglengthcomparison2048/4096passesqualifiedlinearprobes with longerFIRdelay;minimumphase/runtime/nativeunvalidated. No production/default/preset changes; userpreference about opt-inaccuracy mode versus explicitlengths pending.",
+          "evidence": [
+            "audit/artifacts/remaining-fir-weighted-feasibility-20261024/README.md",
+            "audit/artifacts/remaining-fir-weighted-feasibility-20261024/result.json",
+            "audit/artifacts/remaining-fir-weighted-feasibility-20261024/verify-certificate.py",
+            "audit/artifacts/remaining-fir-weighted-feasibility-20261024/verification.json",
+            "audit/artifacts/remaining-fir-weighted-feasibility-20261024/manifest.sha256.json",
+            "audit/artifacts/remaining-fir-anchors-20261024/compare_lengths.py",
+            "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.json",
+            "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md"
+          ]
         }
       ],
       "evidence": [
@@ -2708,7 +2723,15 @@
         "audit/artifacts/remaining-convolution-eq-span-20261024/restored-validation.json",
         "audit/artifacts/remaining-convolution-eq-span-20261024/restoration-verification.json",
         "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
-        "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
+        "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json",
+        "audit/artifacts/remaining-fir-weighted-feasibility-20261024/README.md",
+        "audit/artifacts/remaining-fir-weighted-feasibility-20261024/result.json",
+        "audit/artifacts/remaining-fir-weighted-feasibility-20261024/verify-certificate.py",
+        "audit/artifacts/remaining-fir-weighted-feasibility-20261024/verification.json",
+        "audit/artifacts/remaining-fir-weighted-feasibility-20261024/manifest.sha256.json",
+        "audit/artifacts/remaining-fir-anchors-20261024/compare_lengths.py",
+        "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.json",
+        "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md"
       ]
     },
     {

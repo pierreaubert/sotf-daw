@@ -1,0 +1,46 @@
+{
+  "method": "Independent scalar cosine synthesis and normal-gradient sums; no FFT or CG",
+  "proof_status": "Floating numerical certificate with residual and roundoff safety allowances, not interval arithmetic",
+  "rows": [
+    {
+      "rate": 48000,
+      "witnesses": [
+        {
+          "direct_mse": 4.428189814982285e-08,
+          "scalar_normal_residual_norm": 8.916403211243589e-14,
+          "scalar_constraint_residual": 0.0,
+          "scalar_dual_lower_mse": 4.428178446298009e-08
+        },
+        {
+          "direct_mse": 0.00900254889323166,
+          "scalar_normal_residual_norm": 8.880629921747791e-14,
+          "scalar_constraint_residual": 0.0,
+          "scalar_dual_lower_mse": 0.009002548893115928
+        }
+      ],
+      "scalar_constrained_rms_lower_bound": 0.00021043237503525947,
+      "baseline_rms": 0.00023565951143032175,
+      "rms_nonregression_impossible_for_single_constraint": false
+    },
+    {
+      "rate": 96000,
+      "witnesses": [
+        {
+          "direct_mse": 8.559476052514472e-06,
+          "scalar_normal_residual_norm": 1.4686461965237055e-13,
+          "scalar_constraint_residual": -4.440892098500626e-16,
+          "scalar_dual_lower_mse": 8.559475938805772e-06
+        },
+        {
+          "direct_mse": 0.009673510893212932,
+          "scalar_normal_residual_norm": 1.4718890217991788e-13,
+          "scalar_constraint_residual": 4.440892098500626e-16,
+          "scalar_dual_lower_mse": 0.009673510893097028
+        }
+      ],
+      "scalar_constrained_rms_lower_bound": 0.002925658206080432,
+      "baseline_rms": 0.0027072781574869293,
+      "rms_nonregression_impossible_for_single_constraint": true
+    }
+  ]
+}

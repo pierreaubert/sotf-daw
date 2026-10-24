@@ -1,0 +1,52 @@
+{
+  "rate": 96000,
+  "scope": "Independent linear-phase offline reconstruction only; minimum phase, runtime and native host untested",
+  "production_changed": false,
+  "rows": [
+    {
+      "max_relative_error": 0.02868659060213541,
+      "rms_relative_error": 0.0027072781574869293,
+      "max_imaginary": 2.763170043522476e-14,
+      "minimum_signed_response": 0.5097864249284378,
+      "probe_errors_db": {
+        "100.0": 0.059164521592264326,
+        "500.0": -0.2462967904817963,
+        "1000.0": -0.12756986672499912,
+        "4000.0": -0.025818161109524264
+      },
+      "taps": 1024,
+      "fir_group_delay_samples": 512,
+      "qualified_probe_pass": false
+    },
+    {
+      "max_relative_error": 0.0022710158453178586,
+      "rms_relative_error": 0.0001663204933705717,
+      "max_imaginary": 3.3592767646360364e-14,
+      "minimum_signed_response": 0.5119355827249205,
+      "probe_errors_db": {
+        "100.0": 0.009098266531283504,
+        "500.0": -0.017204291876841887,
+        "1000.0": 0.004693943519319457,
+        "4000.0": 0.0004151028636367447
+      },
+      "taps": 2048,
+      "fir_group_delay_samples": 1024,
+      "qualified_probe_pass": true
+    },
+    {
+      "max_relative_error": 1.4951165750010098e-05,
+      "rms_relative_error": 9.838674169983518e-07,
+      "max_imaginary": 1.4856235121626536e-13,
+      "minimum_signed_response": 0.5119127114867247,
+      "probe_errors_db": {
+        "100.0": -4.0335470146494234e-07,
+        "500.0": -0.00010438298933884622,
+        "1000.0": -4.635024929422678e-05,
+        "4000.0": -1.085909342878102e-05
+      },
+      "taps": 4096,
+      "fir_group_delay_samples": 2048,
+      "qualified_probe_pass": true
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "prototype_source": "audit/artifacts/remaining-fir-anchors-20261024/prototype.py",
+  "prototype_sha256": "543cbff22106c2c593284b66345e9415d3236b94e2c74caebf61574ce0fdce82",
+  "production_modified": false,
+  "taps": 1024,
+  "grid_points": 4097
+}

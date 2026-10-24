@@ -1,0 +1,12 @@
+{
+  "README.md": "3bd6db58da971f8c5c996e719150d5be819d747328c521d829f44af978c68855",
+  "analysis-plan.txt": "d22e81e53812225c74a646d628bf21b44029a9cc1ff344e1922ba0b8115cabc0",
+  "feasibility.py": "a62a6c624d98cc34e4f2d2a17bbf21b1cbc0473ff95351b85cff76b809aea95b",
+  "frozen-prototype.py": "543cbff22106c2c593284b66345e9415d3236b94e2c74caebf61574ce0fdce82",
+  "issue-plan-publication.json": "cfa8408cbe3ead3f54d8aeaf213cb64cbeed5e58adb1652ca31d7aa21537dfb5",
+  "issue-results-publication.json": "aade718643cad7689f08eda1427e9c9da75b3e45b19028ac527c38bb21b6cca4",
+  "result.json": "91aa6b5f9b0c0997a8b452e276bc4dec8116e214c06864ba94513d08a0d9da92",
+  "source.json": "0b5e51652ee5dbdb7de34d1ba98241a9fcb762120cb2802b389ce6232b02fd52",
+  "verification.json": "e3eeb0a1c36b0a01c230ae10409d0413a3fd491a7aa7ed60416c868caf2d4ebc",
+  "verify-certificate.py": "d89463eb8d9eacbed4f770939efb895a91a364c13339d839e6de5342c5f912ba"
+}
