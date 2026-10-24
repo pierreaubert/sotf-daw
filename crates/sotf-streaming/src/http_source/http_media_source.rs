@@ -5,9 +5,14 @@ use super::misc::content_type_to_hint;
 use super::misc::is_retriable;
 use super::misc::url_extension_hint;
 use super::types::StreamMetadata;
+use crate::http_range::parse_content_range;
 use crate::icy::IcyMetadata;
 use reqwest::blocking::Client;
-use reqwest::header::{ACCEPT_RANGES, CONTENT_LENGTH, CONTENT_TYPE, HeaderMap, HeaderValue, RANGE};
+use reqwest::header::{
+    ACCEPT_RANGES, CONTENT_LENGTH, CONTENT_TYPE, ETAG, HeaderMap, HeaderValue, IF_RANGE,
+    LAST_MODIFIED, RANGE,
+};
+use reqwest::StatusCode;
 use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -30,6 +35,8 @@ pub struct HttpMediaSource {
     pub(super) reader: Box<dyn Read + Send + Sync>,
     /// Total content length (None for live/infinite streams).
     pub(super) content_length: Option<u64>,
+    pub(super) entity_tag: Option<String>,
+    pub(super) last_modified: Option<String>,
     /// Current read position in the stream.
     pub(super) position: u64,
     /// Whether the server supports Range requests.
@@ -82,6 +89,8 @@ impl HttpMediaSource {
             url: url.to_string(),
             reader: Box::new(io::empty()),
             content_length: None,
+            entity_tag: None,
+            last_modified: None,
             position: 0,
             seekable: false,
             icy_metaint: 0,
@@ -112,37 +121,103 @@ impl HttpMediaSource {
 
         if offset > 0 {
             request = request.header(RANGE, format!("bytes={}-", offset));
+            if let Some(validator) = self
+                .entity_tag
+                .as_ref()
+                .filter(|tag| !tag.starts_with("W/"))
+                .or(self.last_modified.as_ref())
+            {
+                request = request.header(IF_RANGE, validator.as_str());
+            }
         }
 
         let response = request
             .send()
             .map_err(|e| io::Error::new(io::ErrorKind::ConnectionRefused, e.to_string()))?;
 
-        if !response.status().is_success() && response.status().as_u16() != 206 {
+        if !response.status().is_success() {
             return Err(io::Error::other(format!(
-                "HTTP {} for {}",
-                response.status(),
-                self.url
+                "HTTP {} for media source",
+                response.status()
             )));
         }
 
         let headers = response.headers();
+        let content_range = if response.status() == StatusCode::PARTIAL_CONTENT {
+            Some(parse_content_range(headers)?)
+        } else {
+            None
+        };
+        if offset > 0 {
+            let range = content_range.as_ref().ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "HTTP server ignored the requested byte range",
+                )
+            })?;
+            if range.start != offset
+                || self
+                    .content_length
+                    .zip(range.total)
+                    .is_some_and(|(known, actual)| known != actual)
+            {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "HTTP response byte range does not match the source",
+                ));
+            }
+            let tag = headers.get(ETAG).and_then(|value| value.to_str().ok());
+            let modified = headers
+                .get(LAST_MODIFIED)
+                .and_then(|value| value.to_str().ok());
+            if self
+                .entity_tag
+                .as_deref()
+                .zip(tag)
+                .is_some_and(|(previous, current)| previous != current)
+                || self
+                    .last_modified
+                    .as_deref()
+                    .zip(modified)
+                    .is_some_and(|(previous, current)| previous != current)
+            {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "HTTP media resource changed during playback",
+                ));
+            }
+        } else if content_range.as_ref().is_some_and(|range| range.start != 0) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "HTTP response starts at an unexpected byte offset",
+            ));
+        }
 
         // Detect seek support from Accept-Ranges or 206 response
         if offset == 0 {
             self.seekable = headers
                 .get(ACCEPT_RANGES)
                 .and_then(|v| v.to_str().ok())
-                .is_some_and(|v| v != "none")
-                || response.status().as_u16() == 206;
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("bytes"))
+                || response.status() == StatusCode::PARTIAL_CONTENT;
+            self.entity_tag = headers
+                .get(ETAG)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned);
+            self.last_modified = headers
+                .get(LAST_MODIFIED)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_owned);
         }
 
         // Get content length
         if offset == 0 {
-            self.content_length = headers
-                .get(CONTENT_LENGTH)
-                .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.parse().ok());
+            self.content_length = content_range.as_ref().and_then(|range| range.total).or_else(|| {
+                headers
+                    .get(CONTENT_LENGTH)
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|v| v.parse().ok())
+            });
         }
 
         // Get content type
@@ -174,8 +249,7 @@ impl HttpMediaSource {
         self.reader = Box::new(response);
 
         log::info!(
-            "[HttpMediaSource] Connected to {} (seekable={}, length={:?}, icy_metaint={})",
-            self.url,
+            "[HttpMediaSource] Connected (seekable={}, length={:?}, icy_metaint={})",
             self.seekable,
             self.content_length,
             self.icy_metaint,

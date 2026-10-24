@@ -320,7 +320,7 @@ mod tests {
             Some("worker dead (decoder): panicked")
         );
 
-        // Unpoisoned controls: drained clears, warning records.
+        // Unpoisoned controls: drain preserves the last outcome; warning records.
         let live = Arc::new(ArcSwap::from_pointee(AudioEngineState {
             playback_state: PlaybackState::Playing,
             playback_epoch: 7,
@@ -337,7 +337,7 @@ mod tests {
             },
             &live,
         );
-        assert_eq!(live.load().last_error, None);
+        assert_eq!(live.load().last_error.as_deref(), Some("stale"));
         assert_eq!(live.load().playback_peak_max_linear, 0.7);
         handle_thread_event(ThreadEvent::ProcessingWarning("w".to_string()), &live);
         assert_eq!(live.load().last_error.as_deref(), Some("w"));

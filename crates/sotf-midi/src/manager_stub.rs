@@ -3,6 +3,7 @@
 use crate::config::MidiConfig;
 use crate::device::{MidiDeviceChange, MidiDeviceInfo, MidiDeviceSnapshot};
 use crate::error::Result;
+use crate::input_event::TimedMidiMessage;
 use crate::message::MidiMessage;
 use std::sync::Arc;
 
@@ -50,9 +51,23 @@ impl MidiManager {
         Ok(())
     }
 
+    pub fn connect_input_timed<F>(&mut self, _port_index: usize, _callback: F) -> Result<()>
+    where
+        F: Fn(TimedMidiMessage) + Send + Sync + 'static,
+    {
+        Ok(())
+    }
+
     pub fn connect_input_by_name<F>(&mut self, _name: &str, _callback: F) -> Result<()>
     where
         F: Fn(MidiMessage) + Send + Sync + 'static,
+    {
+        Ok(())
+    }
+
+    pub fn connect_input_by_name_timed<F>(&mut self, _name: &str, _callback: F) -> Result<()>
+    where
+        F: Fn(TimedMidiMessage) + Send + Sync + 'static,
     {
         Ok(())
     }

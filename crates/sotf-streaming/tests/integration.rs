@@ -277,7 +277,7 @@ fn http_media_source_seeks_with_byte_range() {
             (
                 "206 Partial Content".to_string(),
                 "audio/mpeg".to_string(),
-                vec![],
+                vec![("Content-Range".to_string(), "bytes 4-9/10".to_string())],
                 full_clone[4..].to_vec(),
             )
         } else {
@@ -302,6 +302,81 @@ fn http_media_source_seeks_with_byte_range() {
     let mut buf = [0u8; 6];
     source.read_exact(&mut buf).expect("read after seek");
     assert_eq!(&buf, b"456789");
+}
+
+#[test]
+fn http_media_source_rejects_ignored_range_request() {
+    let server = spawn_keep_alive_server(|request| {
+        let is_range = request.to_lowercase().contains("range: bytes=4-");
+        (
+            "200 OK".to_string(),
+            "audio/mpeg".to_string(),
+            if is_range {
+                vec![]
+            } else {
+                vec![("Accept-Ranges".to_string(), "bytes".to_string())]
+            },
+            b"0123456789".to_vec(),
+        )
+    });
+    let url = format!("http://{}/song.mp3", server.addr);
+    let (mut source, _rx) = HttpMediaSource::open(&url).unwrap();
+    assert!(source.is_seekable());
+    assert!(source.seek(std::io::SeekFrom::Start(4)).is_err());
+}
+
+#[test]
+fn http_media_source_rejects_wrong_content_range_start() {
+    let server = spawn_keep_alive_server(|request| {
+        if request.to_lowercase().contains("range: bytes=4-") {
+            (
+                "206 Partial Content".to_string(),
+                "audio/mpeg".to_string(),
+                vec![("Content-Range".to_string(), "bytes 3-9/10".to_string())],
+                b"3456789".to_vec(),
+            )
+        } else {
+            (
+                "200 OK".to_string(),
+                "audio/mpeg".to_string(),
+                vec![("Accept-Ranges".to_string(), "bytes".to_string())],
+                b"0123456789".to_vec(),
+            )
+        }
+    });
+    let url = format!("http://{}/song.mp3", server.addr);
+    let (mut source, _rx) = HttpMediaSource::open(&url).unwrap();
+    assert!(source.seek(std::io::SeekFrom::Start(4)).is_err());
+}
+
+#[test]
+fn http_media_source_rejects_changed_entity_on_range_response() {
+    let server = spawn_keep_alive_server(|request| {
+        if request.to_lowercase().contains("range: bytes=4-") {
+            (
+                "206 Partial Content".to_string(),
+                "audio/mpeg".to_string(),
+                vec![
+                    ("Content-Range".to_string(), "bytes 4-9/10".to_string()),
+                    ("ETag".to_string(), "\"new\"".to_string()),
+                ],
+                b"456789".to_vec(),
+            )
+        } else {
+            (
+                "200 OK".to_string(),
+                "audio/mpeg".to_string(),
+                vec![
+                    ("Accept-Ranges".to_string(), "bytes".to_string()),
+                    ("ETag".to_string(), "\"old\"".to_string()),
+                ],
+                b"0123456789".to_vec(),
+            )
+        }
+    });
+    let url = format!("http://{}/song.mp3", server.addr);
+    let (mut source, _rx) = HttpMediaSource::open(&url).unwrap();
+    assert!(source.seek(std::io::SeekFrom::Start(4)).is_err());
 }
 
 #[test]

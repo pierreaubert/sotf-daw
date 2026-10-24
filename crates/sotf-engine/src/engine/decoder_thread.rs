@@ -2,9 +2,9 @@ use super::worker_death::{WorkerExit, WorkerExitStatus, record_worker_exit};
 use super::{DecoderAsyncError, DecoderCommand, DecoderMessage, DecoderResponse, ThreadEvent};
 use crate::DsdOutputMode;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
+use std::sync::{Arc, Mutex};
 
 mod consts;
 mod decoder_state;
@@ -24,6 +24,7 @@ pub struct DecoderThread {
     command_tx: Sender<DecoderCommand>,
     response_inbox: Mutex<DecoderResponseInbox>,
     next_request_id: AtomicU64,
+    cancelled_attempt_through: Arc<AtomicU64>,
     thread_handle: Option<std::thread::JoinHandle<()>>,
     async_error_rx: Receiver<DecoderAsyncError>,
     exit_status: WorkerExitStatus,
@@ -56,6 +57,8 @@ impl DecoderThread {
         let (async_error_tx, async_error_rx) = std::sync::mpsc::channel();
         let exit_status = WorkerExitStatus::new();
         let worker_exit_status = exit_status.clone();
+        let cancelled_attempt_through = Arc::new(AtomicU64::new(0));
+        let worker_cancelled_attempt_through = Arc::clone(&cancelled_attempt_through);
 
         let thread_handle = std::thread::Builder::new()
             .name("decoder".to_string())
@@ -72,6 +75,7 @@ impl DecoderThread {
                         recycle_rx,
                         dsd_output,
                         async_error_tx,
+                        worker_cancelled_attempt_through,
                     )
                 }));
                 match &result {
@@ -100,6 +104,7 @@ impl DecoderThread {
                 abandoned: HashSet::new(),
             }),
             next_request_id: AtomicU64::new(1),
+            cancelled_attempt_through,
             thread_handle: Some(thread_handle),
             async_error_rx,
             exit_status,
@@ -120,7 +125,9 @@ impl DecoderThread {
     pub fn send_command(&self, command: DecoderCommand) -> Result<u64, String> {
         let expects_response = !matches!(
             command,
-            DecoderCommand::StartSilentSource(_) | DecoderCommand::Shutdown
+            DecoderCommand::StartSilentSource(_)
+                | DecoderCommand::StartCaptureSource(..)
+                | DecoderCommand::Shutdown
         );
         let request_id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         let mut inbox = self
@@ -165,6 +172,13 @@ impl DecoderThread {
                 inbox.abandoned.insert(request_id);
             }
         }
+    }
+
+    /// Prevent a timed-out open from becoming an active decoder after its
+    /// manager transaction has already failed.
+    pub(in crate::engine) fn cancel_decode_attempt(&self, attempt: u64) {
+        self.cancelled_attempt_through
+            .fetch_max(attempt, Ordering::Release);
     }
 
     /// Whether the worker has stopped before the manager requested shutdown.

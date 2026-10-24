@@ -23,6 +23,7 @@ pub(super) fn run_server(
     shutdown_rx: Receiver<()>,
     stats: Arc<SharedStats>,
     client_queue_capacity: usize,
+    max_connections: u32,
 ) {
     let mut clients: Vec<SyncSender<ClientMessage>> = Vec::new();
     let mut current_format = stats.snapshot().current_format;
@@ -37,6 +38,7 @@ pub(super) fn run_server(
             &client_tx,
             Arc::clone(&stats),
             client_queue_capacity,
+            max_connections,
         );
 
         while let Ok(registration) = client_rx.try_recv() {

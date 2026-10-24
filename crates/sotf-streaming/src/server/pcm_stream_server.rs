@@ -26,6 +26,7 @@ impl PcmStreamServer {
             PcmStreamFormat::new(config.initial_sample_rate, config.initial_channels.max(1));
         let queue_capacity = config.queue_capacity_chunks.max(1);
         let client_queue_capacity = config.client_queue_capacity_chunks.max(1);
+        let max_connections = config.max_connections.clamp(1, u32::MAX as usize) as u32;
         let (chunk_tx, chunk_rx) = mpsc::sync_channel(queue_capacity);
         let (client_tx, client_rx) = mpsc::channel();
         let (shutdown_tx, shutdown_rx) = mpsc::channel();
@@ -44,6 +45,7 @@ impl PcmStreamServer {
                     shutdown_rx,
                     thread_stats,
                     client_queue_capacity,
+                    max_connections,
                 );
             })?;
 

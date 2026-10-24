@@ -1,8 +1,7 @@
 use super::super::dyn_eq_band_params::DynEqBandParams;
 use super::super::dynamic_eq_plugin::DynamicEqPlugin;
 use super::super::dynamic_eq_plugin_params::DynamicEqPluginParams;
-use super::super::params;
-use super::super::*;
+use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::ProcessContext;
 
@@ -25,6 +24,15 @@ fn process_with_first_eq_filter(plugin: &mut DynamicEqPlugin, input: &[f32]) -> 
         .iter()
         .map(|sample| filter.process(*sample as f64) as f32)
         .collect()
+}
+
+#[test]
+fn dry_buffer_follows_prepared_callback_budget() {
+    let mut plugin = DynamicEqPlugin::from_params(32, DynamicEqPluginParams::default());
+    plugin.initialize(48_000.0).unwrap();
+    assert_eq!(plugin.dry_buf.len(), 8_192 * 32);
+    plugin.prepare_max_block_frames(1_024).unwrap();
+    assert_eq!(plugin.dry_buf.len(), 1_024 * 32);
 }
 
 #[test]
@@ -58,7 +66,7 @@ fn test_dynamic_eq_passthrough() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let original = make_sine(1000.0, sr, num_frames, amplitude);
     let mut buf = original.clone();
@@ -110,7 +118,8 @@ fn test_dynamic_eq_boosts_on_threshold() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
+    plugin.prepare_max_block_frames(num_frames).unwrap();
 
     let mut buf = make_sine(1000.0, sr, num_frames, amplitude);
     let input_rms = rms(&buf);
@@ -161,7 +170,8 @@ fn test_dynamic_eq_no_boost_below_threshold() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
+    plugin.prepare_max_block_frames(num_frames).unwrap();
 
     let mut buf = make_sine(1000.0, sr, num_frames, amplitude);
     let input_rms = rms(&buf);
@@ -213,7 +223,8 @@ fn test_dynamic_eq_frequency_selective() {
 
     // Test with 1kHz signal (in-band)
     let mut plugin_1k = DynamicEqPlugin::from_params(1, params.clone());
-    plugin_1k.initialize(sr).unwrap();
+    plugin_1k.initialize(f64::from(sr)).unwrap();
+    plugin_1k.prepare_max_block_frames(num_frames).unwrap();
     let mut buf_1k = make_sine(1000.0, sr, num_frames, amplitude);
     let input_rms_1k = rms(&buf_1k);
     let ctx = ProcessContext::new(sr, num_frames);
@@ -222,7 +233,8 @@ fn test_dynamic_eq_frequency_selective() {
 
     // Test with 100Hz signal (out-of-band)
     let mut plugin_100 = DynamicEqPlugin::from_params(1, params);
-    plugin_100.initialize(sr).unwrap();
+    plugin_100.initialize(f64::from(sr)).unwrap();
+    plugin_100.prepare_max_block_frames(num_frames).unwrap();
     let mut buf_100 = make_sine(100.0, sr, num_frames, amplitude);
     let input_rms_100 = rms(&buf_100);
     plugin_100.process_in_place(&mut buf_100, &ctx).unwrap();
@@ -241,14 +253,14 @@ fn test_dynamic_eq_frequency_selective() {
 }
 
 #[test]
-fn test_band_frequency_change_rebuilds_filters() {
+fn test_band_frequency_change_requires_rebuild() {
     let sr = 48000u32;
     let num_frames = 48000;
     let input = make_sine(1000.0, sr, num_frames, 0.25);
     let input_rms = rms(&input);
 
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     plugin.bands[0].frequency = 1000.0;
     plugin.bands[0].q = 4.0;
     plugin.bands[0].target_gain_db = 12.0;
@@ -262,30 +274,31 @@ fn test_band_frequency_change_rebuilds_filters() {
     plugin.bands[0].q = 4.0;
     plugin.bands[0].target_gain_db = 12.0;
     plugin.bands[0].rebuild_eq_filters(sr);
-    plugin
+    let error = plugin
         .set_parameter(
             ParameterId::from("band_0_frequency"),
             ParameterValue::Float(100.0),
         )
-        .unwrap();
+        .unwrap_err();
+    assert!(error.contains("structural"));
 
-    let retuned = process_with_first_eq_filter(&mut plugin, &input);
-    let retuned_rms = rms(&retuned[num_frames / 2..]);
+    let unchanged = process_with_first_eq_filter(&mut plugin, &input);
+    let unchanged_rms = rms(&unchanged[num_frames / 2..]);
     assert!(
-        retuned_rms < input_rms * 1.15,
-        "retuned 100 Hz EQ should not keep boosting 1 kHz: input={input_rms:.4}, retuned={retuned_rms:.4}"
+        unchanged_rms > input_rms * 1.4,
+        "rejected structural change must keep the existing response"
     );
 }
 
 #[test]
-fn test_band_q_change_rebuilds_filters() {
+fn test_band_q_change_requires_rebuild() {
     let sr = 48000u32;
     let num_frames = 48000;
     let input = make_sine(400.0, sr, num_frames, 0.25);
     let input_rms = rms(&input);
 
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
     plugin.bands[0].frequency = 1000.0;
     plugin.bands[0].q = 0.1;
     plugin.bands[0].target_gain_db = 12.0;
@@ -299,15 +312,16 @@ fn test_band_q_change_rebuilds_filters() {
     plugin.bands[0].q = 0.1;
     plugin.bands[0].target_gain_db = 12.0;
     plugin.bands[0].rebuild_eq_filters(sr);
-    plugin
+    let error = plugin
         .set_parameter(ParameterId::from("band_0_q"), ParameterValue::Float(10.0))
-        .unwrap();
+        .unwrap_err();
+    assert!(error.contains("structural"));
 
-    let narrow = process_with_first_eq_filter(&mut plugin, &input);
-    let narrow_rms = rms(&narrow[num_frames / 2..]);
+    let unchanged = process_with_first_eq_filter(&mut plugin, &input);
+    let unchanged_rms = rms(&unchanged[num_frames / 2..]);
     assert!(
-        narrow_rms < input_rms * 1.15,
-        "narrowed Q should not keep wide-band boost: input={input_rms:.4}, narrow={narrow_rms:.4}"
+        unchanged_rms > input_rms * 1.3,
+        "rejected structural change must keep the existing response"
     );
 }
 
@@ -324,7 +338,8 @@ fn test_reset_rebuilds_eq_filters_at_zero_gain() {
     let input_rms = rms(&input);
 
     let mut plugin = DynamicEqPlugin::new(1);
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
+    plugin.prepare_max_block_frames(num_frames).unwrap();
     plugin.num_bands = 1;
     plugin.bands[0].frequency = 1000.0;
     plugin.bands[0].q = 4.0;
@@ -415,11 +430,11 @@ fn test_sidechain_reads_dry_buffer_not_modified_output() {
     };
 
     let mut p_with = make_two_band_plugin(true);
-    p_with.initialize(sr).unwrap();
+    p_with.initialize(f64::from(sr)).unwrap();
     let gr_with_band0 = capture_band1_gr(&mut p_with);
 
     let mut p_without = make_two_band_plugin(false);
-    p_without.initialize(sr).unwrap();
+    p_without.initialize(f64::from(sr)).unwrap();
     let gr_without_band0 = capture_band1_gr(&mut p_without);
 
     // Band 1 detects 2 kHz; the source is a 1 kHz pure tone.
@@ -477,9 +492,10 @@ fn test_eq_gain_uses_proportion_blend_not_coefficient_update() {
             stereo_pairs: None,
         },
     );
-    plugin.initialize(sr).unwrap();
+    plugin.initialize(f64::from(sr)).unwrap();
 
     let input = make_sine(1000.0, sr, num_frames, amplitude);
+    plugin.prepare_max_block_frames(num_frames).unwrap();
     let mut buf = input.clone();
     let ctx = ProcessContext::new(sr, num_frames);
     plugin.process_in_place(&mut buf, &ctx).unwrap();
@@ -488,7 +504,7 @@ fn test_eq_gain_uses_proportion_blend_not_coefficient_update() {
     // the EQ biquad at target_gain_db applied to the input.
     // Apply the reference EQ biquad (at target_gain_db) to the same input.
     let mut ref_plugin = DynamicEqPlugin::new(1);
-    ref_plugin.initialize(sr).unwrap();
+    ref_plugin.initialize(f64::from(sr)).unwrap();
     ref_plugin.bands[0].target_gain_db = target_gain_db;
     ref_plugin.bands[0].rebuild_eq_filters(sr);
     let reference: Vec<f32> = input

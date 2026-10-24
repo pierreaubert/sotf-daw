@@ -768,6 +768,7 @@ fn correlated_processing_wait_buffers_unmatched_response() {
         }),
         request_tickets: std::sync::Mutex::new(std::collections::HashMap::new()),
         next_request_id: std::sync::atomic::AtomicU64::new(3),
+        quarantined: std::sync::atomic::AtomicBool::new(false),
         thread_handle: None,
         host_generation: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
         exit_status: crate::engine::worker_death::WorkerExitStatus::new(),

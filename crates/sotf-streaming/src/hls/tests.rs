@@ -121,6 +121,32 @@ fn hls_source_reads_playlist_segments_in_order() {
     assert_eq!(requests.load(Ordering::SeqCst), 3);
 }
 
+#[test]
+fn oversized_hls_body_is_rejected_before_the_response_finishes() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind test server");
+    let addr = listener.local_addr().unwrap();
+    let (done_tx, done_rx) = std::sync::mpsc::channel();
+    let server = std::thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        let mut request = [0u8; 1024];
+        stream.read(&mut request).unwrap();
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n11\r\n12345678901234567\r\n")
+            .unwrap();
+        stream.flush().unwrap();
+        let returned_before_eof = done_rx.recv_timeout(Duration::from_secs(1)).is_ok();
+        let _ = stream.write_all(b"0\r\n\r\n");
+        returned_before_eof
+    });
+
+    let client = reqwest::blocking::Client::new();
+    let url = Url::parse(&format!("http://{addr}/oversized.ts")).unwrap();
+    let result = super::fetch::fetch_bytes(&client, &url, None, 16);
+    let _ = done_tx.send(());
+    assert!(server.join().unwrap(), "fetch waited for the complete oversized body");
+    assert_eq!(result.unwrap_err().kind(), io::ErrorKind::InvalidData);
+}
+
 fn handle_test_request(stream: &mut TcpStream) {
     let mut buf = [0u8; 1024];
     let n = stream.read(&mut buf).unwrap();

@@ -987,18 +987,10 @@ impl ParametricInPlacePlugin for CrossfeedPlugin {
             }
         }
 
-        // Apply mix with a linear ramp across the block to avoid zipper noise.
-        // `current()` is the mix value at the start of this block; `next_n(nf)` advances
-        // it to the end-of-block value.
-        let mix_start = self.mix_smoother.current();
-        let mix_end = self.mix_smoother.next_n(nf);
-        let mix_step = if nf > 1 {
-            (mix_end - mix_start) / nf as f32
-        } else {
-            0.0
-        };
+        // Advance the one-pole mix clock once per sample so callback size
+        // cannot change the trajectory or its first-sample convention.
         for i in 0..nf {
-            let mix = mix_start + mix_step * i as f32;
+            let mix = self.mix_smoother.advance();
             self.dry_l[i] = self.dry_l[i] * (1.0 - mix) + self.wet_l[i] * mix;
             self.dry_r[i] = self.dry_r[i] * (1.0 - mix) + self.wet_r[i] * mix;
         }

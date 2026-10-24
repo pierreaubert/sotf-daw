@@ -1,11 +1,28 @@
 use super::input_buffer::InputBuffer;
 use super::midi_manager::MidiManager;
+use crate::error::MidiError;
 use crate::message::MidiMessage;
 
 #[test]
 fn test_manager_creation() {
     let manager = MidiManager::new();
     assert!(manager.is_ok());
+}
+
+#[test]
+fn long_messages_reach_output_connection_check_without_panicking() {
+    let manager = MidiManager::new().unwrap();
+    for message in [
+        MidiMessage::IdentityRequest { device: 0x7f },
+        MidiMessage::SystemExclusive {
+            data: vec![0xF0, 0x7D, 0x01, 0x02, 0xF7],
+        },
+    ] {
+        assert!(
+            matches!(manager.send_message(&message), Err(MidiError::NotConnected)),
+            "long message should reach the disconnected-output check: {message:?}"
+        );
+    }
 }
 
 #[test]
@@ -69,6 +86,124 @@ fn input_buffer_preserves_sysex_when_realtime_arrives_mid_packet() {
         sysex,
         MidiMessage::SystemExclusive {
             data: vec![0xF0, 0x7D, 0x01, 0x02, 0xF7]
+        }
+    );
+}
+
+#[test]
+fn input_buffer_bounds_unfinished_sysex_and_recovers_after_terminator() {
+    const MAX_SYSEX_BYTES: usize = 1024 * 1024;
+    let mut buffer = InputBuffer::new();
+    assert!(buffer.parse_message(&[0xF0]).is_none());
+    let chunk = vec![0x01; MAX_SYSEX_BYTES];
+    assert!(matches!(
+        buffer.parse_message(&chunk),
+        Some(Err(MidiError::InvalidMessage(_)))
+    ));
+    assert!(buffer.sysex.is_empty());
+    assert!(buffer.parse_message(&[0x02, 0x03]).is_none());
+    assert!(matches!(
+        buffer.parse_message(&[0xF8]),
+        Some(Ok(MidiMessage::System { status: 0xF8, .. }))
+    ));
+    assert!(buffer.parse_message(&[0xF7]).is_none());
+    assert_eq!(
+        buffer.parse_message(&[0x90, 60, 100]).unwrap().unwrap(),
+        MidiMessage::NoteOn {
+            channel: 0,
+            note: 60,
+            velocity: 100,
+        }
+    );
+}
+
+#[test]
+fn input_buffer_rejects_oversized_complete_sysex() {
+    const MAX_SYSEX_BYTES: usize = 1024 * 1024;
+    let mut buffer = InputBuffer::new();
+    let mut message = vec![0x01; MAX_SYSEX_BYTES + 1];
+    message[0] = 0xF0;
+    *message.last_mut().unwrap() = 0xF7;
+    assert!(matches!(
+        buffer.parse_message(&message),
+        Some(Err(MidiError::InvalidMessage(_)))
+    ));
+    assert!(buffer.sysex.is_empty());
+}
+
+#[test]
+fn input_buffer_recovers_channel_status_after_discarded_sysex() {
+    let mut buffer = InputBuffer::new();
+    assert!(buffer.parse_message(&[0xF0]).is_none());
+    let chunk = vec![0x01; super::input_buffer::MAX_SYSEX_BYTES];
+    assert!(matches!(
+        buffer.parse_message(&chunk),
+        Some(Err(MidiError::InvalidMessage(_)))
+    ));
+    assert_eq!(buffer.discarded_sysex_count(), 1);
+    assert!(matches!(
+        buffer.parse_message(&[0xF8]),
+        Some(Ok(MidiMessage::System { status: 0xF8, .. }))
+    ));
+    assert_eq!(
+        buffer.parse_message(&[0x80, 60, 0]).unwrap().unwrap(),
+        MidiMessage::NoteOff {
+            channel: 0,
+            note: 60,
+            velocity: 0,
+        }
+    );
+    assert_eq!(buffer.discarded_sysex_count(), 1);
+}
+
+#[test]
+fn input_buffer_restarts_interrupted_sysex_and_counts_discard() {
+    let mut buffer = InputBuffer::new();
+    assert!(buffer.parse_message(&[0xF0, 0x7D, 0x01]).is_none());
+    assert_eq!(
+        buffer.parse_message(&[0x90, 64, 100]).unwrap().unwrap(),
+        MidiMessage::NoteOn {
+            channel: 0,
+            note: 64,
+            velocity: 100,
+        }
+    );
+    assert_eq!(buffer.discarded_sysex_count(), 1);
+    assert!(buffer.parse_message(&[0xF0, 0x7D, 0x02]).is_none());
+    assert_eq!(
+        buffer.parse_message(&[0xF7]).unwrap().unwrap(),
+        MidiMessage::SystemExclusive {
+            data: vec![0xF0, 0x7D, 0x02, 0xF7]
+        }
+    );
+}
+
+#[test]
+fn timed_input_keeps_sysex_start_and_completion_metadata() {
+    let mut buffer = InputBuffer::new();
+    assert!(buffer
+        .parse_timed_message(100, 2, 7, &[0xF0, 0x7D])
+        .is_none());
+    let clock = buffer
+        .parse_timed_message(110, 2, 7, &[0xF8])
+        .unwrap()
+        .unwrap();
+    assert_eq!(clock.timestamp_micros, 110);
+    assert_eq!(clock.received_at_micros, 110);
+    assert_eq!(clock.sequence, 1);
+    let sysex = buffer
+        .parse_timed_message(120, 2, 7, &[0x01, 0xF7])
+        .unwrap()
+        .unwrap();
+    assert_eq!(sysex.timestamp_micros, 100);
+    assert_eq!(sysex.received_at_micros, 120);
+    assert_eq!(sysex.port_index, 2);
+    assert_eq!(sysex.connection_id, 7);
+    assert_eq!(sysex.sequence, 2);
+    assert_eq!(
+        sysex.message,
+        MidiMessage::SystemExclusive {
+            data: vec![0xF0, 0x7D, 0x01, 0xF7]
         }
     );
 }

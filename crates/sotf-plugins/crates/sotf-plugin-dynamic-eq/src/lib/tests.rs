@@ -10,6 +10,7 @@ use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parametric_plugin::ParameterSet;
 use sotf_host::plugin::ProcessContext;
 
+#[path = "tests/misc.rs"]
 mod misc;
 #[path = "tests/routing.rs"]
 mod routing;
@@ -366,12 +367,14 @@ fn test_get_parameter_unknown_returns_none() {
 }
 
 #[test]
-fn test_initialize_resizes_dry_buf() {
+fn test_initialize_keeps_prepared_dry_buf_budget() {
     let mut plugin = DynamicEqPlugin::new(1);
     let initial = plugin.dry_buf.len();
     plugin.initialize(96000.0).unwrap();
-    assert!(plugin.dry_buf.len() >= 96000 * 2);
-    assert!(plugin.dry_buf.len() >= initial);
+    assert_eq!(plugin.dry_buf.len(), initial);
+    plugin.prepare_max_block_frames(16_384).unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    assert_eq!(plugin.dry_buf.len(), 16_384);
 }
 
 #[test]

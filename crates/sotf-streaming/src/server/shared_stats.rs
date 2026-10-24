@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 pub(super) struct SharedStats {
     pub(super) local_addr: SocketAddr,
     pub(super) client_count: AtomicU32,
+    pub(super) connection_count: AtomicU32,
     pub(super) published_chunks: AtomicU64,
     pub(super) dropped_chunks: AtomicU64,
     pub(super) published_frames: AtomicU64,
@@ -20,6 +21,7 @@ impl SharedStats {
         Self {
             local_addr,
             client_count: AtomicU32::new(0),
+            connection_count: AtomicU32::new(0),
             published_chunks: AtomicU64::new(0),
             dropped_chunks: AtomicU64::new(0),
             published_frames: AtomicU64::new(0),
@@ -33,6 +35,7 @@ impl SharedStats {
         PcmStreamStats {
             local_addr: self.local_addr,
             client_count: self.client_count.load(Ordering::Relaxed),
+            connection_count: self.connection_count.load(Ordering::Relaxed),
             published_chunks: self.published_chunks.load(Ordering::Relaxed),
             dropped_chunks: self.dropped_chunks.load(Ordering::Relaxed),
             published_frames: self.published_frames.load(Ordering::Relaxed),

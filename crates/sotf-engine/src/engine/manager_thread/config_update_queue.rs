@@ -401,9 +401,14 @@ pub(super) fn run_manager_thread(
     // Start silent source mode (driver playback: audio from driver, not file)
     if config.driver_mode {
         log::info!("[Manager Thread] Starting silent source mode for driver input");
-        decoder_thread.send_command(super::super::DecoderCommand::StartSilentSource(
-            config.input_channels.max(1),
-        ))?;
+        let command = match config.capture_source.clone() {
+            Some(source) => super::super::DecoderCommand::StartCaptureSource(
+                source,
+                config.input_channels.max(1),
+            ),
+            None => super::super::DecoderCommand::StartSilentSource(config.input_channels.max(1)),
+        };
+        decoder_thread.send_command(command)?;
     }
 
     // Setup config watcher if enabled
@@ -431,11 +436,32 @@ pub(super) fn run_manager_thread(
     let mut decoder_exit_reported = false;
     let mut processing_exit_reported = false;
     let mut playback_exit_reported = false;
+    let mut processing_quarantine_reported = false;
 
     let mut shutdown_reply_id = None;
 
     // Main loop
     loop {
+        if processing_thread.is_quarantined() && !processing_quarantine_reported {
+            processing_quarantine_reported = true;
+            // A claimed update may still finish on its own thread. Cut off
+            // output and reject new transport work until engine recreation.
+            playback_thread.send_command(PlaybackCommand::Pause).ok();
+            decoder_thread
+                .send_command(crate::engine::DecoderCommand::Pause)
+                .ok();
+            let mut new_state = (**state.load()).clone();
+            new_state.worker_death_poisoned = true;
+            new_state.peak_record_complete = false;
+            new_state.playback_state = crate::PlaybackState::Stopped;
+            new_state.seeking = false;
+            new_state.seeking_since = None;
+            super::thread_event_visitor::reset_output_meter(&mut new_state);
+            new_state.last_error = Some(
+                "Processing worker quarantined after a stalled update; recreate the engine".into(),
+            );
+            state.store(Arc::new(new_state));
+        }
         // Worker-death poll: merge each wrapper's exit slot with the
         // is_finished fallback and record at most one death per worker.
         // Runs before the event drain each tick, so the generic death
@@ -547,7 +573,8 @@ pub(super) fn run_manager_thread(
         }
 
         // Process pending config updates (one at a time)
-        if config_update_queue.can_process_next()
+        if !processing_thread.is_quarantined()
+            && config_update_queue.can_process_next()
             && let Some(plugins) = config_update_queue.start_processing()
         {
             log::debug!("[Manager Thread] Processing queued config update");

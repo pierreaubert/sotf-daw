@@ -131,7 +131,7 @@ impl Default for NetworkEndpointConfig {
 }
 
 fn default_network_bind_addr() -> String {
-    "0.0.0.0".to_string()
+    "127.0.0.1".to_string()
 }
 
 fn default_network_endpoint_port() -> u16 {
@@ -147,4 +147,14 @@ pub enum NetworkEndpointStatus {
     InputClientUnavailable,
     EndpointRunning,
     EndpointUnavailable,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NetworkEndpointConfig;
+
+    #[test]
+    fn network_endpoint_default_is_loopback() {
+        assert_eq!(NetworkEndpointConfig::default().bind_addr, "127.0.0.1");
+    }
 }

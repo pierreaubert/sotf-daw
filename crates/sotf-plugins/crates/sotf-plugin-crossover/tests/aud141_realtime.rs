@@ -4,68 +4,109 @@ use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::plugin::{Plugin, ProcessContext};
 use sotf_plugin_crossover::CrossoverPlugin;
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::cell::Cell;
 
 struct AuditAllocator;
 
-static TRACK_ALLOCATIONS: AtomicBool = AtomicBool::new(false);
-static ALLOC_EVENTS: AtomicUsize = AtomicUsize::new(0);
-static DEALLOC_EVENTS: AtomicUsize = AtomicUsize::new(0);
-static REALLOC_EVENTS: AtomicUsize = AtomicUsize::new(0);
+thread_local! {
+    static TRACK_ALLOCATIONS: Cell<bool> = const { Cell::new(false) };
+    static ALLOC_EVENTS: Cell<usize> = const { Cell::new(0) };
+    static DEALLOC_EVENTS: Cell<usize> = const { Cell::new(0) };
+    static REALLOC_EVENTS: Cell<usize> = const { Cell::new(0) };
+}
 
 #[global_allocator]
 static ALLOCATOR: AuditAllocator = AuditAllocator;
 
 // SAFETY: Allocation and deallocation are delegated directly to `System`.
-// The counters are atomics and do not affect pointer ownership or layout.
+// The thread-local counters do not affect pointer ownership or layout.
 unsafe impl GlobalAlloc for AuditAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if TRACK_ALLOCATIONS.load(Ordering::Relaxed) {
-            ALLOC_EVENTS.fetch_add(1, Ordering::Relaxed);
-        }
+        let _ = TRACK_ALLOCATIONS.try_with(|enabled| {
+            if enabled.get() {
+                let _ = ALLOC_EVENTS.try_with(|count| count.set(count.get() + 1));
+            }
+        });
         // SAFETY: The caller supplied a valid allocation layout.
         unsafe { System.alloc(layout) }
     }
 
     unsafe fn dealloc(&self, pointer: *mut u8, layout: Layout) {
-        if TRACK_ALLOCATIONS.load(Ordering::Relaxed) {
-            DEALLOC_EVENTS.fetch_add(1, Ordering::Relaxed);
-        }
+        let _ = TRACK_ALLOCATIONS.try_with(|enabled| {
+            if enabled.get() {
+                let _ = DEALLOC_EVENTS.try_with(|count| count.set(count.get() + 1));
+            }
+        });
         // SAFETY: The pointer and layout are forwarded unchanged to `System`.
         unsafe { System.dealloc(pointer, layout) }
     }
 
     unsafe fn realloc(&self, pointer: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        if TRACK_ALLOCATIONS.load(Ordering::Relaxed) {
-            REALLOC_EVENTS.fetch_add(1, Ordering::Relaxed);
-        }
+        let _ = TRACK_ALLOCATIONS.try_with(|enabled| {
+            if enabled.get() {
+                let _ = REALLOC_EVENTS.try_with(|count| count.set(count.get() + 1));
+            }
+        });
         // SAFETY: The pointer, old layout, and new size are forwarded unchanged.
         unsafe { System.realloc(pointer, layout, new_size) }
     }
 }
 
 fn assert_no_allocator_events(action: impl FnOnce()) {
-    ALLOC_EVENTS.store(0, Ordering::Relaxed);
-    DEALLOC_EVENTS.store(0, Ordering::Relaxed);
-    REALLOC_EVENTS.store(0, Ordering::Relaxed);
-    TRACK_ALLOCATIONS.store(true, Ordering::SeqCst);
+    struct DisableGuard;
+    impl Drop for DisableGuard {
+        fn drop(&mut self) {
+            TRACK_ALLOCATIONS.with(|enabled| enabled.set(false));
+        }
+    }
+
+    ALLOC_EVENTS.with(|count| count.set(0));
+    DEALLOC_EVENTS.with(|count| count.set(0));
+    REALLOC_EVENTS.with(|count| count.set(0));
+    TRACK_ALLOCATIONS.with(|enabled| enabled.set(true));
+    let guard = DisableGuard;
     action();
-    TRACK_ALLOCATIONS.store(false, Ordering::SeqCst);
+    drop(guard);
     assert_eq!(
-        ALLOC_EVENTS.load(Ordering::Relaxed),
+        ALLOC_EVENTS.with(Cell::get),
         0,
         "allocation during audio operation"
     );
     assert_eq!(
-        DEALLOC_EVENTS.load(Ordering::Relaxed),
+        DEALLOC_EVENTS.with(Cell::get),
         0,
         "deallocation during audio operation"
     );
     assert_eq!(
-        REALLOC_EVENTS.load(Ordering::Relaxed),
+        REALLOC_EVENTS.with(Cell::get),
         0,
         "reallocation during audio operation"
     );
+}
+
+#[test]
+fn unrelated_thread_allocations_do_not_fail_audio_thread_guard() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let start = std::sync::Arc::new(AtomicBool::new(false));
+    let finish = std::sync::Arc::new(AtomicBool::new(false));
+    let worker_start = std::sync::Arc::clone(&start);
+    let worker_finish = std::sync::Arc::clone(&finish);
+    let worker = std::thread::spawn(move || {
+        while !worker_start.load(Ordering::Acquire) {
+            std::hint::spin_loop();
+        }
+        let buffer = vec![0u8; 4096];
+        std::hint::black_box(&buffer);
+        worker_finish.store(true, Ordering::Release);
+    });
+    assert_no_allocator_events(|| {
+        start.store(true, Ordering::Release);
+        while !finish.load(Ordering::Acquire) {
+            std::hint::spin_loop();
+        }
+    });
+    worker.join().unwrap();
 }
 
 #[test]

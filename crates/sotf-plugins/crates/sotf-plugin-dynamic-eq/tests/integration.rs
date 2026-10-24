@@ -224,6 +224,7 @@ fn dynamic_eq_attenuates_triggered_band() {
         },
     );
     plugin.initialize(f64::from(sr)).unwrap();
+    plugin.prepare_max_block_frames(num_frames).unwrap();
 
     let mut buf = make_sine(1000.0, sr, num_frames, 0.5);
     let input_rms = rms(&buf);

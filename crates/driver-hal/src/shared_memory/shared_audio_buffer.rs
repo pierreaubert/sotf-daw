@@ -450,6 +450,9 @@ impl SharedAudioBuffer {
         if !metadata.file_type().is_file() {
             return false;
         }
+        if metadata.len() != self.mmap.len() as u64 {
+            return false;
+        }
 
         #[cfg(unix)]
         {
@@ -635,6 +638,11 @@ impl SharedAudioBuffer {
     /// Clear the configuration changed flag
     pub fn clear_config_changed(&self) {
         self.header().config_changed.store(0, Ordering::Release);
+    }
+
+    /// Read the published engine readiness flag.
+    pub fn engine_ready(&self) -> bool {
+        self.header().engine_ready.load(Ordering::Acquire) != 0
     }
 
     /// Set engine ready flag.

@@ -26,6 +26,9 @@ use sotf_host::smoothing::Smoother;
 use std::any::Any;
 use std::sync::Arc;
 
+const DEFAULT_MAX_BLOCK_FRAMES: usize = 8_192;
+const MAX_PREPARED_BLOCK_FRAMES: usize = 262_144;
+
 pub struct DynamicEqPlugin {
     pub(super) channels: usize,
     pub(super) sample_rate: f64,
@@ -60,6 +63,7 @@ pub struct DynamicEqPlugin {
 
     // Dry buffer for mix (pre-allocated)
     pub(super) dry_buf: Vec<f32>,
+    max_block_frames: usize,
 
     // Parameter IDs
     pub(super) param_num_bands: ParameterId,
@@ -378,9 +382,8 @@ impl DynamicEqPlugin {
             cache: RealTimeCache::new(DynamicEqData::new(MAX_BANDS)),
             cache_counter: 0,
 
-            // Pre-allocate dry buffer for max expected frame size
-            // 8192 frames * 32 channels should be more than enough
-            dry_buf: vec![0.0; 8192 * channels.max(2)],
+            dry_buf: vec![0.0; DEFAULT_MAX_BLOCK_FRAMES * channels.max(1)],
+            max_block_frames: DEFAULT_MAX_BLOCK_FRAMES,
 
             param_num_bands: ParameterId::from("num_bands"),
             param_threshold: ParameterId::from("threshold"),
@@ -396,6 +399,28 @@ impl DynamicEqPlugin {
 
         p.rebuild_cached_parameters();
         p
+    }
+
+    /// Set the maximum callback size on the control thread before processing.
+    /// Larger blocks are rejected by `process_in_place` without allocating.
+    pub fn prepare_max_block_frames(&mut self, frames: usize) -> PluginResult<()> {
+        if !(1..=MAX_PREPARED_BLOCK_FRAMES).contains(&frames) {
+            return Err("Dynamic EQ max block frames are out of range".into());
+        }
+        let samples = frames
+            .checked_mul(self.channels.max(1))
+            .ok_or_else(|| "Dynamic EQ prepared buffer size overflow".to_string())?;
+        if samples > self.dry_buf.len() {
+            self.dry_buf
+                .try_reserve_exact(samples - self.dry_buf.len())
+                .map_err(|error| format!("Dynamic EQ dry buffer allocation failed: {error}"))?;
+            self.dry_buf.resize(samples, 0.0);
+        } else {
+            self.dry_buf.truncate(samples);
+            self.dry_buf.shrink_to_fit();
+        }
+        self.max_block_frames = frames;
+        Ok(())
     }
 
     pub fn from_params(channels: usize, params: DynamicEqPluginParams) -> Self {
@@ -1233,6 +1258,7 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
                 .map_err(|error| format!("Dynamic EQ band_{index} cannot initialize: {error}"))?;
         }
 
+        self.prepare_max_block_frames(self.max_block_frames)?;
         self.sample_rate = sample_rate;
 
         for band in &mut self.bands {
@@ -1244,12 +1270,6 @@ impl ParametricInPlacePlugin for DynamicEqPlugin {
 
         self.mix_smoother.set_time(5.0, sample_rate);
         self.threshold_smoother.set_time(5.0, sample_rate);
-
-        // Pre-allocate dry buffer for max expected frame size (up to 1s @ 96kHz)
-        let buf_size = 96000 * self.channels.max(2);
-        if self.dry_buf.len() < buf_size {
-            self.dry_buf.resize(buf_size, 0.0);
-        }
 
         // Successful reinitialization starts fresh recursive detector and EQ state.
         self.reset();

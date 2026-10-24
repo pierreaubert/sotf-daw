@@ -62,6 +62,10 @@ pub struct EngineConfig {
     #[serde(default, alias = "hal_mode")]
     pub driver_mode: bool,
 
+    /// Runtime capture transport supplied by the driver owner.
+    #[serde(skip)]
+    pub capture_source: Option<driver_common::CaptureSource>,
+
     /// Allow output to virtual devices (BlackHole, loopback, etc.)
     /// Normally these are blocked to prevent feedback loops, but tests need them.
     #[serde(default)]
@@ -102,6 +106,7 @@ impl Default for EngineConfig {
             input_channels: 2,
             output_channels: 2,
             driver_mode: false,
+            capture_source: None,
             allow_virtual_output: false,
             sink_type: SinkType::default(),
             latency_compensation: LatencyCompensationMode::default(),
@@ -166,6 +171,16 @@ impl EngineConfig {
                 self.input_channels,
                 Self::MAX_INPUT_CHANNELS
             ));
+        }
+        if let Some(source) = &self.capture_source {
+            let geometry = source.configuration();
+            if !self.driver_mode
+                || geometry.channel_count as usize != self.input_channels
+                || geometry.sample_rate == 0
+                || geometry.sample_rate > 192_000
+            {
+                return Err("Capture source geometry must match the driver pipeline input".into());
+            }
         }
         if self.output_channels == 0 {
             return Err("EngineConfig output_channels must be greater than 0".to_string());

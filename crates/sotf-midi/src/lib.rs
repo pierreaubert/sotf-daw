@@ -65,6 +65,7 @@ pub mod clock;
 pub mod config;
 pub mod device;
 pub mod error;
+pub mod input_event;
 pub mod layout;
 pub mod layouts;
 #[cfg(not(target_os = "tvos"))]
@@ -91,6 +92,7 @@ pub use device::{
     MidiDevice, MidiDeviceChange, MidiDeviceChangeKind, MidiDeviceInfo, MidiDeviceSnapshot,
 };
 pub use error::{MidiError, Result};
+pub use input_event::TimedMidiMessage;
 pub use layout::{ControllerLayout, MidiControlId, PhysicalControl, PhysicalControlKind};
 pub use manager::{MidiManager, enumerate_input_devices, enumerate_output_devices};
 pub use mapping::{ControlBinding, MidiMapping, MidiOverlay, ValueScaling};

@@ -106,7 +106,10 @@ impl ManagerCommandHandler for SeekCommand {
                         ctx.state.store(Arc::new(new_state));
                         ManagerResponse::Ok
                     }
-                    Err(play_err) => ManagerResponse::Error(play_err),
+                    Err(play_err) => {
+                        ctx.decoder.cancel_decode_attempt(reopen_attempt);
+                        ManagerResponse::Error(play_err)
+                    }
                 }
             }
             Err(e) => ManagerResponse::Error(e),

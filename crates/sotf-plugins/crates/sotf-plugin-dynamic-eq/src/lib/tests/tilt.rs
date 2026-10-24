@@ -498,6 +498,7 @@ fn public_tilt_process_matches_independent_full_band_reference() {
                 80.0,
                 sample_rate,
             );
+            plugin.prepare_max_block_frames(frames).unwrap();
             plugin
                 .process_in_place(&mut actual, &ProcessContext::new(sample_rate, frames))
                 .unwrap();
@@ -599,6 +600,7 @@ fn tilt_absolute_threshold_sweep_matches_static_law() {
             );
             // Settle the one-pole envelope and the first-order tilt filter.
             let settle_frames = sample_rate as usize / 2;
+            plugin.prepare_max_block_frames(settle_frames).unwrap();
             let mut settle = vec![amplitude as f32; settle_frames];
             plugin
                 .process_in_place(

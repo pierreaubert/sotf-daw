@@ -6,6 +6,7 @@ use crate::clock::{MIDI_CLOCK_CONTINUE, MIDI_CLOCK_START, MIDI_CLOCK_STOP, MIDI_
 use crate::config::MidiConfig;
 use crate::device::{MidiDeviceChange, MidiDeviceInfo, MidiDeviceSnapshot};
 use crate::error::{MidiError, Result};
+use crate::input_event::TimedMidiMessage;
 use crate::message::MidiMessage;
 use midir::{MidiInput, MidiInputConnection, MidiOutput, MidiOutputConnection};
 use parking_lot::Mutex;
@@ -27,6 +28,7 @@ pub struct MidiManager {
 
     /// MIDI configuration
     pub(super) config: MidiConfig,
+    next_input_connection_id: u64,
 }
 
 impl MidiManager {
@@ -38,6 +40,7 @@ impl MidiManager {
             input_connection: None,
             output_connection: Arc::new(Mutex::new(None)),
             config: MidiConfig::default(),
+            next_input_connection_id: 1,
         })
     }
 
@@ -49,6 +52,7 @@ impl MidiManager {
             input_connection: None,
             output_connection: Arc::new(Mutex::new(None)),
             config,
+            next_input_connection_id: 1,
         })
     }
 
@@ -91,6 +95,15 @@ impl MidiManager {
     where
         F: Fn(MidiMessage) + Send + Sync + 'static,
     {
+        self.connect_input_timed(port_index, move |event| callback(event.message))
+    }
+
+    /// Connect to an input and retain the backend timestamp and connection
+    /// provenance for every delivered MIDI message.
+    pub fn connect_input_timed<F>(&mut self, port_index: usize, callback: F) -> Result<()>
+    where
+        F: Fn(TimedMidiMessage) + Send + Sync + 'static,
+    {
         // Disconnect any existing connection
         self.disconnect_input();
 
@@ -114,22 +127,29 @@ impl MidiManager {
 
         let listen_channel = self.config.listen_channel;
         let buffer = InputBuffer::new();
+        let connection_id = self.next_input_connection_id;
 
         let connection = midi_in.connect(
             port,
             &format!("SOTF Input {}", port_name),
-            move |_timestamp, message, buf: &mut InputBuffer| {
+            move |timestamp, message, buf: &mut InputBuffer| {
                 // Use pre-allocated callback-local buffers to avoid hot-path
                 // allocation for channel/system messages. Split SysEx packets
                 // are accumulated until the terminating 0xF7 arrives.
-                let Some(parsed) = buf.parse_message(message) else {
+                let previous_discards = buf.discarded_sysex_count();
+                let parsed = buf.parse_timed_message(timestamp, port_index, connection_id, message);
+                let discards = buf.discarded_sysex_count();
+                if discards != previous_discards && discards.is_power_of_two() {
+                    log::warn!("discarded {discards} interrupted or oversized MIDI SysEx messages");
+                }
+                let Some(parsed) = parsed else {
                     return;
                 };
                 let Ok(midi_msg) = parsed else {
                     return;
                 };
                 if let Some(want) = listen_channel
-                    && let Some(ch) = channel_of(&midi_msg)
+                    && let Some(ch) = channel_of(&midi_msg.message)
                     && ch != want
                 {
                     return;
@@ -140,6 +160,7 @@ impl MidiManager {
         )?;
 
         self.input_connection = Some(connection);
+        self.next_input_connection_id = self.next_input_connection_id.wrapping_add(1);
 
         Ok(())
     }
@@ -149,13 +170,21 @@ impl MidiManager {
     where
         F: Fn(MidiMessage) + Send + Sync + 'static,
     {
+        self.connect_input_by_name_timed(name, move |event| callback(event.message))
+    }
+
+    /// Connect to an input by name with timestamped messages.
+    pub fn connect_input_by_name_timed<F>(&mut self, name: &str, callback: F) -> Result<()>
+    where
+        F: Fn(TimedMidiMessage) + Send + Sync + 'static,
+    {
         let devices = self.list_input_devices()?;
         let device = devices
             .iter()
             .find(|d| d.name == name)
             .ok_or_else(|| MidiError::ConnectionError(format!("Device not found: {}", name)))?;
 
-        self.connect_input(device.index, callback)
+        self.connect_input_timed(device.index, callback)
     }
 
     /// Disconnect from MIDI input
@@ -230,7 +259,10 @@ impl MidiManager {
         } else {
             None
         };
-        let bytes: &[u8] = heap_bytes.as_deref().unwrap_or(&stack_buf[..needed]);
+        let bytes: &[u8] = match heap_bytes.as_deref() {
+            Some(bytes) => bytes,
+            None => &stack_buf[..needed],
+        };
 
         self.send_raw(bytes)?;
         log::debug!("Sent MIDI: {}", message.description());

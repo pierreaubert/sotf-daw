@@ -510,6 +510,8 @@ pub enum DecoderCommand {
     /// Sends empty frames at regular intervals for source plugins using the
     /// configured pipeline input channel count.
     StartSilentSource(usize),
+    /// Start an explicitly supplied capture transport at the pipeline geometry.
+    StartCaptureSource(driver_common::CaptureSource, usize),
     /// Pause decoding
     Pause,
     /// Resume decoding
@@ -886,6 +888,12 @@ pub enum ManagerResponse {
 /// Events sent from worker threads to manager
 #[derive(Clone, Debug)]
 pub enum ThreadEvent {
+    /// Decoder-owned lifecycle or telemetry event scoped to one play attempt.
+    /// The manager discards it after a newer attempt has been adopted.
+    DecoderTagged {
+        attempt: DecodeAttempt,
+        event: Box<ThreadEvent>,
+    },
     /// Decoder reached end of stream
     DecoderEndOfStream,
     /// Decoder seamlessly transitioned to a queued next source (gapless playback)
@@ -955,4 +963,13 @@ pub enum ThreadEvent {
     /// Isolated external plugin worker status snapshot.
     #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
     IsolatedExternalPluginWorkerStatuses(Vec<IsolatedExternalPluginWorkerStatus>),
+}
+
+impl ThreadEvent {
+    pub(in crate::engine) fn with_decode_attempt(self, attempt: DecodeAttempt) -> Self {
+        Self::DecoderTagged {
+            attempt,
+            event: Box::new(self),
+        }
+    }
 }

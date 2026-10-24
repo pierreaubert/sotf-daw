@@ -225,6 +225,17 @@ fn test_decrypt_into_buffer_too_small() {
 }
 
 #[test]
+fn decrypt_into_rejects_partial_sample_ciphertext_without_panicking() {
+    let cipher = AudioCipher::new(&generate_test_key());
+    for extra_bytes in 1..=3 {
+        let ciphertext = vec![0u8; AUTH_TAG_SIZE + extra_bytes];
+        let mut output = [0.25f32; 1];
+        assert_eq!(cipher.decrypt_into(&ciphertext, 0, &mut output), None);
+        assert_eq!(output, [0.25f32; 1]);
+    }
+}
+
+#[test]
 fn test_encrypted_to_samples_into() {
     let ciphertext = vec![1u8, 2, 3, 4, 5, 6, 7, 8, 9];
     let mut output = vec![0.0f32; 10];

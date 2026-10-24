@@ -20,6 +20,72 @@ fn test_manager_creation() {
     assert!(manager.get_audio_info().is_none());
 }
 
+#[test]
+fn driver_capture_runs_through_dsp_and_device_free_output() {
+    use driver_common::{CaptureInput, CaptureSource, DriverConfig};
+    use std::sync::Mutex;
+    use std::time::{Duration, Instant};
+
+    #[derive(Debug)]
+    struct MarkedCapture(Mutex<usize>);
+    impl CaptureInput for MarkedCapture {
+        fn configuration(&self) -> DriverConfig {
+            DriverConfig::new(48_000, 128, 2)
+        }
+        fn available_frames(&self) -> usize {
+            *self.0.lock().unwrap()
+        }
+        fn read_frames(&self, output: &mut [f32], expected: DriverConfig) -> usize {
+            if expected != self.configuration() {
+                return 0;
+            }
+            let mut remaining = self.0.lock().unwrap();
+            let frames = (*remaining).min(output.len() / 2);
+            for frame in output[..frames * 2].chunks_exact_mut(2) {
+                frame.copy_from_slice(&[0.5, -0.25]);
+            }
+            *remaining -= frames;
+            frames
+        }
+    }
+
+    let source = CaptureSource::new(MarkedCapture(Mutex::new(48_000)));
+    let mut manager = AudioEngineManager::new();
+    manager
+        .start_driver_playback_with_source(
+            None,
+            vec![crate::PluginConfig::new(
+                "gain",
+                serde_json::json!({"gain_db": -6.020599913279624}),
+            )],
+            2,
+            48_000,
+            128,
+            2,
+            crate::SinkType::LabNull,
+            Some(source),
+        )
+        .unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let state = manager.get_engine_state();
+        if state.playback_peak_max_linear > 0.01 {
+            let peak = state.playback_peak_max_linear;
+            manager.stop().unwrap();
+            assert!(
+                (peak - 0.25).abs() < 0.001,
+                "captured PCM must pass through gain: {peak}"
+            );
+            break;
+        }
+        if Instant::now() >= deadline {
+            manager.stop().unwrap();
+            panic!("marked capture never reached device-free output: {state:?}");
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
 #[cfg(feature = "test-util")]
 #[test]
 fn test_file_output_runs_decode_dsp_and_transport_without_hardware() {

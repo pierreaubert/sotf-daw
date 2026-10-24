@@ -8,6 +8,7 @@ use std::sync::mpsc::SyncSender;
 pub struct PcmStreamStats {
     pub local_addr: SocketAddr,
     pub client_count: u32,
+    pub connection_count: u32,
     pub published_chunks: u64,
     pub dropped_chunks: u64,
     pub published_frames: u64,

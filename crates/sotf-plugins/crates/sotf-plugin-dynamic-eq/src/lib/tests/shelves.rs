@@ -711,6 +711,7 @@ fn public_process_matches_independent_linked_and_unlinked_shelf_dynamics() {
                     dynamics.attack_ms as f32,
                     dynamics.release_ms as f32,
                 );
+                plugin.prepare_max_block_frames(frames).unwrap();
                 plugin
                     .process_in_place(&mut actual, &ProcessContext::new(sample_rate, frames))
                     .unwrap();
@@ -794,6 +795,7 @@ fn public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection() {
 
     for linked in [true, false] {
         let mut plugin = make_mixed_shape_plugin(linked);
+        plugin.prepare_max_block_frames(frames).unwrap();
         let mut actual = input.clone();
         plugin
             .process_in_place(&mut actual, &ProcessContext::new(sample_rate, frames))
@@ -821,6 +823,7 @@ fn public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection() {
 
     let mut solo_chain =
         make_mixed_shape_plugin_with_controls(true, 1.0, [true; 3], [false, true, false]);
+    solo_chain.prepare_max_block_frames(frames).unwrap();
     let mut solo_output = input.clone();
     solo_chain
         .process_in_place(&mut solo_output, &ProcessContext::new(sample_rate, frames))
@@ -828,6 +831,7 @@ fn public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection() {
 
     let mut only_solo_band =
         make_mixed_shape_plugin_with_controls(true, 1.0, [false, true, false], [false; 3]);
+    only_solo_band.prepare_max_block_frames(frames).unwrap();
     let mut solo_reference = input.clone();
     only_solo_band
         .process_in_place(
@@ -1168,6 +1172,7 @@ fn shape_specific_detector_passes_its_side_and_rejects_the_other_side() {
         (DynEqShape::HighShelf, 100.0, false),
     ] {
         let mut plugin = make_dynamic_shelf(1, false, shape, 12.0, -25.0, 20.0, 0.0, 0.5, 40.0);
+        plugin.prepare_max_block_frames(frames).unwrap();
         let mut audio = (0..frames)
             .map(|frame| {
                 (0.8_f64

@@ -20,6 +20,9 @@ use types::*;
 
 use sotf_host::speaker_config::{SpeakerConfig, get_speaker_config};
 
+/// Maximum encoded IAMF stream size accepted by [`IamfDecoder::open`].
+pub const DEFAULT_MAX_IAMF_BYTES: usize = 256 * 1024 * 1024;
+
 /// Main IAMF decoder.
 ///
 /// Parses IAMF bitstream, decodes substreams, renders to target speaker layout.
@@ -162,9 +165,26 @@ fn build_substream_decoders(
 
 impl IamfDecoder {
     /// Open an IAMF stream from a reader.
-    pub fn open<R: Read + Seek>(mut reader: R) -> IamfResult<Self> {
+    pub fn open<R: Read + Seek>(reader: R) -> IamfResult<Self> {
+        Self::open_with_max_bytes(reader, DEFAULT_MAX_IAMF_BYTES)
+    }
+
+    /// Open an IAMF stream with a caller-selected encoded-input budget.
+    ///
+    /// This decoder retains the encoded stream for seeking, so callers should
+    /// choose a budget that also fits their memory limits.
+    pub fn open_with_max_bytes<R: Read + Seek>(reader: R, max_bytes: usize) -> IamfResult<Self> {
+        let read_limit = max_bytes
+            .checked_add(1)
+            .and_then(|n| u64::try_from(n).ok())
+            .ok_or_else(|| IamfError::ParseError("Invalid IAMF input size limit".into()))?;
         let mut data = Vec::new();
-        reader.read_to_end(&mut data)?;
+        reader.take(read_limit).read_to_end(&mut data)?;
+        if data.len() > max_bytes {
+            return Err(IamfError::ParseError(
+                "IAMF input exceeds the configured size limit".into(),
+            ));
+        }
 
         let (descriptors, temporal_offset) = parse_descriptors(&data)?;
 
@@ -555,6 +575,32 @@ impl IamfDecoder {
 mod tests {
     use super::*;
     use crate::codec::symphonia::{TEST_AAC_FRAME0, TEST_ASC, TEST_FLAC_FRAME0, TEST_STREAMINFO};
+
+    #[test]
+    fn open_with_limit_stops_reading_an_endless_source() {
+        struct EndlessReader {
+            bytes_read: usize,
+        }
+
+        impl Read for EndlessReader {
+            fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+                buf.fill(0);
+                self.bytes_read += buf.len();
+                Ok(buf.len())
+            }
+        }
+
+        impl Seek for EndlessReader {
+            fn seek(&mut self, _pos: std::io::SeekFrom) -> std::io::Result<u64> {
+                Ok(0)
+            }
+        }
+
+        let mut source = EndlessReader { bytes_read: 0 };
+        let result = IamfDecoder::open_with_max_bytes(&mut source, 16);
+        assert!(matches!(result, Err(IamfError::ParseError(_))));
+        assert_eq!(source.bytes_read, 17);
+    }
 
     fn leb(mut v: u32) -> Vec<u8> {
         let mut out = Vec::new();

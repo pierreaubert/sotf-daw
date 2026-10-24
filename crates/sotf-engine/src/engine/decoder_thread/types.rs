@@ -4,6 +4,8 @@ use super::super::{
 use super::consts::SPIN_MS_SLEEP_DECODER;
 use super::decoder_state::DecoderState;
 use crate::DsdOutputMode;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 use std::time::Duration;
 
@@ -37,6 +39,7 @@ pub(super) fn run_decoder_thread(
     recycle_rx: Receiver<Vec<f32>>,
     dsd_output: DsdOutputMode,
     async_error_tx: Sender<DecoderAsyncError>,
+    cancelled_attempt_through: Arc<AtomicU64>,
 ) -> Result<(), String> {
     // The HAL reader feeds every downstream audio stage. Leaving it at the
     // default QoS lets unrelated filesystem/UI work starve it even though the
@@ -69,7 +72,7 @@ pub(super) fn run_decoder_thread(
 
     loop {
         // Check for commands (non-blocking when playing/silent, blocking when stopped)
-        let is_active = (state.decoder.is_some() && !state.paused) || state.silent_source;
+        let is_active = (state.decoder.is_some() && !state.paused) || state.driver_source.active;
         let command = if is_active {
             command_rx.try_recv().ok()
         } else {
@@ -86,6 +89,12 @@ pub(super) fn run_decoder_thread(
         if let Some(cmd) = command {
             match cmd {
                 DecoderCommand::Play(source, attempt) => {
+                    if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                        response_tx
+                            .send(DecoderResponse::Error("Play request cancelled".into()))
+                            .ok();
+                        continue;
+                    }
                     // Adopt-first: the tag identifies this phase even
                     // when the open below NACKs (tried-and-died still
                     // consumed the attempt — manager stays converged).
@@ -97,17 +106,33 @@ pub(super) fn run_decoder_thread(
                     state.clear_stream_metadata(&event_tx);
                     if let Err(e) = state.play(source, target_sample_rate, frame_size) {
                         log::warn!("[Decoder Thread] Play failed: {}", e);
-                        event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::DecoderError(e)
+                                    .with_decode_attempt(state.current_attempt),
+                            )
+                            .ok();
                         response_tx
                             .send(DecoderResponse::Error(
                                 "Failed to start playback".to_string(),
                             ))
+                            .ok();
+                    } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                        state.stop();
+                        response_tx
+                            .send(DecoderResponse::Error("Play request cancelled".into()))
                             .ok();
                     } else {
                         response_tx.send(DecoderResponse::Ok).ok();
                     }
                 }
                 DecoderCommand::PlayAt(source, position, attempt) => {
+                    if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                        response_tx
+                            .send(DecoderResponse::Error("Play request cancelled".into()))
+                            .ok();
+                        continue;
+                    }
                     // Adopt-first: see the Play arm.
                     state.current_attempt = attempt;
                     // Flush-before-ack: see DecoderMessage::Flush invariant.
@@ -117,11 +142,21 @@ pub(super) fn run_decoder_thread(
                     state.clear_stream_metadata(&event_tx);
                     if let Err(e) = state.play(source, target_sample_rate, frame_size) {
                         log::warn!("[Decoder Thread] PlayAt (load) failed: {}", e);
-                        event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::DecoderError(e)
+                                    .with_decode_attempt(state.current_attempt),
+                            )
+                            .ok();
                         response_tx
                             .send(DecoderResponse::Error(
                                 "Failed to start playback".to_string(),
                             ))
+                            .ok();
+                    } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                        state.stop();
+                        response_tx
+                            .send(DecoderResponse::Error("Play request cancelled".into()))
                             .ok();
                     } else if let Err(e) = state.seek(position) {
                         log::warn!("[Decoder Thread] PlayAt (seek) failed: {}", e);
@@ -131,19 +166,37 @@ pub(super) fn run_decoder_thread(
                         // instead of emitting from the wrong position under
                         // the old epoch. The failure stays explicit below.
                         state.stop();
-                        event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::DecoderError(e)
+                                    .with_decode_attempt(state.current_attempt),
+                            )
+                            .ok();
                         response_tx
                             .send(DecoderResponse::Error(
                                 "Failed to seek during play_at".to_string(),
                             ))
                             .ok();
+                    } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                        state.stop();
+                        response_tx
+                            .send(DecoderResponse::Error("Play request cancelled".into()))
+                            .ok();
                     } else {
-                        event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::SeekComplete
+                                    .with_decode_attempt(state.current_attempt),
+                            )
+                            .ok();
                         response_tx.send(DecoderResponse::Ok).ok();
                     }
                 }
                 DecoderCommand::StartSilentSource(channels) => {
                     state.start_silent_source(channels);
+                }
+                DecoderCommand::StartCaptureSource(source, channels) => {
+                    state.start_capture_source(source, channels);
                 }
                 DecoderCommand::Pause => {
                     state.paused = true;
@@ -161,7 +214,12 @@ pub(super) fn run_decoder_thread(
                         log::warn!("[Decoder Thread] Seek failed: {}", e);
                         response_tx.send(DecoderResponse::Error(e)).ok();
                     } else {
-                        event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::SeekComplete
+                                    .with_decode_attempt(state.current_attempt),
+                            )
+                            .ok();
                         response_tx.send(DecoderResponse::Ok).ok();
                     }
                 }
@@ -190,11 +248,20 @@ pub(super) fn run_decoder_thread(
             }
         }
 
+        // The manager can time out between the final open check and this
+        // iteration's first frame. Do not publish a late-started stream.
+        if state.current_attempt != 0
+            && state.decoder.is_some()
+            && state.current_attempt <= cancelled_attempt_through.load(Ordering::Acquire)
+        {
+            state.stop();
+        }
+
         #[cfg(feature = "streaming")]
         state.poll_stream_metadata(&event_tx);
 
         // Generate frames based on mode
-        if state.silent_source && !state.paused {
+        if state.driver_source.active && !state.paused {
             // HAL Input / Silent Source mode
             match state.process_hal_input(
                 &message_tx,
@@ -242,11 +309,24 @@ pub(super) fn run_decoder_thread(
                                 if let Err(e) = state.seek(position) {
                                     response_tx.send(DecoderResponse::Error(e)).ok();
                                 } else {
-                                    event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                                    event_tx
+                                        .try_send(
+                                            ThreadEvent::SeekComplete
+                                                .with_decode_attempt(state.current_attempt),
+                                        )
+                                        .ok();
                                     response_tx.send(DecoderResponse::Ok).ok();
                                 }
                             }
                             DecoderCommand::Play(path, attempt) => {
+                                if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                    response_tx
+                                        .send(DecoderResponse::Error(
+                                            "Play request cancelled".into(),
+                                        ))
+                                        .ok();
+                                    continue;
+                                }
                                 // Adopt-first: see the top-of-loop Play arm.
                                 state.current_attempt = attempt;
                                 message_tx.send(DecoderMessage::Flush).ok();
@@ -258,10 +338,24 @@ pub(super) fn run_decoder_thread(
                                         "[Decoder Thread] Play failed (from HAL interrupt): {}",
                                         e
                                     );
-                                    event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                    event_tx
+                                        .try_send(
+                                            ThreadEvent::DecoderError(e)
+                                                .with_decode_attempt(state.current_attempt),
+                                        )
+                                        .ok();
                                     response_tx
                                         .send(DecoderResponse::Error(
                                             "Failed to start playback".to_string(),
+                                        ))
+                                        .ok();
+                                } else if attempt
+                                    <= cancelled_attempt_through.load(Ordering::Acquire)
+                                {
+                                    state.stop();
+                                    response_tx
+                                        .send(DecoderResponse::Error(
+                                            "Play request cancelled".into(),
                                         ))
                                         .ok();
                                 } else {
@@ -269,6 +363,14 @@ pub(super) fn run_decoder_thread(
                                 }
                             }
                             DecoderCommand::PlayAt(path, position, attempt) => {
+                                if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                    response_tx
+                                        .send(DecoderResponse::Error(
+                                            "Play request cancelled".into(),
+                                        ))
+                                        .ok();
+                                    continue;
+                                }
                                 // Adopt-first: see the top-of-loop Play arm.
                                 state.current_attempt = attempt;
                                 message_tx.send(DecoderMessage::Flush).ok();
@@ -280,10 +382,24 @@ pub(super) fn run_decoder_thread(
                                         "[Decoder Thread] PlayAt failed (from HAL interrupt): {}",
                                         e
                                     );
-                                    event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                    event_tx
+                                        .try_send(
+                                            ThreadEvent::DecoderError(e)
+                                                .with_decode_attempt(state.current_attempt),
+                                        )
+                                        .ok();
                                     response_tx
                                         .send(DecoderResponse::Error(
                                             "Failed to start playback".to_string(),
+                                        ))
+                                        .ok();
+                                } else if attempt
+                                    <= cancelled_attempt_through.load(Ordering::Acquire)
+                                {
+                                    state.stop();
+                                    response_tx
+                                        .send(DecoderResponse::Error(
+                                            "Play request cancelled".into(),
                                         ))
                                         .ok();
                                 } else if let Err(e) = state.seek(position) {
@@ -297,19 +413,41 @@ pub(super) fn run_decoder_thread(
                                     // it instead of emitting from the wrong
                                     // position under the old epoch.
                                     state.stop();
-                                    event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                    event_tx
+                                        .try_send(
+                                            ThreadEvent::DecoderError(e)
+                                                .with_decode_attempt(state.current_attempt),
+                                        )
+                                        .ok();
                                     response_tx
                                         .send(DecoderResponse::Error(
                                             "Failed to seek during play_at".to_string(),
                                         ))
                                         .ok();
+                                } else if attempt
+                                    <= cancelled_attempt_through.load(Ordering::Acquire)
+                                {
+                                    state.stop();
+                                    response_tx
+                                        .send(DecoderResponse::Error(
+                                            "Play request cancelled".into(),
+                                        ))
+                                        .ok();
                                 } else {
-                                    event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                                    event_tx
+                                        .try_send(
+                                            ThreadEvent::SeekComplete
+                                                .with_decode_attempt(state.current_attempt),
+                                        )
+                                        .ok();
                                     response_tx.send(DecoderResponse::Ok).ok();
                                 }
                             }
                             DecoderCommand::StartSilentSource(channels) => {
                                 state.start_silent_source(channels);
+                            }
+                            DecoderCommand::StartCaptureSource(source, channels) => {
+                                state.start_capture_source(source, channels);
                             }
                             DecoderCommand::QueueNext(path) => {
                                 log::debug!(
@@ -389,6 +527,12 @@ pub(super) fn run_decoder_thread(
                     // Handle interruption command immediately
                     match cmd {
                         DecoderCommand::Play(path, attempt) => {
+                            if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                response_tx
+                                    .send(DecoderResponse::Error("Play request cancelled".into()))
+                                    .ok();
+                                continue;
+                            }
                             // Adopt-first: see the top-of-loop Play arm.
                             state.current_attempt = attempt;
                             message_tx.send(DecoderMessage::Flush).ok();
@@ -397,17 +541,33 @@ pub(super) fn run_decoder_thread(
                             state.clear_stream_metadata(&event_tx);
                             if let Err(e) = state.play(path, target_sample_rate, frame_size) {
                                 log::warn!("[Decoder Thread] Play failed: {}", e);
-                                event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                event_tx
+                                    .try_send(
+                                        ThreadEvent::DecoderError(e)
+                                            .with_decode_attempt(state.current_attempt),
+                                    )
+                                    .ok();
                                 response_tx
                                     .send(DecoderResponse::Error(
                                         "Failed to start playback".to_string(),
                                     ))
+                                    .ok();
+                            } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                state.stop();
+                                response_tx
+                                    .send(DecoderResponse::Error("Play request cancelled".into()))
                                     .ok();
                             } else {
                                 response_tx.send(DecoderResponse::Ok).ok();
                             }
                         }
                         DecoderCommand::PlayAt(path, position, attempt) => {
+                            if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                response_tx
+                                    .send(DecoderResponse::Error("Play request cancelled".into()))
+                                    .ok();
+                                continue;
+                            }
                             // Adopt-first: see the top-of-loop Play arm.
                             state.current_attempt = attempt;
                             message_tx.send(DecoderMessage::Flush).ok();
@@ -416,11 +576,21 @@ pub(super) fn run_decoder_thread(
                             state.clear_stream_metadata(&event_tx);
                             if let Err(e) = state.play(path, target_sample_rate, frame_size) {
                                 log::warn!("[Decoder Thread] PlayAt (load) failed: {}", e);
-                                event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                event_tx
+                                    .try_send(
+                                        ThreadEvent::DecoderError(e)
+                                            .with_decode_attempt(state.current_attempt),
+                                    )
+                                    .ok();
                                 response_tx
                                     .send(DecoderResponse::Error(
                                         "Failed to start playback".to_string(),
                                     ))
+                                    .ok();
+                            } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                state.stop();
+                                response_tx
+                                    .send(DecoderResponse::Error("Play request cancelled".into()))
                                     .ok();
                             } else if let Err(e) = state.seek(position) {
                                 log::warn!("[Decoder Thread] PlayAt (seek) failed: {}", e);
@@ -430,19 +600,37 @@ pub(super) fn run_decoder_thread(
                                 // instead of emitting from the wrong
                                 // position under the old epoch.
                                 state.stop();
-                                event_tx.try_send(ThreadEvent::DecoderError(e)).ok();
+                                event_tx
+                                    .try_send(
+                                        ThreadEvent::DecoderError(e)
+                                            .with_decode_attempt(state.current_attempt),
+                                    )
+                                    .ok();
                                 response_tx
                                     .send(DecoderResponse::Error(
                                         "Failed to seek during play_at".to_string(),
                                     ))
                                     .ok();
+                            } else if attempt <= cancelled_attempt_through.load(Ordering::Acquire) {
+                                state.stop();
+                                response_tx
+                                    .send(DecoderResponse::Error("Play request cancelled".into()))
+                                    .ok();
                             } else {
-                                event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                                event_tx
+                                    .try_send(
+                                        ThreadEvent::SeekComplete
+                                            .with_decode_attempt(state.current_attempt),
+                                    )
+                                    .ok();
                                 response_tx.send(DecoderResponse::Ok).ok();
                             }
                         }
                         DecoderCommand::StartSilentSource(channels) => {
                             state.start_silent_source(channels);
+                        }
+                        DecoderCommand::StartCaptureSource(source, channels) => {
+                            state.start_capture_source(source, channels);
                         }
                         DecoderCommand::Pause => {
                             state.paused = true;
@@ -460,7 +648,12 @@ pub(super) fn run_decoder_thread(
                                 log::warn!("[Decoder Thread] Seek failed: {}", e);
                                 response_tx.send(DecoderResponse::Error(e)).ok();
                             } else {
-                                event_tx.try_send(ThreadEvent::SeekComplete).ok();
+                                event_tx
+                                    .try_send(
+                                        ThreadEvent::SeekComplete
+                                            .with_decode_attempt(state.current_attempt),
+                                    )
+                                    .ok();
                                 response_tx.send(DecoderResponse::Ok).ok();
                             }
                         }

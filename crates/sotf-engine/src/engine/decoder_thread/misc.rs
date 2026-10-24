@@ -29,7 +29,6 @@ pub(super) fn take_frame_buffer(
     frame_data
 }
 
-#[cfg(any(test, all(target_os = "macos", feature = "hal")))]
 pub(super) fn frames_to_sample_count(frames: usize, channels: usize, max_samples: usize) -> usize {
     frames.saturating_mul(channels).min(max_samples)
 }

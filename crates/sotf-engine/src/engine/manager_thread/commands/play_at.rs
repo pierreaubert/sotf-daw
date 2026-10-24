@@ -56,6 +56,7 @@ impl ManagerCommandHandler for PlayAtCommand {
                 ManagerResponse::Ok
             }
             Err(e) => {
+                ctx.decoder.cancel_decode_attempt(attempt);
                 // Synchronous honesty: the decoder-side failure is known
                 // (the ack is explicit), so record it without depending on
                 // the lossy event channel. The DecoderError event, when it

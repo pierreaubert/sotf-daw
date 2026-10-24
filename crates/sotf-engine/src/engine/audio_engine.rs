@@ -384,3 +384,20 @@ impl Drop for AudioEngine {
         let _ = self.shutdown();
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn fresh_engine_cannot_resume_without_a_committed_source() {
+        let config = EngineConfig {
+            sink_type: crate::SinkType::LabNull,
+            ..EngineConfig::default()
+        };
+        let engine = AudioEngine::new(config).unwrap();
+        assert!(engine.resume().is_err());
+        assert_eq!(engine.get_state().playback_state, PlaybackState::Stopped);
+        engine.shutdown().unwrap();
+    }
+}

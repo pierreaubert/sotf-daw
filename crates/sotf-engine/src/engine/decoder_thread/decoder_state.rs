@@ -8,9 +8,7 @@ use super::consts::{
     DECODER_LOCAL_FRAME_CAPACITY, DECODER_LOCAL_FRAME_POOL_SIZE, MAX_ENGINE_SAMPLE_CAPACITY,
     MAX_RESAMPLE_OUTPUT_SAMPLES, MAX_RESAMPLE_STAGING_SAMPLES,
 };
-#[cfg(all(target_os = "macos", feature = "hal"))]
 use super::hal_input_guard_trip::guard_hal_input_block;
-#[cfg(all(target_os = "macos", feature = "hal"))]
 use super::misc::frames_to_sample_count;
 use super::misc::take_frame_buffer;
 use super::sample_queue::SampleQueue;
@@ -30,6 +28,62 @@ use std::time::{Duration, Instant};
 
 const POSITION_UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 
+pub(super) struct DriverSourceState {
+    pub(super) active: bool,
+    pub(super) channels: usize,
+    source: Option<driver_common::CaptureSource>,
+}
+
+impl Default for DriverSourceState {
+    fn default() -> Self {
+        Self {
+            active: false,
+            channels: 2,
+            source: None,
+        }
+    }
+}
+
+enum DriverInputReader<'a> {
+    External {
+        source: &'a driver_common::CaptureSource,
+        geometry: driver_common::DriverConfig,
+    },
+    #[cfg(all(target_os = "macos", feature = "hal"))]
+    Hal(&'a mut HalInputReader),
+}
+
+impl DriverInputReader<'_> {
+    fn available_read_frames(&self) -> usize {
+        match self {
+            Self::External { source, .. } => source.available_frames(),
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            Self::Hal(reader) => reader.available_read_frames(),
+        }
+    }
+    fn sample_rate(&self) -> u32 {
+        match self {
+            Self::External { geometry, .. } => geometry.sample_rate,
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            Self::Hal(reader) => reader.sample_rate(),
+        }
+    }
+    fn channel_count(&self) -> u32 {
+        match self {
+            Self::External { geometry, .. } => geometry.channel_count,
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            Self::Hal(reader) => reader.channel_count(),
+        }
+    }
+    fn read(&mut self, buffer: &mut [f32]) -> usize {
+        match self {
+            Self::External { source, geometry } => source.read_frames(buffer, *geometry),
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            Self::Hal(reader) => reader.read(buffer),
+        }
+    }
+}
+
 /// Decoder state
 pub(super) struct DecoderState {
     pub(super) decoder: Option<Box<dyn AudioDecoder>>,
@@ -38,8 +92,7 @@ pub(super) struct DecoderState {
     pub(super) paused: bool,
     pub(super) current_source: Option<AudioSource>,
     pub(super) spec: Option<AudioSpec>,
-    pub(super) silent_source: bool, // For HAL input plugins (no file source)
-    pub(super) silent_source_channels: usize,
+    pub(super) driver_source: DriverSourceState,
     pub(super) decode_buffer: Option<DecodedAudio>,
     pub(super) resample_output_buffer: Vec<f32>,
     /// Staging buffer: accumulates resampled output across decode chunks so that
@@ -76,7 +129,6 @@ pub(super) struct DecoderState {
     #[cfg(feature = "streaming")]
     pub(super) stream_metadata: Option<StreamMetadata>,
 
-    #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) hal_input_buffer: Vec<f32>,
     #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) hal_reader: Option<HalInputReader>,
@@ -84,9 +136,7 @@ pub(super) struct DecoderState {
     pub(super) last_hal_reconnect_attempt: Option<Instant>,
     #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) last_hal_cipher_reload_attempt: Option<Instant>,
-    #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) last_hal_sample_rate: Option<u32>,
-    #[cfg(all(target_os = "macos", feature = "hal"))]
     pub(super) last_hal_channels: Option<usize>,
     /// HAL device workgroup membership for the decoder thread, held from
     /// the first successful HAL reader connection to state drop (which
@@ -111,8 +161,7 @@ impl DecoderState {
             paused: false,
             current_source: None,
             spec: None,
-            silent_source: false,
-            silent_source_channels: 2,
+            driver_source: DriverSourceState::default(),
             decode_buffer: None,
             // Sized for the worst common resampling ratio; `ensure_buffer_len`
             // will grow it if an oversized block is requested.
@@ -134,7 +183,6 @@ impl DecoderState {
             stream_metadata_rx: None,
             #[cfg(feature = "streaming")]
             stream_metadata: None,
-            #[cfg(all(target_os = "macos", feature = "hal"))]
             hal_input_buffer: Vec::with_capacity(MAX_ENGINE_SAMPLE_CAPACITY),
             #[cfg(all(target_os = "macos", feature = "hal"))]
             hal_reader: None,
@@ -142,9 +190,7 @@ impl DecoderState {
             last_hal_reconnect_attempt: None,
             #[cfg(all(target_os = "macos", feature = "hal"))]
             last_hal_cipher_reload_attempt: None,
-            #[cfg(all(target_os = "macos", feature = "hal"))]
             last_hal_sample_rate: None,
-            #[cfg(all(target_os = "macos", feature = "hal"))]
             last_hal_channels: None,
             #[cfg(all(target_os = "macos", feature = "hal"))]
             hal_workgroup_membership: None,
@@ -306,7 +352,7 @@ impl DecoderState {
         let _ = metadata_rx;
         self.decode_buffer = None;
         self.paused = false;
-        self.silent_source = false;
+        self.driver_source = DriverSourceState::default();
 
         Ok(Some(next_source))
     }
@@ -319,7 +365,10 @@ impl DecoderState {
         self.stream_metadata_rx = None;
         if self.stream_metadata.take().is_some() {
             event_tx
-                .try_send(ThreadEvent::StreamMetadataChanged(None))
+                .try_send(
+                    ThreadEvent::StreamMetadataChanged(None)
+                        .with_decode_attempt(self.current_attempt),
+                )
                 .ok();
         }
     }
@@ -364,9 +413,10 @@ impl DecoderState {
 
         if changed {
             event_tx
-                .try_send(ThreadEvent::StreamMetadataChanged(
-                    self.stream_metadata.clone(),
-                ))
+                .try_send(
+                    ThreadEvent::StreamMetadataChanged(self.stream_metadata.clone())
+                        .with_decode_attempt(self.current_attempt),
+                )
                 .ok();
         }
     }
@@ -682,7 +732,10 @@ impl DecoderState {
                     .unwrap_or(0.0);
                 if position_update_due(self.last_position_update.elapsed()) {
                     event_tx
-                        .try_send(ThreadEvent::PositionUpdate(position_sec))
+                        .try_send(
+                            ThreadEvent::PositionUpdate(position_sec)
+                                .with_decode_attempt(self.current_attempt),
+                        )
                         .ok();
                     self.last_position_update = Instant::now();
                 }
@@ -700,7 +753,10 @@ impl DecoderState {
                 match self.try_gapless_transition_preserving_buffers(target_sample_rate) {
                     Ok(Some(next_source)) => {
                         event_tx
-                            .try_send(ThreadEvent::DecoderGaplessTransition(next_source))
+                            .try_send(
+                                ThreadEvent::DecoderGaplessTransition(next_source)
+                                    .with_decode_attempt(self.current_attempt),
+                            )
                             .ok();
                         return Ok(DecoderLoopAction::Continue);
                     }
@@ -708,7 +764,12 @@ impl DecoderState {
                     Err(e) => {
                         let msg = format!("Gapless transition failed: {}", e);
                         log::warn!("[Decoder Thread] {}", msg);
-                        event_tx.try_send(ThreadEvent::DecoderError(msg)).ok();
+                        event_tx
+                            .try_send(
+                                ThreadEvent::DecoderError(msg)
+                                    .with_decode_attempt(self.current_attempt),
+                            )
+                            .ok();
                     }
                 }
 
@@ -825,7 +886,10 @@ impl DecoderState {
                     match self.play(next_source.clone(), target_sample_rate, frame_size) {
                         Ok(()) => {
                             event_tx
-                                .try_send(ThreadEvent::DecoderGaplessTransition(next_source))
+                                .try_send(
+                                    ThreadEvent::DecoderGaplessTransition(next_source)
+                                        .with_decode_attempt(self.current_attempt),
+                                )
                                 .ok();
                             return Ok(DecoderLoopAction::Continue);
                         }
@@ -836,7 +900,12 @@ impl DecoderState {
                                 e
                             );
                             log::warn!("[Decoder Thread] {}, falling through to EndOfStream", msg);
-                            event_tx.try_send(ThreadEvent::DecoderError(msg)).ok();
+                            event_tx
+                                .try_send(
+                                    ThreadEvent::DecoderError(msg)
+                                        .with_decode_attempt(self.current_attempt),
+                                )
+                                .ok();
                             // Fall through to normal end-of-stream below
                         }
                     }
@@ -860,16 +929,26 @@ impl DecoderState {
                     .map(|decoder| decoder.position() as f64 / source_sample_rate as f64)
                     .unwrap_or(0.0);
                 event_tx
-                    .try_send(ThreadEvent::PositionUpdate(final_position_sec))
+                    .try_send(
+                        ThreadEvent::PositionUpdate(final_position_sec)
+                            .with_decode_attempt(self.current_attempt),
+                    )
                     .ok();
                 self.last_position_update = Instant::now();
-                event_tx.try_send(ThreadEvent::DecoderEndOfStream).ok();
+                event_tx
+                    .try_send(
+                        ThreadEvent::DecoderEndOfStream.with_decode_attempt(self.current_attempt),
+                    )
+                    .ok();
                 Ok(DecoderLoopAction::Stop)
             }
             Err(e) => {
                 let err_msg = format!("Decode error: {:?}", e);
                 event_tx
-                    .try_send(ThreadEvent::DecoderError(err_msg.clone()))
+                    .try_send(
+                        ThreadEvent::DecoderError(err_msg.clone())
+                            .with_decode_attempt(self.current_attempt),
+                    )
                     .ok();
                 Err(err_msg)
             }
@@ -913,7 +992,7 @@ impl DecoderState {
         self.resample_staging.clear();
         self.current_source = None;
         self.spec = None;
-        self.silent_source = false;
+        self.driver_source = DriverSourceState::default();
         self.queued_next = None;
         #[cfg(all(target_os = "macos", feature = "hal"))]
         {
@@ -992,8 +1071,8 @@ impl DecoderState {
     /// Start silent source mode (for HAL input plugins)
     pub(super) fn start_silent_source(&mut self, channels: usize) {
         self.stop(); // Clear any existing decoder
-        self.silent_source = true;
-        self.silent_source_channels = channels.max(1);
+        self.driver_source.active = true;
+        self.driver_source.channels = channels.max(1);
 
         #[cfg(all(target_os = "macos", feature = "hal"))]
         {
@@ -1001,6 +1080,19 @@ impl DecoderState {
         }
         #[cfg(not(all(target_os = "macos", feature = "hal")))]
         log::info!("[Decoder Thread] Started silent source mode (HAL input not supported)");
+    }
+
+    pub(super) fn start_capture_source(
+        &mut self,
+        source: driver_common::CaptureSource,
+        channels: usize,
+    ) {
+        self.stop();
+        self.driver_source = DriverSourceState {
+            active: true,
+            channels,
+            source: Some(source),
+        };
     }
 
     /// Read from HAL input or generate silent frame
@@ -1029,15 +1121,29 @@ impl DecoderState {
         let count = LOG_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
 
         #[cfg(all(target_os = "macos", feature = "hal"))]
-        self.try_reconnect_hal_reader(false);
-
-        #[cfg(all(target_os = "macos", feature = "hal"))]
-        if self.hal_reader.is_some() && !self.reload_hal_cipher_if_needed() {
-            return Ok((false, None));
+        if self.driver_source.source.is_none() {
+            self.try_reconnect_hal_reader(false);
+            if self.hal_reader.is_some() && !self.reload_hal_cipher_if_needed() {
+                return Ok((false, None));
+            }
         }
 
-        #[cfg(all(target_os = "macos", feature = "hal"))]
-        if let Some(reader) = &mut self.hal_reader {
+        let reader = if let Some(source) = self.driver_source.source.as_ref() {
+            Some(DriverInputReader::External {
+                source,
+                geometry: source.configuration(),
+            })
+        } else {
+            #[cfg(all(target_os = "macos", feature = "hal"))]
+            {
+                self.hal_reader.as_mut().map(DriverInputReader::Hal)
+            }
+            #[cfg(not(all(target_os = "macos", feature = "hal")))]
+            {
+                None
+            }
+        };
+        if let Some(mut reader) = reader {
             // Check if we have enough frames available
             if reader.available_read_frames() < frame_size {
                 return Ok((false, None));
@@ -1046,6 +1152,14 @@ impl DecoderState {
             // Read from HAL - use actual HAL config
             let hal_sample_rate = reader.sample_rate();
             let hal_channels = reader.channel_count() as usize;
+            if hal_sample_rate == 0
+                || hal_sample_rate > 192_000
+                || hal_channels == 0
+                || hal_channels > crate::EngineConfig::MAX_INPUT_CHANNELS
+                || hal_channels != self.driver_source.channels
+            {
+                return Err("Capture geometry changed; the pipeline must be reconfigured".into());
+            }
             let buffer_len = frame_size * hal_channels;
 
             // Keep the HAL input buffer exactly `buffer_len`: truncate any stale
@@ -1054,6 +1168,9 @@ impl DecoderState {
             self.hal_input_buffer.truncate(buffer_len);
 
             let frames_read = reader.read(&mut self.hal_input_buffer);
+            if frames_read == 0 {
+                return Ok((false, None));
+            }
             let samples_read = frames_to_sample_count(frames_read, hal_channels, buffer_len);
 
             if samples_read < buffer_len {
@@ -1211,7 +1328,7 @@ impl DecoderState {
 
         // Fallback to silent frame if no reader (or not macOS)
         // Use frame_send_buffer to avoid allocation for silent frames
-        let silent_channels = self.silent_source_channels.max(1);
+        let silent_channels = self.driver_source.channels.max(1);
         let silent_len = frame_size * silent_channels;
         Self::ensure_buffer_len(&mut self.frame_send_buffer, silent_len)?;
         self.frame_send_buffer[..silent_len].fill(0.0);

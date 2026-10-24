@@ -9,9 +9,12 @@ use sotf_host::parameters::{ParameterId, ParameterValue};
 use sotf_host::{ParametricInPlacePlugin, ProcessContext, TailLength};
 use sotf_plugin_convolution::{ConvolutionLoadStatus, ConvolutionPlugin, ConvolutionPluginParams};
 use std::alloc::{GlobalAlloc, Layout};
+use std::io::Write;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const NORMAL_LATENCY: usize = 1_024;
+static NEXT_FIXTURE_NONCE: AtomicU64 = AtomicU64::new(0);
 
 thread_local! {
     static AUD134_HEAP_GUARD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -78,14 +81,11 @@ impl Drop for ImpulseFile {
 }
 
 fn write_impulse(channels: &[Vec<i16>], sample_rate: u32) -> ImpulseFile {
-    let unique = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let path = std::env::temp_dir().join(format!(
-        "sotf-convolution-oracle-{}-{unique}.wav",
-        std::process::id()
-    ));
+    let nonce = NEXT_FIXTURE_NONCE.fetch_add(1, Ordering::Relaxed);
+    write_impulse_with_nonce(channels, sample_rate, nonce)
+}
+
+fn write_impulse_with_nonce(channels: &[Vec<i16>], sample_rate: u32, nonce: u64) -> ImpulseFile {
     let channel_count = channels.len() as u16;
     let frames = channels[0].len();
     let data_bytes = (frames * channels.len() * 2) as u32;
@@ -107,8 +107,33 @@ fn write_impulse(channels: &[Vec<i16>], sample_rate: u32) -> ImpulseFile {
             bytes.extend_from_slice(&channel[frame].to_le_bytes());
         }
     }
-    std::fs::write(&path, bytes).unwrap();
-    ImpulseFile(path)
+    for attempt in 0_u64.. {
+        let path = std::env::temp_dir().join(format!(
+            "sotf-convolution-oracle-{}-{nonce}-{attempt}.wav",
+            std::process::id()
+        ));
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+        {
+            Ok(mut file) => {
+                file.write_all(&bytes).unwrap();
+                return ImpulseFile(path);
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => panic!("failed to create temporary impulse file: {error}"),
+        }
+    }
+    unreachable!("exhausted all temporary impulse file names")
+}
+
+#[test]
+fn parallel_fixture_writer_never_reuses_a_path_even_with_same_nonce() {
+    let a = write_impulse_with_nonce(&[vec![1, 2, 3]], 48_000, 42);
+    let b = write_impulse_with_nonce(&[vec![4, 5, 6]], 48_000, 42);
+    assert_ne!(a.0, b.0);
+    assert_ne!(std::fs::read(&a.0).unwrap(), std::fs::read(&b.0).unwrap());
 }
 
 fn direct_convolution(input: &[f32], impulse: &[Vec<i16>]) -> Vec<f64> {

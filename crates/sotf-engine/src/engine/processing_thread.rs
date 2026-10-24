@@ -5,7 +5,7 @@ use super::{
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, Sender, SyncSender};
 
 mod build;
@@ -80,6 +80,7 @@ pub struct ProcessingThread {
     response_inbox: Mutex<ProcessingResponseInbox>,
     request_tickets: Mutex<HashMap<u64, ProcessingCommandTicket>>,
     next_request_id: AtomicU64,
+    quarantined: AtomicBool,
     thread_handle: Option<std::thread::JoinHandle<()>>,
     host_generation: Arc<AtomicU64>,
     exit_status: WorkerExitStatus,
@@ -88,8 +89,15 @@ pub struct ProcessingThread {
 impl ProcessingThread {
     #[cfg(test)]
     pub(in crate::engine) fn command_probe() -> (Self, Receiver<ProcessingRequest>) {
+        let (processing, commands, _replies) = Self::response_probe();
+        (processing, commands)
+    }
+
+    #[cfg(test)]
+    pub(in crate::engine) fn response_probe()
+    -> (Self, Receiver<ProcessingRequest>, Sender<ProcessingReply>) {
         let (command_tx, command_rx) = std::sync::mpsc::channel();
-        let (_response_tx, response_rx) = std::sync::mpsc::channel();
+        let (response_tx, response_rx) = std::sync::mpsc::channel();
         (
             Self {
                 command_tx,
@@ -100,11 +108,13 @@ impl ProcessingThread {
                 }),
                 request_tickets: Mutex::new(HashMap::new()),
                 next_request_id: AtomicU64::new(1),
+                quarantined: AtomicBool::new(false),
                 thread_handle: None,
                 host_generation: Arc::new(AtomicU64::new(0)),
                 exit_status: WorkerExitStatus::new(),
             },
             command_rx,
+            response_tx,
         )
     }
 
@@ -178,6 +188,7 @@ impl ProcessingThread {
             }),
             request_tickets: Mutex::new(HashMap::new()),
             next_request_id: AtomicU64::new(1),
+            quarantined: AtomicBool::new(false),
             thread_handle: Some(thread_handle),
             host_generation,
             exit_status,
@@ -186,6 +197,9 @@ impl ProcessingThread {
 
     /// Send a command to the processing thread
     pub fn send_command(&self, command: ProcessingCommand) -> Result<u64, String> {
+        if self.is_quarantined() && !matches!(command, ProcessingCommand::Shutdown) {
+            return Err("Processing worker quarantined; recreate the engine".into());
+        }
         let id = self.next_request_id.fetch_add(1, Ordering::Relaxed);
         let expects_response = matches!(
             command,
@@ -279,6 +293,14 @@ impl ProcessingThread {
             inbox.buffered.remove(&request_id);
             inbox.abandoned.insert(request_id);
         }
+    }
+
+    pub(in crate::engine) fn quarantine(&self) {
+        self.quarantined.store(true, Ordering::Release);
+    }
+
+    pub(in crate::engine) fn is_quarantined(&self) -> bool {
+        self.quarantined.load(Ordering::Acquire)
     }
 
     /// Whether the worker has stopped before the manager requested shutdown.

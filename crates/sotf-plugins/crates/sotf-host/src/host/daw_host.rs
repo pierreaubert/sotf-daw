@@ -7423,9 +7423,10 @@ impl DawHost {
             );
         }
 
-        if events.iter().any(|event| event.sample_offset > 0)
-            && self.can_split_parameter_event_block(input, output)
-        {
+        if events.iter().any(|event| event.sample_offset > 0) {
+            if !self.can_split_parameter_event_block(input, output) {
+                return Err("sample-offset parameter events are unsupported for this graph".into());
+            }
             return self.process_split_parameter_events(
                 input,
                 output,
@@ -7436,7 +7437,7 @@ impl DawHost {
         }
 
         for event in events.drain(..) {
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
         self.process_block_without_parameter_events(
             input,
@@ -7468,6 +7469,9 @@ impl DawHost {
             return Err("terminal sink input lost whole-frame geometry".into());
         }
         let frames = input.len() / input_channels;
+        if events.iter().any(|event| event.sample_offset > frames) {
+            return Err("sample-offset parameter event exceeds the input block".into());
+        }
         if output.len() != input.len() {
             return Err("terminal sink staging does not match the admitted input block".into());
         }
@@ -7478,7 +7482,7 @@ impl DawHost {
         let mut processed_frames = 0;
         while events.last().is_some_and(|event| event.sample_offset == 0) {
             let event = events.pop().unwrap();
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
             self.validate_terminal_sink_input_geometry(frames)
                 .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
         }
@@ -7504,13 +7508,13 @@ impl DawHost {
                 .is_some_and(|event| event.sample_offset <= frame_cursor)
             {
                 let event = events.pop().unwrap();
-                let _ = self.apply_parameter_event(event);
+                self.apply_parameter_event(event)?;
                 self.validate_terminal_sink_input_geometry(frames - frame_cursor)
                     .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
             }
         }
         while let Some(event) = events.pop() {
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
             self.validate_terminal_sink_input_geometry(0)
                 .map_err(|error| format!("parameter update invalidated sink route: {error}"))?;
         }
@@ -7543,6 +7547,9 @@ impl DawHost {
         let input_channels = self.input_channels();
         let output_channels = self.output_channels();
         let frames = input.len() / input_channels;
+        if events.iter().any(|event| event.sample_offset > frames) {
+            return Err("sample-offset parameter event exceeds the input block".into());
+        }
         events.sort_by_key(|event| event.sample_offset);
         events.reverse();
 
@@ -7551,7 +7558,7 @@ impl DawHost {
 
         while events.last().is_some_and(|event| event.sample_offset == 0) {
             let event = events.pop().unwrap();
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
 
         while frame_cursor < frames {
@@ -7579,12 +7586,12 @@ impl DawHost {
                 .is_some_and(|event| event.sample_offset <= frame_cursor)
             {
                 let event = events.pop().unwrap();
-                let _ = self.apply_parameter_event(event);
+                self.apply_parameter_event(event)?;
             }
         }
 
         while let Some(event) = events.pop() {
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
 
         Ok(processed_frames)
@@ -8558,9 +8565,10 @@ impl DawHost {
             );
         }
 
-        if events.iter().any(|event| event.sample_offset > 0)
-            && self.can_split_parameter_event_block_f64(input, output)
-        {
+        if events.iter().any(|event| event.sample_offset > 0) {
+            if !self.can_split_parameter_event_block_f64(input, output) {
+                return Err("sample-offset parameter events are unsupported for this graph".into());
+            }
             return self.process_f64_split_parameter_events(
                 input,
                 output,
@@ -8570,7 +8578,7 @@ impl DawHost {
         }
 
         for event in events.drain(..) {
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
         self.process_f64_without_parameter_events(
             input,
@@ -8608,6 +8616,9 @@ impl DawHost {
         let input_channels = self.input_channels();
         let output_channels = self.output_channels();
         let frames = input.len() / input_channels;
+        if events.iter().any(|event| event.sample_offset > frames) {
+            return Err("sample-offset parameter event exceeds the input block".into());
+        }
         events.sort_by_key(|event| event.sample_offset);
         events.reverse();
 
@@ -8616,7 +8627,7 @@ impl DawHost {
 
         while events.last().is_some_and(|event| event.sample_offset == 0) {
             let event = events.pop().unwrap();
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
 
         while frame_cursor < frames {
@@ -8643,12 +8654,12 @@ impl DawHost {
                 .is_some_and(|event| event.sample_offset <= frame_cursor)
             {
                 let event = events.pop().unwrap();
-                let _ = self.apply_parameter_event(event);
+                self.apply_parameter_event(event)?;
             }
         }
 
         while let Some(event) = events.pop() {
-            let _ = self.apply_parameter_event(event);
+            self.apply_parameter_event(event)?;
         }
 
         Ok(processed_frames)

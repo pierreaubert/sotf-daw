@@ -52,6 +52,27 @@ fn fractional_host_rate_reaches_both_clocks_without_integer_rounding() {
     assert!(valid.load(Ordering::Relaxed));
 }
 
+#[test]
+fn mixed_rate_graph_rejects_unmapped_parameter_event_offsets() {
+    for native in [false, true] {
+        let valid = Arc::new(AtomicBool::new(true));
+        let mut host = DawHost::new(1, 48_000);
+        host.add_plugin(Box::new(ClockPlugin::new(2, 1, 0, &valid)))
+            .unwrap();
+        host.build().unwrap();
+        host.set_plugin_parameter_at(0, "gain", ParameterValue::Float(0.5), 3)
+            .unwrap();
+        let mut output = [0.0; 64];
+        let error = if native {
+            host.process_f64(&[1.0; 32], &mut output).unwrap_err()
+        } else {
+            let mut f32_output = [0.0; 64];
+            host.process(&[1.0; 32], &mut f32_output).unwrap_err()
+        };
+        assert!(error.contains("sample-offset"), "{error}");
+    }
+}
+
 struct MutableOutputRate(Arc<AtomicU64>);
 
 impl Plugin for MutableOutputRate {

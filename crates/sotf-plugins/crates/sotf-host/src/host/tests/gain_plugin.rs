@@ -186,6 +186,47 @@ fn test_parameter_event_sample_offset_splits_block() {
 }
 
 #[test]
+fn sample_offset_event_with_timeline_automation_is_rejected_explicitly() {
+    let mut host = DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(GainPlugin::new(2, 1.0))).unwrap();
+    host.build().unwrap();
+    let node = host.chain_nodes[0];
+    host.set_automation(
+        node,
+        crate::parameters::ParameterId::from("gain"),
+        crate::automation::AutomationCurve::Step {
+            values: vec![0.25],
+            samples_per_step: 4,
+        },
+    )
+    .unwrap();
+    host.set_plugin_parameter_at(0, "gain", crate::parameters::ParameterValue::Float(0.5), 2)
+        .unwrap();
+
+    let mut output = [0.0; 8];
+    let error = host.process(&[1.0; 8], &mut output).unwrap_err();
+    assert!(error.contains("sample-offset"), "{error}");
+}
+
+#[test]
+fn queued_parameter_application_errors_reach_process_caller() {
+    let mut host = DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(GainPlugin::new(2, 1.0))).unwrap();
+    host.build().unwrap();
+    let node = host.chain_nodes[0];
+    host.queue_node_parameter_at(
+        node,
+        crate::parameters::ParameterId::from("no_such_parameter"),
+        crate::parameters::ParameterValue::Float(0.5),
+        0,
+    )
+    .unwrap();
+
+    let mut output = [0.0; 8];
+    assert!(host.process(&[1.0; 8], &mut output).is_err());
+}
+
+#[test]
 fn test_automation_basic() {
     // Create a host with a single GainPlugin starting at gain=1.0.
     let mut g = DawHost::new(2, 48000);

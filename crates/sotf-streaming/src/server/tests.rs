@@ -12,6 +12,49 @@ use std::time::{Duration, Instant};
 
 const SERVER_ATTEMPTS: usize = 10;
 
+#[test]
+fn default_pcm_server_bind_is_loopback() {
+    assert_eq!(PcmStreamServerConfig::default().bind_addr, "127.0.0.1");
+}
+
+#[test]
+fn pcm_server_caps_pending_connections_and_still_shuts_down() {
+    let Some(mut server) = (match PcmStreamServer::start(PcmStreamServerConfig {
+        bind_addr: "127.0.0.1".to_string(),
+        port: 0,
+        max_connections: 2,
+        ..Default::default()
+    }) {
+        Ok(server) => Some(server),
+        Err(err) if err.kind() == io::ErrorKind::PermissionDenied => None,
+        Err(err) => panic!("failed to start test streaming server: {err}"),
+    }) else {
+        return;
+    };
+
+    let mut idle_clients = Vec::new();
+    for _ in 0..2 {
+        idle_clients.push(TcpStream::connect(server.local_addr()).unwrap());
+    }
+    assert!(wait_until(Duration::from_secs(1), || {
+        server.stats().connection_count == 2
+    }));
+
+    let mut excess = TcpStream::connect(server.local_addr()).unwrap();
+    excess
+        .write_all(b"GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n")
+        .unwrap();
+    let mut response = [0u8; 256];
+    let received = excess.read(&mut response).unwrap();
+    assert!(String::from_utf8_lossy(&response[..received]).starts_with("HTTP/1.1 503"));
+    assert_eq!(server.stats().connection_count, 2);
+
+    let started = Instant::now();
+    server.shutdown();
+    assert!(started.elapsed() < Duration::from_secs(1));
+    drop(idle_clients);
+}
+
 fn start_test_server() -> Option<PcmStreamServer> {
     match PcmStreamServer::start(PcmStreamServerConfig {
         bind_addr: "127.0.0.1".to_string(),

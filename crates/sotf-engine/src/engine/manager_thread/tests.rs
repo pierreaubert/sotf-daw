@@ -823,7 +823,6 @@ fn test_handle_thread_event_decoder_gapless_transition() {
 fn test_handle_thread_event_playback_drained() {
     let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
         playback_state: PlaybackState::Playing,
-        last_error: Some("previous error".to_string()),
         output_peak_linear: 1.25,
         output_clipping_detected: true,
         playback_peak_max_linear: 1.25,
@@ -860,6 +859,39 @@ fn test_handle_thread_event_playback_drained() {
     assert_eq!(s.output_peak_linear, 0.0);
     assert!(!s.output_clipping_detected);
     assert_eq!(s.playback_peak_max_linear, 1.25);
+}
+
+#[test]
+fn processing_error_survives_same_epoch_drain() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        playback_state: PlaybackState::Playing,
+        playback_epoch: 9,
+        ..AudioEngineState::default()
+    }));
+
+    handle_thread_event(
+        ThreadEvent::ProcessingWarning("recoverable warning".into()),
+        &state,
+    );
+    handle_thread_event(
+        ThreadEvent::ProcessingError("fatal processing error".into()),
+        &state,
+    );
+    handle_thread_event(
+        ThreadEvent::PlaybackDrained {
+            epoch: 9,
+            epoch_peak_max: 0.0,
+            flush_gen: 0,
+        },
+        &state,
+    );
+
+    let current = state.load();
+    assert_eq!(current.playback_state, PlaybackState::Stopped);
+    assert_eq!(
+        current.last_error.as_deref(),
+        Some("fatal processing error")
+    );
 }
 
 #[test]
@@ -1442,7 +1474,7 @@ fn double_seek_gates_each_drain_by_generation() {
     assert_eq!(s.last_error.as_deref(), Some("previous error"));
     drop(s);
 
-    // Post-second-Flush drain: completes and clears the error.
+    // Post-second-Flush drain completes without erasing a preceding error.
     handle_thread_event(
         ThreadEvent::PlaybackDrained {
             epoch: 5,
@@ -1454,7 +1486,30 @@ fn double_seek_gates_each_drain_by_generation() {
     let s = state.load();
     assert_eq!(s.playback_state, PlaybackState::Stopped);
     assert_eq!(s.playback_peak_max_linear, 0.70);
-    assert!(s.last_error.is_none());
+    assert_eq!(s.last_error.as_deref(), Some("previous error"));
+}
+
+#[test]
+fn stale_decoder_lifecycle_event_cannot_replace_current_source() {
+    let state = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+        current_source: Some(crate::decoder::AudioSource::File("current.wav".into())),
+        decoder_attempt: 9,
+        playback_state: PlaybackState::Playing,
+        ..AudioEngineState::default()
+    }));
+    handle_thread_event(
+        ThreadEvent::DecoderTagged {
+            attempt: 8,
+            event: Box::new(ThreadEvent::DecoderGaplessTransition(
+                crate::decoder::AudioSource::File("stale.wav".into()),
+            )),
+        },
+        &state,
+    );
+    assert_eq!(
+        state.load().current_source,
+        Some(crate::decoder::AudioSource::File("current.wav".into()))
+    );
 }
 
 #[test]

@@ -9,12 +9,9 @@
 //! no drain-content assertions beyond exact length.
 //!
 //! Corpus: sibling `data_tests/audio` (`piano.wav`, `rock.wav`; 48 kHz
-//! stereo per `manifest.toml`), resolved through `SOTF_TEST_DATA_ROOT`
-//! (same contract as `sotf-testkit`). No corpus is vendored in this
-//! workspace, so without the env var the test passes with a loud SKIP
-//! log; with the var set, a missing file FAILS loudly instead of
-//! silently halving coverage. Root runs the corpus leg; default gates
-//! stay hermetic.
+//! stereo per `manifest.toml`), resolved through `SOTF_TEST_DATA_ROOT`.
+//! The corpus test is explicitly ignored by default; when selected it
+//! requires both files and fails if no data is configured or exercised.
 //!
 //! R41: both corpus wavs carry a leading ID3v2.3 metadata tag ahead of
 //! the RIFF PCM (root file inspection; hound rejects the raw files with
@@ -48,8 +45,10 @@ const SETTLE_FRAMES: usize = 64;
 /// Stream block size (frames).
 const BLOCK: usize = 512;
 
-fn corpus_file(name: &str) -> Option<PathBuf> {
-    std::env::var_os("SOTF_TEST_DATA_ROOT").map(|root| PathBuf::from(root).join("audio").join(name))
+fn corpus_file(name: &str) -> PathBuf {
+    let root = std::env::var_os("SOTF_TEST_DATA_ROOT")
+        .expect("SOTF_TEST_DATA_ROOT is required for the corpus quality test");
+    PathBuf::from(root).join("audio").join(name)
 }
 
 /// Strip a leading ID3v2 tag, returning the untouched remainder.
@@ -100,19 +99,12 @@ fn strip_id3v2(input: &[u8]) -> Result<&[u8], String> {
 
 /// Load the first `SECONDS` of a corpus wav as interleaved f32 stereo.
 ///
-/// Returns `None` (skip) when the corpus is not configured; otherwise
-/// decodes through the shared loud-failure helper below.
-fn load_prefix(name: &str) -> Option<(u32, usize, Vec<f32>)> {
-    let path = match corpus_file(name) {
-        Some(path) => path,
-        None => {
-            eprintln!("[declick-corpus] SKIP {name}: SOTF_TEST_DATA_ROOT unset");
-            return None;
-        }
-    };
+/// Requires an explicitly configured corpus and decodes its first seconds.
+fn load_prefix(name: &str) -> (u32, usize, Vec<f32>) {
+    let path = corpus_file(name);
     let bytes = std::fs::read(&path)
         .unwrap_or_else(|error| panic!("corpus file must read {}: {error}", path.display()));
-    Some(decode_prefix_bytes(&bytes, name))
+    decode_prefix_bytes(&bytes, name)
 }
 
 /// Decode the first `SECONDS` of WAV bytes (shared loud-failure core).
@@ -237,6 +229,7 @@ fn process_full(
 }
 
 #[test]
+#[ignore = "requires SOTF_TEST_DATA_ROOT with the release corpus"]
 fn declick_corpus_music_damage_and_finite() {
     // Release invariant (stabilization): clean controls (damage 0
     // violations at 0.05) and render finiteness stay green on the
@@ -338,17 +331,14 @@ fn run_corpus_matrix(assert_repair: bool) {
     let mut failures: Vec<String> = Vec::new();
     let mut covered = 0_usize;
     for &name in FILES {
-        let Some((rate, channels, clean)) = load_prefix(name) else {
-            continue;
-        };
+        let (rate, channels, clean) = load_prefix(name);
         let frames = clean.len() / channels;
         let slots = quiet_slots(&clean, channels, frames, CLICKS_PER_FILE);
         if slots.len() < CLICKS_PER_FILE {
-            eprintln!(
-                "[declick-corpus] SKIP {name}: only {} quiet slots (want {CLICKS_PER_FILE})",
+            panic!(
+                "[declick-corpus] {name}: only {} quiet slots (want {CLICKS_PER_FILE})",
                 slots.len()
             );
-            continue;
         }
         for slot in &slots {
             let peak = |radius: usize| {
@@ -447,15 +437,7 @@ fn run_corpus_matrix(assert_repair: bool) {
         }
         covered += 1;
     }
-    if covered == 0 {
-        eprintln!("[declick-corpus] SKIP: no corpus files rendered (set SOTF_TEST_DATA_ROOT)");
-    } else {
-        assert_eq!(
-            covered,
-            FILES.len(),
-            "partial corpus coverage must fail loudly, not halve silently"
-        );
-    }
+    assert_eq!(covered, FILES.len(), "partial corpus coverage must fail");
     assert!(
         failures.is_empty(),
         "corpus primary collected {} failure(s):\n{}",

@@ -13,26 +13,55 @@ use super::write::write_stream_headers;
 use std::io::{self};
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::Sender;
 use std::thread::{self};
 use std::time::Duration;
+
+const MAX_ACCEPTS_PER_ITERATION: usize = 16;
+
+struct ConnectionGuard(Arc<SharedStats>);
+
+impl Drop for ConnectionGuard {
+    fn drop(&mut self) {
+        self.0.connection_count.fetch_sub(1, Ordering::AcqRel);
+    }
+}
 
 pub(super) fn accept_pending_clients(
     listener: &TcpListener,
     client_tx: &Sender<ClientRegistration>,
     stats: Arc<SharedStats>,
     client_queue_capacity: usize,
+    max_connections: u32,
 ) {
-    loop {
+    for _ in 0..MAX_ACCEPTS_PER_ITERATION {
         match listener.accept() {
-            Ok((stream, peer)) => {
+            Ok((mut stream, peer)) => {
+                let acquired = stats
+                    .connection_count
+                    .try_update(Ordering::AcqRel, Ordering::Acquire, |count| {
+                        (count < max_connections).then_some(count + 1)
+                    })
+                    .is_ok();
+                if !acquired {
+                    let _ = write_response(
+                        &mut stream,
+                        "503 Service Unavailable",
+                        "text/plain; charset=utf-8",
+                        b"connection limit reached",
+                    );
+                    continue;
+                }
                 log::debug!("[PCM Stream] Connection from {}", peer);
                 let tx = client_tx.clone();
                 let stats = Arc::clone(&stats);
+                let guard = ConnectionGuard(Arc::clone(&stats));
                 if let Err(e) = thread::Builder::new()
                     .name("pcm-stream-client".to_string())
                     .stack_size(CLIENT_THREAD_STACK_SIZE_BYTES)
                     .spawn(move || {
+                        let _guard = guard;
                         handle_client(stream, tx, stats, client_queue_capacity);
                     })
                 {

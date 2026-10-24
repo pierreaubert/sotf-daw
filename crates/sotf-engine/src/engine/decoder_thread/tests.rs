@@ -12,6 +12,43 @@ use crate::decoder::{AudioSpec, DecodedAudio};
 use std::path::PathBuf;
 use std::time::Duration;
 
+#[test]
+fn cancelled_play_attempt_never_flushes_or_opens_a_source() {
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(4);
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(4);
+    let (response_tx, response_rx) = std::sync::mpsc::channel();
+    let (_recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let (command_tx, command_rx) = std::sync::mpsc::channel();
+    let (async_error_tx, _async_error_rx) = std::sync::mpsc::channel();
+    let cancelled_through = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(1));
+    command_tx
+        .send(DecoderCommand::Play(
+            crate::AudioSource::File("/missing-cancelled-source.wav".into()),
+            1,
+        ))
+        .unwrap();
+    command_tx.send(DecoderCommand::Shutdown).unwrap();
+
+    run_decoder_thread(
+        message_tx,
+        command_rx,
+        response_tx,
+        event_tx,
+        48_000,
+        1024,
+        recycle_rx,
+        DsdOutputMode::Disabled,
+        async_error_tx,
+        cancelled_through,
+    )
+    .unwrap();
+    assert!(matches!(
+        response_rx.try_recv(),
+        Ok(DecoderResponse::Error(_))
+    ));
+    assert!(message_rx.try_recv().is_err());
+}
+
 /// Channel barrier deadline. Ordering comes from the receipts themselves;
 /// this only bounds how long a genuinely stuck decoder may take before the
 /// test fails loud. Keep it generous: shared/loaded machines can starve a
@@ -84,6 +121,7 @@ fn decoder_shutdown_does_not_block_on_a_stuck_worker() {
             abandoned: std::collections::HashSet::new(),
         }),
         next_request_id: std::sync::atomic::AtomicU64::new(1),
+        cancelled_attempt_through: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
         thread_handle: Some(handle),
         async_error_rx,
         exit_status: crate::engine::worker_death::WorkerExitStatus::new(),
@@ -110,6 +148,7 @@ fn decoder_late_reply_cannot_acknowledge_a_newer_request() {
             abandoned: std::collections::HashSet::new(),
         }),
         next_request_id: std::sync::atomic::AtomicU64::new(1),
+        cancelled_attempt_through: std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
         thread_handle: None,
         async_error_rx,
         exit_status: crate::engine::worker_death::WorkerExitStatus::new(),
@@ -383,6 +422,7 @@ fn paused_decoder_thread_exits_on_disconnected_sender() {
                 recycle_rx,
                 DsdOutputMode::Disabled,
                 async_error_tx,
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
             )
         })
         .expect("spawn decoder thread");
@@ -433,6 +473,7 @@ fn play_sends_flush_before_ack() {
                 recycle_rx,
                 DsdOutputMode::Disabled,
                 async_error_tx,
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
             )
         })
         .expect("spawn decoder thread");
@@ -540,6 +581,7 @@ fn playat_seek_failure_reverts_to_silence() {
                 recycle_rx,
                 DsdOutputMode::Disabled,
                 async_error_tx,
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
             )
         })
         .expect("spawn decoder thread");
@@ -564,7 +606,8 @@ fn playat_seek_failure_reverts_to_silence() {
     ));
     assert!(matches!(
         event_rx.recv_timeout(BARRIER_DEADLINE).unwrap(),
-        ThreadEvent::DecoderError(message) if message.contains("Seeking not supported")
+        ThreadEvent::DecoderTagged { attempt: 1, event }
+            if matches!(*event, ThreadEvent::DecoderError(ref message) if message.contains("Seeking not supported"))
     ));
 
     // Silence proof, FIFO-causal (no timing): nothing may appear between
@@ -711,6 +754,7 @@ fn mixed_stream_commands_emit_exactly_one_flush_each() {
                 recycle_rx,
                 DsdOutputMode::Disabled,
                 async_error_tx,
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
             )
         })
         .expect("spawn decoder thread");
@@ -818,6 +862,7 @@ fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
                 recycle_rx,
                 DsdOutputMode::Disabled,
                 async_error_tx,
+                std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0)),
             )
         })
         .expect("spawn decoder thread");

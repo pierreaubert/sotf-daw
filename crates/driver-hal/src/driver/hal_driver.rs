@@ -76,6 +76,14 @@ impl HalDriver {
 
     /// Try to open (or reopen) the config buffer for status/config operations.
     pub(super) fn ensure_config_buffer(&mut self) {
+        if self
+            .config_buffer
+            .as_ref()
+            .is_some_and(|buffer| !buffer.backing_file_is_current())
+        {
+            self.stop_engine_heartbeat();
+            self.config_buffer = None;
+        }
         if self.config_buffer.is_none()
             && let Ok(buf) = SharedAudioBuffer::open_default()
         {
@@ -396,18 +404,43 @@ impl AudioDriver for HalDriver {
     }
 
     fn set_engine_ready(&mut self, ready: bool) {
-        self.ensure_config_buffer();
-        if let Some(ref buf) = self.config_buffer {
-            buf.set_engine_ready(ready);
-            if ready {
-                self.start_engine_heartbeat();
-            } else {
-                self.stop_engine_heartbeat();
-            }
-            log::info!("[HalDriver] engine_ready = {}", ready);
-        } else {
-            log::warn!("[HalDriver] Cannot set engine_ready: shared memory not available");
+        if let Err(error) = self.set_engine_ready_checked(ready) {
+            log::warn!("[HalDriver] Cannot publish readiness: {error}");
         }
+    }
+
+    fn set_engine_ready_checked(&mut self, ready: bool) -> Result<(), DriverError> {
+        self.ensure_config_buffer();
+        let buffer = self.config_buffer.as_ref().ok_or_else(|| {
+            DriverError::not_available("HAL mapping unavailable for readiness publication")
+        })?;
+        buffer.set_engine_ready(ready);
+        if ready {
+            self.start_engine_heartbeat();
+        } else {
+            self.stop_engine_heartbeat();
+        }
+        if !self.engine_ready_matches(ready) {
+            if let Some(buffer) = self.config_buffer.as_ref() {
+                buffer.set_engine_ready(false);
+            }
+            return Err(DriverError::not_available(
+                "HAL readiness publication or heartbeat failed",
+            ));
+        }
+        Ok(())
+    }
+
+    fn engine_ready_matches(&self, ready: bool) -> bool {
+        self.config_buffer.as_ref().is_some_and(|buffer| {
+            buffer.backing_file_is_current()
+                && buffer.engine_ready() == ready
+                && (!ready
+                    || self
+                        .heartbeat_thread
+                        .as_ref()
+                        .is_some_and(|thread| !thread.is_finished()))
+        })
     }
 }
 

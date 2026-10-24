@@ -576,6 +576,34 @@ impl AudioEngineManager {
         input_channels: usize,
         sink_type: SinkType,
     ) -> AudioDecoderResult<()> {
+        self.start_driver_playback_with_source(
+            output_device,
+            plugins,
+            output_channels,
+            sample_rate,
+            buffer_frames,
+            input_channels,
+            sink_type,
+            None,
+        )
+    }
+
+    /// Start driver playback with its explicit captured PCM transport.
+    ///
+    /// # Errors
+    /// Returns an error if the source geometry or output pipeline is invalid.
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_driver_playback_with_source(
+        &mut self,
+        output_device: Option<String>,
+        plugins: Vec<PluginConfig>,
+        output_channels: usize,
+        sample_rate: u32,
+        buffer_frames: u32,
+        input_channels: usize,
+        sink_type: SinkType,
+        capture_source: Option<driver_common::CaptureSource>,
+    ) -> AudioDecoderResult<()> {
         let _guard = lock_recover(&self.cmd_mutex, "cmd_mutex");
         let input_channels = input_channels.max(1);
         let frame_size = buffer_frames.max(1) as usize;
@@ -611,6 +639,7 @@ impl AudioEngineManager {
             watch_config,
             watch_signals,
             driver_mode: true,
+            capture_source,
             allow_virtual_output: false,
             sink_type,
             ..EngineConfig::default()

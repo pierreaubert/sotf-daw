@@ -181,7 +181,7 @@ fn set(plugin: &mut CrossfeedPlugin, name: &str, value: ParameterValue) {
 }
 
 #[test]
-fn dynamic_mix_ramp_remains_an_explicit_partition_dependent_negative_control() {
+fn dynamic_mix_ramp_is_independent_of_callback_partition() {
     let rate = 48_000;
     let input = source(rate, 8193);
     let mut a = plugin(rate, CrossfeedMode::Bauer, false, -30.0);
@@ -190,7 +190,7 @@ fn dynamic_mix_ramp_remains_an_explicit_partition_dependent_negative_control() {
     set(&mut b, "mix", ParameterValue::Float(0.0));
     let a = render(&mut a, &input, rate, &[137]);
     let b = render(&mut b, &input, rate, &[8193]);
-    assert!(max_difference(&a, &b) > 1e-5);
+    assert!(max_difference(&a, &b) <= 1e-6);
 }
 
 #[test]

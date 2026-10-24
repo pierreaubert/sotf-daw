@@ -7,6 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::sync::Arc;
 
 /// Status information from the audio driver.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -300,17 +301,65 @@ impl ConfigResult {
     }
 }
 
-/// Platform audio capture abstraction.
+/// Thread-safe sample transport shared with an engine decoder.
 ///
-/// Each platform implements this trait differently:
-/// - **macOS**: Reads from CoreAudio HAL shared memory (`driver-hal`)
-/// - **Linux**: PipeWire filter node with ring buffer (`driver-linux`, future)
-/// - **Windows**: APO + shared memory (`driver-windows`, future)
+/// Implementations keep device handles on the control owner and expose only
+/// captured PCM here. One decoder consumes a source at a time. Reads must not
+/// allocate or perform device discovery, and return complete interleaved frames.
+pub trait CaptureInput: fmt::Debug + Send + Sync + 'static {
+    /// Return a coherent snapshot of the current capture geometry.
+    fn configuration(&self) -> DriverConfig;
+
+    /// Return the complete frames currently available without waiting for audio.
+    fn available_frames(&self) -> usize;
+
+    /// Read frames only if the geometry still matches `expected`.
+    ///
+    /// A geometry change or inactive stream returns zero without consuming PCM.
+    /// The caller supplies storage; never write beyond its complete-frame prefix.
+    fn read_frames(&self, buffer: &mut [f32], expected: DriverConfig) -> usize;
+}
+
+/// Cloneable transport handle connecting capture to the engine decoder.
+#[derive(Clone, Debug)]
+pub struct CaptureSource(Arc<dyn CaptureInput>);
+
+impl CaptureSource {
+    /// Wrap a platform capture transport without transferring its device handle.
+    pub fn new(input: impl CaptureInput) -> Self {
+        Self(Arc::new(input))
+    }
+
+    /// Return the current capture geometry.
+    pub fn configuration(&self) -> DriverConfig {
+        self.0.configuration()
+    }
+
+    /// Return the number of complete frames available to the decoder.
+    pub fn available_frames(&self) -> usize {
+        self.0.available_frames()
+    }
+
+    /// Read bounded complete frames at the previously observed geometry.
+    pub fn read_frames(&self, buffer: &mut [f32], expected: DriverConfig) -> usize {
+        let channels = expected.channel_count as usize;
+        if channels == 0 || expected.sample_rate == 0 {
+            return 0;
+        }
+        let frames = self.0.read_frames(buffer, expected);
+        if frames > buffer.len() / channels {
+            buffer.fill(0.0);
+            return 0;
+        }
+        frames
+    }
+}
+
+/// Single-owner platform audio capture and control abstraction.
 ///
-/// The daemon holds a single-owner `Box<dyn AudioDriver>` and uses it
-/// uniformly regardless of platform. The trait is `Send` so ownership can move
-/// to the daemon thread; it is not `Sync` because drivers own realtime handles
-/// and shared-memory cursors that should not be called concurrently.
+/// Device handles remain on the daemon control owner. A backend may expose a
+/// separate [`CaptureSource`] for the engine decoder without making the driver
+/// itself `Sync`. Native HAL readers and status-only backends need no source.
 pub trait AudioDriver: Send + 'static {
     /// Initialize the driver and connect to the audio source.
     ///
@@ -335,6 +384,14 @@ pub trait AudioDriver: Send + 'static {
     /// provides a buffer of `frame_count * channel_count()` floats, and an
     /// implementation must never consume a partial interleaved frame.
     fn read_audio(&mut self, buffer: &mut [f32]) -> usize;
+
+    /// Return an engine-readable capture transport when this backend provides one.
+    ///
+    /// HAL's native engine reader and status-only backends return `None`.
+    /// Existing driver implementations retain their current behavior by default.
+    fn capture_source(&self) -> Option<CaptureSource> {
+        None
+    }
 
     /// Read interleaved audio and return complete frames.
     ///
@@ -390,6 +447,22 @@ pub trait AudioDriver: Send + 'static {
     /// repeated calls with the same value must not create duplicate worker
     /// threads or otherwise accumulate resources.
     fn set_engine_ready(&mut self, ready: bool);
+
+    /// Publish readiness and report transport failures to the control owner.
+    ///
+    /// # Errors
+    /// Returns an error when readiness could not be published to the transport.
+    fn set_engine_ready_checked(&mut self, ready: bool) -> Result<(), DriverError> {
+        self.set_engine_ready(ready);
+        Ok(())
+    }
+
+    /// Check whether a cached readiness publication still addresses this transport.
+    ///
+    /// Backends with replaceable mappings must verify mapping identity too.
+    fn engine_ready_matches(&self, _ready: bool) -> bool {
+        true
+    }
 }
 
 /// Test helpers shared by each platform driver's conformance tests.

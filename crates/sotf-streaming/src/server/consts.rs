@@ -1,5 +1,6 @@
 use std::io::{self, Read};
 use std::net::TcpStream;
+use std::time::{Duration, Instant};
 
 pub(super) const DEFAULT_QUEUE_CAPACITY_CHUNKS: usize = 128;
 
@@ -20,7 +21,16 @@ pub(super) const STREAM_DATA_SIZE: u32 = u32::MAX - 36;
 pub(super) fn read_http_request(stream: &mut TcpStream) -> io::Result<String> {
     let mut request = Vec::new();
     let mut buf = [0u8; 1024];
+    let deadline = Instant::now() + Duration::from_millis(CLIENT_READ_TIMEOUT_MS);
     loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(io::Error::new(
+                io::ErrorKind::TimedOut,
+                "HTTP request header deadline exceeded",
+            ));
+        }
+        stream.set_read_timeout(Some(remaining))?;
         let n = stream.read(&mut buf)?;
         if n == 0 {
             break;

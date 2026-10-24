@@ -1,4 +1,5 @@
 mod http_source;
+mod http_range;
 mod icy;
 pub mod mpd_source;
 mod server;

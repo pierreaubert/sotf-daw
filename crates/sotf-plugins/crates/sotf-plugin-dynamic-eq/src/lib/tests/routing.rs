@@ -470,6 +470,9 @@ fn threshold_automation_moves_routed_audio_at_all_rates() {
                 linked,
                 sample_rate,
             );
+            plugin
+                .prepare_max_block_frames((frames - frames / 2).max(extra_frames))
+                .unwrap();
             let half = frames / 2;
             let mut first = input[..half * 2].to_vec();
             plugin

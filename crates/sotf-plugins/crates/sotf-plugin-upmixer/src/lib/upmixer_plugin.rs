@@ -2547,13 +2547,16 @@ impl UpmixerPlugin {
             } else {
                 0.0
             };
-            let hr_alpha = if hr_target > self.hr_state.hr_direct_envelope {
-                0.1
+            // Express the old 0.1/0.05 per-1024-frame response as time
+            // constants, then advance by elapsed frames at the actual rate.
+            let time_seconds = if hr_target > self.hr_state.hr_direct_envelope {
+                0.202_5
             } else {
-                0.05
+                0.415_9
             };
-            self.hr_state.hr_direct_envelope +=
-                hr_alpha * (hr_target - self.hr_state.hr_direct_envelope);
+            let retention = (-(n as f64) / (self.core.sample_rate * time_seconds)).exp() as f32;
+            self.hr_state.hr_direct_envelope = hr_target
+                + retention * (self.hr_state.hr_direct_envelope - hr_target);
             if self.hr_state.hr_direct_envelope < 1e-4 {
                 self.hr_state.hr_direct_envelope = 0.0;
             }

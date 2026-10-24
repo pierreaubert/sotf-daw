@@ -49,7 +49,10 @@ impl ManagerCommandHandler for PlayCommand {
                 ctx.state.store(Arc::new(new_state));
                 ManagerResponse::Ok
             }
-            Err(e) => ManagerResponse::Error(e),
+            Err(e) => {
+                ctx.decoder.cancel_decode_attempt(attempt);
+                ManagerResponse::Error(e)
+            }
         }
     }
 }

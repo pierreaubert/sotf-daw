@@ -1,9 +1,11 @@
 use super::consts::USER_AGENT;
 use super::hls_byte_range::HlsByteRange;
 use super::hls_segment::HlsSegment;
+use crate::http_range::parse_content_range;
 use reqwest::blocking::Client;
 use reqwest::header::RANGE;
-use std::io::{self};
+use reqwest::StatusCode;
+use std::io::{self, Read};
 use url::Url;
 
 pub(super) fn fetch_text(client: &Client, url: &Url, max_bytes: usize) -> io::Result<String> {
@@ -42,14 +44,48 @@ pub(super) fn fetch_bytes(
         )));
     }
 
-    let bytes = response
-        .bytes()
-        .map_err(|e| io::Error::other(e.to_string()))?;
+    if let Some(range) = byte_range {
+        let content_range = parse_content_range(response.headers())?;
+        let expected_end = range
+            .end_exclusive()?
+            .checked_sub(1)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "empty HLS byte range"))?;
+        if response.status() != StatusCode::PARTIAL_CONTENT
+            || content_range.start != range.offset
+            || content_range.end != expected_end
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "HTTP response does not match the HLS byte range",
+            ));
+        }
+    }
+
+    if response.content_length().is_some_and(|length| length > max_bytes as u64) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "HTTP body exceeds the configured size limit",
+        ));
+    }
+
+    let mut bytes = Vec::new();
+    let read_limit = u64::try_from(max_bytes).unwrap_or(u64::MAX).saturating_add(1);
+    response
+        .take(read_limit)
+        .read_to_end(&mut bytes)?;
     if bytes.len() > max_bytes {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!("HTTP body from {} exceeded {} bytes", url, max_bytes),
+            "HTTP body exceeds the configured size limit",
         ));
     }
-    Ok(bytes.to_vec())
+    if let Some(range) = byte_range
+        && bytes.len() as u64 != range.length
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "incomplete HLS byte-range response",
+        ));
+    }
+    Ok(bytes)
 }

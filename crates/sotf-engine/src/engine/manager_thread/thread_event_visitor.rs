@@ -86,6 +86,11 @@ pub fn visit<V: ThreadEventVisitor>(
     visitor: &mut V,
 ) {
     match event {
+        ThreadEvent::DecoderTagged { attempt, event } => {
+            if attempt == state.decoder_attempt {
+                visit(*event, state, visitor);
+            }
+        }
         ThreadEvent::DecoderEndOfStream => visitor.decoder_end_of_stream(state),
         ThreadEvent::DecoderGaplessTransition(source) => {
             visitor.decoder_gapless_transition(state, source)
@@ -382,12 +387,8 @@ impl ThreadEventVisitor for AudioEngineStateUpdater {
         log::debug!("[Manager Thread] Playback drained - all audio played");
         state.playback_state = PlaybackState::Stopped;
         reset_output_meter(state);
-        // Death-text preservation: a stale receipt (epoch still matches
-        // — no new epoch while poisoned) must not clear the death
-        // record. The max-fold above is kept (monotonic-safe).
-        if !state.worker_death_poisoned {
-            state.last_error = None;
-        }
+        // A drain confirms transport completion, not recovery from a
+        // processing failure. The next committed play clears last_error.
     }
 
     fn playback_underrun(&mut self, state: &mut AudioEngineState, underruns: u64) {

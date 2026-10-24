@@ -126,6 +126,28 @@ fn render(plugin: &mut UpmixerPlugin, input: &[f32], partitions: &[usize]) -> Ve
 }
 
 #[test]
+fn hr_enable_envelope_tracks_processed_frames_across_partitions() {
+    let mut one_frame = neutral(64);
+    let mut whole_block = neutral(64);
+    for plugin in [&mut one_frame, &mut whole_block] {
+        plugin
+            .set_parameter(
+                "enable_hr_direct".into(),
+                sotf_host::ParameterValue::Bool(true),
+            )
+            .unwrap();
+    }
+    let input = vec![0.125; 128 * 2];
+    render(&mut one_frame, &input, &[1]);
+    render(&mut whole_block, &input, &[128]);
+    assert!(
+        (one_frame.hr_state.hr_direct_envelope - whole_block.hr_state.hr_direct_envelope).abs()
+            < 1e-6,
+        "same source frames should produce the same HR enable envelope"
+    );
+}
+
+#[test]
 fn neutral_reconstruction_preserves_every_initial_window_phase() {
     let mut maximum_error = 0.0_f32;
     for fft_size in [2, 4, 8, 16, 32, 64, 512] {
@@ -1337,11 +1359,17 @@ fn hr_toggle_resume_discards_partial_pre_toggle_input_before_eos() {
     let off_output = render(&mut resumed_with_history, &silence, &[1]);
     let control_off_output = render(&mut resumed_with_cleared_history, &silence, &[1]);
     assert_eq!(off_output, control_off_output);
-    assert_eq!(resumed_with_history.hr_state.hr_direct_envelope, 0.0);
+    // The fade now follows elapsed audio time. Model its settled endpoint so
+    // this test continues to isolate retained HR input across a full off/on cycle.
+    for plugin in [&mut resumed_with_history, &mut resumed_with_cleared_history] {
+        plugin.hr_state.hr_direct_envelope = 0.0;
+        plugin.hr_buffers.hr_input_active = false;
+    }
     assert_eq!(
-        resumed_with_cleared_history.hr_state.hr_direct_envelope,
-        0.0
+        resumed_with_history.hr_state.hr_direct_envelope,
+        resumed_with_cleared_history.hr_state.hr_direct_envelope
     );
+    assert!(!resumed_with_history.hr_buffers.hr_input_active);
     assert_eq!(
         resumed_with_history.hr_buffers.hr_input_buffer_fill,
         resumed_with_cleared_history.hr_buffers.hr_input_buffer_fill
@@ -1439,6 +1467,12 @@ fn aud132_above512_hr_resume_clears_delay_history_and_partial_hop() {
         let control_off =
             render_with_reseeded_hr_transient(&mut manually_cleared_control, &silence);
         assert_eq!(off, control_off);
+        // A 256-frame off interval is shorter than the elapsed-time fade.
+        // Force the settled endpoint to focus this test on stale-history reset.
+        for plugin in [&mut with_stale_history, &mut manually_cleared_control] {
+            plugin.hr_state.hr_direct_envelope = 0.0;
+            plugin.hr_buffers.hr_input_active = false;
+        }
         assert_eq!(with_stale_history.hr_state.hr_direct_envelope, 0.0);
         assert!(!with_stale_history.hr_buffers.hr_input_active);
 

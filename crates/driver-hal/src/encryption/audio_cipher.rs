@@ -175,6 +175,9 @@ impl AudioCipher {
         }
 
         let sample_bytes = ciphertext.len() - AUTH_TAG_SIZE;
+        if !sample_bytes.is_multiple_of(std::mem::size_of::<f32>()) {
+            return None;
+        }
         let sample_count = sample_bytes / 4;
 
         if output.len() < sample_count {
