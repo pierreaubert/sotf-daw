@@ -366,7 +366,14 @@ impl DfTract {
         ))?;
         #[cfg(feature = "timings")]
         let t2 = Instant::now();
-        let &lsnr = enc_emb.pop().unwrap().to_scalar::<f32>()?;
+        // Every channel must contribute to the common stage decision. The
+        // legacy to_scalar call silently selected the first batch element.
+        let scores = enc_emb.pop().unwrap().into_tensor();
+        let scores = scores.as_slice::<f32>()?;
+        if scores.len() != ch || scores.iter().any(|x| !x.is_finite()) {
+            bail!("Unexpected local-SNR channel geometry or non-finite score");
+        }
+        let lsnr = scores.iter().copied().sum::<f32>() / ch as f32;
         let c0 = enc_emb.pop().unwrap().into_tensor();
         let emb = enc_emb.pop().unwrap().into_tensor();
         let (apply_erb, apply_erb_zeros, apply_df) = if lsnr < self.min_db_thresh {
@@ -422,8 +429,13 @@ impl DfTract {
                 .as_mut()
                 .map(|x| x.as_slice_mut().unwrap())
                 .unwrap_or(self.m_zeros.as_mut_slice());
+            // Post-filter the linked mask once; processing it once per channel
+            // would apply a different transfer function to each channel.
+            if pf {
+                post_filter(m);
+            }
             for (state, mut spec_ch) in self.df_states.iter().zip(spec.axis_iter_mut(Axis(0))) {
-                state.apply_mask(as_slice_mut_complex(spec_ch.as_slice_mut().unwrap()), m, pf);
+                state.apply_mask(as_slice_mut_complex(spec_ch.as_slice_mut().unwrap()), m, false);
             }
         }
         #[cfg(feature = "timings")]
@@ -438,6 +450,16 @@ impl DfTract {
         if apply_df {
             let mut coefs = self.df_dec.run(tvec!(emb, c0))?.pop().unwrap().into_tensor();
             coefs.set_shape(&[ch, self.nb_df, self.df_order, 2])?;
+            if ch > 1 {
+                // Real and imaginary FIR components are averaged together,
+                // then shared by all channels. No cross-channel audio is mixed.
+                let mut channel_coefs = coefs.to_array_view_mut::<f32>()?;
+                let shared = channel_coefs.mean_axis(Axis(0))
+                    .ok_or_else(|| anyhow!("Empty deep-filter channel axis"))?;
+                for mut channel in channel_coefs.axis_iter_mut(Axis(0)) {
+                    channel.assign(&shared);
+                }
+            }
             df(
                 &self.rolling_spec_buf,
                 coefs,

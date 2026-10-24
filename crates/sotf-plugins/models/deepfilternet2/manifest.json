@@ -32,5 +32,19 @@
   },
   "release": "v0.3.1",
   "runtime_manifest": "../../../../vendor/deep-filter-runtime/upstream.json",
-  "validation_status": "Local mono model/host tests, feature-disabled legacy tests, and engine policy roundtrip pass. Linked stereo, independent golden audio, held-out quality, and real-DAW/default-budget acceptance remain open."
+  "validation_status": "Mono port matches unchanged upstream synthetic golden audio exactly. Linked-stereo channel ratios, swap symmetry, reset, and host-rate/heap tests pass. Held-out quality and real-DAW/default-budget acceptance remain open.",
+  "supported_channels": [
+    1,
+    2
+  ],
+  "stereo_policy": {
+    "stage_decision": "mean local-SNR across channels",
+    "erb_mask": "mean mask across channels, post-filtered once",
+    "deep_filter": "mean real/imaginary FIR coefficients shared across channels",
+    "audio": "independent per-channel STFT and rolling audio; no audio crossmix"
+  },
+  "reference_golden": {
+    "path": "../../crates/plugins-denoiser/tests/data/deepfilter-v031/provenance.json",
+    "sha256": "ad7e28431514862a5b1bc003e038b073a6b82daa1173139b5e4e48ec0bfa2314"
+  }
 }

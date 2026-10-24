@@ -1,4 +1,4 @@
-//! Prepared streaming rate conversion around the fixed 48 kHz RNNoise model.
+//! Prepared streaming rate conversion around fixed 48 kHz speech models.
 
 use crate::backend::FrameBackend;
 #[cfg(test)]

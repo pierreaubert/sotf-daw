@@ -53,10 +53,8 @@ pub(super) fn validate_request(
 ) -> Result<(), String> {
     if let Some(config) = config {
         config.validate()?;
-        if channels != 1 {
-            return Err(
-                "DeepFilterNet2 linked stereo is not prepared; use the mono mode explicitly".into(),
-            );
+        if !(1..=2).contains(&channels) {
+            return Err("DeepFilterNet2 requires mono or linked stereo".into());
         }
         #[cfg(not(feature = "deep-filter"))]
         return Err("DeepFilterNet2 requires the deep-filter build feature".into());
@@ -77,7 +75,7 @@ impl Backend {
         validate_request(channels, config)?;
         #[cfg(feature = "deep-filter")]
         if let Some(config) = config {
-            return plugins_denoiser::deep_filter::prepare_stream(config)
+            return plugins_denoiser::deep_filter::prepare_stream_for_channels(config, channels)
                 .map(|stream| Self::DeepFilter(Box::new(stream)));
         }
         let mut backend = RnnoiseBackend::new();
@@ -142,10 +140,13 @@ impl FrameBackend for Backend {
             Self::Rnnoise(backend) => backend.process(audio, frames, channels, bypass),
             #[cfg(feature = "deep-filter")]
             Self::DeepFilter(backend) => {
-                if channels != 1 || frames > audio.len() {
+                let Some(samples) = frames.checked_mul(channels) else {
+                    return 0;
+                };
+                if channels != backend.channels() || samples > audio.len() {
                     return 0;
                 }
-                if backend.process(&mut audio[..frames], bypass).is_ok() {
+                if backend.process(&mut audio[..samples], bypass).is_ok() {
                     frames
                 } else {
                     0

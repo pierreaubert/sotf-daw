@@ -1,0 +1,61 @@
+{
+  "upstream_revision": "af5d24a125cc20759f483d4e354fdf70f7951024",
+  "upstream_source_sha256": {
+    "lib.rs": "5dfa85aa3077e21faac48bee574f0983c831ae30f4b05759207961a05cb995e5",
+    "tract.rs": "3966fdf513c714848bfdd55b54ca807be13d8964a3d0bce900f537f530927d94",
+    "transforms.rs": "e307e0d00ac3a9379ce21b3fa3d8d4bc651a803dac2e0ff9a00cfe0d5e835148"
+  },
+  "source_policy": "All three upstream Rust source files are byte-for-byte unchanged; minimal inference manifest, pinned matching Tract, upstream default allocator",
+  "tract_revision": "ed00ff7eadc84b345318b042f134602ed743879d",
+  "model_sha256": "412e81d8d1779b8f925ac4b53472655a9f866c4af73dbf930ab587359f631628",
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "run",
+    "--release",
+    "--jobs",
+    "2",
+    "--manifest-path",
+    "/Volumes/home_tmp/tmp/deepfilter-v031-reference/Cargo.toml",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--locked",
+    "--offline",
+    "--",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/models/deepfilternet2/DeepFilterNet2_onnx.tar.gz",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/input.f32le",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/waveform.f32le",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/scores.f32le"
+  ],
+  "exit_code": 0,
+  "started_unix": 1792877790.9357288,
+  "finished_unix": 1792877791.137744,
+  "sample_rate": 48000,
+  "channels": 1,
+  "hop_frames": 480,
+  "packets": 64,
+  "input_recipe": "Seed 20261024, silence / harmonic signal plus noise / noisy 3100 Hz tone / silence / tone plus impulses; synthetic, not held-out quality evidence",
+  "python": "3.15.0 (main, Oct  9 2026, 11:16:41) [Clang 21.0.0 (clang-2100.3.34.2)]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: aarch64-apple-darwin\nrelease: 1.99.1\nLLVM version: 23.1.1",
+  "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+  "generator_sha256": "6d605641766e0878137883879749ed027d295fb0b5988c3623349cec83f20451",
+  "wrapper_sha256": "6158585390aa5548c4dffd58b08e2bb5b0461bf94d6337c72e1fbfe064019ae6",
+  "minimal_upstream_manifest_sha256": "c2cca69e545a04d53bde6861ee0557abf18417fed3b8cf07a635000720728d56",
+  "files": {
+    "input.f32le": {
+      "bytes": 122880,
+      "sha256": "9107f19e1a6d3ad50d5b0e19f120fa1b078ab3388245dee7c12bc38f9cdb1f00"
+    },
+    "waveform.f32le": {
+      "bytes": 122880,
+      "sha256": "8021ca05dd6a5206d9cda1aafc54e7b3810106bdacfeae37e3d0c1f6db5af58a"
+    },
+    "scores.f32le": {
+      "bytes": 256,
+      "sha256": "f1b0e558150fbf0794d12ca4cb6ba1d2cef2ede232e86bcbcf44360d3b136351"
+    }
+  },
+  "reference_lock_sha256": "5e2c548933500f44aa62e4d34d21162f0a54729f2c1dbf72906392a1f07bdff6"
+}

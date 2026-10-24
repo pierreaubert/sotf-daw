@@ -404,17 +404,19 @@ fn factory_parameter_json_is_strict_and_backward_compatible() {
 #[cfg(not(feature = "deep-filter"))]
 #[test]
 fn explicit_deep_filter_request_requires_compiled_backend() {
-    let mut plugin = SpeechDenoiserPlugin::from_params(
-        1,
-        SpeechDenoiserPluginParams {
-            deep_filter: Some(sotf_plugin_speech_denoiser::DeepFilterConfig {
-                model_path: "must-not-be-opened.onnx.tar.gz".into(),
-                sha256: "0".repeat(64),
-                playout_packets: 4,
-            }),
-            ..SpeechDenoiserPluginParams::default()
-        },
-    );
-    let error = plugin.initialize(48_000.0).unwrap_err();
-    assert!(error.contains("deep-filter build feature"), "{error}");
+    for channels in [1, 2] {
+        let mut plugin = SpeechDenoiserPlugin::from_params(
+            channels,
+            SpeechDenoiserPluginParams {
+                deep_filter: Some(sotf_plugin_speech_denoiser::DeepFilterConfig {
+                    model_path: "must-not-be-opened.onnx.tar.gz".into(),
+                    sha256: "0".repeat(64),
+                    playout_packets: 4,
+                }),
+                ..SpeechDenoiserPluginParams::default()
+            },
+        );
+        let error = plugin.initialize(48_000.0).unwrap_err();
+        assert!(error.contains("deep-filter build feature"), "{error}");
+    }
 }

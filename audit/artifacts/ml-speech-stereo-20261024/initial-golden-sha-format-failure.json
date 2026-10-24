@@ -1,0 +1,31 @@
+[
+  {
+    "name": "strict-clippy-with-golden",
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "plugins-denoiser",
+      "-p",
+      "sotf-plugin-speech-denoiser",
+      "--all-targets",
+      "--features",
+      "sotf-plugin-speech-denoiser/deep-filter,sotf-plugin-speech-denoiser/qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "--jobs",
+      "2",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "started_unix": 1792877682.109833,
+    "exit_code": 101,
+    "finished_unix": 1792877682.607668
+  }
+]

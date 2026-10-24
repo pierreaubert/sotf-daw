@@ -5,8 +5,8 @@
 //! registry. RNNoise runs at 48 kHz; mono/stereo host streams at other finite
 //! positive rates use a prepared streaming converter. Wider layouts are rejected.
 //! The dry path stays at the full host bandwidth. Both backends run at 48 kHz;
-//! their wet path has a 24 kHz Nyquist limit. DeepFilterNet2 currently requires
-//! explicit mono configuration; linked stereo remains under development.
+//! their wet path has a 24 kHz Nyquist limit. DeepFilterNet2 uses explicit
+//! configuration and links suppression across stereo channels.
 
 mod backend;
 pub mod model;
@@ -128,8 +128,8 @@ impl Default for SpeechDenoiserPluginParams {
 /// emit dry and wet bit-exactly, so default and disabled audio are unchanged.
 ///
 /// RNNoise retains its 960-frame delay; optional DeepFilterNet2 adds explicit
-/// worker playout to its intrinsic delay. DeepFilterNet2 currently requires
-/// mono; linked-stereo preparation remains an explicit unimplemented contract.
+/// worker playout to its intrinsic delay. Its stereo path shares suppression
+/// masks and FIR coefficients while preserving separate audio histories.
 /// Enabled end-of-stream drain emits one latency-length continuation window to
 /// release accepted programme audio, then resets the backend. The model and
 /// high-pass response remain `Unknown`; this declared render cutoff does not

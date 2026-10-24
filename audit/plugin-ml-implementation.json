@@ -345,13 +345,14 @@
         "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/backend.rs",
         "vendor/deep-filter-runtime/upstream.json",
         "scripts/ml/verify_deepfilter.py",
-        "audit/artifacts/ml-speech-20261024/runtime-selection.json"
+        "audit/artifacts/ml-speech-20261024/runtime-selection.json",
+        "audit/artifacts/ml-speech-stereo-20261024/README.md",
+        "scripts/ml/deepfilter_reference.py",
+        "crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/provenance.json"
       ],
       "remaining": [
-        "Linked-stereo model processing",
         "Held-out speakers/noises and controlled listening",
         "Real-DAW memory/deadline and backend comparisons",
-        "Independent upstream golden audio for the extracted DFN2 port",
         "User-facing structural-backend configuration"
       ],
       "runtime_validation": {
@@ -367,7 +368,10 @@
         "feature_disabled_tests": "passed; unit and integration tests include explicit unavailable-backend rejection",
         "engine_policy_roundtrip": "1 targeted release test passed; 835 engine tests filtered out",
         "combined_features": "engine tests compile with deep-filter,neural-pitch,sotf-plugins/qa",
-        "formatting": "focused rustfmt: 15 files passed; workspace-all metadata failed due to parent/DAW driver-common workspace membership conflict; retained in artifacts"
+        "formatting": "focused rustfmt: 15 files passed; workspace-all metadata failed due to parent/DAW driver-common workspace membership conflict; retained in artifacts",
+        "linked_stereo": "Common mean ERB mask, complex FIR coefficients and local-SNR decision; independent audio histories; ratios, swap and reset errors 0 in local real-model tests; zero callback/reset heap at 44.1/48/96 kHz",
+        "upstream_golden": "64 mono hops from byte-unchanged upstream v0.3.1 Rust sources; waveform and score maximum error 0; locked offline replay passed",
+        "stereo_gates": "26 feature-enabled speech tests, 21 feature-disabled tests, 7 actual-model adapter tests, strict all-target Clippy and combined ML engine test compilation passed"
       }
     },
     {

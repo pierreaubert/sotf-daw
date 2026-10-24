@@ -10,8 +10,9 @@ revision are in `vendor/deep-filter-runtime` at the workspace root.
 Build with `deep-filter` on the speech-denoiser, facade, or engine crate. An
 explicit `SpeechDenoiserPluginParams.deep_filter` policy supplies `model_path`,
 `sha256`, and `playout_packets` (2–16, default 4). Paths are resolved on the
-control thread during preparation. The model is mono-only at this stage;
-linked stereo remains required work. The three RNNoise model IDs remain stable.
+control thread during preparation. The mode accepts mono or linked stereo. Stereo shares ERB masks, complex
+deep-filter coefficients, and stage decisions, with separate audio histories.
+This is a local linked extension of the pretrained mono model. The three RNNoise model IDs remain stable.
 Old presets omit this policy and retain RNNoise behavior. A request on a build
 without the feature returns an error.
 
@@ -29,6 +30,6 @@ Deadline misses use delayed source audio. Telemetry reports selected packets,
 fallbacks, dropped inputs, recurrent resets, and local SNR. Local SNR is not a
 speech probability and is not published as RNNoise band gains or VAD.
 
-Held-out speakers/noises, controlled listening, linked stereo, deadline-tail
+Held-out speakers/noises, controlled listening, deadline-tail
 benchmarks, and real-DAW validation remain open. This artifact establishes no
 quality advantage over RNNoise.

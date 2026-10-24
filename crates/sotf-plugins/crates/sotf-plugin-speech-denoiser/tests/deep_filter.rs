@@ -23,8 +23,17 @@ fn config(playout_packets: usize) -> DeepFilterConfig {
 }
 
 fn prepared(rate: f64, strength: f32, config: DeepFilterConfig) -> SpeechDenoiserPlugin {
+    prepared_channels(rate, 1, strength, config)
+}
+
+fn prepared_channels(
+    rate: f64,
+    channels: usize,
+    strength: f32,
+    config: DeepFilterConfig,
+) -> SpeechDenoiserPlugin {
     let mut plugin = SpeechDenoiserPlugin::try_from_params(
-        1,
+        channels,
         SpeechDenoiserPluginParams {
             deep_filter: Some(config),
             strength,
@@ -44,8 +53,9 @@ fn signal(n: usize, rate: f64) -> f32 {
 
 fn process(plugin: &mut SpeechDenoiserPlugin, source: &[f32], rate: f64) -> Vec<f32> {
     let mut audio = source.to_vec();
-    for block in audio.chunks_mut(137) {
-        let frames = block.len();
+    let channels = plugin.channels();
+    for block in audio.chunks_mut(137 * channels) {
+        let frames = block.len() / channels;
         let heap = sotf_host::test_utils::measure_heap_activity(|| {
             assert_eq!(
                 plugin
@@ -185,7 +195,7 @@ fn failed_model_reprepare_preserves_nonzero_delayed_source_history() {
 }
 
 #[test]
-fn structural_mode_preserves_legacy_choices_and_refuses_unprepared_stereo() {
+fn structural_mode_preserves_legacy_choices_and_rejects_wider_layouts() {
     assert_eq!(sotf_plugin_speech_denoiser::model::MODEL_LABELS.len(), 3);
     let old: SpeechDenoiserPluginParams = serde_json::from_str("{}").unwrap();
     assert!(old.deep_filter.is_none());
@@ -199,6 +209,100 @@ fn structural_mode_preserves_legacy_choices_and_refuses_unprepared_stereo() {
                 ..Default::default()
             }
         )
+        .is_ok()
+    );
+    assert!(
+        SpeechDenoiserPlugin::try_from_params(
+            3,
+            SpeechDenoiserPluginParams {
+                deep_filter: Some(config(4)),
+                ..Default::default()
+            }
+        )
         .is_err()
     );
+}
+
+#[test]
+fn linked_stereo_dry_path_has_exact_delay_drain_and_zero_heap_activity() {
+    for rate in [44_100.0, 48_000.0, 96_000.0] {
+        let mut plugin = prepared_channels(rate, 2, 0.0, config(4));
+        let latency = plugin.latency_samples();
+        let source: Vec<f32> = (0..3001)
+            .flat_map(|n| [signal(n, rate), -0.25 * signal(n + 37, rate)])
+            .collect();
+        let mut rendered = process(&mut plugin, &source, rate);
+        let mut calls = plugin.drain_call_bound().unwrap().get();
+        loop {
+            assert!(calls > 0);
+            calls -= 1;
+            let frames = plugin.drain_output_frames_max();
+            let mut buffer = vec![0.0; frames * 2];
+            let result = plugin
+                .drain(&mut buffer, &ProcessContext::new(rate, frames))
+                .unwrap();
+            rendered.extend_from_slice(&buffer[..result.frames * 2]);
+            if result.complete {
+                break;
+            }
+        }
+        let mut expected = vec![0.0; rendered.len()];
+        expected[latency * 2..latency * 2 + source.len()].copy_from_slice(&source);
+        assert_eq!(rendered, expected);
+        assert_eq!(
+            sotf_host::test_utils::measure_heap_activity(|| plugin.reset()),
+            (0, 0)
+        );
+    }
+}
+
+#[test]
+fn linked_stereo_real_packets_preserve_antiphase_image_without_callback_allocations() {
+    for rate in [44_100.0, 48_000.0, 96_000.0] {
+        let mut plugin = prepared_channels(rate, 2, 1.0, config(16));
+        let latency = plugin.latency_samples();
+        let frames = (rate * 0.01).round() as usize;
+        let mut max_image_error = 0f32;
+        let mut output_energy = 0f64;
+        let mut changed_energy = 0f64;
+        for packet in 0..100 {
+            let mut audio: Vec<f32> = (packet * frames..(packet + 1) * frames)
+                .flat_map(|n| {
+                    let left = signal(n, rate);
+                    [left, -0.25 * left]
+                })
+                .collect();
+            assert_eq!(
+                sotf_host::test_utils::measure_heap_activity(|| {
+                    plugin
+                        .process_in_place(&mut audio, &ProcessContext::new(rate, frames))
+                        .unwrap();
+                }),
+                (0, 0)
+            );
+            for (i, &[left, right]) in audio.as_chunks::<2>().0.iter().enumerate() {
+                max_image_error = max_image_error.max((right + 0.25 * left).abs());
+                output_energy += f64::from(left).powi(2);
+                let n = packet * frames + i;
+                if n >= latency {
+                    changed_energy += f64::from(left - signal(n - latency, rate)).powi(2);
+                }
+            }
+            std::thread::sleep(Duration::from_millis(12));
+        }
+        let data = plugin
+            .get_data()
+            .unwrap()
+            .downcast::<DeepFilterData>()
+            .unwrap();
+        println!(
+            "Linked stereo rate={rate} timely={} fallback={} dropped={} image_error={max_image_error} changed_energy={changed_energy}",
+            data.timely_packets, data.fallback_packets, data.dropped_inputs
+        );
+        assert!(data.timely_packets > 0);
+        assert_eq!(data.lifetime_worker_errors, 0);
+        assert!(output_energy > 1e-6);
+        assert!(changed_energy > 1e-6);
+        assert!(max_image_error < 1e-6);
+    }
 }

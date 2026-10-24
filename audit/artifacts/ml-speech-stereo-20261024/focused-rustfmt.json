@@ -1,0 +1,19 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "crates/sotf-plugins/crates/plugins-denoiser/src/deep_filter.rs",
+    "crates/sotf-plugins/crates/plugins-denoiser/tests/deep_filter.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/backend.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/rate_adapter.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/deep_filter.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/integration.rs"
+  ],
+  "exit_code": 0,
+  "files": 7
+}

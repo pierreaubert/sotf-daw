@@ -1,0 +1,80 @@
+    Updating crates.io index
+     Locking 1 package to highest Rust 1.99.1 compatible version
+      Adding rubato v0.12.0 (available: v5.0.1)
+ Downloading crates ...
+  Downloaded rubato v0.12.0
+   Compiling syn v3.0.9
+   Compiling serde_core v1.0.229
+   Compiling serde v1.0.229
+   Compiling serde_derive v1.0.229
+   Compiling num-integer v0.1.47
+   Compiling pest_generator v2.9.4
+   Compiling pest_derive v2.9.4
+   Compiling num-complex v0.4.6
+   Compiling matrixmultiply v0.3.11
+   Compiling kstring v2.0.5
+   Compiling liquid-core v0.26.11
+   Compiling ndarray v0.15.6
+   Compiling liquid-lib v0.26.11
+   Compiling liquid v0.26.11
+   Compiling tract-data v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-linalg v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-core v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling transpose v0.2.3
+   Compiling ahash v0.7.8
+   Compiling primal-check v0.3.4
+   Compiling rustfft v6.4.1
+   Compiling hashbrown v0.12.3
+   Compiling ordered-multimap v0.4.3
+   Compiling realfft v3.5.0
+   Compiling thiserror v1.0.69
+   Compiling rubato v0.12.0
+   Compiling rust-ini v0.18.0
+   Compiling tract-nnef v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-pulse-opl v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-onnx-opl v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-hir v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-onnx v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling tract-pulse v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling deep_filter v0.3.1 (/Volumes/home_tmp/tmp/deepfilter-v031-reference/upstream)
+warning: unexpected `cfg` condition value: `logging`
+   --> upstream/src/transforms.rs:584:23
+    |
+584 |             #[cfg(any(feature = "logging", feature = "dataset"))]
+    |                       ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: expected values for `feature` are: `cache`, `dataset`, `default`, `timings`, `tract`, `transforms`, and `wav-utils`
+    = help: consider adding `logging` as a feature in `Cargo.toml`
+    = note: see <https://doc.rust-lang.org/nightly/rustc/check-cfg/cargo-specifics.html> for more information about checking conditional configuration
+    = note: `#[warn(unexpected_cfgs)]` on by default
+
+warning: use of deprecated constant `std::f32::MIN`: replaced by the `MIN` associated constant on `f32`
+   --> upstream/src/transforms.rs:667:30
+    |
+667 |     let mut high = std::f32::MIN;
+    |                              ^^^
+    |
+    = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated constant `std::f32::MIN`: replaced by the `MIN` associated constant on `f32`
+   --> upstream/src/transforms.rs:682:30
+    |
+682 |     let mut high = std::f32::MIN;
+    |                              ^^^
+
+warning: use of deprecated constant `std::f32::MAX`: replaced by the `MAX` associated constant on `f32`
+   --> upstream/src/transforms.rs:697:30
+    |
+697 |     let mut high = std::f32::MAX;
+    |                              ^^^
+
+warning: use of deprecated constant `std::f32::MAX`: replaced by the `MAX` associated constant on `f32`
+   --> upstream/src/transforms.rs:712:30
+    |
+712 |     let mut high = std::f32::MAX;
+    |                              ^^^
+
+warning: `deep_filter` (lib) generated 5 warnings
+   Compiling dfn2-reference-evidence v0.1.0 (/Volumes/home_tmp/tmp/deepfilter-v031-reference)
+    Finished `release` profile [optimized] target(s) in 1m 29s
+     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/dfn2-reference-evidence /Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/models/deepfilternet2/DeepFilterNet2_onnx.tar.gz /Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/input.f32le /Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/waveform.f32le /Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser/tests/data/deepfilter-v031/scores.f32le`

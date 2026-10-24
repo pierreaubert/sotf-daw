@@ -15,7 +15,12 @@ local changes. Training, datasets, command-line programs, and optional codecs
 are excluded. Local changes replace unchecked representation casts and unbound
 array lifetimes with checked bytemuck casts and borrowed ndarray constructors,
 initialize tensors with zeros, allow borrowed archive bytes, reject non-finite
-input, and clone the complete prepared state for worker resets. The default
+input, and clone the complete prepared state for worker resets. The linked-stereo
+extension averages local-SNR scores for the common stage decision, shares the
+mean complex deep-filter coefficients, and post-filters the common ERB mask once.
+Each channel retains its own STFT and rolling audio history. This extension uses
+the pretrained mono weights in a two-channel batch; it is not a separately
+trained spatial enhancement model. The default
 policy disables post-filtering, uses the mean mask, and uses -10/30/20 dB
 local-SNR thresholds with unlimited attenuation (100 dB upstream sentinel).
 

@@ -62,6 +62,41 @@ def verify(root: Path) -> dict:
     for name, digest in provenance["local_sha256"].items():
         if hashlib.sha256((runtime / name).read_bytes()).hexdigest() != digest:
             raise ValueError(f"Local runtime source hash mismatch: {name}")
+    reference_files = 0
+    reference = manifest.get("reference_golden")
+    if reference:
+        path = bundle / reference["path"]
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != reference["sha256"]:
+            raise ValueError("Upstream reference provenance hash mismatch")
+        golden = json.loads(data)
+        if (
+            golden["exit_code"] != 0
+            or golden["model_sha256"] != actual
+            or golden["upstream_revision"] != provenance["revision"]
+            or golden["tract_revision"] != provenance["tract_revision"]
+        ):
+            raise ValueError("Reference runner identity mismatch")
+        for name, expected_hash in provenance["source_sha256"].items():
+            if golden["upstream_source_sha256"].get(name) != expected_hash:
+                raise ValueError(f"Reference upstream source mismatch: {name}")
+        expected_names = {"input.f32le", "waveform.f32le", "scores.f32le"}
+        if set(golden["files"]) != expected_names:
+            raise ValueError("Unexpected reference PCM files")
+        for name, identity in golden["files"].items():
+            pcm = (path.parent / name).read_bytes()
+            if (
+                len(pcm) != identity["bytes"]
+                or hashlib.sha256(pcm).hexdigest() != identity["sha256"]
+            ):
+                raise ValueError(f"Reference PCM identity mismatch: {name}")
+            reference_files += 1
+        lock = (path.parent / "reference-Cargo.lock").read_bytes()
+        if hashlib.sha256(lock).hexdigest() != golden["reference_lock_sha256"]:
+            raise ValueError("Reference dependency lock mismatch")
+        generator = (root / "scripts/ml/deepfilter_reference.py").read_bytes()
+        if hashlib.sha256(generator).hexdigest() != golden["generator_sha256"]:
+            raise ValueError("Reference generator source mismatch")
     return {
         "archive_sha256": actual,
         "verified_members": len(members),
@@ -69,6 +104,7 @@ def verify(root: Path) -> dict:
         "runtime_revision": provenance["revision"],
         "tract_revision": provenance["tract_revision"],
         "verified_runtime_files": len(provenance["local_sha256"]),
+        "verified_reference_pcm_files": reference_files,
         "scope": "Artifact integrity; no enhancement quality or runtime acceptance claim",
     }
 
