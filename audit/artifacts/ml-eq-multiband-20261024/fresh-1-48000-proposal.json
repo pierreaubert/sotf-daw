@@ -1,0 +1,107 @@
+{
+  "accepted": true,
+  "method": "neural",
+  "sample_rate": 48000.0,
+  "sampled_rms_db": 0.005733393148219212,
+  "sampled_max_db": 0.023359059693254025,
+  "sampled_dense_response_peak_db": 13.032936571347792,
+  "independent_scipy_max_error_db": 8.72057981382568e-11,
+  "poles_stable": true,
+  "model_load_seconds": 0.033317457884550095,
+  "inference_seconds": 0.00012195808812975883,
+  "candidates": [
+    {
+      "method": "neural",
+      "mse": 3.287179699204701e-05,
+      "maximum_db": 0.023359059693254025,
+      "residual_calls": 983,
+      "scipy_evaluations": 71,
+      "solver_success": true,
+      "elapsed_seconds": 0.11808099993504584,
+      "accepted": true,
+      "poles_stable": true,
+      "independent_scipy_max_error_db": 8.72057981382568e-11,
+      "sampled_dense_response_peak_db": 13.032936571347792
+    },
+    {
+      "method": "classical-edges",
+      "mse": 0.0013781196410855283,
+      "maximum_db": 0.10364078088459383,
+      "residual_calls": 398,
+      "scipy_evaluations": 30,
+      "solver_success": true,
+      "elapsed_seconds": 0.046836957801133394,
+      "accepted": true,
+      "poles_stable": true,
+      "independent_scipy_max_error_db": 4.9743320573725214e-11,
+      "sampled_dense_response_peak_db": 13.007704060392799
+    },
+    {
+      "method": "classical-constant",
+      "mse": 0.00010410922443298331,
+      "maximum_db": 0.03195874548152844,
+      "residual_calls": 458,
+      "scipy_evaluations": 42,
+      "solver_success": true,
+      "elapsed_seconds": 0.059131584130227566,
+      "accepted": true,
+      "poles_stable": true,
+      "independent_scipy_max_error_db": 1.042312902654885e-10,
+      "sampled_dense_response_peak_db": 13.026299960097754
+    }
+  ],
+  "parameters": {
+    "filters": [
+      {
+        "filter_type": "peak",
+        "freq": 48.53380240751104,
+        "q": 1.7294723853995015,
+        "db_gain": -5.131292084621241,
+        "order": 2
+      },
+      {
+        "filter_type": "peak",
+        "freq": 5437.831491034367,
+        "q": 0.3500000000000322,
+        "db_gain": -2.0169002613884395,
+        "order": 2
+      },
+      {
+        "filter_type": "peak",
+        "freq": 5442.233840563859,
+        "q": 0.35106002849305407,
+        "db_gain": 2.015389446476614,
+        "order": 2
+      },
+      {
+        "filter_type": "peak",
+        "freq": 96.24565966696143,
+        "q": 3.914937336304952,
+        "db_gain": 2.696506463240711,
+        "order": 2
+      },
+      {
+        "filter_type": "lowshelf",
+        "freq": 849.8889141283283,
+        "q": 0.7071067811865476,
+        "db_gain": -6.709858214642356,
+        "order": 2
+      },
+      {
+        "filter_type": "highshelf",
+        "freq": 37.772957638449405,
+        "q": 0.7071067811865476,
+        "db_gain": -1.7327244659602403,
+        "order": 2
+      }
+    ],
+    "auto_gain": {
+      "enabled": false
+    }
+  },
+  "weights_sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+  "qualification": "Supplied-sample accuracy and sampled dense gain guard; no continuous response, quality, calibration, or speed advantage guarantee",
+  "model_sample_rate_shift": false,
+  "elapsed_seconds": 0.2650418751873076,
+  "target_sha256": "44d8a5da47bc9ece85484eef1c527bd1e72f0ae93396dfbc84d18a8d92234a9a"
+}

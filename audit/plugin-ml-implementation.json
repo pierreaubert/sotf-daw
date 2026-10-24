@@ -155,13 +155,29 @@
         "audit/artifacts/ml-eq-20261024/native-proposal.json",
         "crates/sotf-plugins/crates/sotf-plugin-eq/tests/ml_offline_proposal.rs",
         "audit/artifacts/ml-eq-20261024/frozen-comparison.json",
-        "audit/artifacts/ml-eq-20261024/native-tests.json"
+        "audit/artifacts/ml-eq-20261024/native-tests.json",
+        "scripts/ml/eq_multiband.py",
+        "scripts/ml/evaluate_eq_multiband.py",
+        "scripts/ml/verify_eq_multiband.py",
+        "crates/sotf-plugins/models/eq-multiband/validation.json",
+        "audit/artifacts/ml-eq-multiband-20261024/README.md"
       ],
       "remaining": [
-        "General multiband/target support",
+        "Improve refinement-aware neural initialization: current neural seed qualifies in 7/18 fits vs 15/18 for the strongest classical seed",
         "Controlled cost/multistart comparison including Python and model cold-load",
-        "Out-of-family/noise/near-zero acceptance and measured responses"
-      ]
+        "Out-of-family/noise/near-zero acceptance and measured responses",
+        "User-facing review/import integration"
+      ],
+      "multiband_checkpoint": {
+        "status": "experimental_not_adopted",
+        "raw_fresh_holdout_mse_db2": 0.4514790247392916,
+        "final_holdout_count": 1024,
+        "initial_test_smoke_overlap_disclosed": 10,
+        "combined_fresh_refinement_accepted": 16,
+        "fresh_refinement_cases": 18,
+        "native_magnitude_max_error_db": 4.914579198736799e-07,
+        "native_complex_max_error": 3.307764148246827e-08
+      }
     },
     {
       "plugin_id": 25,

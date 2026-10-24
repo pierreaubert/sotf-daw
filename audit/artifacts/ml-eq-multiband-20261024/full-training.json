@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "env",
+    "OMP_NUM_THREADS=2",
+    "OPENBLAS_NUM_THREADS=2",
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/eq_multiband.py",
+    "train",
+    "--output",
+    "crates/sotf-plugins/models/eq-multiband",
+    "--examples",
+    "8192",
+    "--development",
+    "1024",
+    "--test",
+    "1024",
+    "--epochs",
+    "100",
+    "--patience",
+    "20",
+    "--threads",
+    "2"
+  ],
+  "started_unix": 1792879392.715393,
+  "recipe_sha256": "2ee35d251965712c1f2bc18558b9edc539ab286ea6a1e7f386fda10345b0c1d2",
+  "status": "passed",
+  "exit_code": 0,
+  "finished_unix": 1792879455.167704
+}

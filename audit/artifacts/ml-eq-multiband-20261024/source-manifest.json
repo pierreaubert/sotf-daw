@@ -1,0 +1,22 @@
+{
+  "base_commit": "64825da",
+  "files": {
+    "audit/plugin-ml-implementation.json": "1db99bafaa129d29d4636af531497f501e38b2ace72e4befeaf0e2565f2e7c53",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/ml_offline_proposal.rs": "7cae00d9facd35ee4c27491ce9bd34f9190562204abae0c92e93a82cd2d5d0db",
+    "crates/sotf-plugins/crates/sotf-plugin-eq/tests/data/ml-multiband-proposals.json": "8fb4c9489c0d7675b899fa312a0b189195195f76320d99ad8f4069885cb6b0c5",
+    "crates/sotf-plugins/models/eq-multiband/README.md": "aed1549521363ae2bbb104676446078608f82f9eb7f78140a92d4d180910457e",
+    "crates/sotf-plugins/models/eq-multiband/best.pt": "beba9ba20a9401201a85599c0ec14c4f329f56628c96ca6bf4659de88086a676",
+    "crates/sotf-plugins/models/eq-multiband/data-manifest.json": "129d73813f3de60308ff8eaf7d6b5dea11e6f3aba66a517ad9e7c1e720c1dec9",
+    "crates/sotf-plugins/models/eq-multiband/final-holdout.json": "dffdd440c91e6f014c0ea0c5abba6e727d987f496e08b79ef829e7de693b4164",
+    "crates/sotf-plugins/models/eq-multiband/metrics.jsonl": "a330c38b91e9320244e40a471f1ac26f90ef9136b8613c86cba0383e17cf63c0",
+    "crates/sotf-plugins/models/eq-multiband/recipe.py": "2ee35d251965712c1f2bc18558b9edc539ab286ea6a1e7f386fda10345b0c1d2",
+    "crates/sotf-plugins/models/eq-multiband/training-report.json": "36f70c5e2df50420b07b156815e23600a691862eddf9f2252e70d7406654ef4e",
+    "crates/sotf-plugins/models/eq-multiband/validation.json": "0bd8b4b1fa0db744e7b03a4c5aea70b6f269d903657b3a9bb8920d6af1944fea",
+    "crates/sotf-plugins/models/eq-multiband/weights.json": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+    "scripts/ml/eq_multiband.py": "2ee35d251965712c1f2bc18558b9edc539ab286ea6a1e7f386fda10345b0c1d2",
+    "scripts/ml/evaluate_eq_multiband.py": "b834f5f987fedd7ccf413dd39e3a5a170aea9d033d99f43ee622c8b9fa7b906f",
+    "scripts/ml/test_eq_multiband.py": "e4b288cd61f4918e8259e1ac443fd903352ed94a8e91cc9d18835392f1d94c21",
+    "scripts/ml/verify_eq_multiband.py": "09b60b29c77c0a03fb8a55b785bbed8d4265f2359ca1e8309a750c67b6db3a5a"
+  },
+  "user_audit_sha256": "8bec5da45e0630c47e4afbcd0eeb15b72dc327e96194eb865bb82d4ceccfd619"
+}
