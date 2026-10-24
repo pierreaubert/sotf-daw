@@ -1,0 +1,60 @@
+--- a/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
+@@ -1,3 +1,4 @@
++mod encryption_control;
+ mod prepared_write;
+ pub(super) use prepared_write::PreparedWriteRefusal;
+ 
+@@ -1187,7 +1188,16 @@
+ 
+     /// Enable or disable encryption on the control thread.
+     pub fn set_encrypted(&self, enabled: bool) {
+-        if let Err(error) = self.configure_encryption(enabled, self.key_fingerprint(), false) {
++        if let Err(error) = self.with_encryption_update(|shared| {
++            if shared.is_encrypted() != enabled {
++                shared.advance_ring_generation()?;
++                shared
++                    .header()
++                    .encrypted
++                    .store(u32::from(enabled), Ordering::Release);
++            }
++            Ok(())
++        }) {
+             log::warn!("Cannot change HAL encryption mode: {error}");
+         }
+     }
+@@ -1199,16 +1209,30 @@
+ 
+     /// Set the key fingerprint on the control thread.
+     pub fn set_key_fingerprint(&self, fingerprint: [u8; 8]) {
+-        if let Err(error) = self.configure_encryption(self.is_encrypted(), fingerprint, false) {
++        if let Err(error) = self.with_encryption_update(|shared| {
++            if shared.key_fingerprint() != fingerprint {
++                shared.advance_ring_generation()?;
++                shared
++                    .header()
++                    .key_fingerprint
++                    .store(fingerprint_to_u64(fingerprint), Ordering::Release);
++            }
++            Ok(())
++        }) {
+             log::warn!("Cannot change HAL encryption key: {error}");
+         }
+     }
+ 
+     /// Drop queued audio and invalidate cached plaintext on the control thread.
+     pub fn flush_audio(&self) {
+-        if let Err(error) =
+-            self.configure_encryption(self.is_encrypted(), self.key_fingerprint(), true)
+-        {
++        if let Err(error) = self.with_encryption_update(|shared| {
++            shared.advance_ring_generation()?;
++            shared.header().read_position.store(
++                shared.header().write_position.load(Ordering::Acquire),
++                Ordering::Release,
++            );
++            Ok(())
++        }) {
+             log::warn!("Cannot flush HAL ring: {error}");
+         }
+     }

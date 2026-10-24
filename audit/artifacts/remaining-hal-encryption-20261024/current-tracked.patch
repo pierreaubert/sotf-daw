@@ -1,0 +1,911 @@
+diff --git a/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs b/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
+index 0884070..5ab806c 100644
+--- a/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer.rs
+@@ -1,7 +1,9 @@
++mod encryption_control;
+ mod prepared_write;
+ pub(super) use prepared_write::PreparedWriteRefusal;
+ 
+ use super::SharedAudioHeader;
++use super::backing::{self, DescriptorServer, Rendezvous};
+ use super::consts::ENCRYPTED_RECORD_HEADER_BYTES;
+ use super::consts::ENCRYPTED_RECORD_HEADER_SLOTS;
+ use super::consts::MAX_HAL_BUFFER_FRAMES;
+@@ -29,14 +31,16 @@ use super::misc::get_shared_memory_path;
+ use super::misc::u64_to_fingerprint;
+ use super::types::EncryptedRecordHeader;
+ use super::types::EncryptedRecordRead;
+-use super::validate::{open_existing_shared_memory_file, open_shared_memory_file};
++use super::validate::open_existing_shared_memory_file;
++#[cfg(test)]
++use super::validate::open_shared_memory_file;
+ use crate::reader_state::ReaderIdentity;
+ use memmap2::MmapMut;
+ use std::io;
+ #[cfg(unix)]
+ use std::os::unix::fs::MetadataExt;
+ use std::path::{Path, PathBuf};
+-use std::sync::atomic::{Ordering, fence};
++use std::sync::atomic::Ordering;
+ 
+ // `configuring` is a small cross-process state bitset. The reconfiguration bit
+ // blocks new IO commits, while the read/write bits protect an IO operation that
+@@ -58,6 +62,8 @@ pub struct SharedAudioBuffer {
+     pub(super) audio_offset: usize,
+     /// Maximum audio capacity based on original mmap size (for validation)
+     pub(super) max_audio_capacity: usize,
++    backing_length: u64,
++    descriptor_server: Option<DescriptorServer>,
+ }
+ 
+ /// One reader transaction, including cached plaintext delivery.
+@@ -71,6 +77,7 @@ pub(super) struct ReadCommit<'a> {
+ impl ReadCommit<'_> {
+     pub(super) fn identity(&self) -> ReaderIdentity {
+         ReaderIdentity {
++            ring_generation: self.shared.header().ring_generation.load(Ordering::Acquire),
+             sample_rate: self.shared.sample_rate(),
+             channel_count: self.shared.channel_count(),
+             buffer_frames: self.shared.buffer_frames(),
+@@ -260,7 +267,7 @@ impl SharedAudioBuffer {
+         sample_rate: u32,
+         buffer_frames: u32,
+         channel_count: u32,
+-    ) {
++    ) -> io::Result<()> {
+         // The daemon rotates the session key before opening this mapping.
+         // Keep key ownership out of the transport layer: rotating here would
+         // desynchronize KeyManager's cached cipher/fingerprint. Header
+@@ -272,12 +279,38 @@ impl SharedAudioBuffer {
+         // re-init that cleared it would leave the transport reporting
+         // not-ready forever. Preserve it verbatim.
+         let header = self.header();
+-        let driver_ready = header.driver_ready.load(Ordering::Acquire);
++        let driver_ready = if header.version.load(Ordering::Acquire) == SHARED_MEMORY_VERSION {
++            header.driver_ready.load(Ordering::Acquire)
++        } else {
++            0
++        };
+         // Volume state is user state, not transport state: a daemon
+         // restart must not reset the OS-visible volume the HAL driver is
+         // still advertising. Preserve a published volume verbatim; only a
+         // never-published header (generation 0) gets unity defaults.
+-        let volume_published = header.volume_generation.load(Ordering::Acquire) != 0;
++        let is_current = header.version.load(Ordering::Acquire) == SHARED_MEMORY_VERSION;
++        let volume_state = if is_current {
++            header.volume_state.load(Ordering::Acquire)
++        } else {
++            0
++        };
++        let volume_published = volume_state >> 33 != 0;
++        let request_id = if is_current {
++            header
++                .config_request_id
++                .load(Ordering::Acquire)
++                .checked_add(1)
++                .ok_or_else(|| {
++                    io::Error::new(
++                        io::ErrorKind::InvalidData,
++                        "Configuration identity exhausted; replace transport",
++                    )
++                })?
++                .max(1)
++        } else {
++            // Random session seed with at least 2^63 IDs remaining.
++            (rand::random::<u64>() & 0x7fff_ffff_ffff_ffff).max(1)
++        };
+         header.magic.store(SHARED_MEMORY_MAGIC, Ordering::Release);
+         header
+             .version
+@@ -288,6 +321,20 @@ impl SharedAudioBuffer {
+         header
+             .requested_channel_count
+             .store(channel_count, Ordering::Release);
++        let ring_generation = if is_current {
++            header
++                .ring_generation
++                .load(Ordering::Acquire)
++                .checked_add(1)
++                .ok_or_else(|| {
++                    io::Error::new(io::ErrorKind::InvalidData, "HAL ring identity exhausted")
++                })?
++        } else {
++            1
++        };
++        header
++            .ring_generation
++            .store(ring_generation, Ordering::Release);
+         header.write_position.store(0, Ordering::Release);
+         header.read_position.store(0, Ordering::Release);
+         header.active.store(0, Ordering::Release);
+@@ -312,6 +359,22 @@ impl SharedAudioBuffer {
+         header.daemon_heartbeat_ms.store(0, Ordering::Release);
+         header.configuring.store(0, Ordering::Release);
+         header.configuring_ack.store(0, Ordering::Release);
++        header.control_lock.store(0, Ordering::Release);
++        header
++            .actual_channel_count
++            .store(channel_count, Ordering::Release);
++        header
++            .config_request_id
++            .store(request_id, Ordering::Release);
++        header.config_ack_id.store(request_id, Ordering::Release);
++        header.volume_state.store(
++            if volume_published {
++                volume_state
++            } else {
++                u64::from(1.0f32.to_bits()) | (1 << 33)
++            },
++            Ordering::Release,
++        );
+         if !volume_published {
+             header
+                 .volume_scalar_bits
+@@ -319,9 +382,13 @@ impl SharedAudioBuffer {
+             header.output_muted.store(0, Ordering::Release);
+             header.volume_generation.store(1, Ordering::Release);
+         }
++        Ok(())
+     }
+ 
+     /// Create or open the shared memory file and initialize it when needed.
++    ///
++    /// Existing peers must be stopped before resizing or initialization. Daemon
++    /// startup uses `create_replacement_default` to leave pinned mappings intact.
+     pub fn create_or_open<P: AsRef<Path>>(
+         path: P,
+         sample_rate: u32,
+@@ -358,6 +425,7 @@ impl SharedAudioBuffer {
+ 
+     /// Create or open a shared memory file sized for the largest expected
+     /// runtime geometry while advertising the current format in the header.
++    #[cfg(test)]
+     pub fn create_or_open_with_max_geometry<P: AsRef<Path>>(
+         path: P,
+         sample_rate: u32,
+@@ -409,6 +477,8 @@ impl SharedAudioBuffer {
+         // path which enforces one daemon per user.
+         let mmap = unsafe { MmapMut::map_mut(&file)? };
+         let mut buffer = Self {
++            backing_length: mmap.len() as u64,
++            descriptor_server: None,
+             mmap,
+             path: path.to_path_buf(),
+             #[cfg(unix)]
+@@ -429,12 +499,32 @@ impl SharedAudioBuffer {
+         };
+ 
+         if needs_init {
+-            buffer.initialize_header(sample_rate, buffer_frames, channel_count);
++            buffer.initialize_header(sample_rate, buffer_frames, channel_count)?;
+         }
+ 
+         Ok(buffer)
+     }
+ 
++    /// Publish a fresh immutable region. Existing peers retain their old object.
++    #[cfg(not(test))]
++    pub fn create_or_open_with_max_geometry<P: AsRef<Path>>(
++        path: P,
++        sample_rate: u32,
++        buffer_frames: u32,
++        channel_count: u32,
++        max_buffer_frames: u32,
++        max_channel_count: u32,
++    ) -> io::Result<Self> {
++        Self::create_replacement_with_max_geometry(
++            path,
++            sample_rate,
++            buffer_frames,
++            channel_count,
++            max_buffer_frames,
++            max_channel_count,
++        )
++    }
++
+     /// Filesystem path backing this shared memory mapping.
+     pub fn path(&self) -> &Path {
+         &self.path
+@@ -453,7 +543,14 @@ impl SharedAudioBuffer {
+         if !metadata.file_type().is_file() {
+             return false;
+         }
+-        if metadata.len() != self.mmap.len() as u64 {
++        if self
++            .descriptor_server
++            .as_ref()
++            .is_some_and(|server| !server.is_running())
++        {
++            return false;
++        }
++        if metadata.len() != self.backing_length {
+             return false;
+         }
+ 
+@@ -467,6 +564,108 @@ impl SharedAudioBuffer {
+         }
+     }
+ 
++    /// Publish a fresh mapping without resizing or resetting a live peer's mapping.
++    ///
++    /// The old inode remains valid for pinned readers until the HAL control
++    /// thread observes replacement and hands off. A peer that died holding a
++    /// control/IO gate cannot poison the new daemon session. User volume is
++    /// carried over as one atomic tuple; transport readiness is freshly earned.
++    pub fn create_replacement_with_max_geometry<P: AsRef<Path>>(
++        path: P,
++        sample_rate: u32,
++        buffer_frames: u32,
++        channel_count: u32,
++        max_buffer_frames: u32,
++        max_channel_count: u32,
++    ) -> io::Result<Self> {
++        use std::io::Write;
++        use std::os::unix::fs::OpenOptionsExt;
++
++        let path = path.as_ref();
++        let parent = path.parent().ok_or_else(|| {
++            io::Error::new(
++                io::ErrorKind::InvalidInput,
++                "mapping requires a parent directory",
++            )
++        })?;
++        ensure_secure_parent_dir(parent)?;
++        let (audio_offset, _, _) = Self::audio_layout(buffer_frames, channel_count, sample_rate)?;
++        let (_, max_audio_capacity, length) = Self::audio_layout(
++            max_buffer_frames.max(buffer_frames),
++            max_channel_count.max(channel_count),
++            super::consts::MAX_HAL_SAMPLE_RATE,
++        )?;
++        let previous_volume = Self::open(path)
++            .ok()
++            .map(|old| old.header().volume_state.load(Ordering::Acquire))
++            .filter(|state| state >> 33 != 0);
++        let region = backing::create_region(length)?;
++        let record = Rendezvous::new(length)?;
++        let staging = parent.join(format!(".map-{:016x}", rand::random::<u64>()));
++        let result = (|| {
++            let mut marker = std::fs::OpenOptions::new()
++                .read(true)
++                .write(true)
++                .create_new(true)
++                .mode(0o600)
++                .custom_flags(libc::O_NOFOLLOW)
++                .open(&staging)?;
++            marker.write_all(&record.encode())?;
++            grant_coreaudiod_shared_memory_access(&staging)?;
++            let metadata = marker.metadata()?;
++            let server = DescriptorServer::start(path, region.try_clone()?, record)?;
++            // SAFETY: create_region validated an allocated Darwin shm extent.
++            // Its size cannot change, and the unpublished object has no audio
++            // participants until the fully initialized rendezvous is renamed.
++            let mmap = unsafe { memmap2::MmapOptions::new().len(length).map_mut(&region)? };
++            let mut replacement = Self {
++                mmap,
++                path: path.to_path_buf(),
++                backing_device: metadata.dev(),
++                backing_inode: metadata.ino(),
++                backing_length: metadata.len(),
++                descriptor_server: Some(server),
++                audio_offset,
++                max_audio_capacity,
++            };
++            replacement.initialize_header(sample_rate, buffer_frames, channel_count)?;
++            // A surviving HAL process restores its cached controls before
++            // publishing driver readiness when the former broker has exited.
++            replacement.header().volume_state.store(
++                previous_volume.unwrap_or(u64::from(1.0f32.to_bits())),
++                Ordering::Release,
++            );
++            std::fs::rename(&staging, path)?;
++            Ok(replacement)
++        })();
++        if result.is_err() {
++            let _ = std::fs::remove_file(&staging);
++        }
++        result
++    }
++
++    /// Start a daemon session in a fresh maximum-capacity mapping.
++    pub fn create_replacement_default(
++        sample_rate: u32,
++        buffer_frames: u32,
++        channel_count: u32,
++    ) -> io::Result<Self> {
++        if channel_count == 0 || channel_count > MAX_HAL_CHANNEL_COUNT {
++            return Err(io::Error::new(
++                io::ErrorKind::InvalidInput,
++                "invalid HAL channel count",
++            ));
++        }
++        Self::create_replacement_with_max_geometry(
++            get_shared_memory_path(),
++            sample_rate,
++            buffer_frames,
++            channel_count,
++            MAX_HAL_BUFFER_FRAMES,
++            MAX_HAL_CHANNEL_COUNT,
++        )
++    }
++
+     /// Create or open the default per-user shared memory file.
+     pub fn create_or_open_default(
+         sample_rate: u32,
+@@ -493,21 +692,63 @@ impl SharedAudioBuffer {
+         )
+     }
+ 
+-    /// Open an existing shared memory region created by the Swift HAL driver
++    /// Attach through the authenticated descriptor broker.
++    /// Regular-file audio mappings are refused in every production build.
+     pub fn open<P: AsRef<Path>>(path: P) -> io::Result<Self> {
+         let path = path.as_ref();
+-        // Use the same no-follow and owner/type validation as the create
+-        // path. The HAL mapping is a cross-process trust boundary; opening an
+-        // attacker-controlled symlink here would otherwise bypass the
+-        // validation performed during creation.
++        #[cfg(test)]
++        {
++            let file = open_existing_shared_memory_file(path)?;
++            if file.metadata()?.len() != backing::RECORD_LENGTH as u64 {
++                // SAFETY: unit fixtures own isolated temporary files whose
++                // extent remains fixed while their mapped participants run.
++                return unsafe { Self::open_fixture(path) };
++            }
++        }
++        Self::open_brokered(path)
++    }
++
++    pub(super) fn open_brokered(path: &Path) -> io::Result<Self> {
++        let mut marker = open_existing_shared_memory_file(path)?;
++        let backing_metadata = marker.metadata()?;
++        let record = Rendezvous::read(&mut marker)?;
++        let region = backing::receive_region(path, record, backing_metadata.uid())?;
++        // SAFETY: receive_region checked the owner, Darwin shm type and
++        // immutable allocated extent before returning this owned descriptor.
++        unsafe { Self::open_region(path, region, record.length, backing_metadata) }
++    }
++
++    /// Open a legacy regular-file fixture, never used by normal attachment.
++    ///
++    /// # Safety
++    /// The test harness must own the file and keep its extent fixed until all
++    /// mapped participants have exited. Foreign accesses must obey the ring
++    /// and atomic-header protocol. This API is excluded from shipping builds.
++    #[cfg(any(test, feature = "swift-stress-worker"))]
++    pub unsafe fn open_fixture<P: AsRef<Path>>(path: P) -> io::Result<Self> {
++        let path = path.as_ref();
+         let file = open_existing_shared_memory_file(path)?;
+-        #[cfg(unix)]
+-        let backing_metadata = file.metadata()?;
++        let metadata = file.metadata()?;
++        let length = usize::try_from(metadata.len()).map_err(|_| {
++            io::Error::new(
++                io::ErrorKind::InvalidData,
++                "fixture extent does not fit this platform",
++            )
++        })?;
++        // SAFETY: the caller owns the fixture extent and participant protocol.
++        unsafe { Self::open_region(path, file, length, metadata) }
++    }
+ 
+-        // SAFETY: see `create_or_open_with_max_geometry`. The file is sized
+-        // by the daemon; we map it read/write and validate the magic/version
+-        // immediately below.
+-        let mmap = unsafe { MmapMut::map_mut(&file)? };
++    /// The caller proves extent stability for this private mapping boundary.
++    unsafe fn open_region(
++        path: &Path,
++        file: std::fs::File,
++        length: usize,
++        backing_metadata: std::fs::Metadata,
++    ) -> io::Result<Self> {
++        // SAFETY: supplied by open_brokered's immutable descriptor validation,
++        // or by the explicit unsafe fixture constructor's caller contract.
++        let mmap = unsafe { memmap2::MmapOptions::new().len(length).map_mut(&file)? };
+ 
+         let header_size = std::mem::size_of::<SharedAudioHeader>();
+         let audio_offset = (header_size + 63) & !63;
+@@ -589,6 +830,8 @@ impl SharedAudioBuffer {
+         let max_audio_capacity = Self::max_audio_capacity_from_len(audio_offset, mmap.len());
+ 
+         Ok(Self {
++            backing_length: backing_metadata.len(),
++            descriptor_server: None,
+             mmap,
+             path: path.to_path_buf(),
+             #[cfg(unix)]
+@@ -678,6 +921,9 @@ impl SharedAudioBuffer {
+     pub fn reset_daemon_runtime_state(&mut self) -> bool {
+         self.set_engine_ready(false);
+         self.reconfigure_quiesced(None, None, None);
++        if !self.invalidate_config_request() {
++            return false;
++        }
+         self.header().write_position.load(Ordering::Acquire) == 0
+             && self.header().read_position.load(Ordering::Acquire) == 0
+     }
+@@ -702,42 +948,17 @@ impl SharedAudioBuffer {
+     /// scalar/muted values are then meaningless and callers must fall back
+     /// to their own default.
+     pub fn output_volume(&self) -> (f32, bool, u32) {
+-        let header = self.header();
+-        let generation = header.volume_generation.load(Ordering::Acquire);
+-        let bits = header.volume_scalar_bits.load(Ordering::Acquire);
+-        let muted = header.output_muted.load(Ordering::Acquire) != 0;
+-        (f32::from_bits(bits), muted, generation)
++        let state = self.header().volume_state.load(Ordering::Acquire);
++        (
++            f32::from_bits(state as u32),
++            state & (1 << 32) != 0,
++            (state >> 33) as u32,
++        )
+     }
+ 
+-    /// Publish an output volume change and return the new generation.
+-    ///
+-    /// The scalar is clamped to the finite 0.0..=1.0 range the CoreAudio
+-    /// volume control exposes. The generation store is last and uses
+-    /// `AcqRel`, so a reader that observes the new generation also
+-    /// observes the values written before it. Generation 0 is the
+-    /// "unpublished" sentinel and is skipped on wraparound.
++    /// Atomically replace user volume and mute, returning the new generation.
+     pub fn set_output_volume(&self, volume: f32, muted: bool) -> u32 {
+-        let clamped = if volume.is_finite() {
+-            volume.clamp(0.0, 1.0)
+-        } else {
+-            1.0
+-        };
+-        let header = self.header();
+-        header
+-            .volume_scalar_bits
+-            .store(clamped.to_bits(), Ordering::Release);
+-        header
+-            .output_muted
+-            .store(u32::from(muted), Ordering::Release);
+-        let generation = header
+-            .volume_generation
+-            .fetch_add(1, Ordering::AcqRel)
+-            .wrapping_add(1);
+-        if generation == 0 {
+-            header.volume_generation.store(1, Ordering::Release);
+-            return 1;
+-        }
+-        generation
++        self.patch_output_volume(Some(volume), Some(muted)).2
+     }
+ 
+     /// Set sample rate via the quiesced reconfiguration protocol.
+@@ -859,17 +1080,23 @@ impl SharedAudioBuffer {
+             return;
+         }
+ 
++        if let Err(error) = self.advance_ring_generation() {
++            self.header()
++                .configuring
++                .fetch_and(!CONFIGURING_RECONFIGURE, Ordering::Release);
++            log::warn!("Cannot reconfigure HAL ring: {error}");
++            return;
++        }
++
+         {
+             let header = self.header();
+             header.configuring_ack.store(0, Ordering::Release);
+ 
+             if let Some(rate) = sample_rate {
+                 header.sample_rate.store(rate, Ordering::Release);
+-                header.actual_sample_rate.store(rate, Ordering::Release);
+             }
+             if let Some(frames) = buffer_frames {
+                 header.buffer_frames.store(frames, Ordering::Release);
+-                header.actual_buffer_frames.store(frames, Ordering::Release);
+             }
+             if let Some(channels) = channel_count {
+                 header.channel_count.store(channels, Ordering::Release);
+@@ -882,7 +1109,6 @@ impl SharedAudioBuffer {
+         let header = self.header();
+         header.write_position.store(0, Ordering::Release);
+         header.read_position.store(0, Ordering::Release);
+-        header.config_changed.store(1, Ordering::Release);
+         header
+             .configuring
+             .fetch_and(!CONFIGURING_RECONFIGURE, Ordering::Release);
+@@ -898,31 +1124,117 @@ impl SharedAudioBuffer {
+         self.header().encrypted.load(Ordering::Acquire) != 0
+     }
+ 
+-    /// Enable or disable encryption
+-    pub fn set_encrypted(&self, enabled: bool) {
++    /// Advance a ring identity while holding the exclusive reconfiguration gate.
++    fn advance_ring_generation(&self) -> io::Result<()> {
++        let generation = &self.header().ring_generation;
++        let next = generation
++            .load(Ordering::Acquire)
++            .checked_add(1)
++            .ok_or_else(|| {
++                io::Error::new(
++                    io::ErrorKind::InvalidData,
++                    "HAL ring identity exhausted; replace transport",
++                )
++            })?;
++        generation.store(next, Ordering::Release);
++        Ok(())
++    }
++
++    /// Publish encryption state and optionally discard queued audio atomically.
++    ///
++    /// Runs on the control thread. Audio readers and writers are excluded for
++    /// the whole tuple and reset; staged plaintext is fenced by a new identity.
++    ///
++    /// # Errors
++    /// Returns an error if IO cannot quiesce or the identity is exhausted.
++    pub fn configure_encryption(
++        &self,
++        enabled: bool,
++        fingerprint: [u8; 8],
++        flush: bool,
++    ) -> io::Result<()> {
++        if !self.begin_reconfiguration() {
++            return Err(io::Error::new(
++                io::ErrorKind::WouldBlock,
++                "HAL encryption publication is busy",
++            ));
++        }
++        if !flush && self.is_encrypted() == enabled && self.key_fingerprint() == fingerprint {
++            self.header()
++                .configuring
++                .fetch_and(!CONFIGURING_RECONFIGURE, Ordering::Release);
++            return Ok(());
++        }
++        let result = self.advance_ring_generation().map(|()| {
++            let header = self.header();
++            header
++                .key_fingerprint
++                .store(fingerprint_to_u64(fingerprint), Ordering::Release);
++            header
++                .encrypted
++                .store(u32::from(enabled), Ordering::Release);
++            if flush {
++                header.read_position.store(
++                    header.write_position.load(Ordering::Acquire),
++                    Ordering::Release,
++                );
++            }
++        });
+         self.header()
+-            .encrypted
+-            .store(if enabled { 1 } else { 0 }, Ordering::Release);
++            .configuring
++            .fetch_and(!CONFIGURING_RECONFIGURE, Ordering::Release);
++        result
++    }
++
++    /// Enable or disable encryption on the control thread.
++    pub fn set_encrypted(&self, enabled: bool) {
++        if let Err(error) = self.with_encryption_update(|shared| {
++            if shared.is_encrypted() != enabled {
++                shared.advance_ring_generation()?;
++                shared
++                    .header()
++                    .encrypted
++                    .store(u32::from(enabled), Ordering::Release);
++            }
++            Ok(())
++        }) {
++            log::warn!("Cannot change HAL encryption mode: {error}");
++        }
+     }
+ 
+-    /// Get the key fingerprint
++    /// Get the key fingerprint.
+     pub fn key_fingerprint(&self) -> [u8; 8] {
+         u64_to_fingerprint(self.header().key_fingerprint.load(Ordering::Acquire))
+     }
+ 
+-    /// Set the key fingerprint
++    /// Set the key fingerprint on the control thread.
+     pub fn set_key_fingerprint(&self, fingerprint: [u8; 8]) {
+-        self.header()
+-            .key_fingerprint
+-            .store(fingerprint_to_u64(fingerprint), Ordering::Release);
++        if let Err(error) = self.with_encryption_update(|shared| {
++            if shared.key_fingerprint() != fingerprint {
++                shared.advance_ring_generation()?;
++                shared
++                    .header()
++                    .key_fingerprint
++                    .store(fingerprint_to_u64(fingerprint), Ordering::Release);
++            }
++            Ok(())
++        }) {
++            log::warn!("Cannot change HAL encryption key: {error}");
++        }
+     }
+ 
+-    /// Drop all queued audio while preserving the current write position.
++    /// Drop queued audio and invalidate cached plaintext on the control thread.
+     pub fn flush_audio(&self) {
+-        let write_pos = self.header().write_position.load(Ordering::Acquire);
+-        self.header()
+-            .read_position
+-            .store(write_pos, Ordering::Release);
++        if let Err(error) = self.with_encryption_update(|shared| {
++            shared.advance_ring_generation()?;
++            shared.header().read_position.store(
++                shared.header().write_position.load(Ordering::Acquire),
++                Ordering::Release,
++            );
++            Ok(())
++        }) {
++            log::warn!("Cannot flush HAL ring: {error}");
++        }
+     }
+ 
+     /// Get the current frame counter (used as nonce base)
+@@ -1043,28 +1355,18 @@ impl SharedAudioBuffer {
+         buffer_frames: u32,
+         channel_count: u32,
+         source: u32,
+-    ) {
+-        let header = self.header();
+-        header
+-            .requested_sample_rate
+-            .store(sample_rate, Ordering::Release);
+-        header
+-            .requested_buffer_frames
+-            .store(buffer_frames, Ordering::Release);
+-        if channel_count > 0 {
+-            header
+-                .requested_channel_count
+-                .store(channel_count, Ordering::Release);
+-        }
+-        // Release fence so the requested fields are visible before we
+-        // publish the source/status/config_changed flags.
+-        fence(Ordering::Release);
+-        header.config_status.store(0, Ordering::Release);
+-        header.config_source.store(source, Ordering::Release);
+-        header.config_changed.store(1, Ordering::Release);
++    ) -> Option<u64> {
++        self.publish_config_request(
++            driver_common::DriverConfig::new(sample_rate, buffer_frames, channel_count),
++            source,
++        )
+     }
+ 
+-    /// Acknowledge a config change (called by the handler after processing).
++    /// Acknowledge the current request in synchronous legacy fixtures.
++    ///
++    /// Asynchronous owners must use `acknowledge_config_request` with their
++    /// retained identity instead of looking up whichever request is current.
++    #[cfg(test)]
+     pub fn acknowledge_config_change(
+         &mut self,
+         actual_rate: u32,
+@@ -1072,18 +1374,18 @@ impl SharedAudioBuffer {
+         status: u32,
+         error_code: u32,
+     ) {
+-        let header = self.header();
+-        header
+-            .actual_sample_rate
+-            .store(actual_rate, Ordering::Release);
+-        header
+-            .actual_buffer_frames
+-            .store(actual_frames, Ordering::Release);
+-        header
+-            .config_error_code
+-            .store(error_code, Ordering::Release);
+-        header.config_status.store(status, Ordering::Release);
+-        header.config_changed.store(0, Ordering::Release);
++        if let Some(snapshot) = self.configuration_snapshot() {
++            self.acknowledge_config_request(
++                snapshot.request.request_id,
++                driver_common::DriverConfig::new(
++                    actual_rate,
++                    actual_frames,
++                    snapshot.request.config.channel_count,
++                ),
++                status,
++                error_code,
++            );
++        }
+     }
+ 
+     /// Current ring capacity derived from the cross-process geometry.
+diff --git a/crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs b/crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs
+new file mode 100644
+index 0000000..d3603a1
+--- /dev/null
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs
+@@ -0,0 +1,175 @@
++//! Control-only encryption publication and compatibility-setter regressions.
++
++// Rust guideline compliant 2026-02-21
++use super::{CONFIGURING_RECONFIGURE, SharedAudioBuffer};
++use std::io;
++
++struct Publication<'a>(&'a SharedAudioBuffer);
++
++impl Drop for Publication<'_> {
++    fn drop(&mut self) {
++        self.0.release_io_commit(CONFIGURING_RECONFIGURE);
++    }
++}
++
++impl SharedAudioBuffer {
++    /// Run a control publication after excluding all audio commits.
++    pub(super) fn with_encryption_update(
++        &self,
++        publish: impl FnOnce(&Self) -> io::Result<()>,
++    ) -> io::Result<()> {
++        #[cfg(test)]
++        before_publication();
++        if !self.begin_reconfiguration() {
++            return Err(io::Error::new(
++                io::ErrorKind::WouldBlock,
++                "HAL encryption publication is busy",
++            ));
++        }
++        let _publication = Publication(self);
++        publish(self)
++    }
++}
++
++#[cfg(test)]
++pub(super) fn before_publication() {
++    tests::pause_before_publication();
++}
++
++#[cfg(test)]
++mod tests {
++    use super::super::{CONFIGURING_WRITE_COMMIT, SharedAudioBuffer};
++    use std::cell::RefCell;
++    use std::sync::atomic::Ordering;
++    use std::sync::mpsc::{self, Receiver, Sender};
++    use std::time::Duration;
++
++    thread_local! {
++        static PAUSE: RefCell<Option<(Sender<()>, Receiver<()>)>> = const { RefCell::new(None) };
++    }
++
++    pub(super) fn pause_before_publication() {
++        if let Some((ready, resume)) = PAUSE.with(|slot| slot.borrow_mut().take()) {
++            ready.send(()).unwrap();
++            resume.recv_timeout(Duration::from_secs(5)).unwrap();
++        }
++    }
++
++    #[derive(Clone, Copy)]
++    enum Update {
++        Mode,
++        Key,
++        Flush,
++    }
++
++    fn apply(buffer: &SharedAudioBuffer, update: Update) {
++        match update {
++            Update::Mode => buffer.set_encrypted(true),
++            Update::Key => buffer.set_key_fingerprint([0x22; 8]),
++            Update::Flush => buffer.flush_audio(),
++        }
++    }
++
++    fn fixture() -> (tempfile::TempDir, SharedAudioBuffer) {
++        let preferred = std::path::Path::new("/Volumes/home_tmp/tmp");
++        let directory = if preferred.is_dir() {
++            tempfile::tempdir_in(preferred)
++        } else {
++            tempfile::tempdir()
++        }
++        .unwrap();
++        let mut buffer =
++            SharedAudioBuffer::create_or_open(directory.path().join("audio.shm"), 48_000, 64, 2)
++                .unwrap();
++        buffer.set_key_fingerprint([0x11; 8]);
++        assert_eq!(buffer.write_audio(&[0.125, 0.25, 0.375, 0.5]), 2);
++        (directory, buffer)
++    }
++
++    #[test]
++    fn compatibility_encryption_publications_respect_inflight_audio_io() {
++        let mut failures = 0;
++        for update in [Update::Mode, Update::Key, Update::Flush] {
++            let (_directory, buffer) = fixture();
++            let before = (
++                buffer.is_encrypted(),
++                buffer.key_fingerprint(),
++                buffer.header().read_position.load(Ordering::Acquire),
++            );
++            assert!(buffer.try_acquire_io_commit(CONFIGURING_WRITE_COMMIT));
++            apply(&buffer, update);
++            let after = (
++                buffer.is_encrypted(),
++                buffer.key_fingerprint(),
++                buffer.header().read_position.load(Ordering::Acquire),
++            );
++            buffer.release_io_commit(CONFIGURING_WRITE_COMMIT);
++            failures += usize::from(before != after);
++            apply(&buffer, update);
++            match update {
++                Update::Mode => assert!(buffer.is_encrypted()),
++                Update::Key => assert_eq!(buffer.key_fingerprint(), [0x22; 8]),
++                Update::Flush => assert_eq!(
++                    buffer.header().read_position.load(Ordering::Acquire),
++                    buffer.header().write_position.load(Ordering::Acquire)
++                ),
++            }
++        }
++        println!("encryption_io_publication cases=3 failures={failures}");
++        assert_eq!(
++            failures, 0,
++            "control publication must wait for or refuse an active audio commit"
++        );
++    }
++
++    #[test]
++    fn compatibility_field_updates_and_flush_never_restore_an_untouched_stale_field() {
++        let mut failures = 0;
++        for update in [Update::Mode, Update::Key, Update::Flush] {
++            let (directory, buffer) = fixture();
++            let path = directory.path().join("audio.shm");
++            let (ready_tx, ready_rx) = mpsc::channel();
++            let (resume_tx, resume_rx) = mpsc::channel();
++            let worker = std::thread::spawn(move || {
++                let buffer = SharedAudioBuffer::open(path).unwrap();
++                PAUSE.with(|slot| *slot.borrow_mut() = Some((ready_tx, resume_rx)));
++                apply(&buffer, update);
++            });
++            ready_rx.recv_timeout(Duration::from_secs(5)).unwrap();
++            match update {
++                Update::Mode => buffer.set_key_fingerprint([0x22; 8]),
++                Update::Key => buffer.set_encrypted(true),
++                Update::Flush => {
++                    buffer.set_encrypted(true);
++                    buffer.set_key_fingerprint([0x22; 8]);
++                }
++            }
++            resume_tx.send(()).unwrap();
++            worker.join().unwrap();
++            failures +=
++                usize::from(!buffer.is_encrypted() || buffer.key_fingerprint() != [0x22; 8]);
++        }
++        println!("encryption_field_publication cases=3 failures={failures}");
++        assert_eq!(
++            failures, 0,
++            "a setter or flush must not restore fields read before publication ownership"
++        );
++    }
++    #[test]
++    fn publication_releases_control_ownership_after_error_and_unwind() {
++        let (_directory, buffer) = fixture();
++        assert!(
++            buffer
++                .with_encryption_update(|_| Err(std::io::Error::other("injected")))
++                .is_err()
++        );
++        assert_eq!(buffer.header().configuring.load(Ordering::Acquire), 0);
++        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
++            let _ = buffer.with_encryption_update(|_| panic!("injected control unwind"));
++        }));
++        assert!(result.is_err());
++        assert_eq!(buffer.header().configuring.load(Ordering::Acquire), 0);
++        buffer.set_encrypted(true);
++        assert!(buffer.is_encrypted());
++    }
++}
+diff --git a/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs b/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs
+index 370a15f..b650974 100644
+--- a/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs
++++ b/crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs
+@@ -195,8 +195,8 @@ mod tests {
+                     observed_96k += 1;
+                 } else {
+                     assert_eq!(rate, 48_000);
+-                    for frame in out[..frames * 2].chunks_exact(2) {
+-                        assert_eq!(frame, [0.125, 0.25]);
++                    for frame in out[..frames * 2].as_chunks::<2>().0 {
++                        assert_eq!(*frame, [0.125, 0.25]);
+                     }
+                 }
+             }

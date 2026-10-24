@@ -1,0 +1,35 @@
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -83,7 +83,7 @@
+ plist = "1.10.1"
+ driver-common = { path = "crates/driver-common" }
+ driver-hal = { path = "crates/driver-hal" }
+-sotf-capture = { path = "../sotf-capture" }
++sotf-capture = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-capture" }
+ plugins-denoiser = { path = "crates/sotf-plugins/crates/plugins-denoiser" }
+ plugins-gpui = { path = "crates/sotf-plugins/crates/plugins-gpui" }
+ plugins-inference = { path = "crates/sotf-plugins/crates/plugins-inference" }
+@@ -147,7 +147,7 @@
+ 
+ # External dependencies (definitions copied verbatim from sotf).
+ anyhow = { version = "1.0" }
+-autoeq = { version = ">=0.5.54", path = "../autoeq" }
++autoeq = { version = ">=0.5.54", path = "/Volumes/home_tmp/src/all_of_sotf/autoeq" }
+ approx = "0.5"
+ arc-swap = "1"
+ audioadapter-buffers = "5"
+@@ -180,10 +180,10 @@
+ libc = "0.2"
+ libloading = { version = "0.8" }
+ log = "0.4.28"
+-math-analog = { version = "0.5", path = "../math-audio/crates/math-analog" }
+-math-dsp = { version = "0.5", path = "../math-audio/crates/math-dsp" }
+-math-iir-fir = { version = "0.5", path = "../math-audio/crates/math-iir-fir" }
+-math-rir = { version = "0.5", path = "../math-audio/crates/math-rir" }
++math-analog = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-analog" }
++math-dsp = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp" }
++math-iir-fir = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-iir-fir" }
++math-rir = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-rir" }
+ memmap2 = "0.9.11"
+ midir = "0.11"
+ nalgebra = { package = "sotf-nalgebra", git = "https://github.com/pierreaubert/sotf-3rdparties",  version = "0.35", default-features = false, features = ["std"] }

@@ -1,0 +1,12 @@
+{
+  "clean": {
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "78bd7f203e6cede82d3fee23a7954ab2b47c5d3e6384196a55a844beeab2c9b6",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs": "fa3706d3800830d3b1f0ec1ae35018bf42347041b3ddeb9280ccdca97c73801d"
+  },
+  "current": {
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "4b93ed984fe055fe808870a6ff8fabea0723e014f0bc7953f1e3ccd40c88c558",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs": "fa3706d3800830d3b1f0ec1ae35018bf42347041b3ddeb9280ccdca97c73801d"
+  }
+}

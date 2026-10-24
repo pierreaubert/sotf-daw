@@ -1,0 +1,70 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-hal-input",
+      "--release",
+      "--features",
+      "hal,sotf-host/qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--test",
+      "native_transport",
+      "--",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "fixture_root": "/Volumes/home_tmp/tmp/hal-owner-input-1cytlpzl",
+    "exit_code": 0,
+    "elapsed_seconds": 445.6939697091002,
+    "source_before": {
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "4b93ed984fe055fe808870a6ff8fabea0723e014f0bc7953f1e3ccd40c88c558",
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9"
+    },
+    "source_after": {
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "4b93ed984fe055fe808870a6ff8fabea0723e014f0bc7953f1e3ccd40c88c558",
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9"
+    }
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-hal-output",
+      "--release",
+      "--features",
+      "hal,sotf-host/qa",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--test",
+      "native_transport",
+      "--",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "fixture_root": "/Volumes/home_tmp/tmp/hal-owner-output-501rq78h",
+    "exit_code": 0,
+    "elapsed_seconds": 65.16241366579197,
+    "source_before": {
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "4b93ed984fe055fe808870a6ff8fabea0723e014f0bc7953f1e3ccd40c88c558",
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9"
+    },
+    "source_after": {
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs": "4b93ed984fe055fe808870a6ff8fabea0723e014f0bc7953f1e3ccd40c88c558",
+      "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs": "18a315ec2adf4b709e2a4b387986fc3e1c21c145f78c218bdfc718fc0572e3e9"
+    }
+  }
+]

@@ -1,0 +1,10 @@
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -7645,6 +7645,7 @@
+  "rtrb",
+  "rusqlite",
+  "rustfft",
++ "rustix",
+  "serde",
+  "serde_json",
+  "serde_yaml",

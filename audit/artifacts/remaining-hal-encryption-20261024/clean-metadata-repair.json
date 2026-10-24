@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "metadata",
+    "--offline",
+    "--format-version",
+    "1"
+  ],
+  "exit_code": 0,
+  "stderr": "",
+  "lock_diff": "--- a/Cargo.lock\n+++ b/Cargo.lock\n@@ -7527,6 +7527,7 @@\n  \"math-rir\",\n  \"rtrb\",\n  \"rustfft\",\n+ \"rustix\",\n  \"serde\",\n  \"serde_json\",\n  \"sha2\",\n",
+  "lock_before_sha256": "0f7969d48e349534cb98e555f0c56e883af135c84634da6066e74a12a368ed54",
+  "lock_after_sha256": "a4fd2ec52368972cba625b108f0e86bc0d7eaf975814b7b8a69c33c6db222e41"
+}

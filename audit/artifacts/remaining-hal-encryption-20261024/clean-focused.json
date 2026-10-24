@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "driver-hal",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "encryption_control",
+    "--",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "workdir": "/Volumes/home_tmp/tmp/hal-owner-clean-20261024-mn8sdiff",
+  "exit_code": 0,
+  "elapsed_seconds": 1.296754457987845,
+  "stdout": "\nrunning 3 tests\ntest shared_memory::shared_audio_buffer::encryption_control::tests::compatibility_encryption_publications_respect_inflight_audio_io ... encryption_io_publication cases=3 failures=0\nok\ntest shared_memory::shared_audio_buffer::encryption_control::tests::compatibility_field_updates_and_flush_never_restore_an_untouched_stale_field ... encryption_field_publication cases=3 failures=0\nok\ntest shared_memory::shared_audio_buffer::encryption_control::tests::publication_releases_control_ownership_after_error_and_unwind ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 119 filtered out; finished in 0.05s\n\n",
+  "stderr": "    Finished `release` profile [optimized] target(s) in 0.97s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/driver_hal-2eaab2b99694d47c)\n\nthread 'shared_memory::shared_audio_buffer::encryption_control::tests::publication_releases_control_ownership_after_error_and_unwind' (357344715) panicked at crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs:162:55:\ninjected control unwind\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+}

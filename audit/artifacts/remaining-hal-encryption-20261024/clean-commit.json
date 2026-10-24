@@ -1,0 +1,10 @@
+{
+  "commit": "0410b1da6ae35b9ad830baadb1dc785360f4732d",
+  "worktree": "/Volumes/home_tmp/tmp/hal-owner-clean-20261024-mn8sdiff",
+  "paths": [
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs"
+  ],
+  "main_checkout_integration": "Owner-only changes already ported; full parent file includes user changes and is intentionally not committed here."
+}

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "driver-hal",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "encryption_control",
+    "--",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "workdir": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw",
+  "exit_code": 101,
+  "elapsed_seconds": 0.7774351669941097,
+  "stdout": "",
+  "stderr": "error: failed to download `ctutils v0.4.5`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified\n"
+}
