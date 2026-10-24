@@ -1,0 +1,15 @@
+{
+  "baseline_source_sha256": "9ce4821697786de065b3b4cca5f78c8a60d0404c1722f55ff5fc17aead55721c",
+  "candidate_source_sha256": "0b7c8d442b228d770f84a39fb29f265e0e1a38361a36092bc4e8432651c88bda",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "limits": "Exclusive local wall QA; intentional density and modulation-clock waveform changes are validated separately, not assumed bit-identical. No native-device claim.",
+  "baseline_qa-aae_sha256": "73a42fc0f600e9ecdaebbea30c0c4f76c398756d01f452cc9aafa5c03d7ba1a2",
+  "baseline_qa-aae-timing_sha256": "1432d89706988c14031ae58ca2756b77a667ba5025fa508246da433e0225484b",
+  "candidate_qa-aae_sha256": "8ac71885d8adc66c64b809abd4de49ca6ed211c83a5cfa74002097e0c9b468c9",
+  "candidate_qa-aae-timing_sha256": "766f2c43a41de1fbd993fe6f352f98394466fe8564bfc3a88a3faf5abf0a9767"
+}

@@ -1,0 +1,1668 @@
+pub use super::config::DenoiserPluginParams;
+use super::denoiser_data::DenoiserData;
+use super::misc::MIN_IN_PLACE_BLOCK_FRAMES;
+use super::misc::NUM_DISPLAY_BANDS;
+use super::multi_resolution::SMALL_FFT_SIZE;
+use super::reduction_curve::ReductionCurve;
+use crate::params::PARAMS as DN;
+#[cfg(not(miri))]
+use math_audio_dsp::simd::ScopedFtz;
+use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
+use rustfft::num_complex::Complex;
+use sotf_host::analyzer::RealTimeCache;
+use sotf_host::param_bridge;
+use sotf_host::param_specs::find_by_key as pk;
+use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
+use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
+use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
+use sotf_host::plugin::{
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
+};
+use sotf_plugin_pnd::analysis::PndAnalyzer;
+use std::any::Any;
+use std::sync::Arc;
+
+/// Static configuration for the denoiser.
+pub(super) struct DenoiserConfig {
+    pub channels: usize,
+    pub fft_size: usize,
+    pub hop_size: usize,
+    pub sample_rate: f64,
+    pub spectrum_size: usize, // fft_size / 2 + 1
+}
+
+/// FFT planners and time/frequency-domain buffers.
+pub(super) struct DenoiserFft {
+    pub fft_forward: Arc<dyn RealToComplex<f32>>,
+    pub fft_inverse: Arc<dyn ComplexToReal<f32>>,
+    pub window: Vec<f32>,
+    pub synthesis_window: Vec<f32>,
+    pub time_domain: Vec<Vec<f32>>,          // [channels][fft_size]
+    pub freq_domain: Vec<Vec<Complex<f32>>>, // [channels][spectrum_size]
+}
+
+/// User-facing runtime parameters.
+pub(super) struct DenoiserParameters {
+    pub reduction_db: f32,
+    pub floor_db: f32,
+    pub smoothing: f32,
+    pub attack_ms: f32,
+    pub release_ms: f32,
+    pub low_latency: bool,
+    pub polyphonic_detection: bool,
+    pub transparency: f32,
+    pub psychoacoustic_masking: bool,
+    pub spectral_smoothing_enabled: bool,
+    pub temporal_smoothing_enabled: bool,
+    pub harmonic_percussive: bool,
+    pub spatial_denoise: bool,
+    pub spatial_strength: f32,
+}
+
+/// Pre-computed smoothing coefficients.
+pub(super) struct DenoiserCoefficients {
+    pub attack_coeff: f32,
+    pub release_coeff: f32,
+    pub reduction_linear: f32,
+    pub floor_linear: f32,
+}
+
+/// IMCRA/MCRA noise-estimation state and hyperparameters.
+pub(super) struct DenoiserMcra {
+    pub noise_psd: Vec<Vec<f32>>,       // Estimated noise power spectrum
+    pub smoothed_psd: Vec<Vec<f32>>,    // Smoothed signal PSD (S_tmp)
+    pub min_psd: Vec<Vec<f32>>,         // Minimum PSD tracker — window A
+    pub min_psd_b: Vec<Vec<f32>>,       // Minimum PSD tracker — window B (IMCRA)
+    pub speech_presence: Vec<Vec<f32>>, // Speech presence probability (p)
+    pub frame_counter: Vec<usize>,      // Per-channel frame count
+    pub bootstrap_frames: usize,        // Prepared physical-time observation span
+    pub bootstrap_radius: usize,        // Prepared physical-frequency prior neighborhood
+    pub learning_active: Vec<bool>,     // Per-channel fast-adaptation history
+    pub mcra_alpha_s: f32,
+    pub mcra_alpha_p: f32,
+    pub mcra_l: usize,
+    pub mcra_delta: f32,
+}
+
+/// Captured noise profile state.
+pub(super) struct DenoiserNoiseProfile {
+    pub use_captured_profile: bool,
+    pub has_noise_profile: bool,
+    pub noise_profile_storage: Vec<Vec<f32>>, // [channels][spectrum_size] pre-allocated
+    pub learning_accumulator: Vec<Vec<f32>>,  // [channels][spectrum_size]
+    pub learning_frames_count: usize,
+    pub learning_frames_target: usize,
+    pub is_learning: bool,
+}
+
+/// Psychoacoustic masking scratch and precomputed mappings.
+pub(super) struct DenoiserMasking {
+    pub bark_map: Vec<f32>, // [spectrum_size] frequency-to-Bark mapping
+    pub bark_bin_range: Vec<(usize, usize)>, // [spectrum_size] precomputed (lo, hi) bin range within MAX_SPREAD_BARK
+    pub masking_threshold: Vec<f32>,         // [spectrum_size] scratch for masking thresholds
+    pub masking_signal_power: Vec<f32>,      // [spectrum_size] scratch for signal power
+}
+
+/// Decision-directed SNR parameters and state.
+pub(super) struct DenoiserDecisionDirected {
+    pub dd_enabled: bool,
+    pub dd_alpha: f32,
+    pub prev_power: Vec<Vec<f32>>, // [channels][spectrum_size] previous frame power
+}
+
+/// Wiener gain buffers and frequency-smoothing state.
+pub(super) struct DenoiserGains {
+    pub gain: Vec<Vec<f32>>,                 // Current Wiener gains per bin
+    pub smoothed_gain: Vec<Vec<f32>>,        // Temporally smoothed gains
+    pub freq_smooth_temp: Vec<f32>,          // [spectrum_size] scratch for smoothing across bins
+    pub freq_smooth_kernel: (f32, f32, f32), // Precomputed (c0, c1, c2) Gaussian weights
+}
+
+/// Spectral subtraction parameters.
+pub(super) struct DenoiserSpectralSub {
+    pub spectral_sub_enabled: bool,
+    pub spectral_sub_alpha: f32,
+    pub spectral_sub_beta: f32,
+}
+
+/// Spatial denoising state.
+pub(super) struct DenoiserSpatial {
+    /// Channel pairs eligible for spatial processing. Standard 5.1/7.1 layouts
+    /// pair fronts and surround pairs while leaving centre and LFE untouched.
+    pub channel_pairs: Vec<(usize, usize)>,
+    pub spatial_coherence: Vec<Vec<f32>>,      // [pair][bin]
+    pub spatial_cross: Vec<Vec<Complex<f32>>>, // E[Xa * conj(Xb)] [pair][bin]
+    pub spatial_power_a: Vec<Vec<f32>>,        // E[|Xa|²] [pair][bin]
+    pub spatial_power_b: Vec<Vec<f32>>,        // E[|Xb|²] [pair][bin]
+}
+
+/// Harmonic/percussive separation state.
+pub(super) struct DenoiserTonalTransient {
+    pub tonal_transient_seps: Vec<math_audio_dsp::tonal_transient::TonalTransientSeparator>,
+    pub tt_magnitudes: Vec<f32>,     // [spectrum_size]
+    pub tt_tonal_mask: Vec<f32>,     // [spectrum_size]
+    pub tt_transient_mask: Vec<f32>, // [spectrum_size]
+}
+
+/// Overlap-add input/output buffers.
+pub(super) struct DenoiserIo {
+    pub input_buffer: Vec<f32>, // Interleaved input accumulator
+    pub input_buffer_fill: usize,
+    pub temp_input_block: Vec<f32>, // Pre-allocated scratch for FFT input and PND de-interleave
+    pub output_accumulator: Vec<Vec<f32>>, // [channels][ring_capacity]
+    pub output_ring_mask: usize,    // ring_capacity - 1 (for & masking)
+    pub output_read_pos: usize,     // read position in ring
+    pub output_write_pos: usize,    // next overlap-add write position
+    pub output_accumulator_fill: usize, // frames available for reading
+    pub startup_padding_remaining: usize,
+    pub synthesis_discard: usize,
+    pub has_input: bool,
+    pub source_phase: usize,
+    pub drain_remaining: Option<usize>,
+    pub drain_cache: Vec<f32>,
+    pub drain_frames: usize,
+    pub drain_pos: usize,
+    pub time_out_channels: Vec<Vec<f32>>,
+}
+
+/// Auxiliary per-channel processing objects.
+pub(super) struct DenoiserAuxiliary {
+    pub pnd_analyzers: Vec<PndAnalyzer>,
+    pub formant_preserver: super::wiener::FormantPreserver,
+}
+
+/// Cached monitoring/UI data.
+pub(super) struct DenoiserUi {
+    pub avg_reduction_db: f32,
+    pub learning_active: bool,
+    pub cache: RealTimeCache<DenoiserData>,
+    pub data_update_counter: usize,
+    pub cached_noise_floor_buf: Vec<f32>, // [NUM_DISPLAY_BANDS] pre-allocated
+    pub cached_snr_buf: Vec<f32>,         // [NUM_DISPLAY_BANDS] pre-allocated
+    pub cached_parameters: Vec<Parameter>,
+}
+
+/// Multi-resolution dual-STFT state.
+pub(super) struct DenoiserMultiRes {
+    pub multi_resolution: bool,
+    /// `Some(state)` when multi_resolution is enabled, `None` otherwise.
+    /// Stored as an Option so that when disabled the extra RAM is not held.
+    pub multi_res_state: Option<super::multi_resolution::MultiResState>,
+}
+
+/// Frequency-dependent reduction-curve state (R1).
+///
+/// Knots are user parameters; per-bin scales are precomputed on parameter
+/// or sample-rate changes so the realtime path does pure table lookups.
+pub(super) struct DenoiserCurve {
+    pub curve: ReductionCurve,
+    /// Interpolated reduction scales for the large FFT [spectrum_size].
+    pub scales: Vec<f32>,
+    /// Interpolated reduction scales for the multi-resolution small FFT.
+    pub scales_small: Vec<f32>,
+}
+
+/// Residual-audition monitoring state (R2).
+///
+/// The dry delay line holds past input frames so the residual
+/// (`dry - cleaned`) aligns with the latency-delayed cleaned output.
+/// A 5 ms one-pole crossfade (Declick family convention) switches between
+/// cleaned and residual output without clicks.
+pub(super) struct DenoiserAudition {
+    pub enabled: bool,
+    /// Crossfade position, f64 accumulator (F3: f32 stalls above 48 kHz).
+    pub mix_current: f64,
+    pub mix_target: f64,
+    pub mix_decay: f64,
+    /// Aligned dry history, per-channel frame rings [channels][capacity].
+    pub dry: Vec<Vec<f32>>,
+    pub dry_write: usize,
+    pub dry_read: usize,
+    pub dry_fill: usize,
+    /// Scratch for the popped dry frame [channels].
+    pub dry_frame: Vec<f32>,
+    /// Cumulative output frames served (alignment clock).
+    pub output_frames: usize,
+}
+
+/// Residual-audition crossfade endpoint snap threshold.
+///
+/// The one-pole mix accumulator is f64 (F3): an f32 accumulator stalls
+/// above 48 kHz because the per-step decrement near the snap window
+/// rounds to zero (at 2^-16 gap: 1.16/1.07/0.53/0.27 ulp(1.0) at
+/// 44.1/48/96/192 kHz, with two roundings needing ~1.5 ulp for a
+/// progress guarantee). In f64 the same decrement exceeds ulp(1.0) by
+/// more than 1e8 at every supported rate, so engagement is guaranteed
+/// with overwhelming margin and the mix strictly approaches the target
+/// (geometric rate: settled in ~2400/2700/5300/10600 frames nominal at
+/// 44.1/48/96/192 kHz). The 2^-16 threshold value itself is unchanged.
+///
+/// The snap fires only when the TOTAL step from the previous mix fits in
+/// 2^-16 (post-update gap and pre-update gap both in-bounds); otherwise
+/// the smooth step is taken and the snap defers by (at most) one frame.
+/// The snap is therefore a genuine but bounded mix discontinuity: at most
+/// 2^-16 of the full cleaned/residual jump, applied once per toggle. Its
+/// output artifact is quantified, not defined away: the analytic gate
+/// asserts the snap step bound and reports the dBFS artifact (F2(g)).
+///
+/// Targets are always exactly 0.0/1.0 (set from the audition flag), so the
+/// snapped mix takes the exact endpoint direct paths in `drain_output`.
+const AUDITION_SNAP_EPSILON: f64 = 1.0 / 65536.0;
+
+impl DenoiserAudition {
+    pub(super) fn new(
+        channels: usize,
+        enabled: bool,
+        mix_decay: f64,
+        dry_capacity_frames: usize,
+    ) -> Self {
+        let mix = if enabled { 1.0 } else { 0.0 };
+        Self {
+            enabled,
+            mix_current: mix,
+            mix_target: mix,
+            mix_decay,
+            dry: vec![vec![0.0_f32; dry_capacity_frames]; channels],
+            dry_write: 0,
+            dry_read: 0,
+            dry_fill: 0,
+            dry_frame: vec![0.0_f32; channels],
+            output_frames: 0,
+        }
+    }
+}
+
+/// Spectral denoiser using Wiener filter with MCRA noise estimation
+pub struct DenoiserPlugin {
+    pub(super) config: DenoiserConfig,
+    pub(super) fft: DenoiserFft,
+    pub(super) params: DenoiserParameters,
+    pub(super) coeffs: DenoiserCoefficients,
+    pub(super) mcra: DenoiserMcra,
+    pub(super) noise_profile: DenoiserNoiseProfile,
+    pub(super) masking: DenoiserMasking,
+    pub(super) decision_directed: DenoiserDecisionDirected,
+    pub(super) gains: DenoiserGains,
+    pub(super) spectral_sub: DenoiserSpectralSub,
+    pub(super) spatial: DenoiserSpatial,
+    pub(super) tonal_transient: DenoiserTonalTransient,
+    pub(super) io: DenoiserIo,
+    pub(super) auxiliary: DenoiserAuxiliary,
+    pub(super) ui: DenoiserUi,
+    pub(super) multi_res: DenoiserMultiRes,
+    pub(super) curve: DenoiserCurve,
+    pub(super) audition: DenoiserAudition,
+}
+
+impl DenoiserPlugin {
+    fn spatial_channel_pairs(channels: usize) -> Vec<(usize, usize)> {
+        match channels {
+            0 | 1 => Vec::new(),
+            2 | 3 => vec![(0, 1)],
+            // SMPTE-style 5.1: FL, FR, FC, LFE, SL, SR.
+            6 => vec![(0, 1), (4, 5)],
+            // SMPTE-style 7.1: FL, FR, FC, LFE, SL, SR, BL, BR.
+            8 => vec![(0, 1), (4, 5), (6, 7)],
+            _ => (0..channels / 2)
+                .map(|pair| (pair * 2, pair * 2 + 1))
+                .collect(),
+        }
+    }
+
+    /// Create a new denoiser plugin
+    pub fn new(channels: usize, low_latency: bool) -> Self {
+        // Choose FFT size based on latency mode
+        let fft_size = if low_latency { 512 } else { 2048 };
+        let hop_size = fft_size / 2;
+        let spectrum_size = fft_size / 2 + 1;
+
+        // Create FFT planners
+        let mut planner = RealFftPlanner::<f32>::new();
+        let fft_forward = planner.plan_fft_forward(fft_size);
+        let fft_inverse = planner.plan_fft_inverse(fft_size);
+
+        // Generate sqrt(Hann) window for WOLA processing
+        // Analysis: sqrt(Hann), Synthesis: sqrt(Hann), Product = Hann → perfect COLA at 50% overlap
+        let window = sotf_host::stft_common::generate_sqrt_hann_window(fft_size);
+        let inv_fft_size = 1.0 / fft_size as f32;
+        let synthesis_window: Vec<f32> = window.iter().map(|w| w * inv_fft_size).collect();
+
+        // Allocate buffers
+        let time_domain = vec![vec![0.0_f32; fft_size]; channels];
+        let freq_domain = vec![vec![Complex::new(0.0, 0.0); spectrum_size]; channels];
+
+        // MCRA state
+        let noise_psd = vec![vec![0.0_f32; spectrum_size]; channels];
+        let smoothed_psd = vec![vec![0.0_f32; spectrum_size]; channels];
+        let min_psd = vec![vec![0.0_f32; spectrum_size]; channels];
+        let min_psd_b = vec![vec![0.0_f32; spectrum_size]; channels];
+        let speech_presence = vec![vec![0.0_f32; spectrum_size]; channels];
+        let frame_counter = vec![0_usize; channels];
+
+        // Wiener filter state
+        let gain = vec![vec![1.0_f32; spectrum_size]; channels];
+        let smoothed_gain = vec![vec![1.0_f32; spectrum_size]; channels];
+
+        // Overlap-add buffers
+        // Input buffer needs to hold fft_size samples (interleaved)
+        let input_buffer = vec![0.0_f32; fft_size * channels * 2];
+        // Output ring buffer includes the advertised in-place block size plus
+        // one FFT-sized overlap tail that may be written before draining.
+        let ring_capacity = Self::output_ring_capacity_for_fft(fft_size);
+        let output_accumulator = vec![vec![0.0_f32; ring_capacity]; channels];
+        let time_out_channels = vec![vec![0.0_f32; fft_size]; channels];
+        let temp_input_block_len =
+            (fft_size * channels).max(Self::prepared_in_place_frames_for_fft(fft_size));
+
+        // PND Analyzers for polyphonic detection
+        let pnd_analyzers = (0..channels)
+            .map(|_| PndAnalyzer::new(2048, 44100.0, 50.0))
+            .collect();
+
+        let mut p = Self {
+            config: DenoiserConfig {
+                channels,
+                fft_size,
+                hop_size,
+                sample_rate: 44100.0, // Updated in initialize()
+                spectrum_size,
+            },
+
+            fft: DenoiserFft {
+                fft_forward,
+                fft_inverse,
+                window,
+                synthesis_window,
+                time_domain,
+                freq_domain,
+            },
+
+            params: DenoiserParameters {
+                reduction_db: pk(DN, "reduction_db").default_f32(),
+                floor_db: pk(DN, "floor_db").default_f32(),
+                smoothing: pk(DN, "smoothing").default_f32(),
+                attack_ms: pk(DN, "attack_ms").default_f32(),
+                release_ms: pk(DN, "release_ms").default_f32(),
+                low_latency,
+                polyphonic_detection: pk(DN, "polyphonic_detection").default_bool(),
+                transparency: pk(DN, "transparency").default_f32(),
+                psychoacoustic_masking: pk(DN, "psychoacoustic_masking").default_bool(),
+                spectral_smoothing_enabled: pk(DN, "spectral_smoothing_enabled").default_bool(),
+                temporal_smoothing_enabled: pk(DN, "temporal_smoothing_enabled").default_bool(),
+                harmonic_percussive: false,
+                spatial_denoise: false,
+                spatial_strength: 0.5,
+            },
+
+            coeffs: DenoiserCoefficients {
+                attack_coeff: Self::time_to_coeff(
+                    pk(DN, "attack_ms").default_f32(),
+                    44100.0,
+                    hop_size,
+                ),
+                release_coeff: Self::time_to_coeff(
+                    pk(DN, "release_ms").default_f32(),
+                    44100.0,
+                    hop_size,
+                ),
+                reduction_linear: 10.0_f32.powf(pk(DN, "reduction_db").default_f32() / 10.0),
+                floor_linear: 10.0_f32.powf(pk(DN, "floor_db").default_f32() / 20.0),
+            },
+
+            mcra: DenoiserMcra {
+                noise_psd,
+                smoothed_psd,
+                min_psd,
+                min_psd_b,
+                speech_presence,
+                frame_counter,
+                bootstrap_frames: Self::bootstrap_frame_count(44_100.0, hop_size),
+                bootstrap_radius: super::mcra::bootstrap_spectral_radius(44_100.0, fft_size),
+                learning_active: vec![true; channels],
+                mcra_alpha_s: pk(DN, "mcra_alpha_s").default_f32(),
+                mcra_alpha_p: pk(DN, "mcra_alpha_p").default_f32(),
+                mcra_l: pk(DN, "mcra_l").default_usize(),
+                mcra_delta: pk(DN, "mcra_delta").default_f32(),
+            },
+
+            noise_profile: DenoiserNoiseProfile {
+                use_captured_profile: pk(DN, "use_captured_profile").default_bool(),
+                has_noise_profile: false,
+                noise_profile_storage: vec![vec![0.0_f32; spectrum_size]; channels],
+                learning_accumulator: vec![vec![0.0_f32; spectrum_size]; channels],
+                learning_frames_count: 0,
+                learning_frames_target: 44100_usize.div_ceil(hop_size),
+                is_learning: false,
+            },
+
+            masking: DenoiserMasking {
+                bark_map: vec![0.0_f32; spectrum_size],
+                bark_bin_range: vec![(0, 0); spectrum_size],
+                masking_threshold: vec![0.0_f32; spectrum_size],
+                masking_signal_power: vec![0.0_f32; spectrum_size],
+            },
+
+            decision_directed: DenoiserDecisionDirected {
+                dd_enabled: pk(DN, "dd_enabled").default_bool(),
+                dd_alpha: pk(DN, "dd_alpha").default_f32(),
+                prev_power: vec![vec![0.0_f32; spectrum_size]; channels],
+            },
+
+            gains: DenoiserGains {
+                gain,
+                smoothed_gain,
+                freq_smooth_temp: vec![0.0_f32; spectrum_size],
+                freq_smooth_kernel: Self::compute_smoothing_kernel(
+                    pk(DN, "smoothing").default_f32(),
+                ),
+            },
+
+            spectral_sub: DenoiserSpectralSub {
+                spectral_sub_enabled: pk(DN, "spectral_sub_enabled").default_bool(),
+                spectral_sub_alpha: pk(DN, "spectral_sub_alpha").default_f32(),
+                spectral_sub_beta: pk(DN, "spectral_sub_beta").default_f32(),
+            },
+
+            spatial: {
+                let channel_pairs = Self::spatial_channel_pairs(channels);
+                let pair_count = channel_pairs.len();
+                DenoiserSpatial {
+                    channel_pairs,
+                    spatial_coherence: vec![vec![1.0_f32; spectrum_size]; pair_count],
+                    spatial_cross: vec![
+                        vec![Complex::new(0.0_f32, 0.0_f32); spectrum_size];
+                        pair_count
+                    ],
+                    spatial_power_a: vec![vec![0.0_f32; spectrum_size]; pair_count],
+                    spatial_power_b: vec![vec![0.0_f32; spectrum_size]; pair_count],
+                }
+            },
+
+            tonal_transient: DenoiserTonalTransient {
+                tonal_transient_seps: (0..channels)
+                    .map(|_| {
+                        math_audio_dsp::tonal_transient::TonalTransientSeparator::new(
+                            spectrum_size,
+                            7,
+                            7,
+                        )
+                    })
+                    .collect(),
+                tt_magnitudes: vec![0.0; spectrum_size],
+                tt_tonal_mask: vec![0.0; spectrum_size],
+                tt_transient_mask: vec![0.0; spectrum_size],
+            },
+
+            io: DenoiserIo {
+                input_buffer,
+                input_buffer_fill: (fft_size - hop_size) * channels,
+                temp_input_block: vec![0.0_f32; temp_input_block_len],
+                output_accumulator,
+                output_ring_mask: ring_capacity - 1,
+                output_read_pos: 0,
+                output_write_pos: ring_capacity - hop_size,
+                output_accumulator_fill: 0,
+                startup_padding_remaining: fft_size,
+                synthesis_discard: hop_size,
+                has_input: false,
+                source_phase: 0,
+                drain_remaining: None,
+                drain_cache: vec![0.0; hop_size * channels],
+                drain_frames: 0,
+                drain_pos: 0,
+                time_out_channels,
+            },
+
+            auxiliary: DenoiserAuxiliary {
+                pnd_analyzers,
+                formant_preserver: super::wiener::FormantPreserver::new(spectrum_size),
+            },
+
+            ui: DenoiserUi {
+                avg_reduction_db: 0.0,
+                learning_active: true,
+                cache: RealTimeCache::new(DenoiserData::default()),
+                data_update_counter: 0,
+                cached_noise_floor_buf: vec![0.0; NUM_DISPLAY_BANDS],
+                cached_snr_buf: vec![0.0; NUM_DISPLAY_BANDS],
+                cached_parameters: Vec::new(),
+            },
+
+            multi_res: DenoiserMultiRes {
+                multi_resolution: pk(DN, "multi_resolution").default_bool(),
+                multi_res_state: None, // allocated on first enable
+            },
+
+            curve: DenoiserCurve {
+                curve: ReductionCurve::default(),
+                scales: vec![1.0_f32; spectrum_size],
+                scales_small: vec![1.0_f32; SMALL_FFT_SIZE / 2 + 1],
+            },
+
+            audition: DenoiserAudition::new(
+                channels,
+                pk(DN, "audition_residual").default_bool(),
+                Self::audition_decay_for_rate(44100.0),
+                Self::dry_delay_capacity_for_fft(fft_size),
+            ),
+        };
+        p.rebuild_cached_parameters();
+        p
+    }
+
+    /// Get the f64 value of parameter at PARAMS index.
+    /// Order must match params::PARAMS exactly.
+    pub(super) fn param_value(&self, index: usize) -> Option<f64> {
+        match index {
+            0 => Some(self.params.reduction_db as f64),
+            1 => Some(self.params.floor_db as f64),
+            2 => Some(self.params.smoothing as f64),
+            3 => Some(self.params.attack_ms as f64),
+            4 => Some(self.params.release_ms as f64),
+            5 => Some(if self.params.low_latency { 1.0 } else { 0.0 }),
+            6 => Some(if self.params.polyphonic_detection {
+                1.0
+            } else {
+                0.0
+            }),
+            7 => Some(self.mcra.mcra_alpha_s as f64),
+            8 => Some(self.mcra.mcra_alpha_p as f64),
+            9 => Some(self.mcra.mcra_l as f64),
+            10 => Some(self.mcra.mcra_delta as f64),
+            11 => Some(self.params.transparency as f64),
+            12 => Some(if self.decision_directed.dd_enabled {
+                1.0
+            } else {
+                0.0
+            }),
+            13 => Some(self.decision_directed.dd_alpha as f64),
+            14 => Some(if self.params.psychoacoustic_masking {
+                1.0
+            } else {
+                0.0
+            }),
+            15 => Some(if self.params.spectral_smoothing_enabled {
+                1.0
+            } else {
+                0.0
+            }),
+            16 => Some(if self.params.temporal_smoothing_enabled {
+                1.0
+            } else {
+                0.0
+            }),
+            17 => Some(if self.spectral_sub.spectral_sub_enabled {
+                1.0
+            } else {
+                0.0
+            }),
+            18 => Some(self.spectral_sub.spectral_sub_alpha as f64),
+            19 => Some(self.spectral_sub.spectral_sub_beta as f64),
+            20 => Some(if self.noise_profile.is_learning {
+                1.0
+            } else {
+                0.0
+            }),
+            21 => Some(if self.noise_profile.use_captured_profile {
+                1.0
+            } else {
+                0.0
+            }),
+            22 => Some(0.0), // clear_profile: trigger-only, always reads as false
+            23 => Some(if self.auxiliary.formant_preserver.enabled {
+                1.0
+            } else {
+                0.0
+            }),
+            24 => Some(self.auxiliary.formant_preserver.strength as f64),
+            25 => Some(if self.multi_res.multi_resolution {
+                1.0
+            } else {
+                0.0
+            }),
+            26 => Some(if self.params.harmonic_percussive {
+                1.0
+            } else {
+                0.0
+            }),
+            27 => Some(if self.params.spatial_denoise {
+                1.0
+            } else {
+                0.0
+            }),
+            28 => Some(self.params.spatial_strength as f64),
+            29 => Some(self.curve.curve.low as f64),
+            30 => Some(self.curve.curve.mid as f64),
+            31 => Some(self.curve.curve.high as f64),
+            32 => Some(if self.audition.enabled { 1.0 } else { 0.0 }),
+            _ => None,
+        }
+    }
+
+    /// Synchronize live parameter values without rebuilding metadata storage.
+    pub(super) fn refresh_cached_parameter_values(&mut self) {
+        for index in 0..self.ui.cached_parameters.len() {
+            if let Some(value) =
+                param_bridge::get_parameter(DN, &self.ui.cached_parameters[index].id, |i| {
+                    self.param_value(i)
+                })
+            {
+                self.ui.cached_parameters[index].default_value = value;
+            }
+        }
+    }
+
+    /// Set the f64 value of parameter at PARAMS index.
+    /// Order must match params::PARAMS exactly.
+    /// Side effects are dispatched separately after param_bridge::set_parameter.
+    pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
+        match index {
+            0 => self.params.reduction_db = DN[0].clamp_f64(value) as f32,
+            1 => self.params.floor_db = DN[1].clamp_f64(value) as f32,
+            2 => self.params.smoothing = DN[2].clamp_f64(value) as f32,
+            3 => self.params.attack_ms = DN[3].clamp_f64(value) as f32,
+            4 => self.params.release_ms = DN[4].clamp_f64(value) as f32,
+            5 => self.params.low_latency = DN[5].clamp_f64(value) > 0.5,
+            6 => self.params.polyphonic_detection = DN[6].clamp_f64(value) > 0.5,
+            7 => self.mcra.mcra_alpha_s = DN[7].clamp_f64(value) as f32,
+            8 => self.mcra.mcra_alpha_p = DN[8].clamp_f64(value) as f32,
+            9 => self.mcra.mcra_l = DN[9].clamp_f64(value) as usize,
+            10 => self.mcra.mcra_delta = DN[10].clamp_f64(value) as f32,
+            11 => self.params.transparency = DN[11].clamp_f64(value) as f32,
+            12 => self.decision_directed.dd_enabled = DN[12].clamp_f64(value) > 0.5,
+            13 => self.decision_directed.dd_alpha = DN[13].clamp_f64(value) as f32,
+            14 => self.params.psychoacoustic_masking = DN[14].clamp_f64(value) > 0.5,
+            15 => self.params.spectral_smoothing_enabled = DN[15].clamp_f64(value) > 0.5,
+            16 => self.params.temporal_smoothing_enabled = DN[16].clamp_f64(value) > 0.5,
+            17 => self.spectral_sub.spectral_sub_enabled = DN[17].clamp_f64(value) > 0.5,
+            18 => self.spectral_sub.spectral_sub_alpha = DN[18].clamp_f64(value) as f32,
+            19 => self.spectral_sub.spectral_sub_beta = DN[19].clamp_f64(value) as f32,
+            20 => {} // learn_noise: side effect handled in set_parameter
+            21 => self.noise_profile.use_captured_profile = DN[21].clamp_f64(value) > 0.5,
+            22 => {} // clear_profile: side effect handled in set_parameter
+            23 => self.auxiliary.formant_preserver.enabled = DN[23].clamp_f64(value) > 0.5,
+            24 => self.auxiliary.formant_preserver.strength = DN[24].clamp_f64(value) as f32,
+            25 => self.multi_res.multi_resolution = DN[25].clamp_f64(value) > 0.5,
+            26 => self.params.harmonic_percussive = DN[26].clamp_f64(value) > 0.5,
+            27 => self.params.spatial_denoise = DN[27].clamp_f64(value) > 0.5,
+            28 => self.params.spatial_strength = DN[28].clamp_f64(value) as f32,
+            29 => {
+                let next = DN[29].clamp_f64(value) as f32;
+                if next != self.curve.curve.low {
+                    self.curve.curve.low = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            30 => {
+                let next = DN[30].clamp_f64(value) as f32;
+                if next != self.curve.curve.mid {
+                    self.curve.curve.mid = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            31 => {
+                let next = DN[31].clamp_f64(value) as f32;
+                if next != self.curve.curve.high {
+                    self.curve.curve.high = next;
+                    self.rebuild_curve_tables();
+                }
+            }
+            32 => {
+                // Live toggles move the target only; the 5 ms crossfade
+                // converges without clicks. Construction snaps immediately.
+                let next = DN[32].clamp_f64(value) > 0.5;
+                self.audition.enabled = next;
+                self.audition.mix_target = if next { 1.0 } else { 0.0 };
+            }
+            _ => {}
+        }
+    }
+
+    pub(super) fn rebuild_cached_parameters(&mut self) {
+        self.ui.cached_parameters = param_bridge::build_parameters(DN, |i| self.param_value(i));
+    }
+
+    fn apply_value_refs<'a>(
+        &mut self,
+        values: impl Iterator<Item = (&'a ParameterId, &'a ParameterValue)> + Clone,
+    ) -> PluginResult<()> {
+        if self.io.drain_remaining.is_some() {
+            return Err("Reset denoiser before changing parameters after drain starts".into());
+        }
+        for (id, value) in values.clone() {
+            if id.as_str() == "low_latency" {
+                let requested = value
+                    .as_bool()
+                    .ok_or_else(|| "low_latency requires a boolean".to_string())?;
+                if requested != self.params.low_latency {
+                    return Err("low_latency is structural; recreate the denoiser".to_string());
+                }
+            }
+            if id.as_str() == "multi_resolution" {
+                let requested = value
+                    .as_bool()
+                    .ok_or_else(|| "multi_resolution requires a boolean".to_string())?;
+                if requested != self.multi_res.multi_resolution {
+                    return Err("multi_resolution is structural; recreate the denoiser".to_string());
+                }
+            }
+        }
+        for (id, value) in values {
+            let idx = param_bridge::set_parameter(DN, id, value, |i, v| {
+                self.set_param_value(i, v);
+            })?;
+            // Side effects based on which parameter changed
+            match idx {
+                0 => {
+                    // reduction_db -> recompute reduction_linear
+                    self.coeffs.reduction_linear = 10.0_f32.powf(self.params.reduction_db / 10.0);
+                }
+                1 => {
+                    // floor_db -> recompute floor_linear
+                    self.coeffs.floor_linear = 10.0_f32.powf(self.params.floor_db / 20.0);
+                }
+                2 => {
+                    // smoothing -> recompute frequency smoothing kernel
+                    self.gains.freq_smooth_kernel =
+                        Self::compute_smoothing_kernel(self.params.smoothing);
+                }
+                3 | 4 => {
+                    // attack_ms or release_ms -> recompute envelope coefficients
+                    self.update_envelope_coefficients();
+                }
+                7..=10 => {
+                    if let Some(ref mut state) = self.multi_res.multi_res_state {
+                        state.set_mcra_parameters(
+                            self.mcra.mcra_alpha_s,
+                            self.mcra.mcra_alpha_p,
+                            self.mcra.mcra_l,
+                            self.mcra.mcra_delta,
+                        );
+                    }
+                }
+                20 => {
+                    if value.as_bool().unwrap_or(false) {
+                        self.start_learning();
+                    } else {
+                        self.cancel_learning();
+                    }
+                }
+                22
+                    // clear_profile (trigger param)
+                    if value.as_bool().unwrap_or(false) => {
+                        self.clear_noise_profile();
+                    }
+                _ => {}
+            }
+        }
+        // Refresh primitive cached values in place. Profile triggers can also
+        // change Learn/Use Profile, so update every value without replacing the
+        // prepared schema or any of its owned metadata.
+        self.refresh_cached_parameter_values();
+        Ok(())
+    }
+
+    /// Create a new denoiser plugin from configuration parameters
+    pub fn from_params(channels: usize, params: DenoiserPluginParams) -> Self {
+        Self::try_from_params(channels, params).expect("valid denoiser configuration")
+    }
+
+    pub fn try_from_params(channels: usize, params: DenoiserPluginParams) -> PluginResult<Self> {
+        if channels == 0 {
+            return Err("Denoiser requires at least one channel".to_string());
+        }
+        macro_rules! validate_float {
+            ($field:ident, $key:literal) => {{
+                let value = params.$field;
+                let spec = pk(DN, $key);
+                if !value.is_finite()
+                    || value < spec.min_f64() as f32
+                    || value > spec.max_f64() as f32
+                {
+                    return Err(format!("Invalid denoiser {}: {value}", $key));
+                }
+            }};
+        }
+        validate_float!(reduction_db, "reduction_db");
+        validate_float!(floor_db, "floor_db");
+        validate_float!(smoothing, "smoothing");
+        validate_float!(attack_ms, "attack_ms");
+        validate_float!(release_ms, "release_ms");
+        validate_float!(mcra_alpha_s, "mcra_alpha_s");
+        validate_float!(mcra_alpha_p, "mcra_alpha_p");
+        validate_float!(mcra_delta, "mcra_delta");
+        validate_float!(transparency, "transparency");
+        validate_float!(dd_alpha, "dd_alpha");
+        validate_float!(spectral_sub_alpha, "spectral_sub_alpha");
+        validate_float!(spectral_sub_beta, "spectral_sub_beta");
+        validate_float!(formant_strength, "formant_strength");
+        validate_float!(spatial_strength, "spatial_strength");
+        validate_float!(curve_low, "curve_low");
+        validate_float!(curve_mid, "curve_mid");
+        validate_float!(curve_high, "curve_high");
+        let mcra_l = pk(DN, "mcra_l");
+        if params.mcra_l < mcra_l.min_f64() as usize || params.mcra_l > mcra_l.max_f64() as usize {
+            return Err(format!("Invalid denoiser mcra_l: {}", params.mcra_l));
+        }
+        let mut plugin = Self::new(channels, params.low_latency);
+
+        plugin.params.reduction_db = params.reduction_db.clamp(
+            pk(DN, "reduction_db").min_f64() as f32,
+            pk(DN, "reduction_db").max_f64() as f32,
+        );
+        plugin.params.floor_db = params.floor_db.clamp(
+            pk(DN, "floor_db").min_f64() as f32,
+            pk(DN, "floor_db").max_f64() as f32,
+        );
+        plugin.params.smoothing = params.smoothing.clamp(
+            pk(DN, "smoothing").min_f64() as f32,
+            pk(DN, "smoothing").max_f64() as f32,
+        );
+        plugin.params.attack_ms = params.attack_ms.clamp(
+            pk(DN, "attack_ms").min_f64() as f32,
+            pk(DN, "attack_ms").max_f64() as f32,
+        );
+        plugin.params.release_ms = params.release_ms.clamp(
+            pk(DN, "release_ms").min_f64() as f32,
+            pk(DN, "release_ms").max_f64() as f32,
+        );
+        plugin.params.polyphonic_detection = params.polyphonic_detection;
+
+        plugin.mcra.mcra_alpha_s = params.mcra_alpha_s;
+        plugin.mcra.mcra_alpha_p = params.mcra_alpha_p;
+        plugin.mcra.mcra_l = params.mcra_l;
+        plugin.mcra.mcra_delta = params.mcra_delta;
+
+        plugin.params.transparency = params.transparency.clamp(
+            pk(DN, "transparency").min_f64() as f32,
+            pk(DN, "transparency").max_f64() as f32,
+        );
+        plugin.decision_directed.dd_enabled = params.dd_enabled;
+        plugin.decision_directed.dd_alpha = params.dd_alpha.clamp(
+            pk(DN, "dd_alpha").min_f64() as f32,
+            pk(DN, "dd_alpha").max_f64() as f32,
+        );
+        plugin.params.psychoacoustic_masking = params.psychoacoustic_masking;
+        plugin.noise_profile.use_captured_profile = params.use_captured_profile;
+        plugin.params.spectral_smoothing_enabled = params.spectral_smoothing_enabled;
+        plugin.params.temporal_smoothing_enabled = params.temporal_smoothing_enabled;
+
+        plugin.spectral_sub.spectral_sub_enabled = params.spectral_sub_enabled;
+        plugin.spectral_sub.spectral_sub_alpha = params.spectral_sub_alpha.clamp(
+            pk(DN, "spectral_sub_alpha").min_f64() as f32,
+            pk(DN, "spectral_sub_alpha").max_f64() as f32,
+        );
+        plugin.spectral_sub.spectral_sub_beta = params.spectral_sub_beta.clamp(
+            pk(DN, "spectral_sub_beta").min_f64() as f32,
+            pk(DN, "spectral_sub_beta").max_f64() as f32,
+        );
+
+        plugin.coeffs.reduction_linear = 10.0_f32.powf(plugin.params.reduction_db / 10.0);
+        plugin.coeffs.floor_linear = 10.0_f32.powf(plugin.params.floor_db / 20.0);
+        plugin.gains.freq_smooth_kernel = Self::compute_smoothing_kernel(plugin.params.smoothing);
+
+        plugin.auxiliary.formant_preserver.enabled = params.formant_preservation;
+        plugin.auxiliary.formant_preserver.strength = params.formant_strength.clamp(
+            pk(DN, "formant_strength").min_f64() as f32,
+            pk(DN, "formant_strength").max_f64() as f32,
+        );
+
+        plugin.multi_res.multi_resolution = params.multi_resolution;
+        if plugin.multi_res.multi_resolution {
+            plugin.multi_res.multi_res_state = Some(super::multi_resolution::MultiResState::new(
+                channels,
+                plugin.config.sample_rate,
+                plugin.mcra.mcra_alpha_s,
+                plugin.mcra.mcra_alpha_p,
+                plugin.mcra.mcra_l,
+                plugin.mcra.mcra_delta,
+            ));
+        }
+
+        plugin.params.harmonic_percussive = params.harmonic_percussive;
+        plugin.params.spatial_denoise = params.spatial_denoise;
+        plugin.params.spatial_strength = params.spatial_strength;
+
+        plugin.curve.curve = ReductionCurve {
+            low: params.curve_low,
+            mid: params.curve_mid,
+            high: params.curve_high,
+        };
+        plugin.rebuild_curve_tables();
+
+        // Construction snaps the audition crossfade so restored presets and
+        // A/B comparisons start in the configured monitoring state.
+        plugin.audition.enabled = params.audition_residual;
+        plugin.audition.mix_target = if params.audition_residual { 1.0 } else { 0.0 };
+        plugin.audition.mix_current = plugin.audition.mix_target;
+
+        plugin.rebuild_cached_parameters();
+        Ok(plugin)
+    }
+
+    pub(super) fn prepared_in_place_frames_for_fft(fft_size: usize) -> usize {
+        (fft_size * 4).max(MIN_IN_PLACE_BLOCK_FRAMES)
+    }
+
+    pub(super) fn output_ring_capacity_for_fft(fft_size: usize) -> usize {
+        (Self::prepared_in_place_frames_for_fft(fft_size) + fft_size).next_power_of_two()
+    }
+
+    pub(super) fn max_in_place_frames(&self) -> usize {
+        Self::prepared_in_place_frames_for_fft(self.config.fft_size)
+    }
+
+    /// Dry delay-line capacity in frames for residual audition.
+    ///
+    /// Output lags input by one FFT, and a whole input block is pushed
+    /// before its output frames pop, so the line holds the latency plus one
+    /// maximal block.
+    pub(super) fn dry_delay_capacity_for_fft(fft_size: usize) -> usize {
+        fft_size + Self::prepared_in_place_frames_for_fft(fft_size)
+    }
+
+    /// One-pole crossfade coefficient for residual audition.
+    ///
+    /// A 5 ms time constant shared with the Declick audition convention:
+    /// fast enough to feel immediate, slow enough to avoid clicks.
+    pub(super) fn audition_decay_for_rate(sample_rate: f64) -> f64 {
+        let smoothing_samples = sample_rate * 5.0 * 0.001;
+        (-1.0 / smoothing_samples.max(1.0)).exp()
+    }
+
+    /// Rebuilds the precomputed per-bin reduction scales.
+    ///
+    /// Bin frequencies use physical Hz coordinates (`bin * rate / fft`),
+    /// so stored knots keep their meaning across FFT sizes and rates.
+    /// Allocation-free: both tables are filled in place.
+    pub(super) fn rebuild_curve_tables(&mut self) {
+        let curve = self.curve.curve;
+        let sample_rate = self.config.sample_rate as f32;
+        let fft_size = self.config.fft_size;
+        for (bin, slot) in self.curve.scales.iter_mut().enumerate() {
+            *slot = curve.gain_at(bin as f32 * sample_rate / fft_size as f32);
+        }
+        for (bin, slot) in self.curve.scales_small.iter_mut().enumerate() {
+            *slot = curve.gain_at(bin as f32 * sample_rate / SMALL_FFT_SIZE as f32);
+        }
+    }
+
+    /// Pushes interleaved input frames onto the dry delay line.
+    ///
+    /// `frames` must hold whole frames; a no-op for zero channels.
+    pub(super) fn push_dry_frames(&mut self, frames: &[f32]) {
+        let channels = self.config.channels;
+        let capacity = self.audition.dry.first().map_or(0, Vec::len);
+        if channels == 0 || capacity == 0 {
+            return;
+        }
+        debug_assert!(frames.len().is_multiple_of(channels));
+        let frame_count = frames.len() / channels;
+        for frame in 0..frame_count {
+            let write = self.audition.dry_write;
+            for ch in 0..channels {
+                self.audition.dry[ch][write] = frames[frame * channels + ch];
+            }
+            self.audition.dry_write = (write + 1) % capacity;
+            if self.audition.dry_fill < capacity {
+                self.audition.dry_fill += 1;
+            } else {
+                // Unreachable by construction: capacity covers the latency
+                // plus one maximal block. Overwrite oldest instead of growing.
+                self.audition.dry_read = (self.audition.dry_read + 1) % capacity;
+            }
+        }
+    }
+
+    /// Advances audition state for one emitted output frame.
+    ///
+    /// The crossfade always advances so its trajectory depends only on the
+    /// frame count, never on callback partitioning. A dry frame is popped
+    /// once the alignment clock reaches the FFT latency; earlier startup
+    /// frames have no dry counterpart yet and pop nothing. The f64 mix
+    /// accumulator snaps to the exact endpoint so settled fades converge
+    /// bit-exactly; the snap fires only when the TOTAL step from the
+    /// previous mix fits in `AUDITION_SNAP_EPSILON` (see below).
+    pub(super) fn advance_audition_frame(&mut self) {
+        let previous = self.audition.mix_current;
+        let next = previous * self.audition.mix_decay
+            + self.audition.mix_target * (1.0 - self.audition.mix_decay);
+        // Snap only when the total step obeys the bound: the smooth
+        // increment plus the snap jump must fit in 2^-16 together. At
+        // low rates the smooth step into the snap window can already
+        // exceed it (44.1 kHz measured 1.5288e-5), so a post-update-only
+        // check lets the total step overshoot. Deferring costs at most
+        // one frame per toggle (the gap shrinks geometrically, so the
+        // pre-update gap is in-bounds on the very next frame) and keeps
+        // the 5 ms tau and exact endpoints at every rate.
+        if (self.audition.mix_target - next).abs() <= AUDITION_SNAP_EPSILON
+            && (self.audition.mix_target - previous).abs() <= AUDITION_SNAP_EPSILON
+        {
+            self.audition.mix_current = self.audition.mix_target;
+        } else {
+            self.audition.mix_current = next;
+        }
+        if self.audition.output_frames >= self.config.fft_size {
+            let channels = self.config.channels;
+            if self.audition.dry_fill > 0 {
+                let capacity = self.audition.dry.first().map_or(1, Vec::len).max(1);
+                let read = self.audition.dry_read;
+                for ch in 0..channels {
+                    self.audition.dry_frame[ch] = self.audition.dry[ch][read];
+                }
+                self.audition.dry_read = (read + 1) % capacity;
+                self.audition.dry_fill -= 1;
+            } else {
+                // Unreachable: pops lag pushes by exactly the latency.
+                self.audition.dry_frame.fill(0.0);
+            }
+        }
+        self.audition.output_frames += 1;
+    }
+
+    /// Process one FFT block
+    pub(super) fn process_fft_block(&mut self, capture_noise: bool) -> Result<(), String> {
+        // Extract block from input buffer (fft_size * channels samples)
+        let block_samples = self.config.fft_size * self.config.channels;
+
+        // Phase 1: Apply window and forward FFT (must happen before shifting)
+        // Copy into pre-allocated scratch before shifting.
+        self.io
+            .temp_input_block
+            .iter_mut()
+            .take(block_samples)
+            .zip(self.io.input_buffer.iter().take(block_samples))
+            .for_each(|(dst, src)| *dst = *src);
+        super::fft::apply_window_and_forward_fft(
+            &self.config,
+            &mut self.fft,
+            &self.io.temp_input_block[..block_samples],
+        )?;
+
+        // Shift input buffer (remove processed samples, keeping hop_size overlap)
+        let shift_samples = self.config.hop_size * self.config.channels;
+        self.io.input_buffer.copy_within(shift_samples.., 0);
+        self.io.input_buffer_fill -= shift_samples;
+
+        // Phase 2: Noise estimation (multi-frame bootstrap then IMCRA)
+        let bootstrapping = self.update_noise_estimation();
+
+        // Phase 2b: Noise profile learning (if active)
+        if self.noise_profile.is_learning && capture_noise {
+            self.accumulate_noise_frame();
+        }
+
+        // A captured profile is already prepared; live-estimator warm-up must
+        // not bypass its reduction after reset or during a replacement capture.
+        let fixed_profile =
+            self.noise_profile.use_captured_profile && self.noise_profile.has_noise_profile;
+        if !bootstrapping || fixed_profile {
+            if self.params.polyphonic_detection {
+                self.calculate_polyphonic_gains();
+            } else {
+                self.calculate_wiener_gains();
+            }
+        }
+
+        // Phase 3b: Multi-resolution gain combination.
+        // The small-FFT path has already been fed samples and computed its own
+        // gains.  Blend them into `self.gains.smoothed_gain` based on spectral flux.
+        if let Some(ref mrs) = self.multi_res.multi_res_state {
+            mrs.combine_gains(
+                &mut self.gains.smoothed_gain,
+                self.config.channels,
+                self.config.spectrum_size,
+            );
+        }
+
+        // Phase 4: Apply gains and inverse FFT
+        self.apply_gains_and_inverse_fft()?;
+
+        // Phase 5: Overlap-add to output accumulator
+        self.overlap_add_to_accumulator();
+
+        // Phase 6: Update cached monitoring data (every 8th block to reduce overhead)
+        self.ui.data_update_counter += 1;
+        if self.ui.data_update_counter >= 8 {
+            self.ui.data_update_counter = 0;
+            self.update_cached_data();
+        }
+        Ok(())
+    }
+
+    /// Update the cached DenoiserData for UI polling.
+    /// Writes into pre-allocated buffers to avoid allocations on the audio thread.
+    pub(super) fn update_cached_data(&mut self) {
+        self.compute_noise_floor_db();
+        self.compute_snr_db();
+
+        let avg_red = self.ui.avg_reduction_db;
+        let learn_act = self.ui.learning_active;
+        let is_learn = self.noise_profile.is_learning;
+        let has_prof = self.noise_profile.has_noise_profile;
+        let progress = self.learning_progress();
+        let using_prof =
+            self.noise_profile.use_captured_profile && self.noise_profile.has_noise_profile;
+
+        let nf_buf = &self.ui.cached_noise_floor_buf;
+        let snr_buf = &self.ui.cached_snr_buf;
+
+        self.ui.cache.update(|d| {
+            if let Some(mut_nf) = Arc::get_mut(&mut d.noise_floor_db) {
+                mut_nf.copy_from_slice(nf_buf);
+            }
+            if let Some(mut_snr) = Arc::get_mut(&mut d.snr_db) {
+                mut_snr.copy_from_slice(snr_buf);
+            }
+            d.avg_reduction_db = avg_red;
+            d.learning_active = learn_act;
+            d.is_learning_noise = is_learn;
+            d.has_captured_profile = has_prof;
+            d.learning_progress = progress;
+            d.using_captured_profile = using_prof;
+            d.requested_use_profile = self.noise_profile.use_captured_profile;
+        });
+    }
+
+    /// Add processed block to output ring-buffer accumulator using overlap-add.
+    /// Uses modular indexing (& mask) — no bulk shifts.
+    pub(super) fn overlap_add_to_accumulator(&mut self) {
+        // WOLA: apply synthesis window (sqrt(Hann) / fft_size) before overlap-add.
+        // Analysis sqrt(Hann) * synthesis sqrt(Hann) = Hann → perfect COLA at 50% overlap.
+        let mask = self.io.output_ring_mask;
+
+        for ch in 0..self.config.channels {
+            let accum = &mut self.io.output_accumulator[ch];
+            let time_out = &self.io.time_out_channels[ch];
+
+            for (i, (t, w)) in time_out
+                .iter()
+                .zip(self.fft.synthesis_window.iter())
+                .enumerate()
+                .take(self.config.fft_size)
+                // Negative synthesis belongs before source time zero, not a
+                // later revolution of the circular accumulator.
+                .skip(self.io.synthesis_discard)
+            {
+                let idx = (self.io.output_write_pos + i) & mask;
+                accum[idx] += t * w;
+            }
+        }
+
+        // Advance write position by hop_size for next block
+        self.io.output_write_pos = (self.io.output_write_pos + self.config.hop_size) & mask;
+        if self.io.synthesis_discard > 0 {
+            self.io.synthesis_discard -= self.config.hop_size;
+        } else {
+            self.io.output_accumulator_fill += self.config.hop_size;
+        }
+    }
+
+    /// Drain available frames from ring-buffer accumulator to output buffer.
+    /// Returns the number of frames actually drained.
+    ///
+    /// Each drained frame advances the audition crossfade and pops its
+    /// aligned dry frame. Exact endpoints take direct paths: zero mix
+    /// writes the cleaned sample (legacy bit-identical output, no
+    /// `NaN * 0.0` poisoning if a dry tap ever goes non-finite) and unit
+    /// mix writes the residual `dry - cleaned` exactly.
+    pub(super) fn drain_output(
+        &mut self,
+        output: &mut [f32],
+        output_pos: usize,
+        frames_wanted: usize,
+    ) -> usize {
+        let frames_to_drain = self.io.output_accumulator_fill.min(frames_wanted);
+        let mask = self.io.output_ring_mask;
+        let channels = self.config.channels;
+
+        for frame in 0..frames_to_drain {
+            self.advance_audition_frame();
+            let mix = self.audition.mix_current;
+            let ring_idx = (self.io.output_read_pos + frame) & mask;
+            let out_base = (output_pos + frame) * channels;
+            for ch in 0..channels {
+                let cleaned = self.io.output_accumulator[ch][ring_idx];
+                // Clear after reading for next overlap-add cycle
+                self.io.output_accumulator[ch][ring_idx] = 0.0;
+                output[out_base + ch] = if mix == 0.0 {
+                    cleaned
+                } else if mix == 1.0 {
+                    self.audition.dry_frame[ch] - cleaned
+                } else {
+                    let dry = self.audition.dry_frame[ch];
+                    let residual = dry - cleaned;
+                    // f64 accumulator, f32 blend: one round-to-nearest cast.
+                    cleaned + (residual - cleaned) * (mix as f32)
+                };
+            }
+        }
+
+        self.io.output_read_pos = (self.io.output_read_pos + frames_to_drain) & mask;
+        self.io.output_accumulator_fill -= frames_to_drain;
+
+        frames_to_drain
+    }
+    fn process_audio(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+        capture_noise: bool,
+    ) -> PluginResult<usize> {
+        if context.sample_rate != self.config.sample_rate {
+            return Err("Denoiser sample-rate mismatch".into());
+        }
+        // Miri cannot execute the architecture-specific FP-control inline
+        // assembly. The guard only changes denormal handling and owns no DSP
+        // state, so omit it under Miri while preserving production behavior.
+        #[cfg(not(miri))]
+        let _ftz_guard = ScopedFtz::new();
+
+        let num_frames = context.num_frames;
+        let total_samples = match num_frames.checked_mul(self.config.channels) {
+            Some(total_samples) => total_samples,
+            None => return Err("Frame/channel count overflow".to_string()),
+        };
+        if buffer.len() != total_samples {
+            return Err(format!(
+                "Buffer size mismatch: expected {}, got {}",
+                total_samples,
+                buffer.len()
+            ));
+        }
+
+        let max_in_place_frames = self.max_in_place_frames();
+        if num_frames > max_in_place_frames {
+            return Err(format!(
+                "Block too large for in-place denoiser: {} frames exceeds prepared safe maximum {}",
+                num_frames, max_in_place_frames
+            ));
+        }
+
+        // Finite-input guard (samples): NaN/inf input would poison the MCRA PSD
+        // trackers (`noise_psd`, `min_psd`, `min_psd_b`), speech-presence
+        // estimates, and captured-profile accumulators — all IIR/min-statistics
+        // with long memory. Sanitize to silence before any DSP state is touched.
+        // Allocation-free; mirrors the de-esser input guard.
+        for sample in buffer.iter_mut() {
+            if !sample.is_finite() {
+                *sample = 0.0;
+            }
+        }
+
+        let block_samples = self.config.fft_size * self.config.channels;
+
+        // Phase 1: Accumulate ALL input into input_buffer.
+        // This is an in-place plugin (same buffer for input/output), so we must
+        // consume all input before writing any output to avoid data corruption.
+        // Loop to handle cases where input exceeds remaining buffer space:
+        // process FFT blocks to free space, then continue accumulating.
+        //
+        let mut input_pos: usize = 0;
+        while input_pos < total_samples {
+            let space_available = self.io.input_buffer.len() - self.io.input_buffer_fill;
+            let remaining_input = total_samples - input_pos;
+            // Stop exactly at each large-FFT boundary so the small analyzer is
+            // never advanced with future samples before that large frame runs.
+            let until_frame = block_samples - self.io.input_buffer_fill;
+            let samples_to_copy = remaining_input.min(space_available).min(until_frame);
+
+            // Advance note analysis only through this source boundary. Feeding
+            // the entire callback lets an earlier STFT frame observe future notes.
+            if self.params.polyphonic_detection {
+                let channels = self.config.channels;
+                let frames = samples_to_copy / channels;
+                for ch in 0..channels {
+                    for frame in 0..frames {
+                        self.io.temp_input_block[frame] = buffer[input_pos + frame * channels + ch];
+                    }
+                    self.auxiliary.pnd_analyzers[ch].analyze(&self.io.temp_input_block[..frames]);
+                }
+            }
+
+            // A flat curve passes no table so the small-FFT path keeps its
+            // legacy bit-identical gains.
+            let curve_small = if self.curve.curve.is_flat() {
+                None
+            } else {
+                Some(self.curve.scales_small.as_slice())
+            };
+            if let Some(ref mut mrs) = self.multi_res.multi_res_state {
+                mrs.feed_and_process(
+                    &buffer[input_pos..input_pos + samples_to_copy],
+                    self.config.channels,
+                    self.coeffs.reduction_linear,
+                    self.coeffs.floor_linear,
+                    curve_small,
+                    super::multi_resolution::SmallProfileControl {
+                        capture: capture_noise && self.noise_profile.is_learning,
+                        use_captured: self.noise_profile.use_captured_profile
+                            && self.noise_profile.has_noise_profile,
+                    },
+                )
+                .map_err(str::to_string)?;
+            }
+
+            self.io.input_buffer
+                [self.io.input_buffer_fill..self.io.input_buffer_fill + samples_to_copy]
+                .copy_from_slice(&buffer[input_pos..input_pos + samples_to_copy]);
+            self.io.input_buffer_fill += samples_to_copy;
+            self.push_dry_frames(&buffer[input_pos..input_pos + samples_to_copy]);
+            input_pos += samples_to_copy;
+
+            // Process FFT blocks to free input buffer space
+            while self.io.input_buffer_fill >= block_samples {
+                self.process_fft_block(capture_noise)?;
+            }
+        }
+
+        // Phase 2: Process any remaining complete FFT blocks
+        while self.io.input_buffer_fill >= block_samples {
+            self.process_fft_block(capture_noise)?;
+        }
+
+        // Phase 3: Drain output to buffer
+        let mut output_pos = self.io.startup_padding_remaining.min(num_frames);
+        self.io.startup_padding_remaining -= output_pos;
+        buffer[..output_pos * self.config.channels].fill(0.0);
+        for _ in 0..output_pos {
+            self.advance_audition_frame();
+        }
+        if output_pos < num_frames && self.io.output_accumulator_fill > 0 {
+            output_pos += self.drain_output(buffer, output_pos, num_frames - output_pos);
+        }
+
+        // Zero-fill any remaining output (initial latency period)
+        if output_pos < num_frames {
+            let zero_start = output_pos * self.config.channels;
+            buffer[zero_start..total_samples].fill(0.0);
+            let silent = num_frames - output_pos;
+            for _ in 0..silent {
+                self.advance_audition_frame();
+            }
+        }
+
+        // STFT convention: always return num_frames. Buffer is zero-padded for
+        // unfilled portions, so downstream plugins see valid (silent) data.
+        Ok(context.num_frames)
+    }
+}
+
+impl ParametricInPlacePlugin for DenoiserPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Denoiser", "1.0.0", "SotF")
+            .with_description("Wiener filter denoiser with MCRA noise estimation")
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Fft
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::nonlinear(PluginCostClass::Fft, None, self.latency_samples(), false)
+    }
+
+    fn channels(&self) -> usize {
+        self.config.channels
+    }
+
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.ui.cached_parameters.clone()
+    }
+
+    fn supports_immediate_momentary_control(&self, id: &ParameterId) -> bool {
+        matches!(id.as_str(), "learn_noise" | "clear_profile")
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        let parameter = self
+            .ui
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?;
+        parameter
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        self.ui
+            .cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .map(|parameter| parameter.default_value.clone())
+    }
+
+    fn current_values(&self) -> ParameterSet {
+        self.ui
+            .cached_parameters
+            .iter()
+            .map(|p| (p.id.clone(), p.default_value.clone()))
+            .collect()
+    }
+
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        self.apply_value_refs(values.iter())
+    }
+
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        self.apply_value_refs(std::iter::once((&id, &value)))
+    }
+
+    fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Denoiser sample rate must be finite and greater than zero".to_string());
+        }
+        if self.config.sample_rate != sample_rate && self.noise_profile.has_noise_profile {
+            // FFT-bin powers cannot be reused at a different physical clock.
+            self.clear_noise_profile();
+        }
+        self.config.sample_rate = sample_rate;
+        self.mcra.bootstrap_frames = Self::bootstrap_frame_count(sample_rate, self.config.hop_size);
+        self.mcra.bootstrap_radius =
+            super::mcra::bootstrap_spectral_radius(sample_rate, self.config.fft_size);
+        if let Some(state) = &mut self.multi_res.multi_res_state {
+            state.set_sample_rate(sample_rate);
+        }
+        self.noise_profile.learning_frames_target =
+            (sample_rate / self.config.hop_size as f64).ceil().max(1.0) as usize;
+        self.update_envelope_coefficients();
+        self.precompute_bark_mapping();
+        self.audition.mix_decay = Self::audition_decay_for_rate(sample_rate);
+        self.rebuild_curve_tables();
+
+        // Update PND analyzers with correct sample rate
+        for analyzer in &mut self.auxiliary.pnd_analyzers {
+            *analyzer = PndAnalyzer::new(2048, sample_rate, 50.0);
+        }
+        self.reset();
+        Ok(())
+    }
+
+    fn reset(&mut self) {
+        // Reset MCRA state
+        for ch in 0..self.config.channels {
+            self.reset_mcra(ch);
+            self.gains.gain[ch].fill(1.0);
+            self.gains.smoothed_gain[ch].fill(1.0);
+            self.decision_directed.prev_power[ch].fill(0.0);
+            self.noise_profile.learning_accumulator[ch].fill(0.0);
+            self.io.output_accumulator[ch].fill(0.0);
+            self.io.time_out_channels[ch].fill(0.0);
+        }
+        self.noise_profile.is_learning = false;
+        self.noise_profile.learning_frames_count = 0;
+
+        // Reset PND analyzers
+        for analyzer in &mut self.auxiliary.pnd_analyzers {
+            analyzer.reset();
+        }
+
+        // Classification history belongs to the previous audio stream, even
+        // when harmonic/percussive processing is currently disabled.
+        for separator in &mut self.tonal_transient.tonal_transient_seps {
+            separator.reset();
+        }
+        self.tonal_transient.tt_magnitudes.fill(0.0);
+        self.tonal_transient.tt_tonal_mask.fill(0.0);
+        self.tonal_transient.tt_transient_mask.fill(0.0);
+
+        // Reset buffers
+        self.io.input_buffer.fill(0.0);
+        self.io.input_buffer_fill = self.config.hop_size * self.config.channels;
+        self.io.output_read_pos = 0;
+        self.io.output_write_pos = self.io.output_ring_mask + 1 - self.config.hop_size;
+        self.io.synthesis_discard = self.config.hop_size;
+        self.io.has_input = false;
+        self.io.source_phase = 0;
+        self.io.drain_remaining = None;
+        self.io.drain_cache.fill(0.0);
+        self.io.drain_frames = 0;
+        self.io.drain_pos = 0;
+        self.io.output_accumulator_fill = 0;
+        self.io.startup_padding_remaining = self.config.fft_size;
+
+        // Reset formant preserver working buffers
+        self.auxiliary.formant_preserver.log_mag_scratch.fill(0.0);
+        self.auxiliary.formant_preserver.envelope.fill(0.0);
+        for coherence in &mut self.spatial.spatial_coherence {
+            coherence.fill(1.0);
+        }
+        for cross in &mut self.spatial.spatial_cross {
+            cross.fill(Complex::new(0.0_f32, 0.0_f32));
+        }
+        for power in &mut self.spatial.spatial_power_a {
+            power.fill(0.0);
+        }
+        for power in &mut self.spatial.spatial_power_b {
+            power.fill(0.0);
+        }
+
+        // Reset multi-resolution state
+        if let Some(ref mut mrs) = self.multi_res.multi_res_state {
+            mrs.reset();
+        }
+
+        // Reset residual-audition delay line and snap the crossfade to its
+        // target. Curve knots are retained settings, not stream state.
+        for channel in &mut self.audition.dry {
+            channel.fill(0.0);
+        }
+        self.audition.dry_write = 0;
+        self.audition.dry_read = 0;
+        self.audition.dry_fill = 0;
+        self.audition.dry_frame.fill(0.0);
+        self.audition.output_frames = 0;
+        self.audition.mix_current = self.audition.mix_target;
+
+        self.ui.avg_reduction_db = 0.0;
+        self.ui.learning_active = true;
+        self.refresh_cached_parameter_values();
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.io.drain_remaining.is_some() {
+            return Err("Reset denoiser before processing input after drain starts".into());
+        }
+        let frames = self.process_audio(buffer, context, true)?;
+        self.io.has_input |= frames > 0;
+        self.io.source_phase =
+            (self.io.source_phase + frames % self.config.hop_size) % self.config.hop_size;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        self.config.hop_size
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        if !(self.io.has_input) {
+            return std::num::NonZeroU64::new(1);
+        }
+        let hop = self.config.hop_size;
+        let remaining = self
+            .io
+            .drain_remaining
+            .unwrap_or(2 * self.config.fft_size - hop + (hop - self.io.source_phase) % hop);
+        // One call serves at most one canonical refill. A partially served
+        // refill needs its own call even when fewer than one hop remains.
+        let cached = self.io.drain_frames - self.io.drain_pos;
+        let calls = usize::from(cached != 0) + remaining.saturating_sub(cached).div_ceil(hop);
+        std::num::NonZeroU64::new(calls.max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        if context.sample_rate != self.config.sample_rate {
+            return Err("Denoiser drain sample-rate mismatch".into());
+        }
+        if !self.io.has_input || self.io.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let channels = self.config.channels;
+        if output.is_empty() || !output.len().is_multiple_of(channels) {
+            return Err("Denoiser drain requires a positive frame-aligned destination".into());
+        }
+        let hop = self.config.hop_size;
+        // Last source-containing origin is floor((T-1)/H)*H. Its complete
+        // synthesis support ends at output time 2N+origin.
+        let remaining = self
+            .io
+            .drain_remaining
+            .unwrap_or(2 * self.config.fft_size - hop + (hop - self.io.source_phase) % hop);
+        if self.io.drain_pos == self.io.drain_frames {
+            let frames = remaining.min(hop);
+            let mut cache = std::mem::take(&mut self.io.drain_cache);
+            cache[..frames * channels].fill(0.0);
+            // Padding is audio continuation, not new noise-profile measurement.
+            let result = self.process_audio(
+                &mut cache[..frames * channels],
+                &ProcessContext::new(self.config.sample_rate, frames),
+                false,
+            );
+            self.io.drain_cache = cache;
+            result?;
+            self.io.drain_frames = frames;
+            self.io.drain_pos = 0;
+        }
+        let frames = (output.len() / channels).min(self.io.drain_frames - self.io.drain_pos);
+        let start = self.io.drain_pos * channels;
+        output[..frames * channels]
+            .copy_from_slice(&self.io.drain_cache[start..start + frames * channels]);
+        self.io.drain_pos += frames;
+        self.io.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn tail_length(&self) -> TailLength {
+        TailLength::Finite((2 * self.config.fft_size - 1) as u64)
+    }
+
+    fn latency_samples(&self) -> usize {
+        self.config.fft_size
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        Some(self.ui.cache.load() as Arc<dyn Any + Send + Sync>)
+    }
+}

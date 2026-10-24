@@ -16,7 +16,7 @@
 //   3. When the large FFT block fires, combine gains:
 //        final_gain[k] = flux_weight * small_gain[k_mapped]
 //                      + (1 − flux_weight) * large_gain[k]
-//      where k_mapped = round(k * small_spectrum_size / large_spectrum_size)
+//      where k_mapped = round(k * (small_spectrum_size - 1) / (large_spectrum_size - 1))
 //      and   flux_weight = smoothed_flux clamped to [0, 1]
 //
 // The combined gains are written into `self.smoothed_gain` so the rest of
@@ -35,9 +35,6 @@ pub(super) const SMALL_FFT_SIZE: usize = 512;
 const FLUX_HIGH: f32 = 0.08;
 /// Below this flux value the weight is 0.0 (pure large-FFT gains).
 const FLUX_LOW: f32 = 0.01;
-
-/// Bootstrap frames for the small-FFT IMCRA path (same logic as the main MCRA).
-const SMALL_BOOTSTRAP_FRAMES: usize = 5;
 
 /// Profile selection for this source boundary; EOF padding never captures.
 #[derive(Clone, Copy, Default)]
@@ -187,12 +184,19 @@ pub(super) struct MultiResState {
     mcra_alpha_p: f32,
     mcra_l: usize,
     mcra_delta: f32,
+    // Match the main estimator's physical observation span at this clock.
+    bootstrap_frames: usize,
 
     #[cfg(test)]
     force_fft_error: bool,
 }
 
 impl MultiResState {
+    pub fn set_sample_rate(&mut self, sample_rate: f64) {
+        self.bootstrap_frames =
+            crate::DenoiserPlugin::bootstrap_frame_count(sample_rate, SMALL_FFT_SIZE / 2);
+    }
+
     pub fn set_mcra_parameters(&mut self, alpha_s: f32, alpha_p: f32, window: usize, delta: f32) {
         self.mcra_alpha_s = alpha_s;
         self.mcra_alpha_p = alpha_p;
@@ -202,6 +206,7 @@ impl MultiResState {
 
     pub fn new(
         num_channels: usize,
+        sample_rate: f64,
         mcra_alpha_s: f32,
         mcra_alpha_p: f32,
         mcra_l: usize,
@@ -223,6 +228,10 @@ impl MultiResState {
             mcra_alpha_p,
             mcra_l,
             mcra_delta,
+            bootstrap_frames: crate::DenoiserPlugin::bootstrap_frame_count(
+                sample_rate,
+                SMALL_FFT_SIZE / 2,
+            ),
             #[cfg(test)]
             force_fft_error: false,
         }
@@ -374,13 +383,13 @@ impl MultiResState {
             }
 
             // Bootstrap phase: accumulate power, initialise IMCRA on completion
-            if state.frame_counter < SMALL_BOOTSTRAP_FRAMES {
+            if state.frame_counter < self.bootstrap_frames {
                 for k in 0..spectrum_size {
                     let power = state.freq_domain[k].norm_sqr();
                     state.noise_psd[k] += power;
                 }
                 state.frame_counter += 1;
-                if state.frame_counter >= SMALL_BOOTSTRAP_FRAMES {
+                if state.frame_counter >= self.bootstrap_frames {
                     let n = state.frame_counter as f32;
                     let min_power = 1e-6_f32;
                     for k in 0..spectrum_size {
@@ -393,7 +402,7 @@ impl MultiResState {
                     }
                 }
                 // A published fixed profile does not depend on live warm-up.
-                if !use_captured {
+                if !use_captured && state.frame_counter < self.bootstrap_frames {
                     continue;
                 }
             } else {
@@ -472,7 +481,7 @@ impl MultiResState {
     /// Combine small-FFT gains with large-FFT gains.
     ///
     /// For each large-FFT bin k (0..large_spectrum_size):
-    ///   k_small = k * small_spectrum_size / large_spectrum_size   (integer rounding)
+    ///   k_small = k * (small_spectrum_size - 1) / (large_spectrum_size - 1) (rounded)
     ///   final[k] = flux_weight * small_gain[ch][k_small]
     ///            + (1 − flux_weight) * large_gain[ch][k]
     ///
@@ -483,7 +492,7 @@ impl MultiResState {
         num_channels: usize,
         large_spectrum_size: usize,
     ) {
-        let small_spectrum_size = SMALL_FFT_SIZE / 2 + 1;
+        let large_intervals = large_spectrum_size.saturating_sub(1).max(1);
         let flux_w = self.flux_weight;
         let large_w = 1.0 - flux_w;
 
@@ -497,14 +506,103 @@ impl MultiResState {
         {
             let small_gains = &ch_state.smoothed_gain;
             for (k, g_large) in large.iter_mut().enumerate().take(large_spectrum_size) {
-                // Integer linear frequency mapping large bin k → small bin.
-                // Equivalent to round(k * small_spectrum_size / large_spectrum_size).
-                let k_small = ((k * small_spectrum_size + large_spectrum_size / 2)
-                    / large_spectrum_size)
-                    .min(small_spectrum_size - 1);
+                // FFT bins include both DC and Nyquist. Their spacing is set
+                // by the number of intervals, not the number of stored bins.
+                let k_small = ((k * (SMALL_FFT_SIZE / 2) + large_intervals / 2) / large_intervals)
+                    .min(SMALL_FFT_SIZE / 2);
 
                 *g_large = flux_w * small_gains[k_small] + large_w * *g_large;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod clock_and_grid_tests {
+    use super::*;
+    use crate::{DenoiserPlugin, DenoiserPluginParams};
+    use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
+
+    fn observed_bootstrap(state: &mut MultiResState) -> usize {
+        let first = [0.125_f32; SMALL_FFT_SIZE];
+        let next = [0.125_f32; SMALL_FFT_SIZE / 2];
+        for frame in 1..=1000 {
+            state
+                .feed_and_process(
+                    if frame == 1 { &first } else { &next },
+                    1,
+                    1.0,
+                    0.01,
+                    None,
+                    SmallProfileControl::default(),
+                )
+                .unwrap();
+            if state.channels[0].smoothed_gain[0] < 1.0 {
+                return frame;
+            }
+        }
+        panic!("small-grid bootstrap never finished");
+    }
+
+    #[test]
+    fn optional_analysis_bootstrap_preserves_the_main_physical_observation_span() {
+        let mut failures = 0;
+        for rate in [44_100.0, 48_000.0, 48_000.25, 96_000.0, 192_000.0] {
+            for low_latency in [false, true] {
+                let mut plugin = DenoiserPlugin::from_params(
+                    1,
+                    DenoiserPluginParams {
+                        multi_resolution: true,
+                        low_latency,
+                        ..Default::default()
+                    },
+                );
+                plugin.initialize(rate).unwrap();
+                let expected = (rate * (5120.0 / 48000.0) / 256.0).ceil() as usize;
+                let state = plugin.multi_res.multi_res_state.as_mut().unwrap();
+                let observed = observed_bootstrap(state);
+                println!(
+                    "small_bootstrap rate={rate} low_latency={low_latency} observed={observed} expected={expected}"
+                );
+                failures += usize::from(observed != expected);
+                state.reset();
+                assert_eq!(
+                    observed_bootstrap(state),
+                    observed,
+                    "reset must retain the prepared clock"
+                );
+            }
+        }
+        assert_eq!(
+            failures, 0,
+            "the optional estimator must not learn speech on a shorter clock"
+        );
+    }
+
+    #[test]
+    fn optional_gain_mapping_selects_the_nearest_physical_fft_frequency() {
+        let mut state = MultiResState::new(1, 96_000.0, 0.9, 0.2, 125, 5.0);
+        state.flux_weight = 1.0;
+        for (index, gain) in state.channels[0].smoothed_gain.iter_mut().enumerate() {
+            *gain = index as f32 / (SMALL_FFT_SIZE / 2) as f32;
+        }
+        let mut failures = 0;
+        for fft_size in [512_usize, 2048] {
+            let bins = fft_size / 2 + 1;
+            let mut gains = vec![vec![0.0; bins]];
+            state.combine_gains(&mut gains, 1, bins);
+            for (k, &actual) in gains[0].iter().enumerate() {
+                // Independent Hz calculation at a clock not shared by bin indices.
+                let frequency = k as f64 * 96_000.0 / fft_size as f64;
+                let small_bin = (frequency * SMALL_FFT_SIZE as f64 / 96_000.0).round() as usize;
+                let expected = small_bin as f32 / (SMALL_FFT_SIZE / 2) as f32;
+                failures += usize::from(actual != expected);
+            }
+        }
+        println!("small_grid_mapping failures={failures}");
+        assert_eq!(
+            failures, 0,
+            "bin counts include endpoints; FFT frequency spacing does not"
+        );
     }
 }

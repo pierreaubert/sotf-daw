@@ -1,0 +1,14 @@
+{
+  "declared_before_measurement": true,
+  "cases": 36,
+  "speakers": 3,
+  "models": 3,
+  "regimes": [
+    "positive_control",
+    "negative_constant_control",
+    "slow_energy_crossing",
+    "near_tie_flutter"
+  ],
+  "guard": "No ordinary SDR or SI-SDR regression greater than0.25dB against the frozen stateless detector policy in any changed case; unchanged controls must match sample-exactly. All42 prior mono model/source/noise quality fields must remain exact.",
+  "scope": "Existing attributed development recordings with unknown model training overlap. These gates assess this temporal-policy change, not held-out or perceptual acceptance."
+}

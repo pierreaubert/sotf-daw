@@ -1,0 +1,5 @@
+{
+  "rows": 42,
+  "quality_fields_exact": true,
+  "scope": "42 prior mono model/source/noise measurements, excluding timing; no held-out or native timing claim."
+}

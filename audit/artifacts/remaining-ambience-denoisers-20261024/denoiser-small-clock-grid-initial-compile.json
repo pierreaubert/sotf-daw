@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "clock_and_grid_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 219.40039110183716,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\nerror[E0061]: this function takes 6 arguments but 5 arguments were supplied\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs:250:21\n    |\n250 |     let mut state = MultiResState::new(2, 0.9, 0.7, 50, 5.0);\n    |                     ^^^^^^^^^^^^^^^^^^----------------------\n    |                                       |             |   |\n    |                                       |             |   expected `usize`, found `{float}`\n    |                                       |             expected `f32`, found `{integer}`\n    |                                       argument #6 of type `f32` is missing\n    |\nnote: associated function defined here\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs:207:12\n    |\n207 |     pub fn new(\n    |            ^^^\n...\n213 |         mcra_delta: f32,\n    |         ---------------\nhelp: did you mean\n    |\n250 -     let mut state = MultiResState::new(2, 0.9, 0.7, 50, 5.0);\n250 +     let mut state = MultiResState::new(2, 0.9, 0.7, 5.0, 50, /* f32 */);\n    |\n\nerror[E0061]: this function takes 6 arguments but 5 arguments were supplied\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/tests.rs:140:21\n    |\n140 |     let mut state = super::multi_resolution::MultiResState::new(1, 0.9, 0.7, 50, 5.0);\n    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^----------------------\n    |                                                                |             |   |\n    |                                                                |             |   expected `usize`, found `{float}`\n    |                                                                |             expected `f32`, found `{integer}`\n    |                                                                argument #6 of type `f32` is missing\n    |\nnote: associated function defined here\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs:207:12\n    |\n207 |     pub fn new(\n    |            ^^^\n...\n213 |         mcra_delta: f32,\n    |         ---------------\nhelp: did you mean\n    |\n140 -     let mut state = super::multi_resolution::MultiResState::new(1, 0.9, 0.7, 50, 5.0);\n140 +     let mut state = super::multi_resolution::MultiResState::new(1, 0.9, 0.7, 5.0, 50, /* f32 */);\n    |\n\nFor more information about this error, try `rustc --explain E0061`.\nerror: could not compile `sotf-plugin-denoiser` (lib test) due to 2 previous errors\nwarning: build failed, waiting for other jobs to finish...\n"
+}

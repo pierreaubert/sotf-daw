@@ -1,0 +1,9 @@
+{
+  "cases": 208,
+  "fixed": 12,
+  "regressions": 0,
+  "minimum_wide_r2": 0.9827251954834746,
+  "configuration_coverage_exact": true,
+  "runner_unchanged": true,
+  "scope": "Offline full208-row decay and separate acoustic quality pass; no native or listening acceptance."
+}

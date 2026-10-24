@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/aae-lfo-baseline-clock"
+  ],
+  "build_command": [
+    "rtk",
+    "proxy",
+    "rustc",
+    "--edition",
+    "2024",
+    "-O",
+    "audit/artifacts/remaining-ambience-denoisers-20261024/aae-lfo-baseline-clock.rs",
+    "-o",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/aae-lfo-baseline-clock"
+  ],
+  "exit_code": 1,
+  "stdout": "{\"cases\":32,\"samples\":32000000,\"maximum_error\":0.08511754863475139,\"gate\":0.00000006,\"passed\":false}\n",
+  "stderr": ""
+}

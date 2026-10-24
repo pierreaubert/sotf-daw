@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-aae",
+    "-p",
+    "sotf-plugin-denoiser",
+    "-p",
+    "plugins-denoiser",
+    "-p",
+    "sotf-plugin-speech-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 14.069427967071533,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)\n    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\nerror: using `chunks_exact` with a constant chunk size\n  --> crates/sotf-plugins/crates/plugins-denoiser/tests/audit_detector_energy_crossing.rs:79:24\n   |\n79 |     for block in input.chunks_exact(FRAME * 2) {\n   |                        ^^^^^^^^^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<{ FRAME * 2 }>().0`\n   |\n   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks\n   = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`\n   = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`\n\nerror: could not compile `plugins-denoiser` (test \"audit_detector_energy_crossing\") due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\nerror: unnecessary `>= y + 1` or `x - 1 >=`\n   --> crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs:581:68\n    |\n581 |                         assert!(fdn.delay_lengths.iter().all(|tap| *tap + 1 <= limit));\n    |                                                                    ^^^^^^^^^^^^^^^^^ help: change it to: `*tap < limit`\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#int_plus_one\n    = note: `-D clippy::int-plus-one` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::int_plus_one)]`\n\nerror: could not compile `sotf-plugin-aae` (lib test) due to 1 previous error\n"
+}

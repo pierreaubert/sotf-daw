@@ -1,0 +1,261 @@
+{
+  "candidate_rejected": true,
+  "functional_gate_passed": false,
+  "existing_failure": "test_noise_reduction_reduces_energy output/input power0.99481064 exceeds its unchanged reduction contract.",
+  "vowel_guard_passed": false,
+  "vowel_rows": [
+    {
+      "first_100ms_clean_projection": 0.8527376633801261,
+      "input_sdr_db": -11.330588062112977,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "measurement": "recorded_denoiser_onset",
+      "note": "one recorded speaker with deterministic added noise; no population or perceptual quality gate",
+      "output_sdr_db": 0.8307128868301729,
+      "rate": 48000,
+      "vowel_300_450ms_clean_projection": 0.09461645880661909
+    },
+    {
+      "first_100ms_clean_projection": 0.9970037852287646,
+      "input_sdr_db": -11.330588062112977,
+      "latency_frames": 512,
+      "low_latency": true,
+      "measurement": "recorded_denoiser_onset",
+      "note": "one recorded speaker with deterministic added noise; no population or perceptual quality gate",
+      "output_sdr_db": 1.0899746112354303,
+      "rate": 48000,
+      "vowel_300_450ms_clean_projection": 0.12444484231005945
+    }
+  ],
+  "recorded_full_sdr_guard_passed": true,
+  "minimum_full_sdr_delta_db": -0.048745584131451025,
+  "maximum_full_sdr_delta_db": 0.4833842353277402,
+  "noise_guard_passed": true,
+  "settled_noise_before_db": {
+    "false": -19.999994772696056,
+    "true": -19.99999054309764
+  },
+  "settled_noise_after_db": {
+    "false": -19.999994768588046,
+    "true": -19.99999054309764
+  },
+  "comparisons": [
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.0009887191176576327
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 3.7920107774924716e-05
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": -1.4886499236643758e-05
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": -2.8841393995282516e-06
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.003432627897128615
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 2.854229781346085e-05
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.4833842353277402
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.0006174082726546626
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.15348261199611968
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.00034010869195011395
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.48112415029868116
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.0006819524883798778
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.3230405839074113
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.008181493545925678
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.0042544523310654725
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.001442107283082139
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.2652529288844687
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.004860400955191357
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.0028806803275722714
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.05572678403614573
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.0011564149575571392
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.00020134660833659446
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.0019353881692214525
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.0003794856632182153
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.01150712956072697
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.0010892507760535963
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": -4.352574634081119e-05
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": -2.6880604066414904e-05
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": -0.048745584131451025
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 1.7882755125597782e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "full_sdr_delta_db": 0.39952972095801
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "full_sdr_delta_db": 0.00013661894061822721
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "full_sdr_delta_db": -2.598811989318328e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "full_sdr_delta_db": -1.066959349316221e-05
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "full_sdr_delta_db": 5.940861137476716e-07
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "full_sdr_delta_db": 1.2324817921793851e-07
+    }
+  ],
+  "decision": "Reject and restore the spectral-prior candidate; retain optional-arm clock and frequency-grid fixes. No tuning after these guards."
+}

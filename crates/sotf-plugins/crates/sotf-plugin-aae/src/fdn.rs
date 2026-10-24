@@ -16,6 +16,10 @@ use crate::delay_line::DelayLine;
 use crate::hadamard::hadamard8;
 use crate::tone_filter::{ToneCoefficients, ToneFilter};
 
+#[path = "fdn_lfo.rs"]
+mod lfo;
+use lfo::Modulator;
+
 /// Number of delay lines in the FDN.
 pub const FDN_SIZE: usize = 8;
 
@@ -24,8 +28,32 @@ pub const FDN_SIZE: usize = 8;
 const BASE_DELAYS_48K: [usize; FDN_SIZE] = [1553, 1907, 2311, 2719, 3187, 3557, 4001, 4507];
 const MAX_ROOM_SIZE: f32 = 3.0;
 
+// A late field needs repeated circulation before its fastest endpoint decays.
+// Require one longest-loop circulation per FDN line within that endpoint T60:
+// eight traversals per T60, hence four traversals across a T30 fit interval.
+// This density policy is independent of the early-reflection room geometry.
+const MIN_TRAVERSALS_PER_DECAY: f64 = FDN_SIZE as f64;
+
+fn select_late_delays(
+    sample_rate: f32,
+    room_size: f32,
+    decay: (f32, f32, f32),
+) -> [usize; FDN_SIZE] {
+    let (rt60, bass, treble) = decay;
+    let shortest_decay = f64::from(rt60) * f64::from(bass.min(treble));
+    // read(m) traverses m+1 clocks. Reserve that clock before scaling taps.
+    let maximum_tap = (shortest_decay * f64::from(sample_rate) / MIN_TRAVERSALS_PER_DECAY)
+        .floor()
+        .max(2.0)
+        - 1.0;
+    let room_scale =
+        f64::from(room_size.clamp(0.2, MAX_ROOM_SIZE)) * f64::from(sample_rate) / 48_000.0;
+    let scale = room_scale.min(maximum_tap / BASE_DELAYS_48K[FDN_SIZE - 1] as f64);
+    BASE_DELAYS_48K.map(|base| (base as f64 * scale).round().max(1.0) as usize)
+}
+
 /// Per-line modulation frequencies in Hz (all different to avoid beating).
-const MOD_FREQUENCIES: [f32; FDN_SIZE] = [0.07, 0.11, 0.13, 0.17, 0.19, 0.23, 0.29, 0.31];
+const MOD_FREQUENCIES: [f64; FDN_SIZE] = [0.07, 0.11, 0.13, 0.17, 0.19, 0.23, 0.29, 0.31];
 
 /// 8-line Feedback Delay Network.
 pub struct Fdn {
@@ -38,15 +66,15 @@ pub struct Fdn {
     pending_delay_lengths: Option<[usize; FDN_SIZE]>,
     pending_tone_coefficients: [ToneCoefficients; FDN_SIZE],
     decay_params: (f32, f32, f32),
+    /// Latest requested acoustic room; late-loop density may select a shorter grid.
+    room_size: f32,
     /// Allpass interpolation states for modulated reads
     interp_states: [f32; FDN_SIZE],
     previous_interp_states: [f32; FDN_SIZE],
     delay_transition_remaining: usize,
     delay_transition_samples: usize,
-    /// LFO phases for time-variant modulation (0..1, one per line)
-    mod_phases: [f32; FDN_SIZE],
-    /// LFO phase increments per sample
-    mod_phase_incs: [f32; FDN_SIZE],
+    /// Prepared quadrature LFOs; no per-sample trigonometry or f32 phase drift.
+    modulators: [Modulator; FDN_SIZE],
     /// Modulation depth in samples
     mod_depth_samples: f32,
     /// Safety limiter threshold (linear)
@@ -76,13 +104,8 @@ impl Fdn {
         safety_limit_db: f32,
     ) -> Self {
         let sr = sample_rate.into() as f32;
-        let scale = room_size * sr / 48000.0;
-
-        let mut delay_lengths = [0usize; FDN_SIZE];
-        for i in 0..FDN_SIZE {
-            delay_lengths[i] = (BASE_DELAYS_48K[i] as f32 * scale).round() as usize;
-            delay_lengths[i] = delay_lengths[i].max(1);
-        }
+        let room_size = room_size.clamp(0.2, MAX_ROOM_SIZE);
+        let delay_lengths = select_late_delays(sr, room_size, (rt60, bass_ratio, treble_ratio));
 
         // Allocate for the maximum supported room size so room_size changes can
         // update delay lengths without reallocating on the audio/control path.
@@ -107,8 +130,13 @@ impl Fdn {
             ToneFilter::new_for_loop(g_dc, g_ny, m)
         });
 
-        // Modulation phase increments
-        let mod_phase_incs = std::array::from_fn(|i| MOD_FREQUENCIES[i] / sr);
+        let modulators = std::array::from_fn(|i| {
+            Modulator::new(
+                MOD_FREQUENCIES[i],
+                f64::from(sr),
+                i as f64 / FDN_SIZE as f64,
+            )
+        });
 
         let mod_depth_samples = mod_depth * 8.0;
         let limiter_threshold = 10.0_f32.powf(safety_limit_db / 20.0);
@@ -122,12 +150,12 @@ impl Fdn {
             pending_delay_lengths: None,
             pending_tone_coefficients: [ToneCoefficients::SILENCE; FDN_SIZE],
             decay_params: (rt60, bass_ratio, treble_ratio),
+            room_size,
             interp_states: [0.0; FDN_SIZE],
             previous_interp_states: [0.0; FDN_SIZE],
             delay_transition_remaining: 0,
             delay_transition_samples: (sr * 0.01).round().max(1.0) as usize,
-            mod_phases: std::array::from_fn(|i| i as f32 / FDN_SIZE as f32),
-            mod_phase_incs,
+            modulators,
             mod_depth_samples,
             limiter_threshold,
             input_gain,
@@ -157,8 +185,7 @@ impl Fdn {
 
             if self.mod_depth_samples > 0.01 {
                 // Time-variant: modulated delay with allpass interpolation
-                let mod_offset =
-                    (self.mod_phases[i] * std::f32::consts::TAU).sin() * self.mod_depth_samples;
+                let mod_offset = self.modulators[i].next() * self.mod_depth_samples;
                 let effective_delay = (base_delay + mod_offset).max(1.0);
                 let current =
                     self.delay_lines[i].read_allpass(effective_delay, &mut self.interp_states[i]);
@@ -170,12 +197,6 @@ impl Fdn {
                 } else {
                     current
                 };
-
-                // Advance LFO phase
-                self.mod_phases[i] += self.mod_phase_incs[i];
-                if self.mod_phases[i] >= 1.0 {
-                    self.mod_phases[i] -= 1.0;
-                }
             } else {
                 // Static delay — integer read
                 let current = self.delay_lines[i].read(self.delay_lengths[i]);
@@ -221,15 +242,32 @@ impl Fdn {
         outputs
     }
 
-    /// Update RT60 parameters without reallocating.
+    /// Update decay and its bounded late-field density geometry without allocation.
     pub fn set_rt60(&mut self, rt60: f32, bass_ratio: f32, treble_ratio: f32) {
-        self.decay_params = (rt60, bass_ratio, treble_ratio);
-        let coefficients = self.decay_coefficients(self.delay_lengths);
-        for (filter, coefficients) in self.tone_filters.iter_mut().zip(coefficients) {
-            filter.set_coefficients_smooth(
-                coefficients,
-                (self.sample_rate * 0.005).round().max(1.0) as usize,
-            );
+        self.request_geometry_and_decay((rt60, bass_ratio, treble_ratio), false);
+    }
+
+    fn request_geometry_and_decay(&mut self, decay: (f32, f32, f32), room_request: bool) {
+        let decay_changed = self.decay_params != decay;
+        self.decay_params = decay;
+        let target = select_late_delays(self.sample_rate, self.room_size, decay);
+        let mut geometry_started = false;
+        if self.delay_transition_remaining > 0 {
+            // Geometry and damping share the same latest requested endpoint.
+            // Never interrupt the active pair of read heads.
+            self.pending_delay_lengths = (target != self.delay_lengths).then_some(target);
+        } else if room_request || target != self.delay_lengths {
+            self.start_delay_transition(target);
+            geometry_started = true;
+        }
+        if decay_changed || geometry_started {
+            let coefficients = self.decay_coefficients(self.delay_lengths);
+            for (filter, coefficients) in self.tone_filters.iter_mut().zip(coefficients) {
+                filter.set_coefficients_smooth(
+                    coefficients,
+                    (self.sample_rate * 0.005).round().max(1.0) as usize,
+                );
+            }
         }
         if let Some(target) = self.pending_delay_lengths {
             self.pending_tone_coefficients = self.decay_coefficients(target);
@@ -249,30 +287,15 @@ impl Fdn {
         })
     }
 
-    /// Update room size without reallocating delay buffers.
+    /// Update acoustic room and density-limited late delays without allocation.
     ///
-    /// Finish an active 10 ms read-head fade before starting the latest pending
-    /// target. Repeated requests coalesce in one fixed slot, preserving audible
-    /// head ownership and bounded work. Decay controls apply to the active room
-    /// immediately. Setters prepare the queued room's gains for later admission.
+    /// The early-reflection room model is independent. Late-loop traversal is
+    /// bounded by the shortest endpoint decay, so short tails do not consist
+    /// of only a few widely separated echoes. Room and RT60 requests coalesce
+    /// in one pending endpoint; an active two-head fade always finishes first.
     pub fn set_room_size(&mut self, room_size: f32, rt60: f32, bass_ratio: f32, treble_ratio: f32) {
-        let scale = room_size.clamp(0.2, MAX_ROOM_SIZE) * self.sample_rate / 48000.0;
-        let target = std::array::from_fn(|i| {
-            ((BASE_DELAYS_48K[i] as f32 * scale).round() as usize)
-                .max(1)
-                .min(self.delay_lines[i].max_delay_samples())
-        });
-        if self.delay_transition_remaining > 0 {
-            self.pending_delay_lengths = (target != self.delay_lengths).then_some(target);
-            if self.decay_params != (rt60, bass_ratio, treble_ratio) {
-                self.set_rt60(rt60, bass_ratio, treble_ratio);
-            } else if let Some(target) = self.pending_delay_lengths {
-                self.pending_tone_coefficients = self.decay_coefficients(target);
-            }
-        } else {
-            self.start_delay_transition(target);
-            self.set_rt60(rt60, bass_ratio, treble_ratio);
-        }
+        self.room_size = room_size.clamp(0.2, MAX_ROOM_SIZE);
+        self.request_geometry_and_decay((rt60, bass_ratio, treble_ratio), true);
     }
 
     fn start_delay_transition(&mut self, target: [usize; FDN_SIZE]) {
@@ -320,7 +343,9 @@ impl Fdn {
         self.previous_interp_states = [0.0; FDN_SIZE];
         self.previous_delay_lengths = self.delay_lengths;
         self.delay_transition_remaining = 0;
-        self.mod_phases = std::array::from_fn(|i| i as f32 / FDN_SIZE as f32);
+        for (i, oscillator) in self.modulators.iter_mut().enumerate() {
+            oscillator.reset(i as f64 / FDN_SIZE as f64);
+        }
     }
 }
 
@@ -534,5 +559,38 @@ mod tests {
         assert!((fdn.limiter_threshold - expected).abs() < 1e-6);
         assert_eq!(soft_clip(1.0, fdn.limiter_threshold), 1.0);
         assert!(soft_clip(4.0, fdn.limiter_threshold).abs() < 4.0);
+    }
+}
+
+#[cfg(test)]
+mod density_tests {
+    use super::{FDN_SIZE, Fdn};
+
+    #[test]
+    fn every_prepared_loop_obeys_the_declared_endpoint_density() {
+        let mut cases = 0;
+        for rate in [44_100_u32, 48_000, 96_000, 192_000] {
+            for room in [0.2_f32, 0.7, 1.0, 2.3, 3.0] {
+                for rt60 in [0.3_f32, 1.2, 6.0] {
+                    for (bass, treble) in [(1.0_f32, 1.0_f32), (0.8, 0.2), (2.0, 0.5)] {
+                        let fdn = Fdn::new(rate, room, rt60, bass, treble, 0.0, 0.0);
+                        let limit =
+                            (f64::from(rt60) * f64::from(bass.min(treble)) * f64::from(rate)
+                                / FDN_SIZE as f64)
+                                .floor() as usize;
+                        assert!(fdn.delay_lengths.iter().all(|tap| *tap < limit));
+                        assert!(fdn.delay_lengths.windows(2).all(|pair| pair[0] < pair[1]));
+                        assert!(
+                            fdn.delay_lengths
+                                .iter()
+                                .zip(&fdn.delay_lines)
+                                .all(|(tap, line)| *tap <= line.max_delay_samples())
+                        );
+                        cases += 1;
+                    }
+                }
+            }
+        }
+        println!("fdn_density_geometry cases={cases} endpoint_traversals=8");
     }
 }

@@ -7,11 +7,17 @@ struct Lossless {
     heads: [usize; 8],
 }
 impl Lossless {
-    fn new(rate: u32, room: f32) -> Self {
+    fn new(rate: u32, room: f32, rt60: f32) -> Self {
         // DelayLine::read(0) means the most recent pushed sample. Since FDN
         // reads before pushing, a requested m-sample tap traverses m+1 clocks.
+        // Independently derive the requested density in seconds: eight maximum
+        // circulations fit into a neutral endpoint decay. Subtract the explicit
+        // read-before-write clock, then express the allowable scale at 48 kHz.
+        let clocks_per_decay = (f64::from(rt60) * f64::from(rate) / 8.0).floor().max(2.0);
+        let density_room = (clocks_per_decay - 1.0) * 48_000.0 / (4507.0 * f64::from(rate));
+        let late_room = f64::from(room).min(density_room);
         let rings = [1553, 1907, 2311, 2719, 3187, 3557, 4001, 4507].map(|base| {
-            let tap = (f64::from(base) * f64::from(room) * f64::from(rate) / 48_000.0).round();
+            let tap = (f64::from(base) * late_room * f64::from(rate) / 48_000.0).round();
             vec![0.0; tap as usize + 1]
         });
         Self {
@@ -58,7 +64,7 @@ fn neutral_decay_matches_independent_lossless_exponential_weighting() {
                     "reset",
                 ] {
                     let frames = (f64::from(rate) * f64::from(rt60) * 4.0).ceil() as usize;
-                    let mut reference = Lossless::new(rate, room);
+                    let mut reference = Lossless::new(rate, room, rt60);
                     let first_arrival = reference.rings.iter().map(Vec::len).min().unwrap();
                     let mut fdn = if lifecycle == "new" {
                         Fdn::new(rate, room, rt60, 1.0, 1.0, 0.0, 0.0)

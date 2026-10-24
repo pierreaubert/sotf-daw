@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/speech-energy-crossing-baseline",
+    "--nocapture"
+  ],
+  "build_command": [
+    "rtk",
+    "proxy",
+    "rustc",
+    "--edition",
+    "2024",
+    "--test",
+    "-O",
+    "audit/artifacts/remaining-ambience-denoisers-20261024/speech-energy-crossing-baseline.rs",
+    "-o",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/speech-energy-crossing-baseline"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nspeech_energy_crossing relative_detector_delta=2.0010008090812024\ntest crossing_equal_energies_cannot_invert_the_neural_waveform ... FAILED\n\nfailures:\n\nfailures:\n    crossing_equal_energies_cannot_invert_the_neural_waveform\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+  "stderr": "\nthread 'crossing_equal_energies_cannot_invert_the_neural_waveform' (356430348) panicked at audit/artifacts/remaining-ambience-denoisers-20261024/speech-energy-crossing-baseline.rs:57:5:\na 0.2% channel-level change must not invert the detector\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+}

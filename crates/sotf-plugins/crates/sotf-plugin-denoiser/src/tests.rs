@@ -137,7 +137,7 @@ fn captured_profile_requested_and_effective_states_are_distinct() {
 
 #[test]
 fn multires_fft_failure_is_returned_and_state_is_resettable() {
-    let mut state = super::multi_resolution::MultiResState::new(1, 0.9, 0.7, 50, 5.0);
+    let mut state = super::multi_resolution::MultiResState::new(1, 48_000.0, 0.9, 0.7, 50, 5.0);
     state.force_fft_error_for_test(true);
     let samples = vec![0.0; super::multi_resolution::SMALL_FFT_SIZE];
     assert_eq!(

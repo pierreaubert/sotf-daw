@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-aae",
+    "-p",
+    "sotf-plugin-denoiser",
+    "-p",
+    "plugins-denoiser",
+    "-p",
+    "sotf-plugin-speech-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 1.6579949855804443,
+  "stdout": "",
+  "stderr": "    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)\n    Finished `release` profile [optimized] target(s) in 1.56s\n"
+}

@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-aae",
+    "-p",
+    "sotf-plugin-denoiser",
+    "-p",
+    "plugins-denoiser",
+    "-p",
+    "sotf-plugin-speech-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 307.2966070175171,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n    Checking sotf-nnnoiseless v0.1.1 (https://github.com/pierreaubert/sotf-3rdparties#d476ae9b)\n    Checking sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)\n    Checking sotf-plugin-resampler v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler)\n    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Checking sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)\nerror: the loop variable `k` is used to index `gains`\n   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs:609:22\n    |\n609 |             for k in 0..bins {\n    |                      ^^^^^^^\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#needless_range_loop\n    = note: `-D clippy::needless-range-loop` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`\nhelp: consider using an iterator and enumerate()\n    |\n609 -             for k in 0..bins {\n609 +             for (k, <item>) in gains.iter().enumerate().take(bins) {\n    |\n\nerror: could not compile `sotf-plugin-denoiser` (lib test) due to 1 previous error\nwarning: build failed, waiting for other jobs to finish...\n"
+}

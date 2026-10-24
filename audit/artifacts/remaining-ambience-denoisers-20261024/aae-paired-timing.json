@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/qa-aae-baseline-20261024"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.11734324996359646,
+    "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372280\n  Late energy (500ms\u20131s): 0.434273\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8317\n    FR: 185.2575\n    C: 181.0204\n    LFE: 0.0969\n    SL: 25.5139\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005195\n  RT60=4.0s late energy: 4.79951668\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0721\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 55.37ms\n  Estimated CPU Usage: 1.11%\n  callback p50/p95/max: 0.117/0.129/0.173 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+    "stderr": "",
+    "trial": 0,
+    "variant": "baseline"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/qa-aae-candidate-20261024"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.11079941689968109,
+    "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372232\n  Late energy (500ms\u20131s): 0.434326\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8361\n    FR: 185.2572\n    C: 181.0219\n    LFE: 0.0969\n    SL: 25.5153\n    SR: 29.9021\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00016073\n  RT60=4.0s late energy: 4.79957581\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.3873\n  Ratio:         0.5491\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 52.53ms\n  Estimated CPU Usage: 1.05%\n  callback p50/p95/max: 0.111/0.121/0.141 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+    "stderr": "",
+    "trial": 1,
+    "variant": "candidate"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/qa-aae-candidate-20261024"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.11052837478928268,
+    "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372232\n  Late energy (500ms\u20131s): 0.434326\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8361\n    FR: 185.2572\n    C: 181.0219\n    LFE: 0.0969\n    SL: 25.5153\n    SR: 29.9021\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00016073\n  RT60=4.0s late energy: 4.79957581\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.3873\n  Ratio:         0.5491\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 52.37ms\n  Estimated CPU Usage: 1.05%\n  callback p50/p95/max: 0.111/0.117/0.132 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+    "stderr": "",
+    "trial": 2,
+    "variant": "candidate"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/qa-aae-baseline-20261024"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.11702520912513137,
+    "stdout": "=== QA: AAE (Active Acoustic Enhancement) Plugin ===\n\n[Test 1] Reverb Tail Presence\n  Early energy (0\u2013200ms): 19.372280\n  Late energy (500ms\u20131s): 0.434273\n  Reverb Tail: PASS\n\n[Test 2] Channel Energy Distribution (5.1)\n  Channel Energies:\n    FL: 130.8317\n    FR: 185.2575\n    C: 181.0204\n    LFE: 0.0969\n    SL: 25.5139\n    SR: 29.8976\n  Channel Energy Distribution: PASS\n\n[Test 3] RT60 Parameter Effect\n  RT60=0.5s late energy: 0.00005195\n  RT60=4.0s late energy: 4.79951668\n  RT60 Parameter: PASS\n\n[Test 4] Speaker Config Change (7.1.4)\n  Height channel energy: 52.915340\n  12-channel processing: PASS\n\n[Test 5] Bypass Transparency\n  Bypass Transparency: PASS\n\n[Test 6] No NaN/Inf in Output\n  No NaN/Inf: PASS\n\n[Test 7] Energy Bounded\n  Input energy:  12002.8062\n  Output energy: 6590.0721\n  Ratio:         0.5490\n  Max output sample: 0.3704\n  Energy Bounded: PASS\n\n[Test 8] Latency Reporting\n  Reported Latency: 0 samples\n  Latency: PASS\n\n[Test 9] Real-time Safety (Zero Allocations)\n  Zero Allocations: PASS\n\n[Test 10] Performance Benchmark\n  Processed 5.0s of audio in 55.39ms\n  Estimated CPU Usage: 1.11%\n  callback p50/p95/max: 0.118/0.122/0.137 ms (deadline 10.667 ms)\n  Performance: PASS\n\n[ALL PASS] AAE QA Complete.\n",
+    "stderr": "",
+    "trial": 3,
+    "variant": "baseline"
+  }
+]

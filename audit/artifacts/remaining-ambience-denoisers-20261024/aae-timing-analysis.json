@@ -1,0 +1,106 @@
+{
+  "legacy_trials": [
+    {
+      "trial": 0,
+      "variant": "baseline",
+      "exit_code": 0,
+      "wall_derived_load_percent": 1.11,
+      "benchmark_elapsed_ms": 55.37,
+      "callback_p50_p95_max_ms": [
+        0.117,
+        0.129,
+        0.173
+      ]
+    },
+    {
+      "trial": 1,
+      "variant": "candidate",
+      "exit_code": 0,
+      "wall_derived_load_percent": 1.05,
+      "benchmark_elapsed_ms": 52.53,
+      "callback_p50_p95_max_ms": [
+        0.111,
+        0.121,
+        0.141
+      ]
+    },
+    {
+      "trial": 2,
+      "variant": "candidate",
+      "exit_code": 0,
+      "wall_derived_load_percent": 1.05,
+      "benchmark_elapsed_ms": 52.37,
+      "callback_p50_p95_max_ms": [
+        0.111,
+        0.117,
+        0.132
+      ]
+    },
+    {
+      "trial": 3,
+      "variant": "baseline",
+      "exit_code": 0,
+      "wall_derived_load_percent": 1.11,
+      "benchmark_elapsed_ms": 55.39,
+      "callback_p50_p95_max_ms": [
+        0.118,
+        0.122,
+        0.137
+      ]
+    }
+  ],
+  "legacy_abba_guard_passed": true,
+  "legacy_benchmark_candidate_to_baseline_median_ratio": 0.9470928132899965,
+  "full_timing_exit_code": 1,
+  "full_timing_summary": {
+    "cases": 64,
+    "cpu_deadline_misses": 0,
+    "kind": "summary",
+    "missing_cpu_samples": 0,
+    "missing_usage_cases": 0,
+    "observation_seconds": 5,
+    "scope": "offline paired clocks; CPU interval includes sampling work; gap is not causal scheduling attribution; does not replace legacy wall/load gates or device validation",
+    "wall_deadline_misses": 5
+  },
+  "failed_conditions": [
+    {
+      "rate": 96000,
+      "block_frames": 512,
+      "explicit_buffer_touch": true,
+      "replicate": 1,
+      "updates_each_block": false,
+      "wall_deadline_misses": 1,
+      "cpu_deadline_misses": 0,
+      "wall_max_ns": 11137833,
+      "cpu_max_ns": 125084,
+      "max_wall_callback_cpu_ns": 115625,
+      "max_wall_callback_gap_ns": 11022208,
+      "loop_usage_delta": {
+        "involuntary_switches": 9,
+        "major_faults": 0,
+        "minor_faults": 0,
+        "voluntary_switches": 0
+      }
+    },
+    {
+      "rate": 192000,
+      "block_frames": 64,
+      "explicit_buffer_touch": true,
+      "replicate": 1,
+      "updates_each_block": false,
+      "wall_deadline_misses": 4,
+      "cpu_deadline_misses": 0,
+      "wall_max_ns": 7015708,
+      "cpu_max_ns": 54875,
+      "max_wall_callback_cpu_ns": 54875,
+      "max_wall_callback_gap_ns": 6960833,
+      "loop_usage_delta": {
+        "involuntary_switches": 42,
+        "major_faults": 0,
+        "minor_faults": 0,
+        "voluntary_switches": 0
+      }
+    }
+  ],
+  "scope": "Matched legacyABBA timing is local wall observation with intentional density/clock waveform changes. Preserve the red full wall gate; CPU brackets include instrumentation and cannot establish causal waiting/native compliance."
+}

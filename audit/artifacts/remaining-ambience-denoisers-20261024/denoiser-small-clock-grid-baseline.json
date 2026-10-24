@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "clock_and_grid_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 98.11449384689331,
+  "stdout": "\nrunning 2 tests\nsmall_grid_mapping failures=255\ntest multi_resolution::clock_and_grid_tests::optional_gain_mapping_selects_the_nearest_physical_fft_frequency ... FAILED\nsmall_bootstrap rate=44100 low_latency=false observed=6 expected=19\nsmall_bootstrap rate=44100 low_latency=true observed=6 expected=19\nsmall_bootstrap rate=48000 low_latency=false observed=6 expected=20\nsmall_bootstrap rate=48000 low_latency=true observed=6 expected=20\nsmall_bootstrap rate=48000.25 low_latency=false observed=6 expected=21\nsmall_bootstrap rate=48000.25 low_latency=true observed=6 expected=21\nsmall_bootstrap rate=96000 low_latency=false observed=6 expected=40\nsmall_bootstrap rate=96000 low_latency=true observed=6 expected=40\nsmall_bootstrap rate=192000 low_latency=false observed=6 expected=80\nsmall_bootstrap rate=192000 low_latency=true observed=6 expected=80\ntest multi_resolution::clock_and_grid_tests::optional_analysis_bootstrap_preserves_the_main_physical_observation_span ... FAILED\n\nfailures:\n\nfailures:\n    multi_resolution::clock_and_grid_tests::optional_analysis_bootstrap_preserves_the_main_physical_observation_span\n    multi_resolution::clock_and_grid_tests::optional_gain_mapping_selects_the_nearest_physical_fft_frequency\n\ntest result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 83 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)\n    Finished `release` profile [optimized] target(s) in 1m 37s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-6a61cc5935637b57)\n\nthread 'multi_resolution::clock_and_grid_tests::optional_gain_mapping_selects_the_nearest_physical_fft_frequency' (356238321) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs:574:9:\nassertion `left == right` failed: bin counts include endpoints; FFT frequency spacing does not\n  left: 255\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\nthread 'multi_resolution::clock_and_grid_tests::optional_analysis_bootstrap_preserves_the_main_physical_observation_span' (356238320) panicked at crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs:550:9:\nassertion `left == right` failed: the optional estimator must not learn speech on a shorter clock\n  left: 10\n right: 0\nerror: test failed, to rerun pass `-p sotf-plugin-denoiser --lib`\n"
+}

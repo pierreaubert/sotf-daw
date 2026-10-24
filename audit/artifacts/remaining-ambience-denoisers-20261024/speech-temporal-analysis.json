@@ -1,0 +1,338 @@
+{
+  "cases": 36,
+  "changed_cases": 18,
+  "exact_controls": 18,
+  "ordinary_sdr_delta_min_db": -0.01759479824093546,
+  "ordinary_sdr_delta_max_db": 6.208942508017563,
+  "si_sdr_delta_min_db": -0.017683286715737268,
+  "si_sdr_delta_max_db": 5.825776985968206,
+  "predeclared_quality_guard_passed": true,
+  "mono42_quality_fields_exact": true,
+  "rows": [
+    {
+      "speaker": "1272",
+      "model": "RNNoise Full",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9808022118118331,
+      "candidate_projection": 0.9808022118118331
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Full",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.980769483327199,
+      "candidate_projection": 0.980769483327199
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Full",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": -0.01759479824093546,
+      "si_sdr_delta_db": -0.017683286715737268,
+      "legacy_projection": 0.9806589722544008,
+      "candidate_projection": 0.9806914407332709
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Full",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 0.10626223155398762,
+      "si_sdr_delta_db": 0.13272122084776683,
+      "legacy_projection": 0.9635142714004192,
+      "candidate_projection": 0.98079995582362
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy LQ",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9660552187452669,
+      "candidate_projection": 0.9660552187452669
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy LQ",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.965677976207173,
+      "candidate_projection": 0.965677976207173
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy LQ",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": -0.011205630799807409,
+      "si_sdr_delta_db": -0.012377901816488901,
+      "legacy_projection": 0.9677891767767727,
+      "candidate_projection": 0.9658767228643255
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy LQ",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 1.5900892596183276,
+      "si_sdr_delta_db": 1.332231517152751,
+      "legacy_projection": 0.8957929458673988,
+      "candidate_projection": 0.9660511333913838
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy SH",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9792014689540495,
+      "candidate_projection": 0.9792014689540495
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy SH",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9791251924624462,
+      "candidate_projection": 0.9791251924624462
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy SH",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": 0.015440182660377388,
+      "si_sdr_delta_db": 0.018649728016656653,
+      "legacy_projection": 0.9781177266225378,
+      "candidate_projection": 0.9790937194766466
+    },
+    {
+      "speaker": "1272",
+      "model": "RNNoise Legacy SH",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 0.5225517048261743,
+      "si_sdr_delta_db": 0.5272940058381685,
+      "legacy_projection": 0.9478671629693065,
+      "candidate_projection": 0.979193283302521
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Full",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9949331827434202,
+      "candidate_projection": 0.9949331827434202
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Full",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9949492688545934,
+      "candidate_projection": 0.9949492688545934
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Full",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": 1.3842454791301861e-05,
+      "si_sdr_delta_db": -1.5851851280501705e-06,
+      "legacy_projection": 0.9950025638579044,
+      "candidate_projection": 0.9949999167910336
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Full",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 0.1039923254835955,
+      "si_sdr_delta_db": 0.13468508038922167,
+      "legacy_projection": 0.9843724380076065,
+      "candidate_projection": 0.9949331835124969
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy LQ",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9902935535443613,
+      "candidate_projection": 0.9902935535443613
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy LQ",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9902558087140507,
+      "candidate_projection": 0.9902558087140507
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy LQ",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": -0.007712324492992195,
+      "si_sdr_delta_db": -0.008374303881645062,
+      "legacy_projection": 0.9903590409871709,
+      "candidate_projection": 0.9901680717707875
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy LQ",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 2.545101914402885,
+      "si_sdr_delta_db": 2.3561657950878576,
+      "legacy_projection": 0.9356841072127327,
+      "candidate_projection": 0.990296442214391
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy SH",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9929292545347901,
+      "candidate_projection": 0.9929292545347901
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy SH",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9929350441236909,
+      "candidate_projection": 0.9929350441236909
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy SH",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": -0.0006058055588908928,
+      "si_sdr_delta_db": -0.0006182446653824059,
+      "legacy_projection": 0.9929706017530168,
+      "candidate_projection": 0.9929683782082022
+    },
+    {
+      "speaker": "1462",
+      "model": "RNNoise Legacy SH",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 0.3629167202682737,
+      "si_sdr_delta_db": 0.38715384830765487,
+      "legacy_projection": 0.982062958960235,
+      "candidate_projection": 0.9929260414325264
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Full",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9935781769660039,
+      "candidate_projection": 0.9935781769660039
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Full",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9936193965810224,
+      "candidate_projection": 0.9936193965810224
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Full",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": -0.0026784197533942233,
+      "si_sdr_delta_db": -0.0028242097006447864,
+      "legacy_projection": 0.9937528692923973,
+      "candidate_projection": 0.9937116802105365
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Full",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 0.8139778604866308,
+      "si_sdr_delta_db": 0.8200525812830897,
+      "legacy_projection": 0.9830672745948904,
+      "candidate_projection": 0.9935787944315302
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy LQ",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9669866020403364,
+      "candidate_projection": 0.9669866020403364
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy LQ",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9673138159127185,
+      "candidate_projection": 0.9673138159127185
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy LQ",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": 0.0028342315143596863,
+      "si_sdr_delta_db": 0.002363891422938025,
+      "legacy_projection": 0.9676472413900359,
+      "candidate_projection": 0.9677061300918285
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy LQ",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 3.1696433769196375,
+      "si_sdr_delta_db": 2.569080982014972,
+      "legacy_projection": 0.9051985241751486,
+      "candidate_projection": 0.9670018871303135
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy SH",
+      "regime": "positive_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9846341668691307,
+      "candidate_projection": 0.9846341668691307
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy SH",
+      "regime": "negative_constant_control",
+      "ordinary_sdr_delta_db": 0,
+      "si_sdr_delta_db": 0,
+      "legacy_projection": 0.9846741626353157,
+      "candidate_projection": 0.9846741626353157
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy SH",
+      "regime": "slow_energy_crossing",
+      "ordinary_sdr_delta_db": 0.008430356203696476,
+      "si_sdr_delta_db": 0.008241466536652808,
+      "legacy_projection": 0.9845625715347182,
+      "candidate_projection": 0.9846987849350086
+    },
+    {
+      "speaker": "174",
+      "model": "RNNoise Legacy SH",
+      "regime": "near_tie_flutter",
+      "ordinary_sdr_delta_db": 6.208942508017563,
+      "si_sdr_delta_db": 5.825776985968206,
+      "legacy_projection": 0.8828212464746931,
+      "candidate_projection": 0.9846211995239751
+    }
+  ],
+  "limits": "Existing development recordings with unknown model training overlap; controlled energy-crossing comparisons, not held-out/listener/native acceptance."
+}

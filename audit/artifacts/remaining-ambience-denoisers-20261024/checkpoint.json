@@ -1,0 +1,109 @@
+{
+  "base_commit": "b481bd8",
+  "tracking_issue": 9,
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "0b7c8d442b228d770f84a39fb29f265e0e1a38361a36092bc4e8432651c88bda",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn_lfo.rs": "22030269196b7a687ed206d11637bb732a5141f9ecffa2d1f823e643c0216257",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_neutral_decay.rs": "65eaeebdf72d0001281d9fa01e5ce9dcc80ebe62e8818e74540adb7ef74c64be",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/tests/audit_room_retarget.rs": "9f34a3f1c77d9dc122d7c55712228fe54e20ec84c17ad0e1a68fa752439337ce",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/mcra.rs": "6104779152f65d39a3a1bde84f8166a4e6a2df4b6313d9ba4a68f2abe0f2dbea",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs": "a61593a0bd835de70e70de06873ab0829c554eec2334be4e8eb64a86a5e21626",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "5cd104f6c8e5efcbe4f43f7f46cbc92ec79624a26330eb96ec31c145d24a52d4",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/tests.rs": "b04ba6acdf83baabda88a940cf0978566fbde54aa3f7bf4c4a5fd49e2bf96e82",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs": "609a0c05a8351a74149a29968b4fa1aa08fab092526b692edcd687b1ebb91a8c",
+    "crates/sotf-plugins/crates/plugins-denoiser/src/rnnoise.rs": "3ec784140497e2341798b48c1caf134cd6f68adedcf121c8ddb50eb997763977",
+    "crates/sotf-plugins/crates/plugins-denoiser/tests/rnnoise_timing.rs": "9b12280546af97e2f5106401d631ed5d14591d44eae9d449a051402ba0352a8d",
+    "crates/sotf-plugins/crates/plugins-denoiser/tests/audit_detector_energy_crossing.rs": "f0aed6281e3e8900ffdb6317b1a561917f252900ac4964e075845e235b61f1c3"
+  },
+  "plugin_statuses": {
+    "1": "partial",
+    "19": "partial",
+    "40": "partial"
+  },
+  "aae": {
+    "implemented": [
+      "Prepared accurate quadrature modulation clock.",
+      "Decay-aware nominal longest-loop bound at shortest endpoint T60 / 8, with original ER room geometry and existing bounded +/-8-sample modulation excursion.",
+      "Shared bounded room/RT60 geometry retarget and prepared damping admission."
+    ],
+    "tests": {
+      "passed": 131,
+      "ignored": 0
+    },
+    "density_geometry_cases": 180,
+    "new_staged_control_cases": 24,
+    "independent_neutral_cases": 80,
+    "decay_cases": 208,
+    "decay_failures_before": 12,
+    "decay_failures_after": 0,
+    "minimum_wide_r2": 0.9827251954834746,
+    "acoustic_quality_passed": true,
+    "exclusive_timing": {
+      "legacy_abba_runs": 4,
+      "legacy_abba_gate_passed": true,
+      "matched_legacy_candidate_to_baseline_median_ratio": 0.9470928132899965,
+      "full_cases": 64,
+      "full_exit_code": 1,
+      "wall_misses": 5,
+      "cpu_misses": 0,
+      "missing_cpu_samples": 0,
+      "missing_usage_cases": 0,
+      "scope": "Exclusive local observations; preserve failed full wall gate. Both baseline and candidate pass legacy QA. CPU gaps do not establish causes or native compliance."
+    },
+    "remaining": [
+      "The unchanged64-case matrix retains5wall misses despite0CPU misses; loaded/native deadline evidence remains open.",
+      "External corpus/listening validation and offline cutoff audibility remain open."
+    ]
+  },
+  "denoiser": {
+    "implemented": [
+      "Prepare optional analysis bootstrap from the host clock.",
+      "Map optional FFT gain grids by physical frequency intervals."
+    ],
+    "tests": {
+      "passed": 129,
+      "ignored": 4
+    },
+    "optional_qa_rows": 48,
+    "strict_clippy_passed": true,
+    "spectral_bootstrap_candidate_rejected": true,
+    "spectral_bootstrap_rejection": "Existing tone-energy reduction contract fails and predeclared vowel projection guard fails; noise and development SDR guards pass. Candidate source/failures retained, main estimator restored exactly.",
+    "remaining": [
+      "Blind bootstrap speech contamination and later vowel loss.",
+      "Held-out multilingual/music/noise and native workload/quality evidence."
+    ]
+  },
+  "speech_denoiser": {
+    "implemented": "Retain the initially selected physical anti-correlated detector reference through the stream, clearing on reset/model installation. Prevents neural input inversion at channel-energy crossings while preserving complete-stream channel-permutation invariance.",
+    "tests": {
+      "passed": 219,
+      "ignored": 3
+    },
+    "additional_recorded_quality_test_passed": true,
+    "controlled_recorded_cases": 36,
+    "exact_controls": 18,
+    "changed_cases": 18,
+    "ordinary_sdr_delta_db": [
+      -0.01759479824093546,
+      6.208942508017563
+    ],
+    "si_sdr_delta_db": [
+      -0.017683286715737268,
+      5.825776985968206
+    ],
+    "prior_mono_quality_rows_exact": 42,
+    "remaining": [
+      "Model-held-out multilingual/speaker/noise and listener evidence.",
+      "Correlation-sign transitions and broader onset/music quality.",
+      "Host-rate recorded quality and loaded-device/model deadline and footprint evidence."
+    ]
+  },
+  "combined_strict_clippy_passed": true,
+  "limits": "No complete-plugin, native-device, held-out or subjective listening acceptance. Optional ML remains separate; all3plugins remain partial.",
+  "completed_work_batches": [
+    "AAE decay-density/model remedy and prepared modulation clock.",
+    "Denoiser optional-arm physical bootstrap clock and FFT grid mapping.",
+    "Speech denoiser stable temporal detector reference across energy crossings."
+  ],
+  "rejected_work_batch": "Blind spectral-bootstrap prior failed its original tone-energy contract and predeclared vowel guard; preserved and restored."
+}

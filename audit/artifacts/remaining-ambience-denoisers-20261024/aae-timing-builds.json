@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae",
+      "--bin",
+      "qa-aae-timing"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 11.007034000009298,
+    "stdout": "",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 10.96s\n",
+    "variant": "baseline"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-aae",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--bin",
+      "qa-aae",
+      "--bin",
+      "qa-aae-timing"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 11.023929207818583,
+    "stdout": "",
+    "stderr": "   Compiling sotf-plugin-aae v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae)\n    Finished `release` profile [optimized] target(s) in 10.98s\n",
+    "variant": "candidate"
+  }
+]

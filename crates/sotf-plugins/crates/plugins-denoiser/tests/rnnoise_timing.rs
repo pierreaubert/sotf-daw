@@ -29,13 +29,14 @@ fn direct_model(input: &[f32], channels: usize) -> Vec<f32> {
     let mut result = vec![0.; FRAME * channels];
     let mut model_input = [0.; FRAME];
     let mut model_output = [0.; FRAME];
+    let mut negative_reference = None;
     for block in input.chunks_exact(FRAME * channels) {
         let mut gains = [1.; nnnoiseless::DENOISE_BAND_COUNT];
         if channels == 2 {
-            // Fixtures have R=L or R=-L. Equal-energy anti-phase uses the
-            // first largest-magnitude sample as a positive-peak reference;
-            // diotic content retains L. This direct model has no streaming
-            // detector helper, rings or callback-dependent state.
+            // Fixtures have R=L or R=-L. Choose the physical anti-phase
+            // reference from the first negative frame, then retain it across
+            // frames. This direct model has no production detector helper,
+            // rings or callback-dependent state; every model result is kept.
             let frames = block.as_chunks::<2>().0;
             let opposite = frames.iter().any(|frame| frame[0] != frame[1]);
             let peak = frames.iter().fold(0.0_f32, |peak, frame| {
@@ -45,7 +46,11 @@ fn direct_model(input: &[f32], channels: usize) -> Vec<f32> {
                     peak
                 }
             });
-            let orientation = if opposite && peak < 0.0 { -1.0 } else { 1.0 };
+            let orientation = if opposite {
+                *negative_reference.get_or_insert(if peak < 0.0 { -1.0 } else { 1.0 })
+            } else {
+                1.0
+            };
             for i in 0..FRAME {
                 assert_eq!(block[2 * i].abs(), block[2 * i + 1].abs());
                 model_input[i] = orientation * block[2 * i] * 32768.;

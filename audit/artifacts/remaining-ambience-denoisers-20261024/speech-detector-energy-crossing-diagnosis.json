@@ -1,0 +1,27 @@
+{
+  "source_sha256": "aea500e1ae95cf9f2c285600923ba7f422e1e8183aa926839ab46d0929e84ae5",
+  "source": "crates/sotf-plugins/crates/plugins-denoiser/src/rnnoise.rs",
+  "status": "diagnosis_only",
+  "method": "Independent scalar evaluation of the current stateless detector formula on anti-correlated tones straddling equal channel energy. This demonstrates the mathematical reference-sign discontinuity; it does not measure RNNoise band gains, audible artifacts or quality.",
+  "rows": [
+    {
+      "relative_energy_crossing_epsilon": 0.01,
+      "relative_right_input_l2_change": 0.02000000000000001,
+      "relative_detector_l2_change": 2.0000250004687445,
+      "channel_swap_exact": true
+    },
+    {
+      "relative_energy_crossing_epsilon": 0.001,
+      "relative_right_input_l2_change": 0.0019999999999998834,
+      "relative_detector_l2_change": 2.000000250000047,
+      "channel_swap_exact": true
+    },
+    {
+      "relative_energy_crossing_epsilon": 0.0001,
+      "relative_right_input_l2_change": 0.00019999999999997198,
+      "relative_detector_l2_change": 2.0000000025,
+      "channel_swap_exact": true
+    }
+  ],
+  "next_requirement": "A temporal-reference remedy must preserve complete-stream channel permutation invariance and independent model timing, then pass model-specific onset/music/quality and deadline checks. No detector or model change was shipped."
+}

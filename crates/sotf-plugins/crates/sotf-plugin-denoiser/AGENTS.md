@@ -64,3 +64,11 @@ cargo test -p sotf-plugin-denoiser
   six sources, three conditions and both FFT modes. Align source metrics by public
   latency but render the complete synthesis support through EOF. Preserve exact
   reset/partition/polarity checks and separately report trailing synthesis energy.
+
+- Prepare optional small-grid bootstrap from the host clock with the main
+  106.6667 ms observation span. Retain the prepared target on reset and reject
+  invalid initialization before changing either grid. Published profiles still
+  override live warm-up; finalization may apply the first live gains immediately.
+- Map gain grids by FFT frequency intervals (stored bin count minus one), not
+  stored spectrum lengths. Keep every-bin independent Hz references and both
+  endpoints. This fixes optional-arm timing/mapping, not blind speech quality.

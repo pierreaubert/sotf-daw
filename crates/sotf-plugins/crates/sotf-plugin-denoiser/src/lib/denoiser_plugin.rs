@@ -910,6 +910,7 @@ impl DenoiserPlugin {
         if plugin.multi_res.multi_resolution {
             plugin.multi_res.multi_res_state = Some(super::multi_resolution::MultiResState::new(
                 channels,
+                plugin.config.sample_rate,
                 plugin.mcra.mcra_alpha_s,
                 plugin.mcra.mcra_alpha_p,
                 plugin.mcra.mcra_l,
@@ -1466,6 +1467,9 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
         }
         self.config.sample_rate = sample_rate;
         self.mcra.bootstrap_frames = Self::bootstrap_frame_count(sample_rate, self.config.hop_size);
+        if let Some(state) = &mut self.multi_res.multi_res_state {
+            state.set_sample_rate(sample_rate);
+        }
         self.noise_profile.learning_frames_target =
             (sample_rate / self.config.hop_size as f64).ceil().max(1.0) as usize;
         self.update_envelope_coefficients();

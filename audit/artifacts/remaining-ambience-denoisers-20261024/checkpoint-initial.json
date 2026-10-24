@@ -1,0 +1,75 @@
+{
+  "base_commit": "b481bd8",
+  "tracking_issue": 9,
+  "plugin_statuses": {
+    "1": "partial",
+    "19": "partial",
+    "40": "partial"
+  },
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn.rs": "0fe6593b89307c50cc804ee7e16214d1378d2f88509f6e6d62941fa91d350606",
+    "crates/sotf-plugins/crates/sotf-plugin-aae/src/fdn_lfo.rs": "22030269196b7a687ed206d11637bb732a5141f9ecffa2d1f823e643c0216257",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/multi_resolution.rs": "e508c2c55f045db5de11b1d7f5155206b78b8ff02a24096d94a4e19ca58b4102",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "5cd104f6c8e5efcbe4f43f7f46cbc92ec79624a26330eb96ec31c145d24a52d4",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/tests.rs": "b04ba6acdf83baabda88a940cf0978566fbde54aa3f7bf4c4a5fd49e2bf96e82",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/captured_profile_tests.rs": "609a0c05a8351a74149a29968b4fa1aa08fab092526b692edcd687b1ebb91a8c"
+  },
+  "aae": {
+    "implemented": "Prepared f64 unit-circle quadrature LFOs with bounded normalization every 4096 active samples remove per-sample sine and f32 phase drift. Inactive modulation pauses the clock; reset restores initial phases exactly. Geometry, damping, latency, tail metadata and parameters remain unchanged.",
+    "analytic_reference": {
+      "cases": 32,
+      "samples": 32000000,
+      "gate": 6e-08,
+      "baseline_maximum_error": 0.08511754863475139,
+      "candidate_maximum_error": 2.980243585248843e-08
+    },
+    "functional_tests": {
+      "passed": 129,
+      "failed": 0,
+      "ignored": 0
+    },
+    "remaining": [
+      "Replay the unchanged 208-case decay gate (prior 12 sparse short-decay fit failures).",
+      "Exclusive wall/CPU capacity QA is pending.",
+      "Recorded spatial/listening/native evidence and offline export cutoff audibility remain open."
+    ]
+  },
+  "denoiser": {
+    "implemented": "The optional 512-point analysis arm prepares bootstrap hops from the host clock using the main 106.6667 ms reference span. Live gains can begin on the finalization frame, as in the main arm. Gain mapping uses FFT frequency intervals rather than stored bin counts. Captured-profile overrides remain. No schema, latency, allocation or dependency change.",
+    "baseline": {
+      "clock_failures": 10,
+      "mapping_failures": 255
+    },
+    "candidate": {
+      "clock_failures": 0,
+      "mapping_failures": 0,
+      "observed_hops": [
+        19,
+        20,
+        21,
+        40,
+        80
+      ]
+    },
+    "functional_tests": {
+      "passed": 129,
+      "failed": 0,
+      "ignored": 4
+    },
+    "remaining": [
+      "Optional 48-row QA and strict Clippy are pending the exclusive benchmark schedule.",
+      "Main-estimator bootstrap speech contamination and later vowel loss remain unchanged.",
+      "Held-out multilingual/noise/music and native quality/deadline evidence remain missing."
+    ]
+  },
+  "speech_denoiser": {
+    "implemented": null,
+    "finding": "The existing stereo detector reference switches sign when anti-correlated channel energies cross. A continuity remedy must preserve stream permutation invariance and the independent model timing reference, then pass model-quality evaluation. The existing fixture manifest explicitly declares unknown training overlap; these assets cannot establish model-held-out quality.",
+    "remaining": [
+      "Model-held-out multilingual speech/noise and listener evidence.",
+      "Onset and instrument suppression, including detector energy/tie boundaries.",
+      "Host-rate recorded quality and loaded-device/model deadline and footprint evidence."
+    ]
+  },
+  "limits": "No completion, causal throughput, native-device or subjective-quality claims. Optional ML remains excluded. Heavy acceptance jobs are held for the root exclusive schedule."
+}

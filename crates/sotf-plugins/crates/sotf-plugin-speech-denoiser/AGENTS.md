@@ -40,3 +40,12 @@ cargo run -p sotf-plugin-speech-denoiser --features qa --bin qa-speech-denoiser
 - `get_data()` publishes fixed-size band-gain/VAD diagnostics through a
   preallocated realtime cache.
 - DSP body lives in `plugins-denoiser::rnnoise`; this crate is a thin host adapter.
+
+- Select the physical negative-correlation detector reference once per stream,
+  using dominant energy and a canonical positive-peak initial tie; retain it
+  across later energy crossings. Reset and model installation clear it. Keep
+  positive-correlation mixing and original channel polarities unchanged.
+- Preserve the frozen stateless quality control, independent direct-model clock
+  reference, 36 recorded crossing/control cases, exact stream swaps and reset.
+  Unknown training overlap and remaining correlation-sign transitions must not
+  be presented as held-out/listening/native quality acceptance.

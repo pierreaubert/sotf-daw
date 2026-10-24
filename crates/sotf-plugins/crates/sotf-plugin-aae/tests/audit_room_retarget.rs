@@ -156,3 +156,63 @@ fn queued_room_admission_uses_latest_independent_decay_controls() {
         }
     }
 }
+
+#[test]
+fn decay_driven_geometry_and_room_updates_share_one_bounded_fade() {
+    let mut cases = 0;
+    for rate in [44_100_u32, 48_000, 96_000, 192_000] {
+        let fade = (rate as f32 * 0.01).round() as usize;
+        for modulation in [0.0, 1.0] {
+            for elapsed in [0, fade / 2, fade - 1] {
+                let make = || Fdn::new(rate, 3.0, 6.0, 1.0, 1.0, modulation, 0.0);
+                let mut actual = make();
+                let mut staged = make();
+                let mut clock = 0;
+                for _ in 0..rate / 4 {
+                    let x = signal(clock);
+                    assert_eq!(actual.process(x), staged.process(x));
+                    clock += 1;
+                }
+                // A short RT60 now starts the same bounded geometry fade as a
+                // room change. Later room requests only replace its pending slot.
+                actual.set_rt60(0.3, 1.0, 1.0);
+                staged.set_rt60(0.3, 1.0, 1.0);
+                for _ in 0..elapsed {
+                    let x = signal(clock);
+                    assert_eq!(actual.process(x), staged.process(x));
+                    clock += 1;
+                }
+                for room in [1.0, 0.2, 2.2, 0.2] {
+                    actual.set_room_size(room, 0.3, 1.0, 1.0);
+                }
+                // Decay changes affect active damping in both streams at the
+                // same clock; the requested room selects only the next geometry.
+                actual.set_rt60(0.8, 1.0, 1.0);
+                staged.set_rt60(0.8, 1.0, 1.0);
+                for remaining in elapsed..fade {
+                    if remaining + 1 == fade {
+                        // Prepare the staged endpoint immediately before its
+                        // admission, independently of the earlier request storm.
+                        staged.set_room_size(0.2, 0.8, 1.0, 1.0);
+                    }
+                    let x = signal(clock);
+                    assert_eq!(actual.process(x), staged.process(x));
+                    clock += 1;
+                }
+                for _ in 0..fade * 4 {
+                    let x = signal(clock);
+                    assert_eq!(actual.process(x), staged.process(x));
+                    clock += 1;
+                }
+                assert!(!actual.delay_transition_active());
+                actual.reset();
+                let mut fresh = Fdn::new(rate, 0.2, 0.8, 1.0, 1.0, modulation, 0.0);
+                for frame in 0..rate as usize / 4 {
+                    assert_eq!(actual.process(signal(frame)), fresh.process(signal(frame)));
+                }
+                cases += 1;
+            }
+        }
+    }
+    println!("decay_room_retarget_exact cases={cases}");
+}

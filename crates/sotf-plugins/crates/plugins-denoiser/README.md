@@ -28,3 +28,11 @@ Modules:
   original channels; it never reconstructs suppression from broadband RMS.
 
 Used by `sotf-plugin-declick`, `sotf-plugin-hiss-reducer`, and `sotf-plugin-speech-denoiser` so each plugin stays a thin host adapter.
+
+
+RNNoise stereo now retains its first anti-correlated physical channel reference
+through the stream, instead of inverting the detector when channel energies
+cross. Reset and model installation clear this fixed-size history. Independent
+model timing, stream permutation, captured mono quality and controlled recorded
+crossing comparisons are retained; see the speech-denoiser README for scope and
+remaining held-out/native quality requirements.

@@ -174,6 +174,8 @@ pub struct RnnoiseBackend {
     /// common band gains and therefore never make independent spatial
     /// decisions.
     stereo_detector: Option<Box<nnnoiseless::DenoiseState>>,
+    /// Physical channel chosen at the first anti-correlated frame; true is right.
+    stereo_reference: Option<bool>,
     channels: usize,
     sample_rate: u32,
     accum_buffers: Vec<Vec<f32>>,
@@ -210,6 +212,7 @@ impl RnnoiseBackend {
         Self {
             denoisers: Vec::new(),
             stereo_detector: None,
+            stereo_reference: None,
             channels: 0,
             sample_rate: 48000,
             accum_buffers: Vec::new(),
@@ -321,6 +324,7 @@ impl RnnoiseBackend {
         self.output_read_pos = 0;
         self.accum_fill = 0;
         self.analyzer_data = RnnoiseAnalyzerData::default();
+        self.stereo_reference = None;
         self.bypass_mix = 0.0;
         self.bypass_target = 0.0;
         self.bypass_initialized = false;
@@ -402,6 +406,7 @@ impl RnnoiseBackend {
         self.output_read_pos = 0;
         self.accum_fill = 0;
         self.analyzer_data = RnnoiseAnalyzerData::default();
+        self.stereo_reference = None;
         self.bypass_mix = 0.0;
         self.bypass_target = 0.0;
         self.bypass_initialized = false;
@@ -479,7 +484,11 @@ impl RnnoiseBackend {
                     // gains are then applied identically to the original left
                     // and right channels. No channel-specific neural decision
                     // can alter inter-channel phase or level relationships.
-                    prepare_linked_stereo_detector(&self.accum_buffers, &mut self.scratch_input[0]);
+                    prepare_linked_stereo_detector(
+                        &self.accum_buffers,
+                        &mut self.scratch_input[0],
+                        &mut self.stereo_reference,
+                    );
                     let analysis = self
                         .stereo_detector
                         .as_mut()
@@ -603,6 +612,7 @@ impl RnnoiseBackend {
         self.output_read_pos = 0;
         self.accum_fill = 0;
         self.analyzer_data = RnnoiseAnalyzerData::default();
+        self.stereo_reference = None;
         self.bypass_mix = 0.0;
         self.bypass_target = 0.0;
         self.bypass_initialized = false;
@@ -652,7 +662,11 @@ impl RnnoiseBackend {
     }
 }
 
-fn prepare_linked_stereo_detector(accum: &[Vec<f32>], detector: &mut [f32]) {
+fn prepare_linked_stereo_detector(
+    accum: &[Vec<f32>],
+    detector: &mut [f32],
+    reference: &mut Option<bool>,
+) {
     let mut left_energy = 0.0_f32;
     let mut right_energy = 0.0_f32;
     let mut cross = 0.0_f32;
@@ -671,16 +685,17 @@ fn prepare_linked_stereo_detector(accum: &[Vec<f32>], detector: &mut [f32]) {
             combined_peak = combined;
         }
     }
-    // For negative correlation, L-R changes sign under a channel swap.
-    // Anchor the detector to the louder channel, with a positive-peak tie
-    // convention for equal energies. Both channel orders then supply exactly
-    // the same detector waveform, including across correlation sign changes.
-    // Only the neural detector is oriented; original speaker channels retain
-    // their polarity and receive the same shared model gains as before.
-    let reference_sign = if polarity < 0.0
-        && (right_energy > left_energy || (right_energy == left_energy && combined_peak < 0.0))
-    {
-        -1.0
+    // Choose the physical reference once, rather than inverting the model
+    // input whenever anti-correlated channel levels cross. The first negative
+    // frame uses dominant energy and a canonical positive-peak exact tie, so
+    // swapping the complete input stream chooses the same physical reference.
+    // Positive-correlation mixing stays commutative; reset/model install clear
+    // this stream history. Original audio channels retain their own polarity.
+    let reference_sign = if polarity < 0.0 {
+        let right = *reference.get_or_insert_with(|| {
+            right_energy > left_energy || (right_energy == left_energy && combined_peak < 0.0)
+        });
+        if right { -1.0 } else { 1.0 }
     } else {
         1.0
     };
@@ -712,6 +727,8 @@ mod tests {
         let mut swapped = source.clone();
         let mut a = vec![0.0; RNNOISE_FRAME_SIZE];
         let mut b = a.clone();
+        let mut reference_a = None;
+        let mut reference_b = None;
         for frame in 0..128 {
             for sample in 0..RNNOISE_FRAME_SIZE {
                 let left = random();
@@ -727,10 +744,62 @@ mod tests {
                 swapped[0][sample] = source[1][sample];
                 swapped[1][sample] = source[0][sample];
             }
-            prepare_linked_stereo_detector(&source, &mut a);
-            prepare_linked_stereo_detector(&swapped, &mut b);
+            prepare_linked_stereo_detector(&source, &mut a, &mut reference_a);
+            prepare_linked_stereo_detector(&swapped, &mut b, &mut reference_b);
             assert_eq!(a, b, "detector channel bias in frame {frame}");
         }
+    }
+
+    #[test]
+    fn crossing_equal_energies_cannot_invert_the_neural_waveform() {
+        let left: Vec<f32> = (0..RNNOISE_FRAME_SIZE)
+            .map(|i| {
+                0.1 * (std::f32::consts::TAU * 3.0 * i as f32 / RNNOISE_FRAME_SIZE as f32).sin()
+            })
+            .collect();
+        let mut reference = None;
+        let mut previous = vec![0.0; RNNOISE_FRAME_SIZE];
+        for (index, ratio) in [0.999_f32, 1.001, 1.0, 0.999, 1.001]
+            .into_iter()
+            .enumerate()
+        {
+            let input = vec![left.clone(), left.iter().map(|x| -ratio * x).collect()];
+            let mut detector = vec![0.0; RNNOISE_FRAME_SIZE];
+            prepare_linked_stereo_detector(&input, &mut detector, &mut reference);
+            assert_eq!(reference, Some(false));
+            // Independent common-source power normalization. The reference
+            // channel remains left even when the right energy becomes larger.
+            let scale = ((1.0 + f64::from(ratio).powi(2)) / 2.0).sqrt() * 32768.0;
+            let mut max_error = 0.0_f64;
+            for (&actual, &source) in detector.iter().zip(&left) {
+                max_error = max_error.max((f64::from(actual) - f64::from(source) * scale).abs());
+            }
+            assert!(max_error < 0.01, "normalization error {max_error}");
+            if index > 0 {
+                let difference: f64 = previous
+                    .iter()
+                    .zip(&detector)
+                    .map(|(&a, &b)| f64::from(a - b).powi(2))
+                    .sum();
+                let energy: f64 = previous.iter().map(|&x| f64::from(x).powi(2)).sum();
+                let relative = (difference / energy).sqrt();
+                println!("speech_energy_crossing ratio={ratio} relative_detector_delta={relative}");
+                assert!(
+                    relative < 0.01,
+                    "a 0.2% channel-level change must not invert the detector"
+                );
+            }
+            previous = detector;
+        }
+        let mut backend = RnnoiseBackend::new();
+        backend.initialize(48_000, 2).unwrap();
+        backend.stereo_reference = reference;
+        backend.reset();
+        assert_eq!(backend.stereo_reference, None);
+        backend.stereo_reference = Some(true);
+        let prepared = backend.prepare_model(RnnoiseModelId::BundledFull).unwrap();
+        backend.commit_prepared(prepared).unwrap();
+        assert_eq!(backend.stereo_reference, None);
     }
 
     fn assert_linked_spectral_processing_preserves_stereo(input: &[f32]) {

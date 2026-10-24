@@ -215,3 +215,67 @@ omitted energy, not an infinite-tail error bound. Arbitrary modulation, damping,
 auto gain, changing controls and perceptual acceptance need separate evaluation.
 This is a reference caller policy; the plugin does not choose an export duration
 or add a native finite drain.
+
+
+### Prepared FDN modulation clock
+
+FDN delay modulation uses prepared double-precision quadrature oscillators for
+its eight specified 0.07–0.31 Hz rates. This removes the eight per-sample sine
+calls and prevents accumulated single-precision phase error at high sample
+rates. A bounded normalization every 4096 active samples controls amplitude
+roundoff; disabling modulation still pauses its clock, and reset restores the
+same initial phases. The oscillator substitution preserves damping design, tail metadata and public
+parameters; late-delay selection follows the separate density policy below.
+
+An independent analytic-sine regression checks 32 rate/frequency combinations
+through one million samples each, including exact replay across normalization
+boundaries. Maximum sine error is 2.981e-8; the preserved previous phase
+recurrence reaches 0.08512 on the same horizon with its original frequencies.
+The initial oscillator-only release suite passes 129 tests with no ignores, including
+neutral decay references, staged transitions and callback heap checks. These
+clock results do not establish callback deadlines, sparse short-decay fit
+quality, corpus/listening acceptance or a finite recursive tail.
+
+
+### Decay-aware late-field density
+
+The early-reflection room geometry still follows the requested acoustic room.
+The late FDN additionally limits its longest nominal read-before-write traversal to one
+eighth of the shortest requested endpoint T60. Eight traversals fit in that
+endpoint decay, giving at least four longest traversals across a T30 interval;
+this nominal density requirement follows the eight-line late network and is
+independent of the corner-test configurations. The retained modulation varies
+read delays by up to eight samples in either direction; this is not an exact
+instantaneous bound on the time-varying path. Room-scaled line proportions remain, while short
+tails use shorter loops instead of a few widely spaced echoes. Once the density
+limit dominates, increasing room size continues to affect early reflections but
+no longer lengthens the late loops.
+
+RT60 changes can therefore request late geometry as well as damping. They share
+the existing bounded two-read-head room transition and one latest pending
+endpoint. Setters prepare incoming damping; callback admission only installs
+prepared targets. Reset installs the latest complete room/decay endpoint. No
+extra delay storage, graph latency, finite-tail claim or parameter is introduced.
+
+The original independent neutral reference is archived. Its dense f64 lossless
+network now derives the selected grid independently from the declared time rule;
+all excitation, complete-tail comparisons, exponential-weighting errors and fit
+assertions remain. The density candidate passes 131 release tests, including
+180 grid cases, 80 lossless-reference cases, 24 combined decay/room staged
+transitions and prior heap/tail checks. The unchanged 208-row decay gate and
+acoustic/deadline results are recorded separately; density is not listening or
+native-device certification.
+
+
+The unchanged 208-row decay matrix now passes every row, resolving the 12
+previous sparse-fit failures with no passing-row regression; minimum wideband
+r² is 0.982725 at the original >0.98 gate. Separate acoustic-quality QA passes.
+Exclusive frozen baseline/candidate ABBA legacy QA passes all four runs under
+the original load and callback limits. The candidate's median benchmark wall
+time is 0.94709 times baseline (both baseline runs already pass these limits).
+The complete unchanged 64-case wall/CPU matrix still exits 1: five wall misses,
+zero CPU misses and no missing clock/resource observations. All five wall misses
+occur in explicitly touched cohorts; aggregate resource counters do not identify
+the cause of individual gaps. Preserve the complete raw failures. These results
+support the density/clock corrections, while full wall/native and listening
+acceptance remain open.

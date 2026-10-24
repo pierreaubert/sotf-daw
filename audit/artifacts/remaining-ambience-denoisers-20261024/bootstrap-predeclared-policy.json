@@ -1,0 +1,10 @@
+{
+  "declared_before_candidate_measurement": true,
+  "policy": "Cap blind-bootstrap averaged power by a local spectral median within an approximately400Hz half-width neighborhood, with a fixed128bin radius ceiling. The design models noise as a locally broad spectrum and treats narrow peaks as uncertain signal; captured profiles remain authoritative. Prepare neighborhood radii from each FFT and host clock. Initialize tracked minima to the conservative noise prior and speech probability from the existing MCRA ratio threshold.",
+  "guards": {
+    "original_later_vowel_projection_minimum_both_modes": 0.5,
+    "development_full_source_sdr_regression_max_db": 0.25,
+    "settled_noise_only_attenuation_regression_max_db": 1.0
+  },
+  "limits": "Not a held-out quality or universal tonal-noise/speech discriminator. Preserve all36development rows and noise/startup tradeoffs; reject and retain failures rather than tune to these fixtures."
+}

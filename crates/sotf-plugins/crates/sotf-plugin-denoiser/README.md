@@ -125,3 +125,33 @@ later-vowel projection rises from 0.12125 to 0.12429, still far below unity.
 No metric threshold or source was selected to turn that into quality acceptance.
 Noise adaptation, initial-speech contamination, steady music attenuation,
 held-out mixtures, perceptual quality and device-load timing remain open.
+
+
+### Optional analysis clock and gain-grid alignment
+
+The optional 512-point analysis arm prepares its bootstrap hop count from the
+host sample clock using the same 106.6667 ms observation span as the main noise
+estimator. It no longer begins live reduction after a fixed five hops at every
+rate. Bootstrap completion can apply the finalized estimate on that frame, as
+in the main arm; reset retains the prepared target and initialization prepares
+the new clock. A published captured profile still overrides live warm-up.
+
+Gain transfer uses physical FFT frequency spacing, including DC and Nyquist,
+when selecting the nearest small-grid bin. Stored spectrum lengths include both
+endpoints, so using their ratio biased the previous mapping by one bin in 255
+quality-mode positions. An independent Hz-based reference covers every bin in
+both supported FFT modes; ten rate/mode cases verify the physical bootstrap
+span and exact reset. These corrections affect the optional arm and add no
+parameter, latency, allocation or dependency. Blind bootstrap speech contamination,
+later vowel loss, held-out quality and loaded/native deadline validation remain
+open; the unchanged main estimator is not classified as speech-preserving.
+
+
+A separate blind spectral-bootstrap prior was evaluated and rejected. Its local
+median cap retained settled noise reduction and kept all 36 development full-
+source SDR deltas within the predeclared regression guard, but it failed the
+existing tone-energy reduction test and did not resolve the original later-
+vowel projections (about 0.095 / 0.124 against the candidate's 0.5 guard).
+The main estimator is restored exactly; source snapshots and every failed guard
+remain in the audit artifacts. Final validation passes 129 release tests with
+four existing ignores, strict all-target QA Clippy and the 48-row optional QA.

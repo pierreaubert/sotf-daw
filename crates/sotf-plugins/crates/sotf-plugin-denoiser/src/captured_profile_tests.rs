@@ -247,7 +247,7 @@ fn small_profile_matches_independent_periodograms_and_commits_new_gains_together
         }
         re * re + im * im
     };
-    let mut state = MultiResState::new(2, 0.9, 0.7, 50, 5.0);
+    let mut state = MultiResState::new(2, 48_000.0, 0.9, 0.7, 50, 5.0);
     state.start_capture();
     state
         .feed_and_process(

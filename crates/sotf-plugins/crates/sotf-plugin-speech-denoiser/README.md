@@ -19,9 +19,11 @@ anti-phase cancellation and independent channel decisions while preserving the
 original stereo relationships. Wider layouts are rejected rather than
 receiving undefined independent spatial processing.
 
-For negatively correlated stereo, the detector uses the higher-energy channel
-as its polarity reference. Exact equal-energy ties orient the combined peak
-positively. A channel swap therefore supplies the same detector waveform even
+At the first negatively correlated stereo frame, the detector chooses the
+higher-energy physical channel as its polarity reference; exact energy ties
+orient the combined peak positively. It retains that channel reference through
+later negative-correlation frames until reset or model installation, so a level
+crossing does not invert the model input. A channel swap therefore supplies the same detector waveform even
 when the correlation sign changes between frames. This changes some stereo
 inference decisions; mono processing and model weights are unchanged. Original
 channel polarity is preserved when applying the shared gains.
@@ -130,3 +132,24 @@ strength 1.0 and the bundled model, reproducing v1 audio bit-exactly.
 Unknown fields and malformed values are still rejected. Strength and model
 changes freeze once nonempty EOF drain work begins, exactly like `enabled`;
 same-value snapshots remain accepted until reset or reinitialization.
+
+
+### Temporal stereo reference validation
+
+A 0.2% anti-correlated level change across equal channel energies previously
+changed the neural detector waveform by about 200% in relative L2 norm. Retaining
+the initial physical reference reduces that change to about 0.1%, with the
+independent power-normalization check, stream channel swaps, reset/model install
+and direct model-block timing references passing. Mono and positive-correlation
+mixing are unchanged; original audio channel polarities and common band gains
+remain intact. The additional state is fixed-size and adds no callback allocation.
+
+Thirty-six controlled recorded cases cover three existing English speakers,
+all three models, two unchanged controls, slow energy crossings and near-tie
+flutter. All 18 controls match the frozen previous policy sample-exactly.
+Changed-case ordinary SDR deltas range from -0.01760 to +6.20895 dB and SI-SDR
+deltas from -0.01769 to +5.82578 dB, passing the predeclared 0.25 dB regression
+guard. All 42 previous mono speech/noise/music quality records remain exact.
+These are development checks with unknown model training overlap. They do not
+establish held-out multilingual quality, correlation-sign-boundary behavior,
+listener acceptance or model/device deadline compliance.

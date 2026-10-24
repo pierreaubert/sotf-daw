@@ -133,3 +133,20 @@ cargo run -p sotf-plugin-aae --features qa --bin qa-aae
   silent-predelay, short-budget, zero-endpoint and continued-state checks. Its
   finite after-cap energy is observed omitted energy, not an infinite remainder
   bound or listening acceptance. Excited metadata stays Infinite.
+
+- FDN LFOs use prepared f64 quadrature rotations with bounded normalization every
+  4096 active samples. Preserve the specified Hz clock, inactive-clock pause,
+  initial line phases and exact reset. Do not restore f32 phase accumulation or
+  per-sample trigonometry. Keep the independent analytic-sine/full-tail and heap
+  regressions; oscillator accuracy does not establish sparse-fit or wall gates.
+
+- Late FDN delays retain room-scaled proportions but cap the longest full
+  nominal traversal at shortest endpoint T60 / 8. Existing modulation retains
+  its bounded +/-8-sample read excursion. Early-reflection geometry remains
+  independent. This is an intentional density/model change, not a fit tolerance.
+- Room and RT60 now share one latest endpoint and the existing two-head fade.
+  Never restart active fades or compute damping during admission. Preserve exact
+  staged combined controls, reset, heap, tail and exponential-weighting checks.
+- Keep the archived original neutral reference and the independently extended
+  f64 lossless rings/dense matrix. The full 208-case runner and all fit/target
+  assertions remain unchanged; passing clock accuracy is not decay acceptance.
