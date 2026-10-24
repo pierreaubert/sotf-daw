@@ -1,0 +1,19 @@
+{
+  "started": 1792833989.902823,
+  "source_sha256": "54913a07f2edc2e03f6e284f025dc683e24c43817ce79d12c67c8042ce5d768b",
+  "order": [
+    "baseline",
+    "candidate",
+    "candidate",
+    "baseline"
+  ],
+  "screen": {
+    "aggregate_ratio_max": 1.0,
+    "changed_case_ratio_max": 1.05,
+    "controls_ratio_min": 0.9,
+    "controls_ratio_max": 1.1,
+    "waveform_max_error": 2e-05
+  },
+  "raw_sha256": "91cf3a2c304551e5e926fb32612bcd502bb521c59105440a464730a6d3e4244a",
+  "source_unchanged_after_measurement": true
+}

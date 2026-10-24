@@ -1,0 +1,6 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)
+    Finished `release` profile [optimized] target(s) in 9.31s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)

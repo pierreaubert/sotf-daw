@@ -273,3 +273,7 @@ impl std::fmt::Debug for NupcEngine {
             .finish()
     }
 }
+
+#[cfg(test)]
+#[path = "final_tail_cost.rs"]
+mod final_tail_cost;

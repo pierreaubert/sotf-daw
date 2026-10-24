@@ -439,3 +439,34 @@ period is max(legacy, baseline, actual), preserving the established callback
 count even if a future implementation prepares smaller blocks. Current
 production timing remains the accepted preceding baseline; native and full
 capacity work stay open.
+
+
+### Controlled final-tail retry (2026-10-24)
+
+The retry keeps frozen baseline and candidate constructors in one process and
+runs seven preselected 48 kHz head geometries in ABBA order. It preserves all
+70,656 callback durations, equal input/warm-up/output handling, and the untrimmed
+four-period measurement horizon. Five changed geometries have aggregate median
+kernel time 0.96678 times baseline; each is below baseline, while two unchanged
+controls are within 0.5%. Complete measured output differs by at most 5.83e-10,
+and controls replay exactly. This passes the predeclared isolated timing screen.
+The manually executed diagnostic is ignored by default; it adds no CI timing gate.
+
+The subsequent unchanged full plugin matrix still fails the original acceptance
+guard: 1,365 head misses versus 690. It records 44/63 failing geometries and
+42,136 physical misses across the same 562,686 callbacks. All outputs remain
+finite, callback allocations/frees remain zero, and retained storage stays within
+unchanged admission estimates. The 15 changed head cases retain about 67.5–69.6%
+of preceding requested bytes. Six unchanged head controls record 259 misses
+versus 220, so the historical full-run comparison remains observational.
+
+The candidate is rejected again and production DSP is restored to `eab4937`.
+The frozen paired diagnostic remains in `plugins-spatial` for future profiling;
+its kernel throughput result does not establish full plugin or native deadlines.
+Candidate validation passes 273 tests; restored validation passes 271, with eight
+retained ignores including the two explicitly executed manual cost diagnostics.
+Strict all-target QA Clippy, formatting and standard Convolution QA pass.
+Raw trials, source hashes, full load data and the independently replayable failed
+guard remain in `final-tail-paired-*` and `final-tail-retry-*`; reproduce their
+checks with `verify-final-tail-paired.py` and `verify-final-tail-retry.py` in the
+audit artifact directory. Maximum capacity remains open.

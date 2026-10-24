@@ -85,3 +85,13 @@ cargo test -p plugins-spatial
   the failed data and require controlled paired profiling before revisiting.
   A smaller late level must not split a previously shared transform pair, and
   largest-block metadata must remain the maximum if sizes become nonmonotonic.
+
+- The 2026-10-24 final-tail retry passed isolated ABBA kernel timing but failed
+  the original full plugin head-miss guard again (1,365 versus 690). Production
+  DSP remains restored; preserve both failed full runs and the passing paired
+  screen without interpreting kernel throughput as deadline acceptance.
+- `final_tail_paired_callback_cost_abba` is an explicitly executed, ignored-by-
+  default diagnostic. Keep both frozen constructors independent of production,
+  seven selected geometries, two unchanged controls, full measured output checks,
+  equal output touching and the untrimmed four-period horizon. Preserve raw
+  durations and the constructor/source verifier; do not make timing a CI gate.

@@ -166,3 +166,9 @@ cargo test -p sotf-plugin-convolution
   (690 to 932), despite lower memory. Production DSP/tests are restored; source
   snapshots and the failed guard remain in `final-tail-*`. Unchanged controls
   also slowed, so obtain paired evidence before inferring an algorithm effect.
+
+- The controlled final-tail retry is also rejected: isolated paired kernel
+  timing improves 3.3%, but the unchanged full 562,686-callback matrix records
+  1,365 head misses against the original 690 guard. Keep the restored production
+  DSP, paired diagnostic, both failures and exact guard replay. Capacity remains
+  partial; see `final-tail-paired-*` and `final-tail-retry-*` artifacts.

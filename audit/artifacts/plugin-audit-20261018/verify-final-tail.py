@@ -71,8 +71,10 @@ plugin = "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution
 assert previous(plugin) == (REPO / plugin).read_text(), "plugin/admission/host behavior changed"
 assert source["candidate_rejected"]
 for path, sha in source["restored_baseline_sha256"].items():
-    assert (REPO / path).read_text() == previous(path), path
-    assert hashlib.sha256((REPO / path).read_bytes()).hexdigest() == sha, path
+    # The paired retry adds only this cfg(test) diagnostic to restored DSP.
+    restored = (REPO / path).read_text().removesuffix('\n#[cfg(test)]\n#[path = "final_tail_cost.rs"]\nmod final_tail_cost;\n')
+    assert restored == previous(path), path
+    assert hashlib.sha256(restored.encode()).hexdigest() == sha, path
 assert not (REPO / "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs").exists()
 patch = ""
 for path, snapshot in source["candidate_snapshot_paths"].items():

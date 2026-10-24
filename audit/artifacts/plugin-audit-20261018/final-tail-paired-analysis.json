@@ -1,0 +1,65 @@
+{
+  "screen_passed": true,
+  "changed_aggregate_ratio": 0.9667816978831617,
+  "cases": [
+    {
+      "case": "mono2",
+      "control": false,
+      "baseline_median_total_ns": 343728177.0,
+      "candidate_median_total_ns": 336922585.0,
+      "ratio": 0.9802006572187417,
+      "max_error": 5.820766e-10
+    },
+    {
+      "case": "full2",
+      "control": false,
+      "baseline_median_total_ns": 162197807.0,
+      "candidate_median_total_ns": 160677134.5,
+      "ratio": 0.9906245803927546,
+      "max_error": 4.0745363e-10
+    },
+    {
+      "case": "mono12",
+      "control": false,
+      "baseline_median_total_ns": 464955838.5,
+      "candidate_median_total_ns": 443453468.0,
+      "ratio": 0.9537539509787228,
+      "max_error": 2.910383e-10
+    },
+    {
+      "case": "full12_control",
+      "control": true,
+      "baseline_median_total_ns": 92523192.0,
+      "candidate_median_total_ns": 92895626.5,
+      "ratio": 1.0040253096758702,
+      "max_error": 0
+    },
+    {
+      "case": "mono32_control",
+      "control": true,
+      "baseline_median_total_ns": 248891838.0,
+      "candidate_median_total_ns": 249845991.5,
+      "ratio": 1.0038336070305367,
+      "max_error": 0
+    },
+    {
+      "case": "full32",
+      "control": false,
+      "baseline_median_total_ns": 113979543.0,
+      "candidate_median_total_ns": 111421062.5,
+      "ratio": 0.9775531605702262,
+      "max_error": 1.1641532e-10
+    },
+    {
+      "case": "true_stereo",
+      "control": false,
+      "baseline_median_total_ns": 152650830.5,
+      "candidate_median_total_ns": 143929892.0,
+      "ratio": 0.9428700225774402,
+      "max_error": 2.764864e-10
+    }
+  ],
+  "raw_callback_durations": 70656,
+  "constructors_verified": true,
+  "scope": "Isolated paired wall timing; does not establish full plugin or native deadlines."
+}

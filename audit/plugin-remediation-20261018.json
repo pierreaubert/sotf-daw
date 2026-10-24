@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Current actual-period-aware full63 gate remains red:43 failed geometries,40949 physical misses across562686 callbacks. Horizons are at least four materialized periods and never below historical duration;12 geometries gain30600 callbacks. The separate matched historical-horizon run records41 failures/40918 misses over532086 callbacks, versus prior43/42605; head misses2350 to660 across21 geometries with none higher. Matched results do not certify actual-period coverage in12 changed head grids. Retained head requested memory rises5\u201370%, within unchanged conservative estimates. Preserve all raw results, strict budgets, admission lengths, finite/zero-heap gates and native capacity scope. UPC, remaining NUPC/head capacity and aggregate/native evidence stay open. A later final-tail memory candidate was rejected: 50/63 failed cases, 41,574 total misses and head misses 690 to 932 on the same 562,686 callbacks. Six unchanged head controls also slowed (220 to 375), so causality is unresolved; require paired profiling before reconsidering. Production DSP was restored exactly; accepted baseline stays 43/63 and 40,949 misses."
+          "evidence": "Current actual-period-aware full63 gate remains red:43 failed geometries,40949 physical misses across562686 callbacks. Horizons are at least four materialized periods and never below historical duration;12 geometries gain30600 callbacks. The separate matched historical-horizon run records41 failures/40918 misses over532086 callbacks, versus prior43/42605; head misses2350 to660 across21 geometries with none higher. Matched results do not certify actual-period coverage in12 changed head grids. Retained head requested memory rises5\u201370%, within unchanged conservative estimates. Preserve all raw results, strict budgets, admission lengths, finite/zero-heap gates and native capacity scope. UPC, remaining NUPC/head capacity and aggregate/native evidence stay open. A later final-tail memory candidate was rejected: 50/63 failed cases, 41,574 total misses and head misses 690 to 932 on the same 562,686 callbacks. Six unchanged head controls also slowed (220 to 375), so causality is unresolved; require paired profiling before reconsidering. Production DSP was restored exactly; accepted baseline stays 43/63 and 40,949 misses. Controlled ABBA retry passes isolated throughput but full plugin head misses rise to 1365 (original guard690); candidate rejected again and production DSP restored. See final-tail-retry-analysis.json and paired raw trials."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1171,6 +1171,31 @@
             "audit/artifacts/plugin-audit-20261018/final-tail-analysis.json"
           ],
           "result": "QA now reports baseline_largest_period_frames and measures max(legacy, baseline, actual). Every original geometry, admission field, strict callback budget and all 562,686 callback counts match the preceding baseline. Production DSP is unchanged; the memory optimization tested with this control was rejected."
+        },
+        {
+          "task": "Preserve a controlled frozen-constructor final-tail cost diagnostic and replay the full acceptance guards",
+          "status": "implemented_and_verified",
+          "result": "Controlled retry keeps two frozen constructor bodies independent of production, verified against eab4937 and the archived candidate. Seven preselected 48 kHz geometries run baseline/candidate/candidate/baseline in one process with identical dense input, full-history warm-up, output touching and four untrimmed periods; all 70,656 callback durations are retained. Five changed-case median totals aggregate to 0.9667817 times baseline, every changed case improves, both unchanged controls are within 0.5%, and complete measured output error is below 5.83e-10 with exact controls. The predeclared isolated screen passes; this is kernel wall timing, not full plugin or native acceptance. Reapplying exactly the archived DSP passes 273 release tests with eight retained ignores (including two explicitly executed manual timing diagnostics), strict all-target QA Clippy, formatting and standard Convolution QA with zero local physical misses. The unchanged full 63-case load preserves all admission fields, strict budgets, four-period coverage and 562,686 callbacks, with all finite outputs, zero callback heap events and retained bytes within estimates. It records 44 failing geometries and 42,136 misses; head misses 690 to 1,365 fail the original guard again despite requested retained head bytes falling from 1,607,205,107 to 1,228,826,251 (sequential geometry totals, not RSS). Fifteen changed head cases retain about 67.5\u201369.6% of prior bytes; six unchanged head controls record 259 versus 220 misses, so historical timing is not causal proof. The candidate is rejected again, the failed guard is independently replayable, and production DSP is restored exactly to eab4937 apart from the cfg(test) diagnostic declaration. Restored validation passes 271 tests with eight retained ignores, strict all-target QA Clippy, formatting and standard QA. Both historical failures, paired success, exact hashes and raw data are retained. Overall remains 35/45 complete; Convolution partial.",
+          "evidence": [
+            "audit/artifacts/plugin-audit-20261018/final-tail-paired-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-paired-initial-compile-stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/final-tail-paired-raw.txt",
+            "audit/artifacts/plugin-audit-20261018/final-tail-paired-source.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-paired-stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-acceptance-guard.py",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-analysis.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.jsonl",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.stderr.txt",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-replayed-acceptance.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-source.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-validation.json",
+            "audit/artifacts/plugin-audit-20261018/verify-final-tail-paired.py",
+            "audit/artifacts/plugin-audit-20261018/verify-final-tail-retry.py",
+            "audit/artifacts/plugin-audit-20261018/run-final-tail-retry.py",
+            "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_cost.rs",
+            "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
+          ]
         }
       ],
       "evidence": [
@@ -1326,7 +1351,25 @@
         "audit/artifacts/plugin-audit-20261018/final-tail-split-nupc_engine.rs.txt",
         "audit/artifacts/plugin-audit-20261018/final-tail-split-validation.json",
         "audit/artifacts/plugin-audit-20261018/final-tail-validation.json",
-        "audit/artifacts/plugin-audit-20261018/verify-final-tail.py"
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail.py",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-initial-compile-stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-raw.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-acceptance-guard.py",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-replayed-acceptance.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail-paired.py",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail-retry.py",
+        "audit/artifacts/plugin-audit-20261018/run-final-tail-retry.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_cost.rs",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
       ]
     },
     {
@@ -4253,6 +4296,35 @@
         "audit/artifacts/plugin-audit-20261018/verify-final-tail.py"
       ],
       "limitations": "Historical head-miss guard failed despite lower memory. Unchanged controls also slowed; no causal inference or acceptance. DSP restored exactly, QA horizon floor retained. Controlled paired profiling and all remaining original audit requirements stay open; overall completion remains 35/45."
+    },
+    {
+      "name": "Controlled final-tail ABBA retry and repeated full-load rejection",
+      "state": "candidate_rejected",
+      "plugin_ids": [
+        14
+      ],
+      "result": "Controlled retry keeps two frozen constructor bodies independent of production, verified against eab4937 and the archived candidate. Seven preselected 48 kHz geometries run baseline/candidate/candidate/baseline in one process with identical dense input, full-history warm-up, output touching and four untrimmed periods; all 70,656 callback durations are retained. Five changed-case median totals aggregate to 0.9667817 times baseline, every changed case improves, both unchanged controls are within 0.5%, and complete measured output error is below 5.83e-10 with exact controls. The predeclared isolated screen passes; this is kernel wall timing, not full plugin or native acceptance. Reapplying exactly the archived DSP passes 273 release tests with eight retained ignores (including two explicitly executed manual timing diagnostics), strict all-target QA Clippy, formatting and standard Convolution QA with zero local physical misses. The unchanged full 63-case load preserves all admission fields, strict budgets, four-period coverage and 562,686 callbacks, with all finite outputs, zero callback heap events and retained bytes within estimates. It records 44 failing geometries and 42,136 misses; head misses 690 to 1,365 fail the original guard again despite requested retained head bytes falling from 1,607,205,107 to 1,228,826,251 (sequential geometry totals, not RSS). Fifteen changed head cases retain about 67.5\u201369.6% of prior bytes; six unchanged head controls record 259 versus 220 misses, so historical timing is not causal proof. The candidate is rejected again, the failed guard is independently replayable, and production DSP is restored exactly to eab4937 apart from the cfg(test) diagnostic declaration. Restored validation passes 271 tests with eight retained ignores, strict all-target QA Clippy, formatting and standard QA. Both historical failures, paired success, exact hashes and raw data are retained. Overall remains 35/45 complete; Convolution partial.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-initial-compile-stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-raw.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-paired-stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-acceptance-guard.py",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-replayed-acceptance.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail-paired.py",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail-retry.py",
+        "audit/artifacts/plugin-audit-20261018/run-final-tail-retry.py",
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_cost.rs",
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
+      ],
+      "limitations": "Passing isolated kernel throughput does not override the failed full plugin head-miss guard. No capacity, causal timing, RSS, aggregate overlap, native-device or new linear-phase EQ acceptance. Largest historical head increase is the 192 kHz / 12-output / mono-IR geometry (81 to 615 misses), outside the seven-case 48 kHz isolated screen; future controlled full-path profiling must cover it before another sizing retry."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
