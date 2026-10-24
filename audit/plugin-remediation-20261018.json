@@ -2584,6 +2584,18 @@
             "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py",
             "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json"
           ]
+        },
+        {
+          "requirement": "Evaluate a general configured-band-center correction without weakening fixed-support response guards.",
+          "status": "rejected_candidate_restored",
+          "result": "Independent finite-symmetric-support minimum-energy interpolation pilot fixes configured500Hz center but increases96k dense maximum relative error0.0286866 to0.041008 and RMS0.00270728 to0.00353819;1000Hz worsens-0.12757 to-0.15998dB.48k dense guards also fail. Correct4096-point design table reconstructs production500Hz error-0.24629679dB. First wrong-density diagnostic retained. DirectDFT and scalar anchor residual checks pass; algebraic interpolation is not quality acceptance. No Rust source changed; minimum-phase/other-shape integration not attempted after rejection. FIR-M1 and plugin remain partial.",
+          "evidence": [
+            "audit/artifacts/remaining-fir-anchors-20261024/README.md",
+            "audit/artifacts/remaining-fir-anchors-20261024/prototype.py",
+            "audit/artifacts/remaining-fir-anchors-20261024/result.json",
+            "audit/artifacts/remaining-fir-anchors-20261024/initial-result-wrong-design-density.json",
+            "audit/artifacts/remaining-fir-anchors-20261024/checkpoint.json"
+          ]
         }
       ],
       "evidence": [
@@ -2614,7 +2626,12 @@
         "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source.json",
         "audit/artifacts/remaining-convolution-eq-20261024/identity-only-analysis.json",
         "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py",
-        "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json"
+        "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json",
+        "audit/artifacts/remaining-fir-anchors-20261024/README.md",
+        "audit/artifacts/remaining-fir-anchors-20261024/prototype.py",
+        "audit/artifacts/remaining-fir-anchors-20261024/result.json",
+        "audit/artifacts/remaining-fir-anchors-20261024/initial-result-wrong-design-density.json",
+        "audit/artifacts/remaining-fir-anchors-20261024/checkpoint.json"
       ]
     },
     {

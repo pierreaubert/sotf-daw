@@ -1,0 +1,84 @@
+{
+  "shipping_dsp_changed": false,
+  "phase_scope": "centered linear only; minimum phase untested",
+  "independent_dft_max_error": 1.0481037884338143e-14,
+  "rows": [
+    {
+      "rate": 48000,
+      "taps": 1024,
+      "anchors": [
+        0.0,
+        150,
+        500,
+        2000,
+        24000.0
+      ],
+      "minimum_pivot": 503.22766453129475,
+      "anchor_residual": 4.440892098500626e-16,
+      "baseline": {
+        "max_relative_error": 0.0022824916488169977,
+        "rms_relative_error": 0.00023565951143032175,
+        "max_imaginary": 2.7871564919294128e-14,
+        "minimum_signed_response": 0.5118365418503817,
+        "probe_errors_db": {
+          "100.0": 0.009150291420011768,
+          "500.0": -0.01722881638190283,
+          "1000.0": 0.004684917297732018,
+          "4000.0": 0.00039036208806104354
+        }
+      },
+      "candidate": {
+        "max_relative_error": 0.002691850790186745,
+        "rms_relative_error": 0.000284763986450645,
+        "max_imaginary": 2.7890890823018682e-14,
+        "minimum_signed_response": 0.5118590190493035,
+        "probe_errors_db": {
+          "100.0": 0.009785125334307672,
+          "500.0": 1.928654933106574e-15,
+          "1000.0": 0.006217491307969768,
+          "4000.0": 0.0006392242166378625
+        }
+      },
+      "pilot_accepted": false
+    },
+    {
+      "rate": 96000,
+      "taps": 1024,
+      "anchors": [
+        0.0,
+        150,
+        500,
+        2000,
+        48000.0
+      ],
+      "minimum_pivot": 445.1590769757162,
+      "anchor_residual": 0.0,
+      "baseline": {
+        "max_relative_error": 0.02868659060213541,
+        "rms_relative_error": 0.0027072781574869293,
+        "max_imaginary": 2.763170043522476e-14,
+        "minimum_signed_response": 0.5097864249284378,
+        "probe_errors_db": {
+          "100.0": 0.059164521592264326,
+          "500.0": -0.2462967904817963,
+          "1000.0": -0.12756986672499912,
+          "4000.0": -0.025818161109524264
+        }
+      },
+      "candidate": {
+        "max_relative_error": 0.041007975506794914,
+        "rms_relative_error": 0.003538186470924411,
+        "max_imaginary": 2.887020321157979e-14,
+        "minimum_signed_response": 0.5061853630454295,
+        "probe_errors_db": {
+          "100.0": 0.1481765308309726,
+          "500.0": 0.0,
+          "1000.0": -0.15998352309076097,
+          "4000.0": -0.02996658335018308
+        }
+      },
+      "pilot_accepted": false
+    }
+  ],
+  "pilot_accepted": false
+}
