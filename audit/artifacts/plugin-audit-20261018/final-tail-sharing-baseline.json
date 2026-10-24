@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "a_short_last_partition_keeps_the_shared_transform_pair",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nfinal_tail_sharing cases=40 failures=40\ntest nupc::final_tail_tests::a_short_last_partition_keeps_the_shared_transform_pair ... FAILED\n\nfailures:\n\nfailures:\n    nupc::final_tail_tests::a_short_last_partition_keeps_the_shared_transform_pair\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 21 filtered out; finished in 0.06s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.41s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::final_tail_tests::a_short_last_partition_keeps_the_shared_transform_pair' (342383019) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs:95:5:\nassertion `left == right` failed: tail trimming introduced an extra transform pair\n  left: 40\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

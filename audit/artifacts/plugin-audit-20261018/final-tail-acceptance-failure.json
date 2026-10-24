@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/verify-final-tail.py"
+  ],
+  "exit_code": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/artifacts/plugin-audit-20261018/verify-final-tail.py\", line 162, in <module>\n    assert sum(r[\"new_misses\"] for r in heads) < sum(r[\"old_misses\"] for r in heads)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+}

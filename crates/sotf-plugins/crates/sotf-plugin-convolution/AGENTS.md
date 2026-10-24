@@ -158,3 +158,11 @@ cargo test -p sotf-plugin-convolution
   four-period horizon and preserves the 256-call floor. Never shorten historical
   durations or change callback budgets. Report all three period values; a
   planning estimate alone can miss a larger level after constructor changes.
+
+- Retain the preceding untrimmed head grid in
+  `baseline_largest_period_frames`; load measurement uses max(legacy, baseline,
+  actual). Future optimizations must not shorten the 562,686-callback workload.
+- Final-tail sizing was rejected after its historical head-miss guard failed
+  (690 to 932), despite lower memory. Production DSP/tests are restored; source
+  snapshots and the failed guard remain in `final-tail-*`. Unchanged controls
+  also slowed, so obtain paired evidence before inferring an algorithm effect.

@@ -1,0 +1,157 @@
+--- a/crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs
+@@ -24,0 +25,3 @@
++
++#[cfg(test)]
++mod final_tail_tests;
+--- a/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs
+@@ -62,0 +63,3 @@
++    /// An oversized standalone final group uses the smallest fitting block,
++    /// never below that base. Existing adjacent FFT sharing is retained.
++    /// Levels stay in IR order, not necessarily size order.
+@@ -94 +97,17 @@
+-        let specs = coalesce_partition_levels(plan_partitions(tail.len(), fft_block));
++        let mut specs = plan_partitions(tail.len(), fft_block);
++        // Preserve a final group that shares the preceding group's FFT size:
++        // splitting their coalesced level would add another transform pair.
++        let standalone_final = specs.len() < 2
++            || specs[specs.len() - 2].block_size != specs[specs.len() - 1].block_size;
++        if standalone_final && let Some(last) = specs.last_mut() {
++            let remaining = tail.len() - last.offset;
++            if remaining < last.block_size {
++                // Only the final group can contain this zero padding. Keep its
++                // IR offset and one partition, but do not transform a huge
++                // block for a short remainder. The base remains a lower bound.
++                let block = remaining.next_power_of_two().max(fft_block);
++                last.block_size = block;
++                last.fft_size = 2 * block;
++            }
++        }
++        let specs = coalesce_partition_levels(specs);
+@@ -218,0 +238 @@
++    /// A smaller final-tail level need not be the largest level.
+--- a/crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs
+@@ -53 +53 @@
+-fn runtime_has_one_level_per_block_size_with_unchanged_partition_coverage() {
++fn adjacent_equal_groups_keep_contiguous_partition_coverage() {
+@@ -83 +83,15 @@
+-                let original = plan_partitions(length - effective_head, min_block);
++                let mut original = plan_partitions(length - effective_head, min_block);
++                let standalone_final = original.len() < 2
++                    || original[original.len() - 2].block_size
++                        != original[original.len() - 1].block_size;
++                if effective_head > 0
++                    && standalone_final
++                    && let Some(last) = original.last_mut()
++                {
++                    let needed = (length - effective_head - last.offset)
++                        .next_power_of_two()
++                        .max(min_block);
++                    let block = last.block_size.min(needed);
++                    last.block_size = block;
++                    last.fft_size = 2 * block;
++                }
+--- /dev/null
++++ b/crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs
+@@ -0,0 +1,99 @@
++//! Final head-tail blocks cover remainders without oversized zero padding.
++
++// Rust guideline compliant 2026-02-21
++use super::NupcKernel;
++
++#[test]
++fn tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block() {
++    let mut cases = 0;
++    let mut failures = 0;
++    let mut last_blocks = 0;
++    let mut largest_blocks = 0;
++    for head in [33_usize, 65, 129, 257, 511] {
++        for cap in [32_usize, 1024] {
++            let limit = cap.min(head);
++            let base = (0..usize::BITS)
++                .map(|n| 1_usize << n)
++                .take_while(|&b| b <= limit)
++                .last()
++                .unwrap();
++            for levels in [1, 3, 6, 10] {
++                let prefix = 4 * base * ((1_usize << levels) - 1);
++                for remaining in [1, base - 1, base + 1] {
++                    let length = head + prefix + remaining;
++                    let ir = vec![0.01; length];
++                    let engine = NupcKernel::new_with_head(&ir, cap, head).instantiate();
++                    let expected_last = remaining.next_power_of_two().max(base);
++                    let expected_max = (base << (levels - 1)).max(expected_last);
++                    let last = engine.levels.last().unwrap().kernel.block_size;
++                    let valid =
++                        last == expected_last && engine.largest_block_size() == expected_max;
++                    assert_eq!(engine.head_taps(), head);
++                    assert_eq!(engine.latency_samples(), 0);
++                    let mut next = head;
++                    for level in &engine.levels {
++                        assert_eq!(
++                            level.output_delay.len() + level.kernel.block_size,
++                            next,
++                            "IR gap or overlap"
++                        );
++                        next += level.kernel.block_size * level.kernel.ir_partitions.len();
++                    }
++                    assert!(next >= length, "lost IR taps");
++                    failures += usize::from(!valid || next >= length + expected_last);
++                    if head == 257 && cap == 1024 && levels == 10 && remaining == 1 {
++                        println!(
++                            "final_tail_example ir_frames={length} last_block={last} largest_block={} expected_last={expected_last} expected_largest={expected_max}",
++                            engine.largest_block_size()
++                        );
++                    }
++                    last_blocks += last;
++                    largest_blocks += engine.largest_block_size();
++                    cases += 1;
++                }
++            }
++        }
++    }
++    println!(
++        "final_tail_layout cases={cases} failures={failures} last_blocks={last_blocks} largest_blocks={largest_blocks}"
++    );
++    assert_eq!(cases, 120);
++    assert_eq!(
++        failures, 0,
++        "tiny remainders still allocate oversized transforms"
++    );
++}
++
++#[test]
++fn a_short_last_partition_keeps_the_shared_transform_pair() {
++    let mut cases = 0;
++    let mut failures = 0;
++    for head in [33_usize, 65, 129, 257, 511] {
++        for cap in [32_usize, 1024] {
++            let limit = cap.min(head);
++            let upper = limit.next_power_of_two();
++            let base = if upper == limit { limit } else { upper / 2 };
++            for levels in [1, 3, 6, 10] {
++                let block = base << levels;
++                let prefix = 4 * base * ((1_usize << levels) - 1);
++                // Two full partitions and a one-sample final partition already
++                // share one transform pair at this size. Do not split them.
++                let ir = vec![0.01; head + prefix + 2 * block + 1];
++                let engine = NupcKernel::new_with_head(&ir, cap, head).instantiate();
++                let last = engine.levels.last().unwrap();
++                let valid = last.kernel.block_size == block
++                    && last.kernel.ir_partitions.len() == 3
++                    && engine.levels.len() == levels + 1;
++                failures += usize::from(!valid);
++                assert_eq!(engine.largest_block_size(), block);
++                cases += 1;
++            }
++        }
++    }
++    println!("final_tail_sharing cases={cases} failures={failures}");
++    assert_eq!(cases, 40);
++    assert_eq!(
++        failures, 0,
++        "tail trimming introduced an extra transform pair"
++    );
++}

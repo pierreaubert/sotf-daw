@@ -278,9 +278,22 @@ fn run(case: Case, id: usize) -> Result<Value, String> {
     } else {
         1024
     };
-    // Keep the historical horizon as a floor, but cover four periods of the
-    // materialized runtime even when internal partition selection changes.
-    let largest_period = legacy_largest_period.max(actual_largest_period);
+    // Retain the preceding untrimmed power-of-two head grid as another floor.
+    // Smaller prepared final levels must not shorten this established workload.
+    let baseline_largest_period = if case.nupc && case.head {
+        let head = HEAD.min(length);
+        let base = 1_usize << 1024.min(head).ilog2();
+        plugins_spatial::nupc::plan_partitions(length - head, base)
+            .iter()
+            .map(|spec| spec.block_size)
+            .max()
+            .unwrap_or(1)
+    } else {
+        legacy_largest_period
+    };
+    let largest_period = legacy_largest_period
+        .max(baseline_largest_period)
+        .max(actual_largest_period);
     let mut steady = Vec::new();
     for frames in [128, 512] {
         let calls = 256.max((largest_period * 4).div_ceil(frames));
@@ -293,6 +306,7 @@ fn run(case: Case, id: usize) -> Result<Value, String> {
         "construction_retained_requested_delta_bytes":retained,"construction_peak_requested_delta_bytes":peak,
         "retained_delta_within_estimate":retained<=case.estimate(length),"latency_frames":latency,
         "legacy_largest_period_frames":legacy_largest_period,
+        "baseline_largest_period_frames":baseline_largest_period,
         "actual_largest_period_frames":actual_largest_period,
         "measured_largest_period_frames":largest_period,
         "warm":warm,"steady":steady}),

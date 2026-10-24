@@ -79,3 +79,9 @@ cargo test -p plugins-spatial
   describes the selected head grid. Keep Convolution's conservative admission
   arithmetic unchanged and verify materialized retained storage at its original
   boundaries. Do not infer capacity from powers-of-two selection alone.
+
+- The proposed standalone final-tail crop is archived, not production behavior.
+  Its waveform checks passed but its historical timing guard failed. Preserve
+  the failed data and require controlled paired profiling before revisiting.
+  A smaller late level must not split a previously shared transform pair, and
+  largest-block metadata must remain the maximum if sizes become nonmonotonic.

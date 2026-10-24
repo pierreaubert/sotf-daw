@@ -1,0 +1,1120 @@
+{
+  "candidate_functional_verified": true,
+  "candidate_rejected": true,
+  "historical_head_miss_guard_passed": false,
+  "memory_guard_passed": true,
+  "production_dsp_restored_exactly": true,
+  "restored_tests_passed": 271,
+  "restored_tests_ignored": 7,
+  "candidate_tests_passed": 273,
+  "candidate_tests_ignored": 7,
+  "standalone_cases": 120,
+  "sharing_cases": 40,
+  "maximum_errors": {
+    "nupc_coalesced_unmerged": 2.2351741790771484e-08,
+    "nupc_real_direct_reference": 1.5679317962036254e-08,
+    "nupc_large_sparse_reference": 2.420713940409769e-08,
+    "nupc_phase_f64": 1.5832483768463135e-08
+  },
+  "plugin_and_admission_unchanged": true,
+  "callbacks_budgets_and_period_floor_unchanged": true,
+  "actual_periods_verified": true,
+  "previous_load": {
+    "cases": 63,
+    "callbacks": 562686,
+    "failed_cases": 43,
+    "physical_misses": 40949,
+    "deadline_pass": false
+  },
+  "load": {
+    "cases": 63,
+    "callbacks": 562686,
+    "failed_cases": 50,
+    "physical_misses": 41574,
+    "deadline_pass": false
+  },
+  "unchanged_head_controls": 6,
+  "unchanged_head_old_misses": 220,
+  "unchanged_head_new_misses": 375,
+  "head_old_misses": 690,
+  "head_new_misses": 932,
+  "head_geometries_fewer_misses": 6,
+  "head_geometries_equal_misses": 5,
+  "head_geometries_more_misses": 10,
+  "head_retained_ratio_min": 0.6751923303353072,
+  "head_retained_ratio_max": 1.0,
+  "comparisons": [
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 76,
+      "old_retained_bytes": 34870647,
+      "new_retained_bytes": 34870647,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1,
+      "new_misses": 0,
+      "old_retained_bytes": 58388279,
+      "new_retained_bytes": 58388279,
+      "old_actual_period": 131072,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 16,
+      "new_misses": 19,
+      "old_retained_bytes": 98541271,
+      "new_retained_bytes": 67477143,
+      "old_actual_period": 262144,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 52,
+      "old_retained_bytes": 46441839,
+      "new_retained_bytes": 46441839,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 7,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "old_actual_period": 65536,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 8,
+      "new_misses": 0,
+      "old_retained_bytes": 60787225,
+      "new_retained_bytes": 41077657,
+      "old_actual_period": 131072,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1439,
+      "new_misses": 1494,
+      "old_retained_bytes": 150491689,
+      "new_retained_bytes": 150491689,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 22,
+      "old_retained_bytes": 68120849,
+      "new_retained_bytes": 68120849,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 20,
+      "new_misses": 51,
+      "old_retained_bytes": 118801897,
+      "new_retained_bytes": 82650537,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1243,
+      "new_misses": 1308,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 8,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 13,
+      "old_retained_bytes": 51640433,
+      "new_retained_bytes": 51640433,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 15,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 20,
+      "new_misses": 74,
+      "old_retained_bytes": 85155945,
+      "new_retained_bytes": 85155945,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 486,
+      "new_misses": 542,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 16,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "old_actual_period": 8192,
+      "new_actual_period": 8192
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 48000,
+        "true_stereo": false
+      },
+      "old_misses": 7,
+      "new_misses": 5,
+      "old_retained_bytes": 60125555,
+      "new_retained_bytes": 40634739,
+      "old_actual_period": 8192,
+      "new_actual_period": 4096
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 4,
+      "old_retained_bytes": 69584225,
+      "new_retained_bytes": 69584225,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 48000,
+        "true_stereo": true
+      },
+      "old_misses": 8,
+      "new_misses": 0,
+      "old_retained_bytes": 60682705,
+      "new_retained_bytes": 40972497,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 69491993,
+      "new_retained_bytes": 69491993,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "old_actual_period": 131072,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 36,
+      "new_misses": 32,
+      "old_retained_bytes": 98541273,
+      "new_retained_bytes": 67477145,
+      "old_actual_period": 262144,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 92626129,
+      "new_retained_bytes": 92626129,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "old_actual_period": 65536,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 16,
+      "new_misses": 16,
+      "old_retained_bytes": 60787225,
+      "new_retained_bytes": 41077657,
+      "old_actual_period": 131072,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776361,
+      "new_retained_bytes": 238776361,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 68120849,
+      "new_retained_bytes": 68120849,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 40,
+      "new_misses": 52,
+      "old_retained_bytes": 118801897,
+      "new_retained_bytes": 82650537,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1371,
+      "old_retained_bytes": 238948465,
+      "new_retained_bytes": 238948465,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 46685585,
+      "new_retained_bytes": 46685585,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 10,
+      "new_misses": 11,
+      "old_retained_bytes": 51640433,
+      "new_retained_bytes": 51640433,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1040,
+      "old_retained_bytes": 238844297,
+      "new_retained_bytes": 238844297,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 81709329,
+      "new_retained_bytes": 81709329,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 48,
+      "new_misses": 48,
+      "old_retained_bytes": 85155945,
+      "new_retained_bytes": 85155945,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048851,
+      "new_retained_bytes": 239048851,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598323,
+      "new_retained_bytes": 55598323,
+      "old_actual_period": 8192,
+      "new_actual_period": 8192
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 96000,
+        "true_stereo": false
+      },
+      "old_misses": 15,
+      "new_misses": 15,
+      "old_retained_bytes": 60125555,
+      "new_retained_bytes": 40634739,
+      "old_actual_period": 8192,
+      "new_actual_period": 4096
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 2845,
+      "new_misses": 2845,
+      "old_retained_bytes": 138894401,
+      "new_retained_bytes": 138894401,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936049,
+      "new_retained_bytes": 35936049,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 96000,
+        "true_stereo": true
+      },
+      "old_misses": 16,
+      "new_misses": 16,
+      "old_retained_bytes": 60682705,
+      "new_retained_bytes": 40972497,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 138734681,
+      "new_retained_bytes": 138734681,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 47,
+      "new_misses": 47,
+      "old_retained_bytes": 58388369,
+      "new_retained_bytes": 58388369,
+      "old_actual_period": 131072,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 72,
+      "new_misses": 72,
+      "old_retained_bytes": 98541273,
+      "new_retained_bytes": 67477145,
+      "old_actual_period": 262144,
+      "new_actual_period": 131072
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 5786,
+      "new_misses": 5786,
+      "old_retained_bytes": 184994705,
+      "new_retained_bytes": 184994705,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 23,
+      "new_misses": 23,
+      "old_retained_bytes": 36337345,
+      "new_retained_bytes": 36337345,
+      "old_actual_period": 65536,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 2,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 36,
+      "new_misses": 32,
+      "old_retained_bytes": 60787225,
+      "new_retained_bytes": 41077657,
+      "old_actual_period": 131072,
+      "new_actual_period": 65536
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 2396,
+      "new_misses": 2396,
+      "old_retained_bytes": 238776273,
+      "new_retained_bytes": 238776361,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 1,
+      "old_retained_bytes": 68120763,
+      "new_retained_bytes": 68120763,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 81,
+      "new_misses": 133,
+      "old_retained_bytes": 118801899,
+      "new_retained_bytes": 82650539,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": false,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1371,
+      "new_misses": 1372,
+      "old_retained_bytes": 238948467,
+      "new_retained_bytes": 238948467,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 2,
+      "old_retained_bytes": 46685587,
+      "new_retained_bytes": 46685587,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 12,
+        "nupc": true,
+        "output_channels": 12,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 28,
+      "new_misses": 62,
+      "old_retained_bytes": 51640435,
+      "new_retained_bytes": 51640435,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 1040,
+      "new_misses": 1046,
+      "old_retained_bytes": 238844299,
+      "new_retained_bytes": 238844299,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 2,
+      "new_misses": 0,
+      "old_retained_bytes": 81709331,
+      "new_retained_bytes": 81709331,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 1,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 114,
+      "new_misses": 167,
+      "old_retained_bytes": 85155947,
+      "new_retained_bytes": 85155947,
+      "old_actual_period": 16384,
+      "new_actual_period": 16384
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": false,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 614,
+      "new_misses": 614,
+      "old_retained_bytes": 239048853,
+      "new_retained_bytes": 239048853,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 55598325,
+      "new_retained_bytes": 55598325,
+      "old_actual_period": 8192,
+      "new_actual_period": 8192
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 32,
+        "nupc": true,
+        "output_channels": 32,
+        "rate_hz": 192000,
+        "true_stereo": false
+      },
+      "old_misses": 63,
+      "new_misses": 82,
+      "old_retained_bytes": 60125557,
+      "new_retained_bytes": 40634741,
+      "old_actual_period": 8192,
+      "new_actual_period": 4096
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": false,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 5006,
+      "new_misses": 5006,
+      "old_retained_bytes": 239063875,
+      "new_retained_bytes": 239063787,
+      "old_actual_period": 1024,
+      "new_actual_period": 1024
+    },
+    {
+      "geometry": {
+        "head": false,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 0,
+      "new_misses": 0,
+      "old_retained_bytes": 35936051,
+      "new_retained_bytes": 35936051,
+      "old_actual_period": 32768,
+      "new_actual_period": 32768
+    },
+    {
+      "geometry": {
+        "head": true,
+        "head_taps": 257,
+        "ir_channels": 4,
+        "nupc": true,
+        "output_channels": 2,
+        "rate_hz": 192000,
+        "true_stereo": true
+      },
+      "old_misses": 36,
+      "new_misses": 32,
+      "old_retained_bytes": 60682707,
+      "new_retained_bytes": 40972499,
+      "old_actual_period": 65536,
+      "new_actual_period": 32768
+    }
+  ],
+  "scope": "Same 63 admitted geometries, 562686 callbacks and strict budgets. Actual periods may shrink but the preceding untrimmed period remains a measurement floor. Local historical timing is unmatched; no causal/native-device or new linear-EQ capacity acceptance."
+}

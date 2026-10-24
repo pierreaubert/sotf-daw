@@ -1,0 +1,51 @@
+{
+  "base_commit": "eab4937fe1c5ac3f3f54a34f0197f8d142fa08e0",
+  "horizon_policy": "Retain original legacy and preceding untrimmed power-of-two planning periods as floors; measure max(legacy,baseline,actual), with original warm and minimum 256 steady calls. Expected fixed total562686 callbacks.",
+  "source_sha256": {
+    "Cargo.lock": "8214e358c13655280a7eab0dc02de2e3df72d1efcae178e2a5ff15585289742c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "6fd9e8377711f534fa3cd6bdfd6f36f5e8ab62e1287b45dd73ef45ed2c3b93a1",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "518b1590a5f716d4cb4f6a80c7b3d0ada79600951d58b357744dd509da5a3f57",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs": "e47f8f979d8b326b2bdcb56fdac496fa53eff24eb014dc5b04223bc50c88b2e9",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs": "a1a7c1c898194833f04b29e8ef091397991b5071f275a1fcd592f19ec4d9c2ea",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_tests.rs": "d55af70e46b207324831ad759858d1f1aeca3b53fafbf79287cfc53bf3562747",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "cd713fdf6b8ad8bbd5a95aef1dea6e4e8e56fcec489c61159d01fa496abf4568",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "79321a0648a1dec724e23a6d6607770667b09432b7eb192d2df4e8d1acb4fdca",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/phase_tests.rs": "a47f361baeeef98c00e2fa6cecacf85dff79b7719b265c94baa83eb37f01c00f",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "b5fdb80bd89e250a09f02784ad16811e1d34d1ae21946f578b727f50f0dacec5",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/Cargo.toml": "1f95133ba21929a2c05ad27fd0b0eb2f7fd70997f6808006b8cae80b554aaa79",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "7699720301115bb5fe5bfae98bb9338b48f40a8b99ed90cb0f48404c0712efa3",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "a7189128e25c136ee86410fa981630d0c253816139bd9a111343b09c42db9e59",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/misc.rs": "5e027d5c953935d825791a816fb4618cf00903082403ea0987dc2c2012ba9b3e",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/resource_tests.rs": "6b2eeba3681ae27e9d0172a773185fce638a0d7c264fd444007013735c1f12ed",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests.rs": "3011183bfdd4f6ea2a15c09cda2bc5864eb18e5c5ab3d219736eefbce61cc6b4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/tests/misc.rs": "0ce81ad3257c60661f5dd47f6ba3dd1bfdc3f3be165ebd145f740fbed7320f30",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/types.rs": "e8ffe06bdd13211504a634b00fc2c3d0588200ff66b619e1b13b3e8a55ddc171",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/upc_real_tests.rs": "e4b83754d07d8e762f004d2192bc91ea5e1be0c7f4450b98d1f5566519a422a4",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/tests/direct_convolution.rs": "76fa9909c9bf0d8c297e56aeddbe0c9885a4c7d6972ca02b046ea9454d72570f"
+  },
+  "baseline_artifact_sha256": {
+    "head-fft-selection-load.json": "0e22d82b560c10b5ad4b34fe550d509f0184302a9af76e67956e0dbcf793b60f",
+    "final-tail-baseline.json": "cf8006024a0d88ef2a8f34b6d5412ba14f6b32d62403ea1fa714d7dcf296ddf4",
+    "final-tail-initial-baseline.json": "331c763d7176299e30fb4bd76f29a47fafec8c4819032450f40887e61943477b",
+    "final-tail-sharing-baseline.json": "7b3ad5a637f52ba09b1dad18106147876e56e2c6787e7a11e33731e43b881438",
+    "final-tail-split-validation.json": "7845f0ea48a23eb0f0cd4af6361c05082b594f90af3f384fd33c943b1849211a",
+    "final-tail-split-nupc_engine.rs.txt": "e8be31a041e4d6724550727485c0cc5752bb41535536982ac6823d1457402295",
+    "final-tail-selection.json": "afa41b42b64e977428a52e60eed86a35256ba28f1d9737860de24f319790dcf3"
+  },
+  "hashes_unchanged_after_load": true,
+  "candidate_snapshot_paths": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc.rs.txt",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc_engine.rs.txt",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "audit/artifacts/plugin-audit-20261018/final-tail-candidate-coalesced_tests.rs.txt",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs": "audit/artifacts/plugin-audit-20261018/final-tail-candidate-final_tail_tests.rs.txt"
+  },
+  "restored_baseline_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "59bc9a6b8c5714c8f2e9c4b6a4390e0c2b338718928f705cdafa82bbc87b0548",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "1b9103dd59d87f485b702c004d74fbd232ad9174212f78d8e72868f6b3229011",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "47cb680045051f96742ca5358b719c9e851150363ce5b1c0e18a97b8a2dc3930"
+  },
+  "candidate_rejected": true,
+  "rejection_reason": "The fixed-workload historical head-miss guard fails: 932 versus 690. Total misses 41574 versus 40949 and failed cases 50 versus 43. Memory falls in changed geometries, but unchanged controls also get slower; no causal timing conclusion or acceptance is justified. Production DSP restored; paired profiling remains required.",
+  "candidate_patch_sha256": "3b927e0ae8942d6dcd0aab58211a8d115c4555558d87303125609e98d1976320"
+}

@@ -409,3 +409,33 @@ snapshots, period-coverage report and independent verifier are retained under
 `audit/artifacts/plugin-audit-20261018/head-fft-selection-*` and
 `verify-head-fft-selection.py`. Capacity and aggregate/native validation remain
 open; no new linear-phase EQ maximum-load acceptance is claimed.
+
+### Rejected final-tail sizing candidate
+
+An evaluated candidate replaced oversized standalone final head-tail blocks with
+smaller fitting blocks, retaining absolute offsets, direct taps and complete
+support. It passed waveform, reset, heap and resource checks. A separate sharing
+regression rejected an unconditional version that would split an existing FFT
+pair; that variant is also retained as evidence.
+
+The selected candidate lowered requested retained memory in changed head
+geometries to about 67.5–69.6% of the preceding values. It failed the declared
+historical head-miss guard: 932 misses versus 690. The complete fixed workload
+recorded 50/63 failing geometries and 41,574 physical misses over 562,686
+callbacks, versus 43 / 40,949 previously. Unchanged head controls also became
+slower, so these unmatched observations do not establish a causal regression
+or justify acceptance. Paired profiling is required before reconsidering it.
+
+Production DSP and tests were restored exactly to the preceding commit. Candidate
+source/test snapshots, both structural failures, the complete load results and
+the replayable failed acceptance guard remain under
+`audit/artifacts/plugin-audit-20261018/final-tail-*`, with
+`verify-final-tail.py`. The verifier checks the rejection and exact restoration;
+it does not turn the failed gate into acceptance.
+
+The QA-only control improvement is retained: the prior untrimmed power-of-two
+head-grid period is explicit in `baseline_largest_period_frames`. The measured
+period is max(legacy, baseline, actual), preserving the established callback
+count even if a future implementation prepares smaller blocks. Current
+production timing remains the accepted preceding baseline; native and full
+capacity work stay open.

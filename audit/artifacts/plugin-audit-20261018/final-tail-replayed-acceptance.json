@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/plugin-audit-20261018/final-tail-acceptance-guard.py"
+  ],
+  "exit_code": 1,
+  "stdout": "{\"head_before\": 690, \"head_after\": 932, \"retained_before\": 1607205107, \"retained_after\": 1228826867, \"head_miss_guard_passed\": false, \"memory_guard_passed\": true}\n",
+  "stderr": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/artifacts/plugin-audit-20261018/final-tail-acceptance-guard.py\", line 12, in <module>\n    assert result[\"memory_guard_passed\"] and result[\"head_miss_guard_passed\"], \"candidate does not meet both acceptance guards\"\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: candidate does not meet both acceptance guards\n"
+}

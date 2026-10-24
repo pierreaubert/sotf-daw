@@ -1,0 +1,20 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "stdout": "\nrunning 22 tests\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... ignored, explicit isolated paired cost diagnostic; not a functional deferral or CI deadline gate\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\nnupc_half_spectra checks=108 failures=0 legacy_complex_values=70980 actual_complex_values=35598\ntest nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins ... ok\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\nnupc_coalesced_coverage cases=120 failures=0 original_levels=438 actual_levels=246\ntest nupc::coalesced_tests::adjacent_equal_groups_keep_contiguous_partition_coverage ... ok\ndirect_head_f64 cases=18 maximum_error=5.3350127399154346e-8\ntest nupc::head_tests::direct_head_matches_f64_convolution_at_every_history_wrap_and_lane_boundary ... ok\nnupc_real_direct_reference cases=54 maximum_error=1.5679317962036254e-8\ntest nupc::real_fft_tests::real_fft_render_matches_independent_f64_direct_convolution_through_complete_tail ... ok\nnupc_phase_layout cases=1176 checks=16464 failures=0\ntest nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size ... ok\nfinal_tail_example ir_frames=1047810 last_block=256 largest_block=131072 expected_last=256 expected_largest=131072\nhead_fft_example head=257 blocks=[256, 512, 1024] first_delay=1\nfinal_tail_sharing cases=40 failures=0\ntest nupc::final_tail_tests::a_short_last_partition_keeps_the_shared_transform_pair ... ok\nhead_fft_selection cases=962 levels=5004 failures=0\ntest nupc::head_partition_tests::every_supported_head_selects_power_two_tail_blocks_under_the_requested_cap ... ok\nnupc_coalesced_unmerged cases=45 maximum_error=2.2351741790771484e-8\ntest nupc::coalesced_tests::merged_levels_match_separate_delayed_groups_through_reset_and_complete_tail ... ok\nfinal_tail_layout cases=120 failures=0 last_blocks=14336 largest_blocks=1476608\ntest nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block ... ok\nnupc_large_sparse_reference cases=4 maximum_error=2.420713940409769e-8\ntest nupc::real_fft_tests::large_partition_levels_preserve_sparse_absolute_taps_and_last_tail_sample ... ok\nnupc_phase_f64 cases=36 maximum_error=1.5832483768463135e-8 exact_replay=true\ntest nupc::phase_tests::phased_engines_match_f64_convolution_and_exact_replay_through_complete_tail ... ok\n\ntest result: ok. 21 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.31s\n\n\nrunning 2 tests\ntest crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs - nupc::nupc_engine::NupcKernel::instantiate_with_phase (line 145) ... ok\ntest crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs - nupc::nupc_engine::NupcKernel::new_with_head (line 71) ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nall doctests ran in 0.87s; merged doctests compilation took 0.83s\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 10.13s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n   Doc-tests plugins_spatial\n"
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "final_tail_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\ntest nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block ... FAILED\n\nfailures:\n\nfailures:\n    nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 9.48s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block' (342274607) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs:43:21:\nlost taps or excessive final padding\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

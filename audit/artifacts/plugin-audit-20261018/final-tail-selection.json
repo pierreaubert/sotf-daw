@@ -1,0 +1,8 @@
+{
+  "rejected_variant": "Unconditional last-partition trimming before coalescing.",
+  "reason": "It splits an already coalescible final group and adds a transform pair.",
+  "sharing_baseline_cases": 40,
+  "sharing_baseline_failures": 40,
+  "selected_policy": "Trim only a standalone final group; preserve adjacent FFT sharing, then coalesce new adjacent matches.",
+  "validation_scope": "The rejected variant passed waveform tests, not the new sharing invariant; no maximum-load timing claim is made for it. The selected policy must pass the complete fixed 562686-callback capacity matrix."
+}

@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "final_tail_tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nfinal_tail_example ir_frames=1047810 last_block=262144 largest_block=262144 expected_last=256 expected_largest=131072\nfinal_tail_layout cases=120 failures=110 last_blocks=2951424 largest_blocks=2951424\ntest nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block ... FAILED\n\nfailures:\n\nfailures:\n    nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.11s\n\n",
+  "stderr": "   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 8.55s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-02cbd719f547158c)\n\nthread 'nupc::final_tail_tests::tiny_final_remainders_keep_all_taps_and_report_the_actual_maximum_block' (342279657) panicked at crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_tests.rs:61:5:\nassertion `left == right` failed: tiny remainders still allocate oversized transforms\n  left: 110\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p plugins-spatial --lib`\n"
+}

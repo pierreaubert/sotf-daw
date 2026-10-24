@@ -953,7 +953,7 @@
         {
           "task": "Address measured full-load callback deadline failures",
           "status": "pending",
-          "evidence": "Current actual-period-aware full63 gate remains red:43 failed geometries,40949 physical misses across562686 callbacks. Horizons are at least four materialized periods and never below historical duration;12 geometries gain30600 callbacks. The separate matched historical-horizon run records41 failures/40918 misses over532086 callbacks, versus prior43/42605; head misses2350 to660 across21 geometries with none higher. Matched results do not certify actual-period coverage in12 changed head grids. Retained head requested memory rises5\u201370%, within unchanged conservative estimates. Preserve all raw results, strict budgets, admission lengths, finite/zero-heap gates and native capacity scope. UPC, remaining NUPC/head capacity and aggregate/native evidence stay open."
+          "evidence": "Current actual-period-aware full63 gate remains red:43 failed geometries,40949 physical misses across562686 callbacks. Horizons are at least four materialized periods and never below historical duration;12 geometries gain30600 callbacks. The separate matched historical-horizon run records41 failures/40918 misses over532086 callbacks, versus prior43/42605; head misses2350 to660 across21 geometries with none higher. Matched results do not certify actual-period coverage in12 changed head grids. Retained head requested memory rises5\u201370%, within unchanged conservative estimates. Preserve all raw results, strict budgets, admission lengths, finite/zero-heap gates and native capacity scope. UPC, remaining NUPC/head capacity and aggregate/native evidence stay open. A later final-tail memory candidate was rejected: 50/63 failed cases, 41,574 total misses and head misses 690 to 932 on the same 562,686 callbacks. Six unchanged head controls also slowed (220 to 375), so causality is unresolved; require paired profiling before reconsidering. Production DSP was restored exactly; accepted baseline stays 43/63 and 40,949 misses."
         },
         {
           "task": "Correct ordinary convolution resource admission using shared partition geometry",
@@ -1161,6 +1161,16 @@
             "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
           ],
           "result": "Direct-head NupcKernel preparation now chooses the largest power-of-two tail base within the requested cap and actual head length. Every direct tap is retained; absolute-offset delay compensates the shorter block (257 taps: blocks 257/514/1028/2056 become 256/512/1024/2048, first delay 0 to 1). Ordinary construction, phase policy (heads zero), public explicit planner, callback convolution, normalization, routing, automation, latency, complete finite support and kernel sharing are unchanged. Admission arithmetic/limits/source lengths remain the previous conservative model. Across every supported head 32..512 and caps 32/1024, 962 structural cases fail 476 before and zero after; materialized runtime levels total 4817 before and 5260 after, so more levels/storage are possible. The old unmerged renderer and its waveform/assertion bodies are byte-identical; only structural coalescing expectations describe the selected new grid. Independent f64 dense54/sparse4/legacy-unmerged45/phased36 full-tail cases retain errors below 2.43e-8 at unchanged 2e-5 gates, with exact dirty reset/partition replay. Final affected release tests: 271 passed/seven retained ignores; strict all-target QA Clippy, formatting and standard Convolution QA pass, the latter with zero local physical misses. A historical matched-horizon 63-case run retains all old geometry/admission/budget fields and 532086 callbacks: 41 failed cases /40918 total misses versus prior43/42605. All21 head geometries record fewer misses, head total2350 to660. However near grid boundaries12 matched geometries cover fewer than four actual prepared periods. Preserve that diagnostic and exact kernel/plugin/harness snapshots; do not classify it as actual-period capacity acceptance. Add a read-only largest-block accessor plus QA-only plugin metadata; load QA measures max(actual prepared period, historical planning period), preserving warm counts, 256-call minimum, 128/512 sizes and strict raw 1.0 budgets. Final full63 gate therefore adds30600 calls in12 geometries (never shorter) and verifies at least four actual periods: 562686 callbacks, 43 failed geometries,40949 physical misses,690 in head cases; exit1. All rows finite, callback allocation/free-free and within unchanged conservative estimates; all admitted lengths, latencies and source boundaries match. Matched head retained requested bytes rise to1.04938\u20131.70126 times prior values; this CPU/memory tradeoff is not RSS or an aggregate-overlap bound. Both complete red runs, coverage-gap explanation, source/baseline hashes, all period fields and independent verifier are retained. Local unmatched timing is not causal/generalized/native-device acceptance. Maximum capacity remains open; linear-phase EQ keeps phase-zero/no-head construction with no new maximum-load result or FIR-M1 claim. Convolution partial; overall35/45 complete."
+        },
+        {
+          "task": "Retain the preceding prepared head-grid period as an explicit fixed-workload QA control",
+          "status": "implemented_and_verified",
+          "evidence": [
+            "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs",
+            "audit/artifacts/plugin-audit-20261018/final-tail-restored-validation.json",
+            "audit/artifacts/plugin-audit-20261018/final-tail-analysis.json"
+          ],
+          "result": "QA now reports baseline_largest_period_frames and measures max(legacy, baseline, actual). Every original geometry, admission field, strict callback budget and all 562,686 callback counts match the preceding baseline. Production DSP is unchanged; the memory optimization tested with this control was rejected."
         }
       ],
       "evidence": [
@@ -1292,7 +1302,31 @@
         "audit/artifacts/plugin-audit-20261018/head-fft-selection-validation.json",
         "audit/artifacts/plugin-audit-20261018/verify-head-fft-selection.py",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/head_partition_tests.rs",
-        "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs",
+        "audit/artifacts/plugin-audit-20261018/final-tail-acceptance-failure.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-acceptance-guard.py",
+        "audit/artifacts/plugin-audit-20261018/final-tail-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-coalesced_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-final_tail_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate.patch",
+        "audit/artifacts/plugin-audit-20261018/final-tail-focused.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-replayed-acceptance.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-restored-validation.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-selection.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-sharing-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-focused.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-validation.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail.py"
       ]
     },
     {
@@ -4184,6 +4218,41 @@
         "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs"
       ],
       "limitations": "Current strengthened load gate still fails43/63 with40949 misses over562686 callbacks. Matched historical timing is incomplete actual-period coverage for12 geometries and is not native/causal acceptance. Head retained requested memory increases5\u201370%. All original plugin requirements, prior EQ28/108 failures and FIR-M1 remain open; completion35/45."
+    },
+    {
+      "name": "Rejected standalone final-tail sizing with shared-transform and fixed-workload guards",
+      "state": "candidate_rejected",
+      "plugin_ids": [
+        14
+      ],
+      "result": "Rejected a standalone final-tail sizing candidate after its declared historical head-miss guard failed. The candidate kept all IR samples, direct taps, offsets, latency, normalization and host behavior, but replaced oversized standalone final blocks with smaller fitting power-of-two blocks bounded below by the selected base. A 120-case boundary regression fails 110 cases before and zero on the candidate; its example replaces a 262,144-sample final block for one tap with 256 samples while retaining the actual largest-block maximum of 131,072. An initial excessive-padding assertion is preserved, then diagnostics collect every upper-bound failure before failing; no gate is removed. An unconditional variant passes waveform tests but fails 40 shared-transform cases; the selected variant preserves adjacent FFT sharing and passes all 40. Both source variants and failures are retained. The old unmerged renderer and numerical assertion bodies are unchanged. Independent dense 54, sparse 4, old-layout 45 and phased 36 f64 full-tail references retain errors below 2.43e-8 under the existing 2e-5 gates, with exact dirty reset and partition replay. Candidate release validation passes 273 tests with seven retained ignores; strict all-target QA Clippy, formatting and standard Convolution QA pass. The full 63-case load run preserves every admitted length, latency, estimate, geometry, callback budget and all 562,686 callbacks, including the preceding untrimmed grid as a horizon floor. All rows are finite, callback allocation/free-free and within the unchanged retained estimates. Requested retained memory in 15 changed head geometries is about 67.5\u201369.6% of preceding values, while six controls are unchanged. However the candidate records 50 failing geometries and 41,574 physical misses versus the accepted 43 / 40,949 baseline; head misses rise from 690 to 932, failing the predeclared guard. The six unchanged head controls also rise from 220 to 375 misses, so historical timing cannot establish a causal algorithm regression or justify acceptance. The failed guard is preserved and independently replayable; it is not relaxed. Production DSP and active tests are restored byte-for-byte to eab4937. Restored release validation passes 271 tests with seven retained ignores, strict all-target QA Clippy, formatting and standard QA. The QA-only improvement remains: explicit baseline_largest_period_frames retains the preceding untrimmed grid, with max(legacy, baseline, actual), so future sizing changes cannot shorten this control workload. Complete raw failures, source hashes, source/test snapshots, a reproducible zero-context candidate patch and a verifier of rejection/restoration are retained. Next work requires controlled paired baseline/candidate profiling before reconsidering this memory optimization; no native, causal, current capacity or new EQ acceptance is claimed. Accepted production capacity remains the prior 43/63 red result. Convolution partial; overall completion remains 35/45.",
+      "evidence": [
+        "audit/artifacts/plugin-audit-20261018/final-tail-acceptance-failure.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-acceptance-guard.py",
+        "audit/artifacts/plugin-audit-20261018/final-tail-analysis.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-coalesced_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-final_tail_tests.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-candidate.patch",
+        "audit/artifacts/plugin-audit-20261018/final-tail-focused.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-initial-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.jsonl",
+        "audit/artifacts/plugin-audit-20261018/final-tail-load.stderr.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-replayed-acceptance.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-restored-validation.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-selection.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-sharing-baseline.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-source.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-focused.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-nupc_engine.rs.txt",
+        "audit/artifacts/plugin-audit-20261018/final-tail-split-validation.json",
+        "audit/artifacts/plugin-audit-20261018/final-tail-validation.json",
+        "audit/artifacts/plugin-audit-20261018/verify-final-tail.py"
+      ],
+      "limitations": "Historical head-miss guard failed despite lower memory. Unchanged controls also slowed; no causal inference or acceptance. DSP restored exactly, QA horizon floor retained. Controlled paired profiling and all remaining original audit requirements stay open; overall completion remains 35/45."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
