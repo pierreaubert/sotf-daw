@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-hal-input",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "hal,sotf-host/qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.3536466669756919,
+  "stdout": "",
+  "stderr": "    Finished `release` profile [optimized] target(s) in 0.27s\n"
+}

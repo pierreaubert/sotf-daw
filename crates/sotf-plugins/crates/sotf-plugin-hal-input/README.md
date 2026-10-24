@@ -7,8 +7,13 @@ Reads audio data from the macOS CoreAudio HAL driver via shared memory, acting a
 `input_channels` is structural and must match the negotiated HAL stream. Runtime
 status is available through `HalInputPlugin::diagnostics()` rather than plugin
 automation. When `needs_control_recovery` becomes true, a control thread may call
-`refresh_transport()`; that operation can open mappings and load keys and must
-never run in the audio callback. The plugin reports zero graph-compensation
+`refresh_transport()` to validate a replacement without changing the active
+reader on refusal. A liveness supervisor should call `service_transport()` instead:
+if broker attachment, key loading or format validation fails, it latches the
+source disconnected and silent until a validated replacement succeeds. A healthy
+probe retains the active reader and its partially consumed decrypted record;
+periodic checks must not discard those source frames. Both
+operations can open mappings and load keys and must never run in the audio callback. The plugin reports zero graph-compensation
 latency because shared-memory capacity is not measured signal latency.
 
 Each nonempty callback validates readiness and format before and after its single
@@ -62,6 +67,10 @@ or real Swift/device operation.
 `connected` observes shared `driver_ready`; it is not broker-process liveness.
 After abrupt writer death with that flag still set, missing frames and underruns
 advance but automatic control recovery is not requested. A control supervisor
-must detect producer/session changes and call `refresh_transport`. Hardware
-clock drift, callback-time format races and automatic liveness supervision remain
-outstanding.
+must schedule `service_transport()` to check broker availability. After a failed
+service, stale readiness cannot rearm callbacks: missing frames advance without
+new underruns or reader consumption, reset does not clear the latch, and
+initialization refuses until control preparation succeeds. A failed transactional
+`refresh_transport()` continues to preserve its prior reader and diagnostics.
+Hardware clock drift, callback-time format races and automatic service scheduling
+remain outstanding.

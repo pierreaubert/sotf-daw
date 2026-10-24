@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-hal-input",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "hal,sotf-host/qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 299.51116604194976,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n    Checking math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n    Checking driver-common v0.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-common)\n    Checking driver-hal v0.1.13 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-hal)\n    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-hal-input v0.5.87 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input)\n    Checking sotf-plugin-hal-output v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output)\n    Finished `release` profile [optimized] target(s) in 4m 59s\n"
+}

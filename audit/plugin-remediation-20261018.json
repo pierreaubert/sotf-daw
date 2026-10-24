@@ -1999,11 +1999,54 @@
             "audit/artifacts/plugin-audit-20261018/hal-input-native-broker-validation.json"
           ],
           "result": "New separately ignored native_transport integration target spawns only explicitly redirected private fixtures; shared mapping, key and runtime paths are verified before native constructors. Production brokered shared-memory/readers pass 32 cases: 1-16 channels at 48/96k, plain partial/empty reads, disconnect/reconnect exact first frames, encrypted records, key rotation while old plaintext is staged, failed refresh retaining the active reader, sample-rate refusal/restoration and exact first frames after region replacement. A distinct writer process is killed abruptly: immutable retained mapping and its queued frames remain valid, starvation is counted, and explicit refresh reads replacement first frame exactly. The observed automatic-recovery flag remains false while stale driver_ready remains set: liveness supervision stays open. All native successful callbacks assert zero allocations (not independently frees); core36 tests and native strict all-target QA Clippy/format pass. Current dirty driver/Cargo.lock hashes are stable before/after each run and recorded. Final harness uses public method names already present in committed driver source; this is not a clean-driver compile/runtime claim. Initial harness source using two uncommitted method names retained separately, then replaced with stable compatibility calls. No live default transport, actual Swift producer, callback race, source-clock drift or device timing claim; no driver/engine edits."
+        },
+        {
+          "task": "Latch failed control-thread input service and retain healthy decrypted staging under validated prepared geometry",
+          "status": "implemented_and_verified",
+          "result": "Add explicit control-thread service_transport. Failed attachment/key/format preparation latches callbacks disconnected without consuming a retired reader whose ready bit remains set; reset and initialize cannot bypass recovery. Successful validated replacement clears the latch. Healthy probes retain the active reader and its partially consumed decrypted records, arming and counters. A final shortcut regression independently catches 3/3 stale prepared-format cases before refinement; clock/channel mismatches now refuse service and a changed capacity refreshes metadata. Add a control-only HalInputReader backing_file_is_current query through the existing driver mapping API; no filesystem call enters process. Preserve transactional refresh refusal semantics. Final validation passes 39 core tests, 32 isolated native channel/rate cases, strict all-target native QA Clippy and formatting. Actual killed-child broker tests verify failed-service latching, repeated zero-heap silence and exact replacement first frames; every native healthy-service encrypted suffix is exact. Sources remain unchanged throughout final validation. The driver's preexisting dirty bytes are preserved exactly around the isolated new method; a minimal committed-source patch is retained. Native runtime uses the recorded dirty dependency snapshot, not a clean driver/Swift/device certification. Automatic host service scheduling, source clock drift and concurrent native owner/epoch scope remain open. HAL input remains partial; no count advancement from 35/45.",
+          "evidence": [
+            "audit/artifacts/remaining-hal-20261024/README.md",
+            "audit/artifacts/remaining-hal-20261024/dependency-after.json",
+            "audit/artifacts/remaining-hal-20261024/dependency-before.json",
+            "audit/artifacts/remaining-hal-20261024/driver-control-mapping-method.txt",
+            "audit/artifacts/remaining-hal-20261024/driver-control-mapping.patch",
+            "audit/artifacts/remaining-hal-20261024/format-probe-baseline.json",
+            "audit/artifacts/remaining-hal-20261024/format.json",
+            "audit/artifacts/remaining-hal-20261024/input-before.rs.txt",
+            "audit/artifacts/remaining-hal-20261024/input-core-initial.json",
+            "audit/artifacts/remaining-hal-20261024/input-core.json",
+            "audit/artifacts/remaining-hal-20261024/input-native-initial.json",
+            "audit/artifacts/remaining-hal-20261024/input-native.json",
+            "audit/artifacts/remaining-hal-20261024/native-clippy-initial.json",
+            "audit/artifacts/remaining-hal-20261024/native-clippy.json",
+            "audit/artifacts/remaining-hal-20261024/run-validation.py",
+            "audit/artifacts/remaining-hal-20261024/service-before-prepared-format.rs.txt",
+            "audit/artifacts/remaining-hal-20261024/source.json",
+            "audit/artifacts/remaining-hal-20261024/verify.py"
+          ]
         }
       ],
       "evidence": [
         "audit/artifacts/plugin-audit-20261018/hal-input-read-epoch-validation.json",
-        "audit/artifacts/plugin-audit-20261018/hal-input-native-broker-validation.json"
+        "audit/artifacts/plugin-audit-20261018/hal-input-native-broker-validation.json",
+        "audit/artifacts/remaining-hal-20261024/README.md",
+        "audit/artifacts/remaining-hal-20261024/dependency-after.json",
+        "audit/artifacts/remaining-hal-20261024/dependency-before.json",
+        "audit/artifacts/remaining-hal-20261024/driver-control-mapping-method.txt",
+        "audit/artifacts/remaining-hal-20261024/driver-control-mapping.patch",
+        "audit/artifacts/remaining-hal-20261024/format-probe-baseline.json",
+        "audit/artifacts/remaining-hal-20261024/format.json",
+        "audit/artifacts/remaining-hal-20261024/input-before.rs.txt",
+        "audit/artifacts/remaining-hal-20261024/input-core-initial.json",
+        "audit/artifacts/remaining-hal-20261024/input-core.json",
+        "audit/artifacts/remaining-hal-20261024/input-native-initial.json",
+        "audit/artifacts/remaining-hal-20261024/input-native.json",
+        "audit/artifacts/remaining-hal-20261024/native-clippy-initial.json",
+        "audit/artifacts/remaining-hal-20261024/native-clippy.json",
+        "audit/artifacts/remaining-hal-20261024/run-validation.py",
+        "audit/artifacts/remaining-hal-20261024/service-before-prepared-format.rs.txt",
+        "audit/artifacts/remaining-hal-20261024/source.json",
+        "audit/artifacts/remaining-hal-20261024/verify.py"
       ]
     },
     {
@@ -4325,6 +4368,35 @@
         "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
       ],
       "limitations": "Passing isolated kernel throughput does not override the failed full plugin head-miss guard. No capacity, causal timing, RSS, aggregate overlap, native-device or new linear-phase EQ acceptance. Largest historical head increase is the 192 kHz / 12-output / mono-IR geometry (81 to 615 misses), outside the seven-case 48 kHz isolated screen; future controlled full-path profiling must cover it before another sizing retry."
+    },
+    {
+      "name": "HAL input control availability service with healthy staging and prepared format guards",
+      "state": "implemented_and_verified",
+      "plugin_ids": [
+        26
+      ],
+      "result": "Add explicit control-thread service_transport. Failed attachment/key/format preparation latches callbacks disconnected without consuming a retired reader whose ready bit remains set; reset and initialize cannot bypass recovery. Successful validated replacement clears the latch. Healthy probes retain the active reader and its partially consumed decrypted records, arming and counters. A final shortcut regression independently catches 3/3 stale prepared-format cases before refinement; clock/channel mismatches now refuse service and a changed capacity refreshes metadata. Add a control-only HalInputReader backing_file_is_current query through the existing driver mapping API; no filesystem call enters process. Preserve transactional refresh refusal semantics. Final validation passes 39 core tests, 32 isolated native channel/rate cases, strict all-target native QA Clippy and formatting. Actual killed-child broker tests verify failed-service latching, repeated zero-heap silence and exact replacement first frames; every native healthy-service encrypted suffix is exact. Sources remain unchanged throughout final validation. The driver's preexisting dirty bytes are preserved exactly around the isolated new method; a minimal committed-source patch is retained. Native runtime uses the recorded dirty dependency snapshot, not a clean driver/Swift/device certification. Automatic host service scheduling, source clock drift and concurrent native owner/epoch scope remain open. HAL input remains partial; no count advancement from 35/45.",
+      "evidence": [
+        "audit/artifacts/remaining-hal-20261024/README.md",
+        "audit/artifacts/remaining-hal-20261024/dependency-after.json",
+        "audit/artifacts/remaining-hal-20261024/dependency-before.json",
+        "audit/artifacts/remaining-hal-20261024/driver-control-mapping-method.txt",
+        "audit/artifacts/remaining-hal-20261024/driver-control-mapping.patch",
+        "audit/artifacts/remaining-hal-20261024/format-probe-baseline.json",
+        "audit/artifacts/remaining-hal-20261024/format.json",
+        "audit/artifacts/remaining-hal-20261024/input-before.rs.txt",
+        "audit/artifacts/remaining-hal-20261024/input-core-initial.json",
+        "audit/artifacts/remaining-hal-20261024/input-core.json",
+        "audit/artifacts/remaining-hal-20261024/input-native-initial.json",
+        "audit/artifacts/remaining-hal-20261024/input-native.json",
+        "audit/artifacts/remaining-hal-20261024/native-clippy-initial.json",
+        "audit/artifacts/remaining-hal-20261024/native-clippy.json",
+        "audit/artifacts/remaining-hal-20261024/run-validation.py",
+        "audit/artifacts/remaining-hal-20261024/service-before-prepared-format.rs.txt",
+        "audit/artifacts/remaining-hal-20261024/source.json",
+        "audit/artifacts/remaining-hal-20261024/verify.py"
+      ],
+      "limitations": "Explicit control service only. Automatic host scheduling, physical producer clock, clean driver/Swift/device and full concurrent owner/epoch validation remain open; all10partial plugin scopes stay active."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",

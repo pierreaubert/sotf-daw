@@ -1,0 +1,18 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "crates/driver-hal/src/shared_memory/hal_input_reader.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-hal-input/tests/native_transport.rs"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.053428207989782095,
+  "stdout": "",
+  "stderr": ""
+}

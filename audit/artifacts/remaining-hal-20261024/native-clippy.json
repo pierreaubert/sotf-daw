@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-hal-input",
+    "-p",
+    "sotf-plugin-hal-output",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "hal,sotf-host/qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.5904567500110716,
+  "stdout": "",
+  "stderr": "    Checking sotf-plugin-hal-input v0.5.87 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input)\n    Finished `release` profile [optimized] target(s) in 0.50s\n"
+}

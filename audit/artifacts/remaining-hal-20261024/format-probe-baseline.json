@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-hal-input",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "sotf-host/qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "healthy_probe_validates_the_prepared_format",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "stdout": "\nrunning 1 test\nhealthy_service_format cases=3 failures=3\ntest hal_input_plugin::audit_tests::healthy_probe_validates_the_prepared_format_before_retaining_reader ... FAILED\n\nfailures:\n\nfailures:\n    hal_input_plugin::audit_tests::healthy_probe_validates_the_prepared_format_before_retaining_reader\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.00s\n\n",
+  "stderr": "    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on package cache\n    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-hal-input v0.5.87 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input)\n    Finished `release` profile [optimized] target(s) in 2m 18s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hal_input-0cfbc189b3f3d926)\n\nthread 'hal_input_plugin::audit_tests::healthy_probe_validates_the_prepared_format_before_retaining_reader' (356492031) panicked at crates/sotf-plugins/crates/sotf-plugin-hal-input/src/lib/hal_input_audit_tests.rs:563:5:\nassertion `left == right` failed\n  left: 3\n right: 0\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nerror: test failed, to rerun pass `-p sotf-plugin-hal-input --lib`\n",
+  "elapsed_seconds": 138.2385639580898
+}

@@ -106,13 +106,27 @@ fn abrupt_writer_death_and_replacement(runtime: &Path) {
     assert!(read(&mut p, 48_000, 8).iter().all(|&v| v == 0.0));
     assert_eq!(p.diagnostics().missing_frames, before.missing_frames + 8);
     let automatic_recovery = p.diagnostics().needs_control_recovery;
+    assert!(p.service_transport().is_err());
+    let serviced = p.diagnostics();
+    assert!(!serviced.connected && serviced.needs_control_recovery);
+    // The pinned old header still says ready; callback observation cannot
+    // override the failed broker service or turn this into an ordinary underrun.
+    let missing = serviced.missing_frames;
+    let underruns = serviced.underrun_count;
+    for _ in 0..3 {
+        assert_eq!(read(&mut p, 48_000, 8), vec![0.0; 16]);
+        assert!(p.diagnostics().needs_control_recovery);
+        assert!(!p.diagnostics().connected);
+    }
+    assert_eq!(p.diagnostics().missing_frames, missing + 24);
+    assert_eq!(p.diagnostics().underrun_count, underruns);
     let mut replacement = spawn_writer(runtime, 9000);
-    p.refresh_transport().unwrap();
+    p.service_transport().unwrap();
     expect_prefix(&read(&mut p, 48_000, 8), &data(2, 8, 9000));
     replacement.kill().unwrap();
     replacement.wait().unwrap();
     println!(
-        "native_hal_input_cross_process abrupt_writer_death=true immutable_region_retained=true queued_frames_exact=true replacement_first_frame_exact=true automatic_recovery={automatic_recovery}"
+        "native_hal_input_cross_process abrupt_writer_death=true immutable_region_retained=true queued_frames_exact=true replacement_first_frame_exact=true automatic_recovery={automatic_recovery} failed_service_latched=true successful_service_first_frame_exact=true"
     );
 }
 
@@ -190,6 +204,15 @@ fn native_cases(runtime: &Path) {
             let retained = data(channels, 5, 5000);
             assert_eq!(writer.write_audio_encrypted(&retained, &cipher_b), 5);
             expect_prefix(&read(&mut p, rate, 8), &retained);
+            // Healthy service probes must keep the active decrypted suffix;
+            // reopening it unconditionally would lose these four source frames.
+            let healthy = data(channels, 7, 5500);
+            assert_eq!(writer.write_audio_encrypted(&healthy, &cipher_b), 7);
+            expect_prefix(&read(&mut p, rate, 3), &healthy[..3 * channels]);
+            let before_service = p.diagnostics();
+            p.service_transport().unwrap();
+            assert_eq!(p.diagnostics(), before_service);
+            expect_prefix(&read(&mut p, rate, 8), &healthy[3 * channels..]);
             let other_rate = if rate == 48_000 { 96_000 } else { 48_000 };
             writer.set_sample_rate(other_rate);
             let mut rejected = vec![99.0; 8 * channels];
@@ -230,7 +253,7 @@ fn native_cases(runtime: &Path) {
             let after = p.diagnostics();
             assert_eq!(after.missing_frames, before.missing_frames + 8);
             println!(
-                "native_hal_input rate={rate} channels={channels} plaintext=true encrypted=true old_key_staging_discarded=true restart_first_frame_exact=true refresh_failure_retained=true format_rejected=true after_writer_drop_recovery={}",
+                "native_hal_input rate={rate} channels={channels} plaintext=true encrypted=true old_key_staging_discarded=true restart_first_frame_exact=true refresh_failure_retained=true format_rejected=true healthy_service_staged_suffix_exact=true after_writer_drop_recovery={}",
                 after.needs_control_recovery
             );
             drop(p);

@@ -132,6 +132,17 @@ impl HalInputReader {
             .unwrap_or(false)
     }
 
+    /// Check whether this reader still owns the current published mapping.
+    ///
+    /// Performs filesystem metadata queries and belongs on the control thread.
+    /// This checks mapping identity, not producer process liveness or an atomic
+    /// session epoch. A live broker attachment must be checked separately.
+    pub fn backing_file_is_current(&self) -> bool {
+        self.buffer
+            .as_ref()
+            .is_some_and(SharedAudioBuffer::backing_file_is_current)
+    }
+
     /// Read audio samples from the HAL.
     ///
     /// Real-time safe: no filesystem I/O, no allocations, no per-call

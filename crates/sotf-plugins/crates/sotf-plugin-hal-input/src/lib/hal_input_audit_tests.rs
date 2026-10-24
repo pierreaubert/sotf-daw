@@ -27,6 +27,10 @@ struct State {
 struct Reader(Arc<Mutex<State>>);
 
 impl HalAudioSource for Reader {
+    fn control_mapping_is_current(&self) -> bool {
+        true
+    }
+
     fn read_frames(&mut self, output: &mut [f32]) -> usize {
         let mut s = self.0.lock().unwrap();
         s.reads += 1;
@@ -453,4 +457,108 @@ fn successful_and_unavailable_observations_have_zero_callback_heap_activity() {
         }
     }
     println!("input_observation_heap callbacks={callbacks} allocations=0 frees=0");
+}
+
+#[test]
+fn failed_control_service_latches_stale_ready_reader_until_valid_replacement() {
+    let (mut plugin, state) = processor(2);
+    let context = ProcessContext::new(48_000, 3);
+    let mut output = [99.0; 6];
+    plugin.process(&[], &mut output, &context).unwrap();
+    assert_eq!(output, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    let old_reads = state.lock().unwrap().reads;
+    assert!(
+        plugin
+            .service_replacement(Err("broker exited".into()))
+            .is_err()
+    );
+    assert!(
+        state.lock().unwrap().connected,
+        "retired ready bit remains set"
+    );
+    let before = plugin.diagnostics();
+    assert!(!before.connected && before.needs_control_recovery);
+    assert!(plugin.initialize(48_000.0).is_err());
+    plugin.reset();
+    for _ in 0..3 {
+        output.fill(99.0);
+        no_heap(|| {
+            assert_eq!(plugin.process(&[], &mut output, &context), Ok(3));
+        });
+        assert_eq!(output, [0.0; 6]);
+        assert!(!plugin.diagnostics().connected);
+        assert!(plugin.diagnostics().needs_control_recovery);
+    }
+    assert_eq!(state.lock().unwrap().reads, old_reads);
+    assert_eq!(
+        plugin.diagnostics().missing_frames,
+        before.missing_frames + 9
+    );
+    assert_eq!(plugin.diagnostics().underrun_count, before.underrun_count);
+    // A rejected replacement cannot clear the control-service latch.
+    let (_other, wrong) = processor(1);
+    assert!(
+        plugin
+            .service_replacement(Ok(Box::new(Reader(wrong))))
+            .is_err()
+    );
+    assert!(plugin.control_unavailable);
+    plugin
+        .service_replacement(Ok(Box::new(Reader(Arc::clone(&state)))))
+        .unwrap();
+    plugin.process(&[], &mut output, &context).unwrap();
+    assert_eq!(output, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
+    assert!(plugin.diagnostics().connected);
+    assert!(!plugin.diagnostics().needs_control_recovery);
+}
+
+#[test]
+fn healthy_control_service_keeps_active_reader_and_its_history() {
+    let (mut plugin, active) = processor(2);
+    let (_other, probe) = processor(2);
+    let mut output = [0.0; 6];
+    plugin
+        .process(&[], &mut output, &ProcessContext::new(48_000, 3))
+        .unwrap();
+    let before = plugin.diagnostics();
+    plugin
+        .service_replacement(Ok(Box::new(Reader(Arc::clone(&probe)))))
+        .unwrap();
+    assert_eq!(plugin.diagnostics(), before);
+    plugin
+        .process(&[], &mut output, &ProcessContext::new(48_000, 3))
+        .unwrap();
+    assert_eq!(active.lock().unwrap().reads, 2);
+    assert_eq!(probe.lock().unwrap().reads, 0);
+}
+
+#[test]
+fn healthy_probe_validates_the_prepared_format_before_retaining_reader() {
+    let mut failures = 0;
+    for mutation in [Mutation::Rate, Mutation::Channels, Mutation::Capacity] {
+        let (mut plugin, active) = processor(2);
+        let (_other, probe) = processor(2);
+        let mut format = active.lock().unwrap().format;
+        match mutation {
+            Mutation::Rate => format.sample_rate = 96_000,
+            Mutation::Channels => format.channels = 3,
+            Mutation::Capacity => format.buffer_capacity_frames = 32,
+            _ => unreachable!(),
+        }
+        active.lock().unwrap().format = format;
+        probe.lock().unwrap().format = format;
+        // Agreement between active and probed headers does not establish that
+        // either still matches this plugin's prepared clock/channel/capacity.
+        let result = plugin.service_replacement(Ok(Box::new(Reader(probe))));
+        let correct = if matches!(mutation, Mutation::Capacity) {
+            result.is_ok() && plugin.diagnostics().buffer_capacity_frames == 32
+        } else {
+            result.is_err()
+                && plugin.diagnostics().needs_control_recovery
+                && !plugin.diagnostics().connected
+        };
+        failures += usize::from(!correct);
+    }
+    println!("healthy_service_format cases=3 failures={failures}");
+    assert_eq!(failures, 0);
 }

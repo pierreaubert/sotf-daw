@@ -41,3 +41,15 @@ cargo test -p sotf-plugin-hal-input
   and do not claim clean-driver, Swift callback or hardware timing validation.
 - Shared driver_ready is not process liveness. Abrupt writer death can leave
   connected=true with counted silence; automatic supervisor recovery is open.
+
+- `service_transport` is an explicit non-RT liveness check: failed broker/key/
+  format preparation latches callbacks disconnected without consuming the old
+  ready mapping. Reset and initialize cannot bypass it; successful validated
+  replacement clears it. Keep transactional `refresh_transport` refusal behavior
+  separate. Automatic service scheduling and physical source-clock checks remain
+  open; never derive process death from silence alone.
+
+- Healthy service probes must retain the current reader's decrypted suffix and
+  arming/counter state. The driver mapping identity check is control-only and
+  performs filesystem metadata work; never call it from reader_observation or
+  process. A new mapping or faulted reader still requires validated replacement.

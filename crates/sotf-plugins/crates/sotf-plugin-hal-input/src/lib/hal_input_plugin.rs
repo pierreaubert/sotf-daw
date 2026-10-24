@@ -30,6 +30,10 @@ trait HalAudioSource: Send {
     fn needs_control_recovery(&self) -> bool {
         false
     }
+    /// Control-thread-only mapping identity check; never called by process.
+    fn control_mapping_is_current(&self) -> bool {
+        false
+    }
 }
 
 enum ReaderObservation {
@@ -61,6 +65,10 @@ impl HalAudioSource for HalInputReader {
 
     fn needs_control_recovery(&self) -> bool {
         self.needs_cipher_reload()
+    }
+
+    fn control_mapping_is_current(&self) -> bool {
+        self.backing_file_is_current()
     }
 
     fn transport_available_frames(&self) -> usize {
@@ -125,6 +133,7 @@ pub struct HalInputPlugin {
     /// True after at least one complete or partial read while connected.
     stream_armed: bool,
     recovery_pending: bool,
+    control_unavailable: bool,
     format_mismatch_pending: bool,
     last_error: HalInputErrorKind,
     cached_parameters: Vec<Parameter>,
@@ -169,6 +178,7 @@ impl HalInputPlugin {
                 initialized_sample_rate: None,
                 stream_armed: false,
                 recovery_pending: false,
+                control_unavailable: false,
                 format_mismatch_pending: false,
                 last_error: HalInputErrorKind::None,
                 cached_parameters: Self::build_parameters(channels),
@@ -274,6 +284,7 @@ impl HalInputPlugin {
             self.last_error = HalInputErrorKind::None;
         }
         self.format_mismatch_pending = false;
+        self.control_unavailable = false;
         self.stream_armed = false;
         Ok(())
     }
@@ -284,6 +295,11 @@ impl HalInputPlugin {
     /// of the replacement fails.
     #[cfg(all(target_os = "macos", feature = "hal"))]
     pub fn refresh_transport(&mut self) -> Result<(), String> {
+        self.activate_reader(Self::open_reader()?)
+    }
+
+    #[cfg(all(target_os = "macos", feature = "hal"))]
+    fn open_reader() -> Result<Box<dyn HalAudioSource>, String> {
         let mut replacement = HalInputReader::new()
             .ok_or_else(|| "HAL input shared memory is unavailable".to_string())?;
         if replacement.needs_cipher_reload() {
@@ -291,7 +307,63 @@ impl HalInputPlugin {
                 .reload_cipher()
                 .map_err(|error| error.to_string())?;
         }
-        self.activate_reader(Box::new(replacement))
+        Ok(Box::new(replacement))
+    }
+
+    /// Check broker availability and recover the source on a control thread.
+    ///
+    /// Probes the current mapping and cipher, retaining healthy reader staging.
+    /// Replaces a retired or faulted reader. A failure latches
+    /// callbacks silent, even if the retired mapping still advertises readiness.
+    /// Only a successfully validated replacement clears that latch. The caller
+    /// schedules this operation; it performs filesystem work and allocation and
+    /// must never run from the audio callback. Silence alone is not a liveness
+    /// signal, and this method does not measure the physical producer clock.
+    ///
+    /// # Errors
+    /// Returns an error if attachment, cipher loading, or format validation fails.
+    #[cfg(all(target_os = "macos", feature = "hal"))]
+    pub fn service_transport(&mut self) -> Result<(), String> {
+        self.service_replacement(Self::open_reader())
+    }
+
+    #[cfg_attr(not(all(target_os = "macos", feature = "hal")), allow(dead_code))]
+    fn service_replacement(
+        &mut self,
+        replacement: Result<Box<dyn HalAudioSource>, String>,
+    ) -> Result<(), String> {
+        let result = replacement.and_then(|reader| {
+            // A successful probe of the same healthy mapping must not discard
+            // the active reader's partially consumed decrypted record.
+            let probed_format = reader.current_format()?;
+            let compatible = probed_format.channels == self.channels
+                && self
+                    .initialized_sample_rate
+                    .is_none_or(|rate| rate == probed_format.sample_rate)
+                && probed_format.buffer_capacity_frames == self.buffer_capacity_frames;
+            let keep_current = compatible
+                && !self.control_unavailable
+                && !self.recovery_pending
+                && reader.is_connected()
+                && !reader.needs_control_recovery()
+                && self.reader.as_ref().is_some_and(|active| {
+                    active.is_connected()
+                        && !active.needs_control_recovery()
+                        && active.control_mapping_is_current()
+                        && active.current_format().ok() == Some(probed_format)
+                });
+            if keep_current {
+                Ok(())
+            } else {
+                self.activate_reader(reader)
+            }
+        });
+        if result.is_err() {
+            self.control_unavailable = true;
+            self.observe_connection(false);
+            self.note_recovery(HalInputErrorKind::Disconnected);
+        }
+        result
     }
 
     fn observe_connection(&mut self, connected: bool) {
@@ -311,6 +383,9 @@ impl HalInputPlugin {
     }
 
     fn reader_observation(&self) -> ReaderObservation {
+        if self.control_unavailable {
+            return ReaderObservation::Disconnected;
+        }
         let Some(reader) = self.reader.as_ref() else {
             return ReaderObservation::Disconnected;
         };
@@ -410,6 +485,11 @@ impl Plugin for HalInputPlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        if self.control_unavailable {
+            return Err(
+                "HAL Input requires successful transport service before initialization".into(),
+            );
+        }
         if !sample_rate.is_finite()
             || sample_rate <= 0.0
             || sample_rate > f64::from(u32::MAX)
@@ -662,6 +742,7 @@ mod tests {
             initialized_sample_rate: Some(48_000),
             stream_armed: false,
             recovery_pending: false,
+            control_unavailable: false,
             format_mismatch_pending: false,
             last_error: HalInputErrorKind::None,
             cached_parameters: HalInputPlugin::build_parameters(channels),

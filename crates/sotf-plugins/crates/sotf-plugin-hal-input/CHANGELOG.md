@@ -1,5 +1,11 @@
 # Unreleased
 
+- Add control-thread `service_transport`: failed broker/key/format preparation
+  latches the source disconnected and callbacks silent until a validated reader
+  replacement succeeds. Reset/initialize cannot rearm a retired ready mapping;
+  transactional `refresh_transport` refusal still preserves its prior reader.
+  Healthy service probes preserve staged decrypted frames and stream counters.
+
 - Add an explicitly isolated native HAL input integration target spanning all
   supported channel counts at 48/96 kHz, encrypted/plain reads, staged key changes,
   failed refresh, format rejection, mapping restart and abrupt producer-process
