@@ -305,13 +305,18 @@ impl ParameterMap {
 
         // Pre-build cached C-compatible info structs from static ParamSpec
         let mut cached_infos = Vec::with_capacity(bridge.count());
+        let mut accuracy_info = None;
         for i in 0..bridge.count() {
             if let Some(info) = bridge.info(i) {
+                let appended_accuracy = matches!(
+                    plugin_type,
+                    "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+                ) && info.id == "accuracy_mode";
                 let id = ffi_cstring_ptr(info.id);
                 let name = ffi_cstring_ptr(info.name);
                 let unit = ffi_cstring_ptr(info.unit);
 
-                cached_infos.push(ParameterInfo {
+                let cached = ParameterInfo {
                     id,
                     name,
                     unit,
@@ -320,7 +325,12 @@ impl ParameterMap {
                     default_value: info.default_value,
                     steps: info.steps,
                     logarithmic: info.logarithmic,
-                });
+                };
+                if appended_accuracy {
+                    accuracy_info = Some(cached);
+                } else {
+                    cached_infos.push(cached);
+                }
             }
         }
 
@@ -346,6 +356,11 @@ impl ParameterMap {
         // advanced entry cannot shift a legacy scalar address.
         if is_eq_type(plugin_type) {
             expand_eq_placement_params(&mut cached_infos);
+        }
+
+        // Keep all legacy globals/bands at their original numeric addresses.
+        if let Some(info) = accuracy_info {
+            cached_infos.push(info);
         }
 
         // Fallback: if no static specs produced params, use Plugin::parameters()
@@ -1155,7 +1170,8 @@ mod tests {
         assert_eq!(band_template_info("LinearPhaseEQ"), Some((6, 10)));
         let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
         let param_map = ParameterMap::from_plugin(&*plugin, "LinearPhaseEQ");
-        assert_eq!(param_map.count(), 5 + 10 * 6);
+        assert_eq!(param_map.count(), 5 + 10 * 6 + 1);
+        assert_eq!(param_map.param_id_at(65), Some("accuracy_mode"));
         assert_eq!(param_map.param_id_at(5), Some("band_0_type"));
         assert_eq!(param_map.param_id_at(10), Some("band_0_placement"));
     }
@@ -1297,7 +1313,8 @@ mod tests {
         let linear = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
         let canonical = ParameterMap::from_plugin(&*linear, "LinearPhaseEQ");
         // 5 globals + 10 bands x 6 fields; static schema includes dormant slots.
-        assert_eq!(canonical.count(), 5 + 10 * 6);
+        assert_eq!(canonical.count(), 5 + 10 * 6 + 1);
+        assert_eq!(canonical.param_id_at(65), Some("accuracy_mode"));
         for alias in ["linear_phase_eq", "Linear-Phase-EQ"] {
             let aliased = ParameterMap::from_plugin(&*linear, alias);
             assert_eq!(aliased.count(), canonical.count(), "alias {alias}");

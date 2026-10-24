@@ -1364,9 +1364,14 @@ macro_rules! sotf_nih_plugin {
 
                 // Build param infos for DynamicParams
                 let mut infos = Vec::new();
+                let mut accuracy_info = None;
                 for i in 0..bridge_inner.count() {
                     if let Some(info) = bridge_inner.info(i) {
-                        infos.push(info);
+                        if matches!($plugin_type, "LinearPhaseEQ") && info.id == "accuracy_mode" {
+                            accuracy_info = Some(info);
+                        } else {
+                            infos.push(info);
+                        }
                     }
                 }
 
@@ -1388,6 +1393,12 @@ macro_rules! sotf_nih_plugin {
                         if let Some(info) = $crate::wrapper::bridged_info_from_parameter(&param) {
                             infos.push(info);
                         }
+                    }
+                }
+
+                if let Some(info) = accuracy_info {
+                    if !infos.iter().any(|existing| existing.id == info.id) {
+                        infos.push(info);
                     }
                 }
 
@@ -1526,6 +1537,8 @@ macro_rules! sotf_nih_plugin {
                     $crate::wrapper::migrate_crossover_state(state);
                 } else if matches!($plugin_type, "EQ") {
                     $crate::params::migrate_eq_native_state(state);
+                } else if matches!($plugin_type, "LinearPhaseEQ") {
+                    $crate::params::migrate_linear_phase_eq_state(state);
                 } else if matches!($plugin_type, "HissReducer") {
                     $crate::params::scrub_hiss_momentary_state(state);
                 }
@@ -1538,6 +1551,9 @@ macro_rules! sotf_nih_plugin {
                 // runs before NIH enters its allocating audio-thread restore path.
                 if matches!($plugin_type, "Upmixer") {
                     return false;
+                }
+                if matches!($plugin_type, "LinearPhaseEQ") {
+                    return $crate::params::linear_phase_eq_state_restore_allows_audio_thread(state);
                 }
                 if matches!($plugin_type, "EQ") {
                     return $crate::params::eq_state_restore_allows_audio_thread(state);

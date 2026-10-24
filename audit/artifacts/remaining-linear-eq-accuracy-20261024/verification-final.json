@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/remaining-linear-eq-accuracy-20261024/verify.py"
+  ],
+  "exit_code": 0,
+  "stdout": "PASS: owned source fingerprints;152 core /15 coherent FFI; debug, heap, factory, native and strict records; delegated observable host PDC. Retained failures are excluded from success.\n",
+  "stderr": ""
+}

@@ -70,6 +70,10 @@ pub const PARAMS: &[ParamSpec] = &[
         .scaled(100.0)
         .output()
         .doc("Dry/wet mix"),
+    ParamSpec::bool_param("Automatic Accuracy", "accuracy_mode", false, "Quality")
+        .setup()
+        .structural()
+        .doc("Select shortest FIR meeting sampled 0.05 dB magnitude accuracy; may add latency"),
 ];
 
 // ============================================================================
@@ -122,6 +126,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         ControlSpec::knob(0),     // num_filters
         ControlSpec::selector(1), // fir_length
         ControlSpec::selector(2), // phase_mode
+        ControlSpec::toggle(5),   // accuracy_mode
     ],
     main: &[],
     output: &[
@@ -159,6 +164,8 @@ pub struct Params {
     pub auto_gain: f64,
     #[serde(default = "d_mix")]
     pub mix: f64,
+    #[serde(default = "d_accuracy_mode")]
+    pub accuracy_mode: f64,
 }
 
 fn d_num_filters() -> f64 {
@@ -173,6 +180,9 @@ fn d_phase_mode() -> f64 {
 fn d_auto_gain() -> f64 {
     pk(PARAMS, "auto_gain").default_f64()
 }
+fn d_accuracy_mode() -> f64 {
+    pk(PARAMS, "accuracy_mode").default_f64()
+}
 fn d_mix() -> f64 {
     pk(PARAMS, "mix").default_f64()
 }
@@ -185,6 +195,7 @@ impl Default for Params {
             phase_mode: d_phase_mode(),
             auto_gain: d_auto_gain(),
             mix: d_mix(),
+            accuracy_mode: d_accuracy_mode(),
         }
     }
 }
@@ -206,6 +217,7 @@ impl PluginParamDef for Params {
             2 => Some(self.phase_mode),
             3 => Some(self.auto_gain),
             4 => Some(self.mix),
+            5 => Some(self.accuracy_mode),
             _ => None,
         }
     }
@@ -217,6 +229,7 @@ impl PluginParamDef for Params {
             2 => self.phase_mode = PARAMS[2].clamp_f64(value),
             3 => self.auto_gain = PARAMS[3].clamp_f64(value),
             4 => self.mix = PARAMS[4].clamp_f64(value),
+            5 => self.accuracy_mode = PARAMS[5].clamp_f64(value),
             _ => {}
         }
     }
@@ -256,6 +269,7 @@ mod tests {
         assert_eq!(original.phase_mode, restored.phase_mode);
         assert_eq!(original.auto_gain, restored.auto_gain);
         assert_eq!(original.mix, restored.mix);
+        assert_eq!(original.accuracy_mode, restored.accuracy_mode);
     }
 
     #[test]
@@ -266,6 +280,7 @@ mod tests {
         assert_eq!(p.phase_mode, pk(PARAMS, "phase_mode_index").default_f64());
         assert_eq!(p.auto_gain, pk(PARAMS, "auto_gain").default_f64());
         assert_eq!(p.mix, pk(PARAMS, "mix").default_f64());
+        assert_eq!(p.accuracy_mode, pk(PARAMS, "accuracy_mode").default_f64());
     }
 
     #[test]

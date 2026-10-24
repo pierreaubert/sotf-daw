@@ -160,6 +160,7 @@ fn scenario(rate: u32, channels: usize, stages: usize, phase: usize, frames: usi
     let mut update = bands[stages - 1].clone();
     update.gain_db += 3.0;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: stages,
         fir_length_index: 3,
         phase_mode_index: phase,

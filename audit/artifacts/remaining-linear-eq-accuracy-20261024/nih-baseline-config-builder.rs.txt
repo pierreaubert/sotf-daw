@@ -1,0 +1,69 @@
+fn linear_phase_eq_config_json(&self) -> Result<String, String> {
+        let int_value = |id: &str| match self.value(id) {
+            Some(ParameterValue::Int(value)) => Ok(value),
+            _ => Err(format!("missing LinearPhaseEQ integer parameter '{id}'")),
+        };
+        let float_value = |id: &str| match self.value(id) {
+            Some(ParameterValue::Float(value)) => Ok(value),
+            _ => Err(format!("missing LinearPhaseEQ float parameter '{id}'")),
+        };
+        let bool_value = |id: &str| match self.value(id) {
+            Some(ParameterValue::Bool(value)) => Ok(value),
+            _ => Err(format!("missing LinearPhaseEQ boolean parameter '{id}'")),
+        };
+
+        let num_filters = usize::try_from(int_value("num_filters")?)
+            .map_err(|_| "LinearPhaseEQ num_filters must be positive".to_string())?;
+        // Canonical type labels from the plugin `BAND_TEMPLATE` (Peak,
+        // Lowshelf, Highshelf, Lowpass, Highpass); the DSP parses these
+        // spellings case-insensitively and reports the same indices back.
+        let filter_types = ["Peak", "Lowshelf", "Highshelf", "Lowpass", "Highpass"];
+        // Placement labels for indices 1..=5. Index 0 (Legacy) and saved
+        // states that predate `band_{i}_placement` omit the key, which the
+        // DSP deserializes as the legacy stereo-linked route.
+        const PLACEMENTS: [&str; 5] = ["stereo", "left", "right", "mid", "side"];
+        let mut filters = Vec::with_capacity(num_filters);
+        for index in 0..num_filters {
+            let type_index = usize::try_from(int_value(&format!("band_{index}_type"))?)
+                .map_err(|_| format!("LinearPhaseEQ band {index} type must be non-negative"))?;
+            let filter_type = filter_types
+                .get(type_index)
+                .ok_or_else(|| format!("LinearPhaseEQ band {index} type is out of range"))?;
+            let mut filter = serde_json::json!({
+                "filter_type": filter_type,
+                "frequency": float_value(&format!("band_{index}_freq"))?,
+                "q": float_value(&format!("band_{index}_q"))?,
+                "gain_db": float_value(&format!("band_{index}_gain"))?,
+                "active": bool_value(&format!("band_{index}_active"))?,
+            });
+            match self.value(&format!("band_{index}_placement")) {
+                None | Some(ParameterValue::Int(0)) => {}
+                Some(ParameterValue::Int(placement)) => {
+                    let label = usize::try_from(placement)
+                        .ok()
+                        .filter(|placement| (1..=PLACEMENTS.len()).contains(placement))
+                        .map(|placement| PLACEMENTS[placement - 1])
+                        .ok_or_else(|| {
+                            format!("LinearPhaseEQ band {index} placement is out of range")
+                        })?;
+                    filter["placement"] = label.into();
+                }
+                _ => {
+                    return Err(format!(
+                        "LinearPhaseEQ band {index} placement must be an integer"
+                    ));
+                }
+            }
+            filters.push(filter);
+        }
+
+        serde_json::to_string(&serde_json::json!({
+            "num_filters": num_filters,
+            "fir_length_index": int_value("fir_length")?,
+            "phase_mode_index": int_value("phase_mode")?,
+            "auto_gain": bool_value("auto_gain")?,
+            "mix": float_value("mix")?,
+            "filters": filters,
+        }))
+        .map_err(|error| format!("failed to serialize LinearPhaseEQ parameters: {error}"))
+    }

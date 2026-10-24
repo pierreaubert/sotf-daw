@@ -1,0 +1,67 @@
+{
+  "feature": "Default-off automatic sampled FIR accuracy and actual latency reporting",
+  "scope": "Local production implementation + functional/heap/normal strict checks; user-approved adaptive support, historical manual1024/performance gates unchanged",
+  "required_success_records": [
+    "core-final-confirmed.json",
+    "core-debug-auto.json",
+    "core-debug-manual.json",
+    "core-true-mode-heap.json",
+    "core-bridge-clippy-final.json",
+    "bridge-added-latency.json",
+    "engine-converter-qa.json",
+    "engine-clippy.json",
+    "nih-native-lifecycle-final.json",
+    "nih-legacy-clippy-final.json",
+    "ffi-legacy-coherent.json",
+    "ffi-legacy-clippy-debug-coherent.json"
+  ],
+  "delegated_evidence": "delegated-host-pdc.json",
+  "core_total": {
+    "passed": 152,
+    "failed": 0,
+    "ignored": 2
+  },
+  "factory_96k_linear": {
+    "selected_taps": 2048,
+    "actual_latency_samples": 1056,
+    "manual_latency_samples": 544,
+    "added_latency_samples": 512
+  },
+  "native_96k_actual": {
+    "manual_latency_samples": 800,
+    "automatic_latency_samples": 4384,
+    "restored_legacy_latency_samples": 800,
+    "includes_async_host_quantum": true
+  },
+  "ffi_scope": "Known coherent isolated GPUI fixture, current source symlinks; ordinary main graph separately blocked",
+  "ffi_tests": {
+    "passed": 15,
+    "failed": 0
+  },
+  "retained_limits": [
+    {
+      "record": "ffi-linear.json",
+      "scope": "ordinary main FFI dependency graph",
+      "result": "69 unrelated duplicate-GPUI type errors"
+    },
+    {
+      "record": "ffi-legacy-clippy-coherent.json",
+      "scope": "release-profile FFI strict Clippy",
+      "result": "3 preexisting literal-unwrap lints in unchanged release processing functions",
+      "source_proof": "ffi-release-lint-baseline-source-trace.json"
+    },
+    {
+      "record": "nih-linear.json",
+      "scope": "full native activation matrix",
+      "result": "preexisting1234.5678Hz rejection;1000Hz default exceeds unchanged0.99*Nyquist guard",
+      "source_proof": "nih-low-rate-baseline-source-trace.json"
+    }
+  ],
+  "source_manifest": "source-manifest.json",
+  "owned_paths": "owned-paths.txt",
+  "feature_patch": "feature-only.patch",
+  "engine_patch": "engine-feature-only.patch",
+  "no_lock_commit": true,
+  "no_performance_claim": true,
+  "external_validation": "User will add external heldout/Linux/Windows/DAW hosts later; not claimed."
+}

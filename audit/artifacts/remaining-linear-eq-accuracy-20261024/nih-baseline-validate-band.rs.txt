@@ -1,0 +1,17 @@
+fn validate_band(frequency: f64, q: f64, gain_db: f64, sample_rate: f64) -> Result<(), String> {
+        let max_frequency = (sample_rate * 0.5 * 0.99).min(20_000.0);
+        if !frequency.is_finite() || frequency < 20.0 || frequency > max_frequency {
+            return Err(format!(
+                "frequency must be finite and within [20, {max_frequency}], got {frequency}"
+            ));
+        }
+        if !q.is_finite() || !(0.1..=10.0).contains(&q) {
+            return Err(format!("Q must be finite and within [0.1, 10], got {q}"));
+        }
+        if !gain_db.is_finite() || !(-24.0..=24.0).contains(&gain_db) {
+            return Err(format!(
+                "gain must be finite and within [-24, 24], got {gain_db}"
+            ));
+        }
+        Ok(())
+    }

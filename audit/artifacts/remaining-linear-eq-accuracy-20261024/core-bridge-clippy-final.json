@@ -1,0 +1,28 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "-p",
+    "plugins-bridge",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 1.8740163340698928,
+  "stdout": "",
+  "stderr": "    Checking sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Checking plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `release` profile [optimized] target(s) in 1.77s\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

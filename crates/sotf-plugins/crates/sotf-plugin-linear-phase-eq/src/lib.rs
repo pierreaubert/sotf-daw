@@ -2,6 +2,11 @@
 pub mod dynamic_host;
 pub mod params;
 
+#[path = "lib/accuracy.rs"]
+mod accuracy;
+#[doc(inline)]
+pub use accuracy::{ACCURACY_REFERENCE_FLOOR, ACCURACY_TOLERANCE_DB, FirAccuracyReport};
+
 #[path = "lib/default.rs"]
 mod default;
 #[cfg(test)]

@@ -353,6 +353,7 @@ pub struct LinearPhaseEqControlHandle {
     accepted_phase_mode_index: usize,
     /// Immutable auto gain flag.
     accepted_auto_gain: bool,
+    accepted_accuracy_mode: bool,
     /// Immutable per-band placements for the configured prefix.
     accepted_placements: [Option<LinearPhaseEqBandPlacement>; MAX_FILTERS],
     /// Immutable explicit stereo pairs.
@@ -534,6 +535,7 @@ impl LinearPhaseEqControlHandle {
                         fir_length_index: self.accepted_fir_length_index,
                         phase_mode_index: self.accepted_phase_mode_index,
                         auto_gain: self.accepted_auto_gain,
+                        accuracy_mode: self.accepted_accuracy_mode,
                         bands,
                         stereo_pairs: self.accepted_pairs.clone(),
                     },
@@ -704,6 +706,7 @@ impl LinearPhaseEqDynamicPlugin {
             accepted_fir_length_index: initial.fir_length_index,
             accepted_phase_mode_index: initial.phase_mode_index,
             accepted_auto_gain: initial.auto_gain,
+            accepted_accuracy_mode: initial.accuracy_mode,
             accepted_placements,
             accepted_pairs: initial.stereo_pairs.clone(),
             accepted_sample_rate: AtomicU64::new(initial.sample_rate.to_bits()),

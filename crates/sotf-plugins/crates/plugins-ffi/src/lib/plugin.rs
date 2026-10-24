@@ -429,7 +429,7 @@ fn replace_plugin_from_state(
         handle.plugin_type.as_str(),
         "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
     ) {
-        return replace_linear_phase_eq_from_state(handle, state);
+        return replace_linear_phase_eq_from_state(handle, state, restore_kind);
     }
     if matches!(handle.plugin_type.as_str(), "EQ" | "eq") {
         return replace_eq_from_state(handle, state);
@@ -1216,6 +1216,7 @@ mod analog_limiter_consumer_tests;
 fn replace_linear_phase_eq_from_state(
     handle: &mut PluginHandle,
     state: &[u8],
+    restore_kind: PluginStateRestoreKind,
 ) -> Result<(), String> {
     // Match the generic state loader's partial-update contract: values omitted
     // from the incoming object retain their current live values, including
@@ -1225,6 +1226,14 @@ fn replace_linear_phase_eq_from_state(
             .map_err(|error| format!("Failed to capture current LinearPhaseEQ state: {error}"))?;
     let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
         .map_err(|error| format!("Failed to parse LinearPhaseEQ state: {error}"))?;
+    // Preset envelopes are unambiguously complete. Raw maps keep the existing
+    // partial contract unless every prior canonical scalar/band field exists.
+    if !incoming_state.contains_key("accuracy_mode")
+        && (restore_kind == PluginStateRestoreKind::Preset
+            || super::plugin_factory::is_complete_legacy_linear_phase_eq_state(&incoming_state))
+    {
+        merged_state.insert("accuracy_mode".to_string(), false.into());
+    }
     if let Some(num_filters) = incoming_state
         .get("num_filters")
         .and_then(serde_json::Value::as_u64)

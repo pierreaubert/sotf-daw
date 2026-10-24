@@ -975,9 +975,123 @@ fn dynamic_eq_failed_restore_retains_audio_and_config() {
 // ---------------------------------------------------------------------------
 
 #[test]
+fn linear_phase_eq_accuracy_legacy_presets_and_partial_overlays_preserve_contracts() {
+    let config = serde_json::json!({
+        "num_filters": 1, "fir_length_index": 0, "accuracy_mode": true,
+        "filters": [{"filter_type":"Peak", "frequency":125.0, "q":2.0, "gain_db":9.0}]
+    })
+    .to_string();
+    let mut handle = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
+    let automatic_latency = handle.inner().plugin.latency_samples();
+    let modern: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&handle.save()).unwrap();
+    let mut legacy = modern.clone();
+    legacy.remove("accuracy_mode");
+    assert_eq!(
+        handle.load(&serde_json::to_vec(&legacy).unwrap()),
+        0,
+        "{}",
+        abi_last_error()
+    );
+    let manual_latency = handle.inner().plugin.latency_samples();
+    assert!(automatic_latency > manual_latency);
+    assert_eq!(handle.config_json()["accuracy_mode"], false);
+    assert_eq!(handle.config_json()["fir_length_index"], 0);
+
+    for mode in [true, false, true] {
+        let mut explicit = modern.clone();
+        explicit.insert("accuracy_mode".into(), serde_json::json!(mode));
+        assert_eq!(
+            handle.load(&serde_json::to_vec(&explicit).unwrap()),
+            0,
+            "{}",
+            abi_last_error()
+        );
+        assert_eq!(handle.config_json()["accuracy_mode"], mode);
+        assert_eq!(
+            handle.inner().plugin.latency_samples(),
+            if mode {
+                automatic_latency
+            } else {
+                manual_latency
+            }
+        );
+    }
+    // Raw maps can also be partial overlays. Five globals alone, or a band
+    // missing placement, do not unambiguously identify a whole old preset.
+    let mut globals = legacy.clone();
+    globals.retain(|key, _| !key.starts_with("band_") && key != "stereo_pairs");
+    let mut incomplete_band = legacy.clone();
+    incomplete_band.remove("band_0_placement");
+    for overlay in [
+        serde_json::json!({"mix": 0.75}),
+        serde_json::json!(globals),
+        serde_json::json!(incomplete_band),
+    ] {
+        assert_eq!(
+            handle.load(&serde_json::to_vec(&overlay).unwrap()),
+            0,
+            "{}",
+            abi_last_error()
+        );
+        assert_eq!(handle.config_json()["accuracy_mode"], true);
+        assert_eq!(handle.inner().plugin.latency_samples(), automatic_latency);
+    }
+    // The explicit preset envelope disambiguates older snapshots that
+    // predate placement as well as the new accuracy flag.
+    let document = serde_json::to_vec(&serde_json::json!({
+        "schema_version":1, "ut_type":"org.spinorama.sotf.plugin-preset",
+        "plugin_type":"LinearPhaseEQ", "state":serde_json::to_vec(&incomplete_band).unwrap()
+    }))
+    .unwrap();
+    assert_eq!(
+        plugin_import_preset_json(handle.pointer, document.as_ptr(), document.len()),
+        0,
+        "{}",
+        abi_last_error()
+    );
+    assert_eq!(handle.config_json()["accuracy_mode"], false);
+    assert_eq!(handle.inner().plugin.latency_samples(), manual_latency);
+    println!(
+        "ffi_accuracy_legacy_pdc rate=48000 automatic={automatic_latency} manual={manual_latency}"
+    );
+}
+
+#[test]
+fn linear_phase_eq_accuracy_failed_restore_preserves_populated_history() {
+    let config = serde_json::json!({
+        "num_filters": 1, "fir_length_index": 0, "accuracy_mode": true,
+        "filters": [{"filter_type":"Peak", "frequency":125.0, "q":2.0, "gain_db":9.0}]
+    })
+    .to_string();
+    let mut handle = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
+    let mut control = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
+    let prefix = sine_interleaved(1536, 2, 317.0, 48_000.0);
+    assert_eq!(handle.process(&prefix), control.process(&prefix));
+    let state = handle.save();
+    let config_before = handle.config_json();
+    let latency = handle.inner().plugin.latency_samples();
+    for bad in [
+        serde_json::json!({"accuracy_mode":"true"}),
+        serde_json::json!({"band_0_freq":20.0,"band_0_q":50.0,"band_0_gain":24.0}),
+    ] {
+        assert_ne!(handle.load(&serde_json::to_vec(&bad).unwrap()), 0);
+        assert_eq!(handle.save(), state);
+        assert_eq!(handle.config_json(), config_before);
+        assert_eq!(handle.inner().plugin.latency_samples(), latency);
+        let continuation = sine_interleaved(384, 2, 829.0, 48_000.0);
+        assert_eq!(
+            handle.process(&continuation),
+            control.process(&continuation)
+        );
+    }
+}
+
+#[test]
 fn linear_phase_eq_template_matches_plugin_ids_and_count() {
     let handle = AbiHandle::create("LinearPhaseEQ", "{}", 2, 2);
-    assert_eq!(handle.param_count(), 5 + 10 * 6);
+    assert_eq!(handle.param_count(), 5 + 10 * 6 + 1);
+    assert_eq!(handle.param_id(65), "accuracy_mode");
     let fields = ["type", "freq", "q", "gain", "active", "placement"];
     for band in 0..10 {
         for (field, name) in fields.iter().enumerate() {

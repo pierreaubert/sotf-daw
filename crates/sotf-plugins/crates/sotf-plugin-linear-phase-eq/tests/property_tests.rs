@@ -20,6 +20,7 @@ fn minimal_plugin() -> LinearPhaseEqPlugin {
         1,
         48000,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 0,
@@ -54,6 +55,7 @@ proptest! {
     #[test]
     fn process_finite_output_with_active_band(buffer in mono_buffer_strategy()) {
         let params = LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 0,
@@ -102,6 +104,7 @@ proptest! {
     fn dry_mix_passthrough(buffer in mono_buffer_strategy()) {
         // Construct with mix=0 from the start so the smoother begins at target.
         let params = LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 0,
@@ -130,6 +133,7 @@ proptest! {
     #[test]
     fn inactive_bands_approximately_passthrough_after_latency(buffer in mono_buffer_strategy()) {
         let params = LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 2,
             fir_length_index: 0,
             phase_mode_index: 0,
@@ -186,6 +190,7 @@ proptest! {
         freq in 200.0f32..8000.0f32
     ) {
         let params = LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0, // 1024 taps
             phase_mode_index: 0,
@@ -213,6 +218,7 @@ proptest! {
         freq in 200.0f32..8000.0f32
     ) {
         let params = LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 1,

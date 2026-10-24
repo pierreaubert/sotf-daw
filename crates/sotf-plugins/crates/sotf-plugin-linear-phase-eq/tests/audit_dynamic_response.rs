@@ -73,6 +73,7 @@ fn params(length: usize, phase: usize, ordered: bool, gain: f64) -> LinearPhaseE
         vec![band(gain, None)]
     };
     LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: filters.len(),
         fir_length_index: length,
         phase_mode_index: phase,

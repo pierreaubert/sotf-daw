@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-bridge",
+    "--test",
+    "linear_eq_accuracy",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 59.26353995897807,
+  "stdout": "\nrunning 1 test\ntest ordinary_factory_resolves_96k_automatic_support_before_reporting_latency ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-bridge)\n    Finished `release` profile [optimized] target(s) in 59.18s\n     Running tests/linear_eq_accuracy.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/linear_eq_accuracy-e7058d87d8eb2495)\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

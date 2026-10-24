@@ -1,0 +1,21 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "env",
+    "CARGO_BUILD_JOBS=2",
+    "cargo",
+    "check",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 101,
+  "stderr": "cannot update Cargo.lock because --locked was passed; unrelated external manifest/lock resolution prerequisite",
+  "acceptance_evidence": false,
+  "lock_modified_by_worker": false
+}

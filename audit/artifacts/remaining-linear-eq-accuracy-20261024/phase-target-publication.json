@@ -1,0 +1,5 @@
+{
+  "exit_code": 0,
+  "stdout": "\n                                                                              \n  --------                                                                    \n                                                                              \n  **@pierre** wrote on 2026-10-24 17:18:                                      \n                                                                              \n  Minimum-phase ordered target clarification: T composes each independent     \n  ideal band magnitude with the unit phase of that final actual FIR stage. The\n  accuracy criterion therefore qualifies sampled magnitude and the complete   \n  cascade given actual stage phase, not equality to IIR/allpass phase and not \n  a new minimum-phase proof. Zero actual stage magnitude with nonzero target  \n  still fails its magnitude check. Linear-phase target keeps positive ideal   \n  magnitudes after removal of the actual N/2 stage delay. Existing minimum-   \n  phase energy/latency tests remain unchanged.                                \n\n",
+  "stderr": ""
+}

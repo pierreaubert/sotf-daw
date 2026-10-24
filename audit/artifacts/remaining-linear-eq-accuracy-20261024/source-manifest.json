@@ -1,0 +1,151 @@
+{
+  "paths": {
+    "crates/sotf-engine/src/plugin_param_accessors.rs": {
+      "sha256": "6ef893355db89a48d9f7b7659e12e0bb93cb53d927063ae183565e04c32c217d",
+      "bytes": 42890
+    },
+    "crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs": {
+      "sha256": "57c8e3c54229fe5f3c1300677cd06ebfe0464078c566660427d578ef07982ecf",
+      "bytes": 2892
+    },
+    "crates/sotf-engine/src/plugins/plugin_settings.rs": {
+      "sha256": "20cd6d447c1100cb2004c3346e20b896835c14b87fbbc98b074bef83f99659fc",
+      "bytes": 142057
+    },
+    "crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy.rs": {
+      "sha256": "d2845c1693608c6d5f07f8123fefadac30d2438aaf178ba6001142d7ed6e6839",
+      "bytes": 3154
+    },
+    "crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy_pdc.rs": {
+      "sha256": "d97dac0dcccad7c971768a0046d0a7960c24e26d5d697e28e27c7d4150b13359",
+      "bytes": 5658
+    },
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs": {
+      "sha256": "5f1509a3bdf8d7f8c3fee3b1ec57a02cf397db13c451b3e86cbba115e4012a8f",
+      "bytes": 97019
+    },
+    "crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs": {
+      "sha256": "5a6476f061188907a9ecd1a65ce4c818827a18438c3b1060b8de5681eeac99f0",
+      "bytes": 117403
+    },
+    "crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs": {
+      "sha256": "510b0fd06c8d3fc680550b246b69139154e7288e18078fd2735cee04e86b4cd7",
+      "bytes": 57762
+    },
+    "crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs": {
+      "sha256": "5c5caf5e3b7e5e33e587d9198126332d3c016c719571fa7d928b195a48e1aac0",
+      "bytes": 59639
+    },
+    "crates/sotf-plugins/crates/plugins-nih/src/lib.rs": {
+      "sha256": "2f2bbc9026fe7b67b79d037eac8cfbfda60704a06b31020a7ec9efd402cec295",
+      "bytes": 31915
+    },
+    "crates/sotf-plugins/crates/plugins-nih/src/params.rs": {
+      "sha256": "ad5f6f9f20884c3404c51e0ccc4f09df11f0860db3a61e37f54faf35b12cc7ed",
+      "bytes": 152088
+    },
+    "crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs": {
+      "sha256": "f7ca1bab2bb626c22d936a8b4f1b98ad30f741c93f79eea5698ffed49c766e6a",
+      "bytes": 134170
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/CHANGELOG.md": {
+      "sha256": "ebb8f651be95f81d66aa4a8356ad8114bd0584c07f2bcc44bebb40fcce9f1f18",
+      "bytes": 11651
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md": {
+      "sha256": "d942e3716a9bcbbb3e965b5f650b8d01dcd5fe001ffca1fa30b5b4af68de495a",
+      "bytes": 24071
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs": {
+      "sha256": "b4213772833983ceb9f7c71dd5e767930380eb9a5fc885b9366351dbf6a443f3",
+      "bytes": 10906
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs": {
+      "sha256": "d07026226493c53ac2f24e2441c05d18f98759517e36dfbafc048ba39401483c",
+      "bytes": 8002
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs": {
+      "sha256": "8d9e523a37efac75c69f846c47a047a005f5eee39ef7caeadf5ee6166041035a",
+      "bytes": 56046
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs": {
+      "sha256": "fa4a702e44e8ffabc5da67f50d2a664a98d4ed7bf52d402bd17dfbff193432e0",
+      "bytes": 953
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy.rs": {
+      "sha256": "07b45ab980a7f4a58b4bcd7ee521ed161149c8282626581b9d99a6fcf1d411b5",
+      "bytes": 13375
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy_tests.rs": {
+      "sha256": "54254702e93331f5df7c6c66bc56cd6017f284c7b7d274b318cc5e21eef00b57",
+      "bytes": 14224
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/drain_tests.rs": {
+      "sha256": "557bd3f107c15341bbdff96db474d6f0337d859aa5ea491f96303482a20213e9",
+      "bytes": 12853
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs": {
+      "sha256": "f7206a16162a3f2b4de3d22777a569eb4fcef63f8a0aa80563dc1e2dd2c23fe0",
+      "bytes": 57896
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs": {
+      "sha256": "bc0e16e42343b7bf27a857a42007107ad8441541e2e74c6de99a0b7a061f2bca",
+      "bytes": 87508
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/placement_tests.rs": {
+      "sha256": "18448008c81764c0dbcc44c3826cdbda442e751d046816d7cab2f615da3e3c61",
+      "bytes": 42751
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests.rs": {
+      "sha256": "05355ea943f6d885efdc5d59c7ed84070ee247f525c4bd16e9470be049d52aa0",
+      "bytes": 22238
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests/misc.rs": {
+      "sha256": "9959dd1b133c5207e9bb5d8f25a339756e2fb7d2a14dcb2c76f72c570dc3c62e",
+      "bytes": 15361
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs": {
+      "sha256": "97543f4670803dab8da0aee4bc50700afbe88a3ad6ed33c67b37e4d7ba141bc3",
+      "bytes": 15670
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/params.rs": {
+      "sha256": "5ee4c4aa10fd273e8fc1f2c58b686204e2079373fec9d753bde05e8a5403c4dd",
+      "bytes": 9776
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs": {
+      "sha256": "71d7446789da39d46cb361ba78f914d6352787cf4852f6a5973c5d1d040f35f8",
+      "bytes": 24146
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs": {
+      "sha256": "d4619626f8d356500dd204f0222100ba45284c86d93ca74e2aec153d45e3a6d0",
+      "bytes": 28396
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/channel_placement.rs": {
+      "sha256": "6710b18d90c5e1447c8d2ed7213508324f445ae58b66fc05784cd98452e1648e",
+      "bytes": 8866
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs": {
+      "sha256": "390c01a46503d36fcf05541263f89f962075a9afa0bcbac61b9bf74ec9fe32c9",
+      "bytes": 77149
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_updates.rs": {
+      "sha256": "4c43143e050fbcc3fa796e86a250e51cadc19a6124867a10d616ecfb8867f005",
+      "bytes": 10539
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/integration.rs": {
+      "sha256": "f7a251845cbf2f4e05aee5960d073b66f9ba282000ec2978dd0c47af8982ae4a",
+      "bytes": 13383
+    },
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/property_tests.rs": {
+      "sha256": "342f1e485f9a543124ca9b1636de124ddbbb6012bcd872ab966a5379c3ed8de9",
+      "bytes": 9127
+    }
+  },
+  "manual_choices": [
+    1024,
+    2048,
+    4096,
+    8192
+  ],
+  "main_lock_sha256": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050"
+}

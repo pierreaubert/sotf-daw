@@ -1,5 +1,14 @@
 # Unreleased
 
+- Add default-off `accuracy_mode`: choose the shortest supported FIR meeting
+  the declared sampled magnitude/cascade criterion, expose actual support and
+  full/additional route latency before audio, and fail clearly at maximum
+  support. Preserve manual choices, defaults and old automation addresses.
+- Keep automatic-mode dynamic updates at the resolved fixed length; refuse
+  targets requiring a structural rebuild. Qualify retained f32 taps in both
+  phases, preserve explicit near-null residual policy, and reject real rate
+  changes before mutation until reconstruction at the actual clock.
+
 - Enforce centered linear-phase symmetry without changing N-tap support or
   N/2+32 per-stage delay: discard the unpaired endpoint and average pairs before
   f32 conversion. Minimum-phase design is unchanged. Independent streamed

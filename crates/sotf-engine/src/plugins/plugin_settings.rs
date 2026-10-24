@@ -1868,6 +1868,8 @@ pub enum PluginSettings {
         phase_mode: f64,
         #[serde(default)]
         auto_gain: bool,
+        #[serde(default)]
+        accuracy_mode: bool,
         #[serde(default = "default_lpeq_mix")]
         mix: f64,
         #[serde(default)]
@@ -2790,6 +2792,7 @@ impl PluginSettings {
                     fir_length: p(lp, "fir_length_index").default_f64(),
                     phase_mode: p(lp, "phase_mode_index").default_f64(),
                     auto_gain: p(lp, "auto_gain").default_bool(),
+                    accuracy_mode: p(lp, "accuracy_mode").default_bool(),
                     mix: p(lp, "mix").default_f64(),
                     filters,
                     stereo_pairs: None,

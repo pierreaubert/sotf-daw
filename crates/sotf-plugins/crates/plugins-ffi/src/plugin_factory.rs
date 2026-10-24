@@ -99,6 +99,33 @@ fn default_linear_phase_eq_band() -> serde_json::Value {
     })
 }
 
+/// Recognize the complete pre-accuracy raw snapshot, never a partial overlay.
+pub(crate) fn is_complete_legacy_linear_phase_eq_state(
+    state: &serde_json::Map<String, serde_json::Value>,
+) -> bool {
+    if state.contains_key("accuracy_mode")
+        || !["num_filters", "auto_gain", "mix"]
+            .iter()
+            .all(|key| state.contains_key(*key))
+        || !(state.contains_key("fir_length") || state.contains_key("fir_length_index"))
+        || !(state.contains_key("phase_mode") || state.contains_key("phase_mode_index"))
+    {
+        return false;
+    }
+    let Some(count) = state
+        .get("num_filters")
+        .and_then(serde_json::Value::as_u64)
+        .filter(|count| (1..=LINEAR_PHASE_EQ_MAX_FILTERS as u64).contains(count))
+    else {
+        return false;
+    };
+    (0..count).all(|band| {
+        ["type", "freq", "q", "gain", "active", "placement"]
+            .iter()
+            .all(|field| state.contains_key(&format!("band_{band}_{field}")))
+    })
+}
+
 /// Merge the flat parameter state used by plugin presets into the structured
 /// constructor configuration required by LinearPhaseEQ.
 pub(crate) fn merge_linear_phase_eq_state_into_config(
@@ -118,15 +145,24 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
     let state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state_bytes)
         .map_err(|error| format!("Failed to parse LinearPhaseEQ state: {error}"))?;
 
-    if let Some(index) = state_integer(&state, "fir_length")? {
+    let length = match state_integer(&state, "fir_length")? {
+        Some(index) => Some(index),
+        None => state_integer(&state, "fir_length_index")?,
+    };
+    if let Some(index) = length {
         if index > 3 {
             return Err(format!(
                 "LinearPhaseEQ fir_length index must be within [0, 3], got {index}"
             ));
         }
+        config.remove("fir_length");
         config.insert("fir_length_index".to_string(), index.into());
     }
-    if let Some(index) = state_integer(&state, "phase_mode")? {
+    let phase = match state_integer(&state, "phase_mode")? {
+        Some(index) => Some(index),
+        None => state_integer(&state, "phase_mode_index")?,
+    };
+    if let Some(index) = phase {
         if index > 1 {
             return Err(format!(
                 "LinearPhaseEQ phase_mode index must be within [0, 1], got {index}"
@@ -134,6 +170,11 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
         }
         config.remove("phase_mode");
         config.insert("phase_mode_index".to_string(), index.into());
+    }
+    if let Some(accuracy_mode) = state_bool(&state, "accuracy_mode")? {
+        config.insert("accuracy_mode".to_string(), accuracy_mode.into());
+    } else if is_complete_legacy_linear_phase_eq_state(&state) {
+        config.insert("accuracy_mode".to_string(), false.into());
     }
     if let Some(auto_gain) = state_bool(&state, "auto_gain")? {
         config.insert("auto_gain".to_string(), auto_gain.into());
@@ -1392,5 +1433,43 @@ mod tests {
         direct.initialize(48_000.0).unwrap();
         assert_eq!(direct.realtime_quantum_frames(), 1);
         assert_eq!(direct.latency_samples(), inner_latency + 2 * 257);
+    }
+
+    #[test]
+    fn linear_phase_eq_accuracy_state_rebuild_uses_actual_clock_and_saved_manual_choice() {
+        let initial = serde_json::json!({"num_filters":3,"fir_length_index":0,"filters":[
+            {"filter_type":"Peak","frequency":500.0,"q":2.0,"gain_db":9.0},
+            {"filter_type":"Peak","frequency":2000.0,"q":1.5,"gain_db":-6.0},
+            {"filter_type":"Lowshelf","frequency":150.0,"gain_db":3.0}
+        ]})
+        .to_string();
+        let automatic =
+            merge_linear_phase_eq_state_into_config(&initial, br#"{"accuracy_mode":true}"#)
+                .unwrap();
+        let bridge =
+            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &automatic).unwrap();
+        let mut external =
+            create_plugin_with_max_callback("LinearPhaseEQ", &automatic, 2, 2, 96_000, 257)
+                .unwrap();
+        external.initialize(96_000.0).unwrap();
+        assert_eq!(external.latency_samples(), bridge.latency_samples() + 514);
+        assert_eq!(
+            external.get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
+            Some(sotf_host::ParameterValue::Bool(true))
+        );
+        assert_eq!(
+            external.get_parameter(&sotf_host::ParameterId::from("fir_length_index")),
+            Some(sotf_host::ParameterValue::Int(0))
+        );
+        let manual =
+            merge_linear_phase_eq_state_into_config(&automatic, br#"{"accuracy_mode":false}"#)
+                .unwrap();
+        let manual = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &manual).unwrap();
+        assert_eq!(manual.latency_samples(), 544);
+        assert!(bridge.latency_samples() > manual.latency_samples());
+        assert!(
+            merge_linear_phase_eq_state_into_config(&initial, br#"{"accuracy_mode":"yes"}"#)
+                .is_err()
+        );
     }
 }

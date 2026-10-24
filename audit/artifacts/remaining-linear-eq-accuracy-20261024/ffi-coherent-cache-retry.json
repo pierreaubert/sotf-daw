@@ -1,0 +1,38 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-ffi",
+    "--lib",
+    "linear_phase",
+    "--release",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "cwd": "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u",
+  "exit_code": 101,
+  "elapsed_seconds": 151.11899045784958,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n   Compiling plugins-ffi v0.7.0 (/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/crates/sotf-plugins/crates/plugins-ffi)\n   Compiling sotf-plugins v0.8.2 (/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/crates/sotf-plugins)\n   Compiling plugins-bridge v0.6.0 (/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/crates/sotf-plugins/crates/plugins-bridge)\nerror[E0432]: unresolved import `sotf_host::test_utils`\n   --> crates/sotf-plugins/crates/plugins-ffi/src/lib/aud139_baseline_tests.rs:273:20\n    |\n273 |     use sotf_host::test_utils::{assert_no_allocs_or_deallocs, measure_heap_activity};\n    |                    ^^^^^^^^^^ could not find `test_utils` in `sotf_host`\n    |\nnote: found an item that was configured out\n   --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:49:9\n    |\n 48 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n    |          ---------------------------------------- the item is gated here\n 49 | pub mod test_utils;\n    |         ^^^^^^^^^^\n\nerror[E0432]: unresolved import `sotf_host::test_utils`\n    --> crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs:1259:20\n     |\n1259 |     use sotf_host::test_utils::assert_no_allocs_or_deallocs;\n     |                    ^^^^^^^^^^ could not find `test_utils` in `sotf_host`\n     |\nnote: found an item that was configured out\n    --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:49:9\n     |\n  48 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n     |          ---------------------------------------- the item is gated here\n  49 | pub mod test_utils;\n     |         ^^^^^^^^^^\n\nerror[E0432]: unresolved import `sotf_host::test_utils`\n    --> crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs:1749:20\n     |\n1749 |     use sotf_host::test_utils::assert_no_allocs_or_deallocs;\n     |                    ^^^^^^^^^^ could not find `test_utils` in `sotf_host`\n     |\nnote: found an item that was configured out\n    --> crates/sotf-plugins/crates/sotf-host/src/lib.rs:49:9\n     |\n  48 | #[cfg(any(feature = \"qa\", test, debug_assertions))]\n     |          ---------------------------------------- the item is gated here\n  49 | pub mod test_utils;\n     |         ^^^^^^^^^^\n\nerror[E0382]: borrow of moved value: `info.id`\n   --> crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs:328:22\n    |\n311 |                 let id = ffi_cstring_ptr(info.id);\n    |                                          ------- value moved here\n...\n328 |                 ) && info.id == \"accuracy_mode\"\n    |                      ^^^^^^^ value borrowed here after move\n    |\n    = note: move occurs because `info.id` has type `std::string::String`, which does not implement the `Copy` trait\n\nSome errors have detailed explanations: E0382, E0432.\nFor more information about an error, try `rustc --explain E0382`.\nerror: could not compile `plugins-ffi` (lib test) due to 4 previous errors\n",
+  "locks_sha256_before": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_sha256_after": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_unchanged": true,
+  "downloaded_packages_in_output": [],
+  "new_crate_cache_files_observed": [
+    "plist-1.10.3.crate",
+    "webpki-root-certs-1.0.11.crate"
+  ],
+  "authorization": "Root authorized fetching only dependencies already selected by the existing coherent fixture lock, including plist1.10.3/cbindgen metadata; no cargo update or version changes."
+}

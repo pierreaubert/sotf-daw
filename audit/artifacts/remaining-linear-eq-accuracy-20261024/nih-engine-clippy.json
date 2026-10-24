@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "plugins-nih",
+    "-p",
+    "sotf-engine",
+    "--no-default-features",
+    "--features",
+    "plugins-nih/linear-phase-eq",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.40790112502872944,
+  "stdout": "",
+  "stderr": "error: failed to download `typed-path v0.12.4`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

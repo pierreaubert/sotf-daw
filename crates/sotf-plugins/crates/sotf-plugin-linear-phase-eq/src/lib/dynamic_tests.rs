@@ -33,6 +33,7 @@ fn band(
 fn params_for(bands: Vec<BandConfig>, mix: f32) -> LinearPhaseEqPluginParams {
     let num_filters = bands.len();
     LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -710,7 +711,8 @@ fn cached_parameter_layout_matches_commit_indices() {
     );
     // band_1 entries sit at 5 + 1*6 + {0..4} by construction.
     let schema = plugin.parameter_schema();
-    assert_eq!(schema.len(), 5 + 2 * 6);
+    assert_eq!(schema.len(), 5 + 2 * 6 + 1);
+    assert_eq!(schema.last().unwrap().id.as_str(), "accuracy_mode");
     assert_eq!(schema[5 + 6 + 3].id.as_str(), "band_1_gain");
     assert_eq!(schema[5 + 6 + 3].default_value, ParameterValue::Float(4.5));
     assert_eq!(

@@ -1,0 +1,27 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-engine",
+    "--lib",
+    "--no-default-features",
+    "linear_phase_eq_accuracy_converter",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.36152091692201793,
+  "stdout": "",
+  "stderr": "error: failed to download `typed-path v0.12.4`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

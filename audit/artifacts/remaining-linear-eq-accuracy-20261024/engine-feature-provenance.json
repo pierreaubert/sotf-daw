@@ -1,0 +1,20 @@
+{
+  "note": "These three exact paths were clean immediately before feature edits and have empty cached diffs. Patch includes only mode propagation and focused converter regression. Other engine/driver/lock user changes are excluded; parent controls isolated integration.",
+  "paths": {
+    "crates/sotf-engine/src/plugin_param_accessors.rs": {
+      "before_sha256": "8c741dd7e8a4081cde6760b65d643a68e29329cfa66b6901baf4056aaba3282d",
+      "current_sha256": "6ef893355db89a48d9f7b7659e12e0bb93cb53d927063ae183565e04c32c217d",
+      "cached_diff_empty": true
+    },
+    "crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs": {
+      "before_sha256": "669bd9c79deb09565dc49fc50c99562672d5ceef466f16c8dfac09d961d28f4a",
+      "current_sha256": "57c8e3c54229fe5f3c1300677cd06ebfe0464078c566660427d578ef07982ecf",
+      "cached_diff_empty": true
+    },
+    "crates/sotf-engine/src/plugins/plugin_settings.rs": {
+      "before_sha256": "751b7fad6d204db3b8fbbd7714178e3461093631679b57ddd73c8abe12ccd54a",
+      "current_sha256": "20cd6d447c1100cb2004c3346e20b896835c14b87fbbc98b074bef83f99659fc",
+      "cached_diff_empty": true
+    }
+  }
+}

@@ -21,6 +21,7 @@ fn main() {
     let sample_rate = 48000;
     let channels = 1;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 1, // Medium FIR length
         phase_mode_index: 0,
@@ -84,6 +85,7 @@ fn main() {
                 channels,
                 sample_rate,
                 LinearPhaseEqPluginParams {
+                    accuracy_mode: false,
                     num_filters: 1,
                     fir_length_index,
                     phase_mode_index: 0,

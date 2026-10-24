@@ -16,6 +16,7 @@ fn test_linear_phase_eq_passthrough() {
     let channels = 2;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 3,
         fir_length_index: 1, // 2048 taps
         phase_mode_index: 0,
@@ -103,6 +104,7 @@ fn test_linear_phase_eq_boost() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2, // 4096 taps
         phase_mode_index: 0,
@@ -175,6 +177,7 @@ fn test_linear_phase_eq_phase_linearity() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 1, // 2048 taps
         phase_mode_index: 0,
@@ -283,6 +286,7 @@ fn rms_after_latency(
 fn test_highpass_attenuates_below_cutoff() {
     let sr = 48000u32;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2, // 4096 taps for clean HP response
         phase_mode_index: 0,
@@ -335,6 +339,7 @@ fn test_lowshelf_cut_attenuates_low_frequencies() {
     let sr = 48000u32;
     // -12 dB lowshelf at 500 Hz should visibly attenuate a 100 Hz tone.
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2,
         phase_mode_index: 0,
@@ -381,6 +386,7 @@ fn test_lowpass_zero_gain_not_skipped() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2, // 4096 taps
         phase_mode_index: 0,

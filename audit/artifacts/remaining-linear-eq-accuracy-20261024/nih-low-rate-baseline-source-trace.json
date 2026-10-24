@@ -1,0 +1,14 @@
+{
+  "baseline_commit": "e15a3940d7cc0cffe1b29d71dfde09925ec1ff24",
+  "evidence": "Read-only HEAD/source equivalence and deterministic preexisting validation bound; no baseline binary build claimed.",
+  "default_factory_config_unchanged": true,
+  "config_builder_unchanged_except_added_default_false_accuracy_mode": true,
+  "validate_band_body_byte_equal_to_HEAD": true,
+  "default_band_frequency_hz": 1000.0,
+  "failed_nominal_sample_rate": 1234.5678,
+  "existing_max_band_frequency_hz": 611.1110610000001,
+  "default_band_exceeds_existing_limit": true,
+  "automatic_mode_default": false,
+  "guard_or_default_changes": false,
+  "scope": "Classifies the existing all-rates default-preset activation expectation; not a new automatic-mode failure."
+}

@@ -1,0 +1,23 @@
+{
+  "provenance": "Delegated independent agent /root/ambience_denoisers final handoff and parent-visible tool results; no additional rerun claimed.",
+  "source": "crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy_pdc.rs",
+  "source_sha256": "d97dac0dcccad7c971768a0046d0a7960c24e26d5d697e28e27c7d4150b13359",
+  "test": {
+    "passed": 1,
+    "failed": 0,
+    "rate": 96000,
+    "selected_taps": 2048,
+    "actual_latency_samples": 1056,
+    "manual_latency_samples": 544,
+    "frames": 2426,
+    "maximum_waveform_error": 1.490116e-08,
+    "wrong_manual_reference_error": 0.250000015
+  },
+  "strict_clippy_exit_code": 0,
+  "rustfmt_check_exit_code": 0,
+  "commands": [
+    "rtk proxy env CARGO_BUILD_JOBS=2 cargo test -p plugins-bridge --test linear_eq_accuracy_pdc --release --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- --nocapture",
+    "rtk proxy env CARGO_BUILD_JOBS=2 cargo clippy -p plugins-bridge --test linear_eq_accuracy_pdc --release --offline --locked --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- -D warnings"
+  ],
+  "lock_unchanged_sha256": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050"
+}

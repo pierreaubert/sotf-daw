@@ -1,0 +1,36 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-ffi",
+    "--lib",
+    "linear_phase",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "sotf-plugins/qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "cwd": "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u",
+  "exit_code": 0,
+  "elapsed_seconds": 193.98825254081748,
+  "stdout": "\nrunning 15 tests\ntest parameter_map::tests::test_parameter_map_linear_phase_eq_matches_dsp_band_ids_and_limit ... ok\ntest plugin_factory::tests::linear_phase_eq_adapter_latency_uses_negotiated_callback_quantum ... ok\ntest tests::linear_phase_eq_direct_adapter_enforces_callback_bound_and_silences_error ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_template_matches_plugin_ids_and_count ... ok\ntest parameter_map::tests::placement_choice_labels_cover_eq_dynamic_and_linear_phase_eq ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_rejects_bad_placement_without_touching_live_state ... ok\ntest plugin_factory::tests::linear_phase_eq_rebuilt_fir_length_updates_latency ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_placement_and_pairs_restore_and_render ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_aliases_preserve_pairs_and_restore_placement ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_c_abi_impulse_matches_latency_and_callback_partitions ... ok\ntest tests::linear_phase_eq_preset_import_rebuilds_alias_and_updates_structure ... ok\ntest tests::linear_phase_eq_structural_state_rebuilds_transactionally ... ok\ntest plugin_factory::tests::linear_phase_eq_accuracy_state_rebuild_uses_actual_clock_and_saved_manual_choice ... ok\ntest plugin::ffi_integration_tests::linear_phase_eq_accuracy_failed_restore_preserves_populated_history ... ok\nffi_accuracy_legacy_pdc rate=48000 automatic=10272 manual=8736\ntest plugin::ffi_integration_tests::linear_phase_eq_accuracy_legacy_presets_and_partial_overlays_preserve_contracts ... ok\n\ntest result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.14s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling plugins-ffi v0.7.0 (/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/crates/sotf-plugins/crates/plugins-ffi)\n    Finished `release` profile [optimized] target(s) in 3m 13s\nwarning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6\nnote: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 2`\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_ffi-2226f8f2435eefff)\n",
+  "locks_sha256_before": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_sha256_after": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_unchanged": true,
+  "scope": "Known coherent isolated GPUI dependency baseline, source symlinks; ordinary main FFI dependency graph remains separately blocked."
+}

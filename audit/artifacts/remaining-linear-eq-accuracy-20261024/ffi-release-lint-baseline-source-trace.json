@@ -1,0 +1,25 @@
+{
+  "scope": "Three release-profile unnecessary_literal_unwrap lint failures arise from unchanged existing cfg(not(debug_assertions)) Ok(...).unwrap_or_else processing paths. Normal-profile strict all-target Clippy passes in coherent fixture. No lint override or processing edits.",
+  "head": "e15a3940d7cc0cffe1b29d71dfde09925ec1ff24",
+  "source": "crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs",
+  "functions": [
+    {
+      "function": "plugin_process",
+      "source_unchanged_from_HEAD": true,
+      "head_sha256": "85d8ccac0387e2493b3305aab036253180fc483641b124e597ef356a391a1436",
+      "current_sha256": "85d8ccac0387e2493b3305aab036253180fc483641b124e597ef356a391a1436"
+    },
+    {
+      "function": "plugin_process_with_midi",
+      "source_unchanged_from_HEAD": true,
+      "head_sha256": "0214cf18fcf3a35701fb4953d719d97a27f551ea2d887c4d04752dd115d344a1",
+      "current_sha256": "0214cf18fcf3a35701fb4953d719d97a27f551ea2d887c4d04752dd115d344a1"
+    },
+    {
+      "function": "plugin_process_with_events",
+      "source_unchanged_from_HEAD": true,
+      "head_sha256": "1173cbd868c3379bfb65e70217949accce251b1626875621325938101ad74e69",
+      "current_sha256": "1173cbd868c3379bfb65e70217949accce251b1626875621325938101ad74e69"
+    }
+  ]
+}

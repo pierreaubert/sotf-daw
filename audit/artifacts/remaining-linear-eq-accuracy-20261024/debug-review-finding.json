@@ -1,0 +1,7 @@
+{
+  "finding": "Accepted-update debug assertion omitted the appended accuracy boolean, causing a debug panic for manual and automatic updates.",
+  "source": "Independent readonly review by /root/ambience_denoisers",
+  "fix": "Assert 5+min(num_filters,bands.len())*6+1; preserve all legacy band offsets.",
+  "release_arithmetic_changed": false,
+  "validation": "Scoped debug automatic accepted update and existing manual cached-layout test scheduled."
+}

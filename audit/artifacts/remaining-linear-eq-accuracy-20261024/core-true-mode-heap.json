@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--lib",
+    "accepted_update_keeps_resolved_long_support",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 17.666848290944472,
+  "stdout": "\nrunning 1 test\ntest accuracy::tests::accepted_update_keeps_resolved_long_support_when_new_target_could_be_shorter ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 87 filtered out; finished in 0.08s\n\n",
+  "stderr": "   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 17.53s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_linear_phase_eq-ebc541b501a0edd8)\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

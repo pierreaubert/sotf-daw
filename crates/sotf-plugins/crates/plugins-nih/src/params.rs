@@ -831,6 +831,28 @@ pub fn scrub_hiss_momentary_state(state: &mut PluginState) {
     }
 }
 
+/// Default an old complete native preset to manual FIR support.
+///
+/// Control-thread migration. Modern states retain their explicit flag. The
+/// wrapper refuses legacy audio-thread restores before this can allocate.
+#[doc(hidden)]
+pub fn migrate_linear_phase_eq_state(state: &mut PluginState) {
+    if !state.params.contains_key("accuracy_mode") {
+        state
+            .params
+            .insert("accuracy_mode".to_string(), NativeParamValue::Bool(false));
+    }
+}
+
+/// Refuse legacy migration or invalid mode types before audio-thread mutation.
+#[doc(hidden)]
+pub fn linear_phase_eq_state_restore_allows_audio_thread(state: &PluginState) -> bool {
+    matches!(
+        state.params.get("accuracy_mode"),
+        Some(NativeParamValue::Bool(_))
+    )
+}
+
 impl DynamicParams {
     pub fn from_infos(infos: &[BridgedParamInfo]) -> Arc<Self> {
         Self::from_infos_for_plugin("", infos)
@@ -2828,6 +2850,52 @@ impl DynamicParams {
         Some(self.value_for_entry(entry))
     }
 
+    #[cfg(all(test, feature = "linear-phase-eq"))]
+    pub(crate) fn state_for_initialization_test(&self) -> PluginState {
+        let params = self
+            .sync_entries
+            .iter()
+            .filter_map(|entry| {
+                let value = match self.value(entry.id.as_str())? {
+                    ParameterValue::Bool(value) => NativeParamValue::Bool(value),
+                    ParameterValue::Int(value) => NativeParamValue::I32(value),
+                    ParameterValue::Float(value) => NativeParamValue::F32(value),
+                    ParameterValue::String(value) => NativeParamValue::String(value),
+                };
+                Some((entry.id.to_string(), value))
+            })
+            .collect();
+        PluginState {
+            version: env!("CARGO_PKG_VERSION").into(),
+            params,
+            fields: BTreeMap::new(),
+        }
+    }
+
+    #[cfg(all(test, feature = "linear-phase-eq"))]
+    pub(crate) fn apply_initialization_test_state(&self, state: &PluginState) {
+        // Match NIH's primitive parameter-store leg after filter/admission.
+        // Tests invoke actual wrapper initialization separately, so support
+        // and host PDC are observed from the real reconstructed backend.
+        for (id, value) in &state.params {
+            let Some(entry) = self.param_map.get(id) else {
+                continue;
+            };
+            match (entry.kind, value) {
+                (ParamKind::Bool, NativeParamValue::Bool(value)) => {
+                    self.bool_params[entry.index].set_plain_value_for_initialization(*value);
+                }
+                (ParamKind::Int, NativeParamValue::I32(value)) => {
+                    self.int_params[entry.index].set_plain_value_for_initialization(*value);
+                }
+                (ParamKind::Float, NativeParamValue::F32(value)) => {
+                    self.float_params[entry.index].set_plain_value_for_initialization(*value);
+                }
+                _ => panic!("invalid test fixture parameter {id}"),
+            }
+        }
+    }
+
     #[cfg(feature = "convolution")]
     // Interactive editor removed; retained for the convolution service tests.
     #[allow(dead_code)]
@@ -2853,15 +2921,29 @@ impl DynamicParams {
     /// `stereo`/`left`/`right`/`mid`/`side`. Hosts apply these values when
     /// they recreate/initialize the plugin, never from the render callback.
     pub(crate) fn linear_phase_eq_config_json(&self) -> Result<String, String> {
-        let int_value = |id: &str| match self.value(id) {
+        self.linear_phase_eq_config_json_with_state(None)
+    }
+
+    fn linear_phase_eq_config_json_with_state(
+        &self,
+        state: Option<&PluginState>,
+    ) -> Result<String, String> {
+        let value = |id: &str| match state.and_then(|state| state.params.get(id)) {
+            Some(NativeParamValue::I32(value)) => Some(ParameterValue::Int(*value)),
+            Some(NativeParamValue::F32(value)) => Some(ParameterValue::Float(*value)),
+            Some(NativeParamValue::Bool(value)) => Some(ParameterValue::Bool(*value)),
+            Some(NativeParamValue::String(_)) => None,
+            None => self.value(id),
+        };
+        let int_value = |id: &str| match value(id) {
             Some(ParameterValue::Int(value)) => Ok(value),
             _ => Err(format!("missing LinearPhaseEQ integer parameter '{id}'")),
         };
-        let float_value = |id: &str| match self.value(id) {
+        let float_value = |id: &str| match value(id) {
             Some(ParameterValue::Float(value)) => Ok(value),
             _ => Err(format!("missing LinearPhaseEQ float parameter '{id}'")),
         };
-        let bool_value = |id: &str| match self.value(id) {
+        let bool_value = |id: &str| match value(id) {
             Some(ParameterValue::Bool(value)) => Ok(value),
             _ => Err(format!("missing LinearPhaseEQ boolean parameter '{id}'")),
         };
@@ -2890,7 +2972,7 @@ impl DynamicParams {
                 "gain_db": float_value(&format!("band_{index}_gain"))?,
                 "active": bool_value(&format!("band_{index}_active"))?,
             });
-            match self.value(&format!("band_{index}_placement")) {
+            match value(&format!("band_{index}_placement")) {
                 None | Some(ParameterValue::Int(0)) => {}
                 Some(ParameterValue::Int(placement)) => {
                     let label = usize::try_from(placement)
@@ -2916,6 +2998,7 @@ impl DynamicParams {
             "fir_length_index": int_value("fir_length")?,
             "phase_mode_index": int_value("phase_mode")?,
             "auto_gain": bool_value("auto_gain")?,
+            "accuracy_mode": bool_value("accuracy_mode")?,
             "mix": float_value("mix")?,
             "filters": filters,
         }))
@@ -2983,6 +3066,42 @@ unsafe impl Params for DynamicParams {
         is_audio_thread: bool,
         sample_rate: Option<f64>,
     ) -> bool {
+        if self.param_map.contains_key("accuracy_mode") && self.param_map.contains_key("fir_length")
+        {
+            let requested = match state.params.get("accuracy_mode") {
+                Some(NativeParamValue::Bool(value)) => *value,
+                None => false,
+                Some(_) => return false,
+            };
+            // A mode transition can change prepared support and host PDC.
+            // Keep both native controls and the old backend untouched until
+            // an inactive control-thread restore/reinitialization can occur.
+            if (is_active || is_audio_thread)
+                && self.value("accuracy_mode") != Some(ParameterValue::Bool(requested))
+            {
+                return false;
+            }
+            if requested {
+                // Qualification can allocate and can legitimately fail even
+                // for valid parameter ranges. Refuse before native stores;
+                // never design on active/audio state-restore paths.
+                if is_active || is_audio_thread {
+                    return false;
+                }
+                if let Some(rate) = sample_rate {
+                    let Ok(config) = self.linear_phase_eq_config_json_with_state(Some(state))
+                    else {
+                        return false;
+                    };
+                    if plugins_bridge::create_plugin("LinearPhaseEQ", 2, rate, &config).is_err() {
+                        return false;
+                    }
+                }
+                // Before first initialization there is no actual clock.
+                // Keep the request pending; initialize will select or refuse
+                // at the real clock rather than a provisional guessed rate.
+            }
+        }
         // NIH reinitializes an already prepared plugin after every accepted snapshot,
         // including scalar-only and sparse snapshots. Reject before any mutation so
         // active FFT history and published latency survive until host deactivation.
@@ -3256,6 +3375,39 @@ mod tests {
     }
 
     #[test]
+    fn linear_phase_eq_accuracy_boolean_roundtrips_through_native_config_at_96k() {
+        let mut infos = linear_phase_infos();
+        for info in &mut infos {
+            info.default_value = match info.id.as_str() {
+                "accuracy_mode" => 1.0,
+                "num_filters" => 1.0,
+                "fir_length" => 0.0,
+                "band_0_freq" => 125.0,
+                "band_0_q" => 2.0,
+                "band_0_gain" => 9.0,
+                _ => info.default_value,
+            };
+        }
+        let params = DynamicParams::from_infos(&infos);
+        let config = params.linear_phase_eq_config_json().unwrap();
+        let saved: serde_json::Value = serde_json::from_str(&config).unwrap();
+        assert_eq!(saved["accuracy_mode"], true);
+        assert_eq!(saved["fir_length_index"], 0);
+        let mut plugin =
+            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &config).unwrap();
+        plugin.initialize(96_000.0).unwrap();
+        assert!(plugin.latency_samples() > 544);
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("accuracy_mode")),
+            Some(ParameterValue::Bool(true))
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("fir_length_index")),
+            Some(ParameterValue::Int(0))
+        );
+    }
+
+    #[test]
     fn structural_linear_state_builds_adapter_with_matching_latency_and_bands() {
         let mut infos = linear_phase_infos();
         for info in &mut infos {
@@ -3433,6 +3585,7 @@ mod tests {
             "fir_length",
             "phase_mode",
             "auto_gain",
+            "accuracy_mode",
             "band_0_gain",
             "band_0_placement",
         ] {

@@ -261,6 +261,7 @@ fn run_exact_case(
         channels,
         rate,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: filters.len(),
             fir_length_index: length_index,
             phase_mode_index: phase,
@@ -557,6 +558,7 @@ fn swapped_placement_order_does_not_commute() {
             2,
             48_000,
             LinearPhaseEqPluginParams {
+                accuracy_mode: false,
                 num_filters: 2,
                 fir_length_index: 0,
                 phase_mode_index: 0,
@@ -622,6 +624,7 @@ fn placed_params(
 ) -> LinearPhaseEqPluginParams {
     let num_filters = filters.len();
     LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -790,6 +793,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
         2,
         48_000,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 2,
             fir_length_index: 1,
             phase_mode_index: 0,
@@ -815,6 +819,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
         2,
         48_000,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 2,
             fir_length_index: 1,
             phase_mode_index: 0,
@@ -886,6 +891,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
             "band_1_gain",
             "band_1_active",
             "band_1_placement",
+            "accuracy_mode",
         ]
     );
     assert_eq!(
@@ -922,6 +928,7 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
                     2,
                     48_000,
                     LinearPhaseEqPluginParams {
+                        accuracy_mode: false,
                         num_filters,
                         fir_length_index: length_index,
                         phase_mode_index: phase,
@@ -949,6 +956,7 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
                     2,
                     48_000,
                     LinearPhaseEqPluginParams {
+                        accuracy_mode: false,
                         num_filters,
                         fir_length_index: length_index,
                         phase_mode_index: phase,
@@ -1093,6 +1101,7 @@ fn channel_response_matches_streamed_impulse_per_channel() {
                 2,
                 48_000,
                 LinearPhaseEqPluginParams {
+                    accuracy_mode: false,
                     num_filters,
                     fir_length_index: 0,
                     phase_mode_index: *phase,
@@ -1161,6 +1170,7 @@ fn mid_stopband_response_matches_single_channel_excitation() {
             2,
             48_000,
             LinearPhaseEqPluginParams {
+                accuracy_mode: false,
                 num_filters: 1,
                 fir_length_index: 0,
                 phase_mode_index: 0,

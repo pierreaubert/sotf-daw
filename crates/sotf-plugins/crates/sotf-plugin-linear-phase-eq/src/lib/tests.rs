@@ -66,6 +66,7 @@ fn test_process_rejects_short_and_preserves_oversized_buffer_tail() {
 #[test]
 fn test_from_params_rejects_nonfinite_and_above_nyquist_values() {
     let mut params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -97,6 +98,7 @@ fn test_large_block_is_chunked_not_silently_bypassed() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 1,
         phase_mode_index: 0,
@@ -140,6 +142,7 @@ fn test_large_block_ola_matches_small_chunks() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0, // 1024 taps, fft_size 2048, max valid block 1025
         phase_mode_index: 0,
@@ -277,6 +280,7 @@ fn test_dc_gain_not_hardcoded() {
     let channels = 1;
     let sr = 48000;
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2, // 4096 taps
         phase_mode_index: 0,
@@ -307,6 +311,7 @@ fn test_dc_gain_not_hardcoded() {
 #[test]
 fn auto_gain_does_not_explode_highpass_design() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -356,6 +361,7 @@ fn auto_gain_does_not_explode_highpass_design() {
 #[test]
 fn auto_gain_normalizes_lowshelf_dc_to_unity() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -383,6 +389,7 @@ fn auto_gain_normalizes_lowshelf_dc_to_unity() {
 #[test]
 fn auto_gain_keeps_narrow_lowpass_unity_and_bounded() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -546,6 +553,7 @@ fn test_initialize_changes_sample_rate() {
 #[test]
 fn test_from_params_fills_missing_bands() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 3,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -629,6 +637,7 @@ fn test_process_with_mix() {
         channels,
         sr,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 0,

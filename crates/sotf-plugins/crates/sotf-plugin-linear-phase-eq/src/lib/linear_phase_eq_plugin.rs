@@ -25,6 +25,7 @@ use super::types::PreparedBandUpdate;
 use super::types::RouteBanks;
 use super::types::StageBanks;
 use super::types::{FilterRevision, MAX_FILTER_REVISION, PreparedPriming, PreparedUpdateProgress};
+use crate::accuracy::{self, ACCURACY_TOLERANCE_DB, FirAccuracyReport, Measurement};
 use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
 
 /// The streaming latency contract shared by the DSP and its editor summary.
@@ -84,6 +85,9 @@ pub struct LinearPhaseEqPlugin {
     pub(super) sample_rate: f64,
     pub(super) num_filters: usize,
     pub(super) fir_length_index: usize,
+    configured_fir_length_index: usize,
+    accuracy_mode: bool,
+    accuracy_measurement: Option<Measurement>,
     pub(super) phase_mode_index: usize,
     pub(super) auto_gain: bool,
     pub(super) mix_value: f32,
@@ -212,7 +216,6 @@ impl LinearPhaseEqPlugin {
         }
         let fir_length_index = params.fir_length_index.min(FIR_LENGTH_OPTIONS.len() - 1);
         let phase_mode_index = params.phase_mode_index.min(PHASE_MODE_OPTIONS.len() - 1);
-        let fir_length = fir_length_from_index(fir_length_index);
         let num_filters = params.num_filters.clamp(1, MAX_FILTERS);
         let sr = sample_rate;
 
@@ -260,18 +263,66 @@ impl LinearPhaseEqPlugin {
             ));
         }
 
-        Ok(Self::build(
+        let selected_index = if params.accuracy_mode {
+            Self::select_accuracy_length(
+                sample_rate,
+                phase_mode_index,
+                &bands,
+                params.auto_gain,
+                channels,
+                &stereo_pairs,
+            )?
+            .0
+        } else {
+            fir_length_index
+        };
+        let mut plugin = Self::build(
             channels,
             sample_rate,
             num_filters,
-            fir_length_index,
-            fir_length,
+            selected_index,
+            fir_length_from_index(selected_index),
             phase_mode_index,
             params.auto_gain,
             params.mix,
             bands,
             stereo_pairs,
-        ))
+        );
+        plugin.configured_fir_length_index = fir_length_index;
+        plugin.accuracy_mode = params.accuracy_mode;
+        plugin.accuracy_measurement = if params.accuracy_mode {
+            // Qualify the retained f32 kernels, not just a trial design that
+            // was discarded while selecting support.
+            let firs: Vec<Vec<f32>> = if plugin.is_ordered_route() {
+                plugin
+                    .ordered_stages
+                    .iter()
+                    .map(|stage| stage.fir.clone())
+                    .collect()
+            } else {
+                vec![plugin.fir_coeffs.clone()]
+            };
+            let measured = accuracy::measure(
+                &firs,
+                &plugin.bands,
+                plugin.is_ordered_route(),
+                plugin.phase_mode_index,
+                plugin.auto_gain,
+                plugin.channels,
+                &plugin.stereo_pairs,
+                plugin.sample_rate,
+            )?;
+            if measured.maximum_error_db > ACCURACY_TOLERANCE_DB {
+                return Err(
+                    "final retained FIR kernels failed sampled accuracy qualification".into(),
+                );
+            }
+            Some(measured)
+        } else {
+            None
+        };
+        plugin.rebuild_cached_parameters();
+        Ok(plugin)
     }
 
     fn validate_band(frequency: f64, q: f64, gain_db: f64, sample_rate: f64) -> Result<(), String> {
@@ -358,6 +409,9 @@ impl LinearPhaseEqPlugin {
             sample_rate,
             num_filters,
             fir_length_index,
+            configured_fir_length_index: fir_length_index,
+            accuracy_mode: false,
+            accuracy_measurement: None,
             phase_mode_index,
             auto_gain,
             mix_value: mix,
@@ -418,6 +472,132 @@ impl LinearPhaseEqPlugin {
 
     pub(super) fn fir_length(&self) -> usize {
         fir_length_from_index(self.fir_length_index)
+    }
+
+    /// Return actual FIR support per stage, including automatic selection.
+    pub fn selected_fir_taps(&self) -> usize {
+        self.fir_length()
+    }
+
+    /// Report automatic qualification and complete route latency before audio.
+    ///
+    /// Manual mode returns `None`. During a dynamic blend, the measurement
+    /// describes the committed target, as does `channel_complex_response`.
+    pub fn accuracy_report(&self) -> Option<FirAccuracyReport> {
+        self.accuracy_measurement
+            .map(|measurement| FirAccuracyReport {
+                selected_taps: self.fir_length(),
+                stage_count: if self.is_ordered_route() {
+                    self.num_filters
+                } else {
+                    1
+                },
+                latency_samples: self.latency_samples(),
+                manual_latency_samples: linear_phase_eq_latency_samples(
+                    self.configured_fir_length_index,
+                    self.phase_mode_index,
+                    self.stage_count(),
+                ),
+                additional_latency_samples: self.latency_samples().saturating_sub(
+                    linear_phase_eq_latency_samples(
+                        self.configured_fir_length_index,
+                        self.phase_mode_index,
+                        self.stage_count(),
+                    ),
+                ),
+                sample_rate: self.sample_rate,
+                maximum_error_db: measurement.maximum_error_db,
+                worst_frequency_hz: measurement.worst_frequency_hz,
+                frequency_points: measurement.frequency_points,
+                paired_operator_qualified: measurement.paired_operator_qualified,
+            })
+    }
+
+    fn accuracy_firs(
+        sample_rate: f64,
+        taps: usize,
+        phase: usize,
+        bands: &[EqBand],
+        auto_gain: bool,
+    ) -> Vec<Vec<f32>> {
+        let ordered = bands
+            .iter()
+            .any(|b| b.placement.is_some_and(|p| p.requires_stereo_pair()));
+        let mut frequencies = Vec::new();
+        let mut magnitudes = Vec::new();
+        if ordered {
+            bands
+                .iter()
+                .map(|band| {
+                    if band.active {
+                        Self::design_fir_coefficients(
+                            sample_rate,
+                            taps,
+                            phase,
+                            std::slice::from_ref(band),
+                            false,
+                            &mut frequencies,
+                            &mut magnitudes,
+                        )
+                    } else {
+                        design_identity_fir(taps, phase)
+                    }
+                })
+                .collect()
+        } else {
+            vec![Self::design_fir_coefficients(
+                sample_rate,
+                taps,
+                phase,
+                bands,
+                auto_gain,
+                &mut frequencies,
+                &mut magnitudes,
+            )]
+        }
+    }
+
+    fn select_accuracy_length(
+        sample_rate: f64,
+        phase: usize,
+        bands: &[EqBand],
+        auto_gain: bool,
+        channels: usize,
+        pairs: &[[usize; 2]],
+    ) -> Result<(usize, Measurement), String> {
+        let ordered = bands
+            .iter()
+            .any(|b| b.placement.is_some_and(|p| p.requires_stereo_pair()));
+        let mut last = None;
+        for index in 0..FIR_LENGTH_OPTIONS.len() {
+            let firs = Self::accuracy_firs(
+                sample_rate,
+                fir_length_from_index(index),
+                phase,
+                bands,
+                auto_gain,
+            );
+            let measurement = accuracy::measure(
+                &firs,
+                bands,
+                ordered,
+                phase,
+                auto_gain,
+                channels,
+                pairs,
+                sample_rate,
+            )?;
+            if measurement.maximum_error_db <= ACCURACY_TOLERANCE_DB {
+                return Ok((index, measurement));
+            }
+            last = Some(measurement);
+        }
+        let detail = last
+            .map(|m| format!("{} dB at {} Hz", m.maximum_error_db, m.worst_frequency_hz))
+            .unwrap_or_else(|| "no supported FIR lengths".into());
+        Err(format!(
+            "accuracy mode cannot meet sampled 0.05 dB criterion at maximum 8192 taps ({detail}); no filter was installed"
+        ))
     }
 
     pub(super) fn band_contribution_db(bands: &[EqBand], freq: f64) -> f64 {
@@ -644,7 +824,7 @@ impl LinearPhaseEqPlugin {
             Parameter::new_int(
                 "fir_length_index",
                 "FIR Length",
-                self.fir_length_index as i32,
+                self.configured_fir_length_index as i32,
                 0,
                 (FIR_LENGTH_OPTIONS.len() - 1) as i32,
             )
@@ -735,6 +915,15 @@ impl LinearPhaseEqPlugin {
             );
         }
 
+        // Append after every legacy band slot: existing numeric addresses stay fixed.
+        params.push(
+            Parameter::new_bool("accuracy_mode", "Automatic Accuracy", self.accuracy_mode)
+                .with_description(
+                    "Choose FIR support for sampled 0.05 dB accuracy; rebuild required",
+                )
+                .with_group("Quality")
+                .with_update_mode(UpdateMode::Structural),
+        );
         apply_spec_update_modes(&mut params, LP_PARAMS);
         self.cached_parameters = params;
     }
@@ -807,7 +996,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
         );
         values.insert(
             ParameterId::from("fir_length_index"),
-            ParameterValue::Int(self.fir_length_index as i32),
+            ParameterValue::Int(self.configured_fir_length_index as i32),
         );
         values.insert(
             ParameterId::from("phase_mode_index"),
@@ -851,6 +1040,10 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
                 ParameterValue::Int(placement_to_index(band.placement) as i32),
             );
         }
+        values.insert(
+            ParameterId::from("accuracy_mode"),
+            ParameterValue::Bool(self.accuracy_mode),
+        );
         values
     }
 
@@ -862,7 +1055,8 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
             let id_str = id.as_str();
 
             match id_str {
-                "num_filters" | "fir_length_index" | "phase_mode_index" | "auto_gain" => {
+                "num_filters" | "fir_length_index" | "phase_mode_index" | "auto_gain"
+                | "accuracy_mode" => {
                     return Err(format!(
                         "{id_str} is structural; rebuild the plugin to change it"
                     ));
@@ -891,6 +1085,9 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("sample rate must be positive".into());
+        }
+        if self.accuracy_mode && sample_rate != self.sample_rate {
+            return Err("accuracy mode sample-rate changes require structural rebuild/reprepare at the actual rate".into());
         }
         let reset_stream = self.drain_remaining.is_some() || sample_rate != self.sample_rate;
         if sample_rate != self.sample_rate {
@@ -1493,6 +1690,7 @@ impl LinearPhaseEqPlugin {
             fir_length_index: self.fir_length_index,
             phase_mode_index: self.phase_mode_index,
             auto_gain: self.auto_gain,
+            accuracy_mode: self.accuracy_mode,
             bands: self
                 .bands
                 .iter()
@@ -1520,6 +1718,7 @@ impl LinearPhaseEqPlugin {
             && base.fir_length_index == self.fir_length_index
             && base.phase_mode_index == self.phase_mode_index
             && base.auto_gain == self.auto_gain
+            && base.accuracy_mode == self.accuracy_mode
             && base.stereo_pairs == self.stereo_pairs
             && base.bands.len() == self.num_filters.min(self.bands.len())
             && self
@@ -1649,6 +1848,27 @@ impl LinearPhaseEqPlugin {
                 &mut scratch_mags,
             ));
         }
+        let accuracy_measurement = if base.accuracy_mode {
+            let measured = accuracy::measure(
+                &firs,
+                &design_bands,
+                ordered,
+                base.phase_mode_index,
+                base.auto_gain,
+                base.channels,
+                &base.stereo_pairs,
+                sr,
+            )?;
+            if measured.maximum_error_db > ACCURACY_TOLERANCE_DB {
+                return Err(format!(
+                    "accuracy target cannot qualify at fixed {} taps (sampled error {} dB at {} Hz); structural rebuild/reprepare required",
+                    fir_length, measured.maximum_error_db, measured.worst_frequency_hz
+                ));
+            }
+            Some(measured)
+        } else {
+            None
+        };
         let placements: Vec<LinearPhaseEqBandPlacement> = if ordered {
             design_bands
                 .iter()
@@ -1680,6 +1900,7 @@ impl LinearPhaseEqPlugin {
             new_biquad,
             target,
             priming: None,
+            accuracy_measurement,
         })
     }
 
@@ -1855,6 +2076,7 @@ impl LinearPhaseEqPlugin {
         // Validation above prevents wrap; even an accepted no-op consumes its
         // revision so an older worker cannot revive after equal controls.
         self.filter_revision += 1;
+        self.accuracy_measurement = owned.accuracy_measurement;
         // Install the new design data. Lengths and placements already match;
         // copies keep every allocation on the preparation side.
         if self.is_ordered_route() {
@@ -1887,9 +2109,10 @@ impl LinearPhaseEqPlugin {
         // gain, active at 5 + band*6 + {0..4} by construction; placement never
         // changes here). No allocation: the schema shape is untouched.
         let base = 5 + band_index * 6;
+        // The accuracy flag follows all legacy band slots; their offsets stay fixed.
         debug_assert_eq!(
             self.cached_parameters.len(),
-            5 + self.num_filters.min(self.bands.len()) * 6
+            5 + self.num_filters.min(self.bands.len()) * 6 + 1
         );
         if let Some(slot) = self.cached_parameters.get_mut(base) {
             slot.default_value = ParameterValue::Int(new.filter_type_index as i32);

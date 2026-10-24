@@ -1,0 +1,3131 @@
+diff --git a/crates/sotf-engine/src/plugin_param_accessors.rs b/crates/sotf-engine/src/plugin_param_accessors.rs
+index e952108..cd73b8a 100644
+--- a/crates/sotf-engine/src/plugin_param_accessors.rs
++++ b/crates/sotf-engine/src/plugin_param_accessors.rs
+@@ -640,7 +640,7 @@ impl_param_accessors! {
+         layout: Some(&param_specs::linear_phase_eq::LAYOUT),
+         fields: [
+             num_filters: f64, fir_length: f64,
+-            phase_mode: f64, auto_gain: bool, mix: f64,
++            phase_mode: f64, auto_gain: bool, mix: f64, accuracy_mode: bool,
+         ]
+     },
+     AAE {
+diff --git a/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs b/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs
+index af4abd0..c1e09fa 100644
+--- a/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs
++++ b/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs
+@@ -13,6 +13,7 @@ pub fn convert_linear_phase_eq(
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         mix,
+         filters,
+         stereo_pairs,
+@@ -42,9 +43,48 @@ pub fn convert_linear_phase_eq(
+             "fir_length_index": *fir_length as usize,
+             "phase_mode_index": *phase_mode as usize,
+             "auto_gain": auto_gain,
++            "accuracy_mode": accuracy_mode,
+             "mix": *mix as f32,
+             "filters": band_configs,
+             "stereo_pairs": stereo_pairs,
+         }),
+     ))
+ }
++
++#[cfg(test)]
++mod accuracy_tests {
++    use super::*;
++
++    #[test]
++    fn linear_phase_eq_accuracy_converter_preserves_opt_in_and_manual_length() {
++        for accuracy in [false, true] {
++            let settings: PluginSettings = serde_json::from_value(json!({
++                "LinearPhaseEq": {
++                    "fir_length": 2.0,
++                    "accuracy_mode": accuracy,
++                    "filters": [],
++                }
++            }))
++            .unwrap();
++            assert_eq!(settings.param_value(1), Some(2.0));
++            assert_eq!(settings.param_value(5), Some(f64::from(accuracy)));
++            let config = convert_linear_phase_eq(&settings, 96_000.0).unwrap();
++            assert_eq!(config.parameters["fir_length_index"], 2);
++            assert_eq!(config.parameters["accuracy_mode"], accuracy);
++            let restored: PluginSettings =
++                serde_json::from_value(serde_json::to_value(&settings).unwrap()).unwrap();
++            assert_eq!(
++                convert_linear_phase_eq(&restored, 96_000.0)
++                    .unwrap()
++                    .parameters,
++                config.parameters
++            );
++        }
++        let old: PluginSettings =
++            serde_json::from_value(json!({"LinearPhaseEq":{"fir_length":2.0}})).unwrap();
++        assert_eq!(
++            convert_linear_phase_eq(&old, 96_000.0).unwrap().parameters["accuracy_mode"],
++            false
++        );
++    }
++}
+diff --git a/crates/sotf-engine/src/plugins/plugin_settings.rs b/crates/sotf-engine/src/plugins/plugin_settings.rs
+index 57a0226..72e24e4 100644
+--- a/crates/sotf-engine/src/plugins/plugin_settings.rs
++++ b/crates/sotf-engine/src/plugins/plugin_settings.rs
+@@ -1868,6 +1868,8 @@ pub enum PluginSettings {
+         phase_mode: f64,
+         #[serde(default)]
+         auto_gain: bool,
++        #[serde(default)]
++        accuracy_mode: bool,
+         #[serde(default = "default_lpeq_mix")]
+         mix: f64,
+         #[serde(default)]
+@@ -2790,6 +2792,7 @@ impl PluginSettings {
+                     fir_length: p(lp, "fir_length_index").default_f64(),
+                     phase_mode: p(lp, "phase_mode_index").default_f64(),
+                     auto_gain: p(lp, "auto_gain").default_bool(),
++                    accuracy_mode: p(lp, "accuracy_mode").default_bool(),
+                     mix: p(lp, "mix").default_f64(),
+                     filters,
+                     stereo_pairs: None,
+diff --git a/crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs b/crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs
+index fac6290..d83f084 100644
+--- a/crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs
++++ b/crates/sotf-plugins/crates/plugins-ffi/src/lib/ffi_integration_tests.rs
+@@ -974,10 +974,124 @@ fn dynamic_eq_failed_restore_retains_audio_and_config() {
+ // LinearPhaseEQ: placement/pairs/complete state.
+ // ---------------------------------------------------------------------------
+ 
++#[test]
++fn linear_phase_eq_accuracy_legacy_presets_and_partial_overlays_preserve_contracts() {
++    let config = serde_json::json!({
++        "num_filters": 1, "fir_length_index": 0, "accuracy_mode": true,
++        "filters": [{"filter_type":"Peak", "frequency":125.0, "q":2.0, "gain_db":9.0}]
++    })
++    .to_string();
++    let mut handle = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
++    let automatic_latency = handle.inner().plugin.latency_samples();
++    let modern: serde_json::Map<String, serde_json::Value> =
++        serde_json::from_slice(&handle.save()).unwrap();
++    let mut legacy = modern.clone();
++    legacy.remove("accuracy_mode");
++    assert_eq!(
++        handle.load(&serde_json::to_vec(&legacy).unwrap()),
++        0,
++        "{}",
++        abi_last_error()
++    );
++    let manual_latency = handle.inner().plugin.latency_samples();
++    assert!(automatic_latency > manual_latency);
++    assert_eq!(handle.config_json()["accuracy_mode"], false);
++    assert_eq!(handle.config_json()["fir_length_index"], 0);
++
++    for mode in [true, false, true] {
++        let mut explicit = modern.clone();
++        explicit.insert("accuracy_mode".into(), serde_json::json!(mode));
++        assert_eq!(
++            handle.load(&serde_json::to_vec(&explicit).unwrap()),
++            0,
++            "{}",
++            abi_last_error()
++        );
++        assert_eq!(handle.config_json()["accuracy_mode"], mode);
++        assert_eq!(
++            handle.inner().plugin.latency_samples(),
++            if mode {
++                automatic_latency
++            } else {
++                manual_latency
++            }
++        );
++    }
++    // Raw maps can also be partial overlays. Five globals alone, or a band
++    // missing placement, do not unambiguously identify a whole old preset.
++    let mut globals = legacy.clone();
++    globals.retain(|key, _| !key.starts_with("band_") && key != "stereo_pairs");
++    let mut incomplete_band = legacy.clone();
++    incomplete_band.remove("band_0_placement");
++    for overlay in [
++        serde_json::json!({"mix": 0.75}),
++        serde_json::json!(globals),
++        serde_json::json!(incomplete_band),
++    ] {
++        assert_eq!(
++            handle.load(&serde_json::to_vec(&overlay).unwrap()),
++            0,
++            "{}",
++            abi_last_error()
++        );
++        assert_eq!(handle.config_json()["accuracy_mode"], true);
++        assert_eq!(handle.inner().plugin.latency_samples(), automatic_latency);
++    }
++    // The explicit preset envelope disambiguates older snapshots that
++    // predate placement as well as the new accuracy flag.
++    let document = serde_json::to_vec(&serde_json::json!({
++        "schema_version":1, "ut_type":"org.spinorama.sotf.plugin-preset",
++        "plugin_type":"LinearPhaseEQ", "state":serde_json::to_vec(&incomplete_band).unwrap()
++    }))
++    .unwrap();
++    assert_eq!(
++        plugin_import_preset_json(handle.pointer, document.as_ptr(), document.len()),
++        0,
++        "{}",
++        abi_last_error()
++    );
++    assert_eq!(handle.config_json()["accuracy_mode"], false);
++    assert_eq!(handle.inner().plugin.latency_samples(), manual_latency);
++    println!(
++        "ffi_accuracy_legacy_pdc rate=48000 automatic={automatic_latency} manual={manual_latency}"
++    );
++}
++
++#[test]
++fn linear_phase_eq_accuracy_failed_restore_preserves_populated_history() {
++    let config = serde_json::json!({
++        "num_filters": 1, "fir_length_index": 0, "accuracy_mode": true,
++        "filters": [{"filter_type":"Peak", "frequency":125.0, "q":2.0, "gain_db":9.0}]
++    })
++    .to_string();
++    let mut handle = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
++    let mut control = AbiHandle::create("LinearPhaseEQ", &config, 2, 2);
++    let prefix = sine_interleaved(1536, 2, 317.0, 48_000.0);
++    assert_eq!(handle.process(&prefix), control.process(&prefix));
++    let state = handle.save();
++    let config_before = handle.config_json();
++    let latency = handle.inner().plugin.latency_samples();
++    for bad in [
++        serde_json::json!({"accuracy_mode":"true"}),
++        serde_json::json!({"band_0_freq":20.0,"band_0_q":50.0,"band_0_gain":24.0}),
++    ] {
++        assert_ne!(handle.load(&serde_json::to_vec(&bad).unwrap()), 0);
++        assert_eq!(handle.save(), state);
++        assert_eq!(handle.config_json(), config_before);
++        assert_eq!(handle.inner().plugin.latency_samples(), latency);
++        let continuation = sine_interleaved(384, 2, 829.0, 48_000.0);
++        assert_eq!(
++            handle.process(&continuation),
++            control.process(&continuation)
++        );
++    }
++}
++
+ #[test]
+ fn linear_phase_eq_template_matches_plugin_ids_and_count() {
+     let handle = AbiHandle::create("LinearPhaseEQ", "{}", 2, 2);
+-    assert_eq!(handle.param_count(), 5 + 10 * 6);
++    assert_eq!(handle.param_count(), 5 + 10 * 6 + 1);
++    assert_eq!(handle.param_id(65), "accuracy_mode");
+     let fields = ["type", "freq", "q", "gain", "active", "placement"];
+     for band in 0..10 {
+         for (field, name) in fields.iter().enumerate() {
+diff --git a/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs b/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs
+index 1d810a9..8e491d9 100644
+--- a/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs
++++ b/crates/sotf-plugins/crates/plugins-ffi/src/lib/plugin.rs
+@@ -429,7 +429,7 @@ fn replace_plugin_from_state(
+         handle.plugin_type.as_str(),
+         "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
+     ) {
+-        return replace_linear_phase_eq_from_state(handle, state);
++        return replace_linear_phase_eq_from_state(handle, state, restore_kind);
+     }
+     if matches!(handle.plugin_type.as_str(), "EQ" | "eq") {
+         return replace_eq_from_state(handle, state);
+@@ -1216,6 +1216,7 @@ mod analog_limiter_consumer_tests;
+ fn replace_linear_phase_eq_from_state(
+     handle: &mut PluginHandle,
+     state: &[u8],
++    restore_kind: PluginStateRestoreKind,
+ ) -> Result<(), String> {
+     // Match the generic state loader's partial-update contract: values omitted
+     // from the incoming object retain their current live values, including
+@@ -1225,6 +1226,14 @@ fn replace_linear_phase_eq_from_state(
+             .map_err(|error| format!("Failed to capture current LinearPhaseEQ state: {error}"))?;
+     let incoming_state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+         .map_err(|error| format!("Failed to parse LinearPhaseEQ state: {error}"))?;
++    // Preset envelopes are unambiguously complete. Raw maps keep the existing
++    // partial contract unless every prior canonical scalar/band field exists.
++    if !incoming_state.contains_key("accuracy_mode")
++        && (restore_kind == PluginStateRestoreKind::Preset
++            || super::plugin_factory::is_complete_legacy_linear_phase_eq_state(&incoming_state))
++    {
++        merged_state.insert("accuracy_mode".to_string(), false.into());
++    }
+     if let Some(num_filters) = incoming_state
+         .get("num_filters")
+         .and_then(serde_json::Value::as_u64)
+diff --git a/crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs b/crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
+index 2a16b6c..afd7cf3 100644
+--- a/crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
++++ b/crates/sotf-plugins/crates/plugins-ffi/src/parameter_map.rs
+@@ -305,13 +305,18 @@ impl ParameterMap {
+ 
+         // Pre-build cached C-compatible info structs from static ParamSpec
+         let mut cached_infos = Vec::with_capacity(bridge.count());
++        let mut accuracy_info = None;
+         for i in 0..bridge.count() {
+             if let Some(info) = bridge.info(i) {
++                let appended_accuracy = matches!(
++                    plugin_type,
++                    "LinearPhaseEQ" | "linear_phase_eq" | "Linear-Phase-EQ"
++                ) && info.id == "accuracy_mode";
+                 let id = ffi_cstring_ptr(info.id);
+                 let name = ffi_cstring_ptr(info.name);
+                 let unit = ffi_cstring_ptr(info.unit);
+ 
+-                cached_infos.push(ParameterInfo {
++                let cached = ParameterInfo {
+                     id,
+                     name,
+                     unit,
+@@ -320,7 +325,12 @@ impl ParameterMap {
+                     default_value: info.default_value,
+                     steps: info.steps,
+                     logarithmic: info.logarithmic,
+-                });
++                };
++                if appended_accuracy {
++                    accuracy_info = Some(cached);
++                } else {
++                    cached_infos.push(cached);
++                }
+             }
+         }
+ 
+@@ -348,6 +358,11 @@ impl ParameterMap {
+             expand_eq_placement_params(&mut cached_infos);
+         }
+ 
++        // Keep all legacy globals/bands at their original numeric addresses.
++        if let Some(info) = accuracy_info {
++            cached_infos.push(info);
++        }
++
+         // Fallback: if no static specs produced params, use Plugin::parameters()
+         if cached_infos.is_empty() {
+             for param in &runtime_parameters {
+@@ -1155,7 +1170,8 @@ mod tests {
+         assert_eq!(band_template_info("LinearPhaseEQ"), Some((6, 10)));
+         let plugin = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
+         let param_map = ParameterMap::from_plugin(&*plugin, "LinearPhaseEQ");
+-        assert_eq!(param_map.count(), 5 + 10 * 6);
++        assert_eq!(param_map.count(), 5 + 10 * 6 + 1);
++        assert_eq!(param_map.param_id_at(65), Some("accuracy_mode"));
+         assert_eq!(param_map.param_id_at(5), Some("band_0_type"));
+         assert_eq!(param_map.param_id_at(10), Some("band_0_placement"));
+     }
+@@ -1297,7 +1313,8 @@ mod tests {
+         let linear = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 48_000.0, "{}").unwrap();
+         let canonical = ParameterMap::from_plugin(&*linear, "LinearPhaseEQ");
+         // 5 globals + 10 bands x 6 fields; static schema includes dormant slots.
+-        assert_eq!(canonical.count(), 5 + 10 * 6);
++        assert_eq!(canonical.count(), 5 + 10 * 6 + 1);
++        assert_eq!(canonical.param_id_at(65), Some("accuracy_mode"));
+         for alias in ["linear_phase_eq", "Linear-Phase-EQ"] {
+             let aliased = ParameterMap::from_plugin(&*linear, alias);
+             assert_eq!(aliased.count(), canonical.count(), "alias {alias}");
+diff --git a/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs b/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs
+index a5c699c..00cc300 100644
+--- a/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs
++++ b/crates/sotf-plugins/crates/plugins-ffi/src/plugin_factory.rs
+@@ -99,6 +99,33 @@ fn default_linear_phase_eq_band() -> serde_json::Value {
+     })
+ }
+ 
++/// Recognize the complete pre-accuracy raw snapshot, never a partial overlay.
++pub(crate) fn is_complete_legacy_linear_phase_eq_state(
++    state: &serde_json::Map<String, serde_json::Value>,
++) -> bool {
++    if state.contains_key("accuracy_mode")
++        || !["num_filters", "auto_gain", "mix"]
++            .iter()
++            .all(|key| state.contains_key(*key))
++        || !(state.contains_key("fir_length") || state.contains_key("fir_length_index"))
++        || !(state.contains_key("phase_mode") || state.contains_key("phase_mode_index"))
++    {
++        return false;
++    }
++    let Some(count) = state
++        .get("num_filters")
++        .and_then(serde_json::Value::as_u64)
++        .filter(|count| (1..=LINEAR_PHASE_EQ_MAX_FILTERS as u64).contains(count))
++    else {
++        return false;
++    };
++    (0..count).all(|band| {
++        ["type", "freq", "q", "gain", "active", "placement"]
++            .iter()
++            .all(|field| state.contains_key(&format!("band_{band}_{field}")))
++    })
++}
++
+ /// Merge the flat parameter state used by plugin presets into the structured
+ /// constructor configuration required by LinearPhaseEQ.
+ pub(crate) fn merge_linear_phase_eq_state_into_config(
+@@ -118,15 +145,24 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
+     let state: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state_bytes)
+         .map_err(|error| format!("Failed to parse LinearPhaseEQ state: {error}"))?;
+ 
+-    if let Some(index) = state_integer(&state, "fir_length")? {
++    let length = match state_integer(&state, "fir_length")? {
++        Some(index) => Some(index),
++        None => state_integer(&state, "fir_length_index")?,
++    };
++    if let Some(index) = length {
+         if index > 3 {
+             return Err(format!(
+                 "LinearPhaseEQ fir_length index must be within [0, 3], got {index}"
+             ));
+         }
++        config.remove("fir_length");
+         config.insert("fir_length_index".to_string(), index.into());
+     }
+-    if let Some(index) = state_integer(&state, "phase_mode")? {
++    let phase = match state_integer(&state, "phase_mode")? {
++        Some(index) => Some(index),
++        None => state_integer(&state, "phase_mode_index")?,
++    };
++    if let Some(index) = phase {
+         if index > 1 {
+             return Err(format!(
+                 "LinearPhaseEQ phase_mode index must be within [0, 1], got {index}"
+@@ -135,6 +171,11 @@ pub(crate) fn merge_linear_phase_eq_state_into_config(
+         config.remove("phase_mode");
+         config.insert("phase_mode_index".to_string(), index.into());
+     }
++    if let Some(accuracy_mode) = state_bool(&state, "accuracy_mode")? {
++        config.insert("accuracy_mode".to_string(), accuracy_mode.into());
++    } else if is_complete_legacy_linear_phase_eq_state(&state) {
++        config.insert("accuracy_mode".to_string(), false.into());
++    }
+     if let Some(auto_gain) = state_bool(&state, "auto_gain")? {
+         config.insert("auto_gain".to_string(), auto_gain.into());
+     }
+@@ -1393,4 +1434,42 @@ mod tests {
+         assert_eq!(direct.realtime_quantum_frames(), 1);
+         assert_eq!(direct.latency_samples(), inner_latency + 2 * 257);
+     }
++
++    #[test]
++    fn linear_phase_eq_accuracy_state_rebuild_uses_actual_clock_and_saved_manual_choice() {
++        let initial = serde_json::json!({"num_filters":3,"fir_length_index":0,"filters":[
++            {"filter_type":"Peak","frequency":500.0,"q":2.0,"gain_db":9.0},
++            {"filter_type":"Peak","frequency":2000.0,"q":1.5,"gain_db":-6.0},
++            {"filter_type":"Lowshelf","frequency":150.0,"gain_db":3.0}
++        ]})
++        .to_string();
++        let automatic =
++            merge_linear_phase_eq_state_into_config(&initial, br#"{"accuracy_mode":true}"#)
++                .unwrap();
++        let bridge =
++            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &automatic).unwrap();
++        let mut external =
++            create_plugin_with_max_callback("LinearPhaseEQ", &automatic, 2, 2, 96_000, 257)
++                .unwrap();
++        external.initialize(96_000.0).unwrap();
++        assert_eq!(external.latency_samples(), bridge.latency_samples() + 514);
++        assert_eq!(
++            external.get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
++            Some(sotf_host::ParameterValue::Bool(true))
++        );
++        assert_eq!(
++            external.get_parameter(&sotf_host::ParameterId::from("fir_length_index")),
++            Some(sotf_host::ParameterValue::Int(0))
++        );
++        let manual =
++            merge_linear_phase_eq_state_into_config(&automatic, br#"{"accuracy_mode":false}"#)
++                .unwrap();
++        let manual = plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &manual).unwrap();
++        assert_eq!(manual.latency_samples(), 544);
++        assert!(bridge.latency_samples() > manual.latency_samples());
++        assert!(
++            merge_linear_phase_eq_state_into_config(&initial, br#"{"accuracy_mode":"yes"}"#)
++                .is_err()
++        );
++    }
+ }
+diff --git a/crates/sotf-plugins/crates/plugins-nih/src/lib.rs b/crates/sotf-plugins/crates/plugins-nih/src/lib.rs
+index 16fe5b7..379cb7e 100644
+--- a/crates/sotf-plugins/crates/plugins-nih/src/lib.rs
++++ b/crates/sotf-plugins/crates/plugins-nih/src/lib.rs
+@@ -417,9 +417,310 @@ mod plugin {
+     #[cfg(test)]
+     mod tests {
+         use super::SotfLinearPhaseEQ;
+-        use nih_plug::prelude::Plugin;
++        use nih_plug::prelude::{
++            BufferConfig, InitContext, Params, Plugin, PluginApi, ProcessMode,
++        };
++        use nih_plug::wrapper::state::{ParamValue, PluginState};
+ 
+         const _: () = assert!(SotfLinearPhaseEQ::SAMPLE_ACCURATE_AUTOMATION);
++
++        #[test]
++        fn linear_phase_eq_native_accuracy_preserves_legacy_host_ids() {
++            let plugin = SotfLinearPhaseEQ::default();
++            let params = plugin.params();
++            // NIH's legacy Params map enumerates a HashMap, so enumeration
++            // positions were never stable addresses. Host IDs are strings.
++            let ids = params
++                .param_map()
++                .into_iter()
++                .map(|(id, _, _)| id)
++                .collect::<std::collections::HashSet<_>>();
++            assert_eq!(ids.len(), 66);
++            for id in [
++                "num_filters",
++                "fir_length",
++                "phase_mode",
++                "auto_gain",
++                "mix",
++                "accuracy_mode",
++            ] {
++                assert!(ids.contains(id));
++            }
++            for band in 0..10 {
++                for field in ["type", "freq", "q", "gain", "active", "placement"] {
++                    assert!(ids.contains(&format!("band_{band}_{field}")));
++                }
++            }
++        }
++
++        struct LatencyContext(std::cell::Cell<u32>);
++        impl InitContext<SotfLinearPhaseEQ> for LatencyContext {
++            fn plugin_api(&self) -> PluginApi {
++                PluginApi::Clap
++            }
++            fn execute(&self, _: ()) {}
++            fn set_latency_samples(&self, latency: u32) {
++                self.0.set(latency);
++            }
++            fn set_current_voice_capacity(&self, _: u32) {}
++        }
++
++        fn admit_and_store(
++            plugin: &SotfLinearPhaseEQ,
++            state: &mut PluginState,
++            active: bool,
++            audio: bool,
++        ) -> bool {
++            // NIH runs this hook before allocating migration or applying any
++            // parameters. The fixture follows that same pinned codec order.
++            if audio && !SotfLinearPhaseEQ::state_restore_allows_audio_thread(state) {
++                return false;
++            }
++            SotfLinearPhaseEQ::filter_state(state);
++            if !plugin
++                .params
++                .validate_state(state, active, audio, Some(96_000.0))
++            {
++                return false;
++            }
++            plugin.params.apply_initialization_test_state(state);
++            true
++        }
++
++        fn render_native_backend(
++            plugin: &mut SotfLinearPhaseEQ,
++            input: &[f32],
++            submitted: &mut u64,
++        ) -> Vec<f32> {
++            let mut output = vec![f32::NAN; input.len()];
++            for (source, destination) in input.chunks(256).zip(output.chunks_mut(256)) {
++                let frames = source.len() / 2;
++                plugin
++                    .inner
++                    .as_mut()
++                    .unwrap()
++                    .process(
++                        source,
++                        destination,
++                        &sotf_host::ProcessContext::new(96_000, frames),
++                    )
++                    .unwrap();
++                *submitted += frames as u64;
++                let adapter = plugin
++                    .inner
++                    .as_ref()
++                    .unwrap()
++                    .as_any()
++                    .unwrap()
++                    .downcast_ref::<sotf_host::AsyncTimelinePlugin>()
++                    .unwrap();
++                let quantum = adapter.quantum_frames() as u64;
++                let target = *submitted / quantum * quantum;
++                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
++                while target != 0 && adapter.completed_frame() < target {
++                    assert!(std::time::Instant::now() < deadline);
++                    std::thread::sleep(std::time::Duration::from_micros(100));
++                }
++            }
++            output
++        }
++
++        #[test]
++        fn linear_phase_eq_native_mode_only_rebuild_and_legacy_restore_publish_actual_pdc() {
++            let mut plugin = SotfLinearPhaseEQ::default();
++            let mut initial = plugin.params.state_for_initialization_test();
++            initial
++                .params
++                .insert("num_filters".into(), ParamValue::I32(1));
++            initial
++                .params
++                .insert("fir_length".into(), ParamValue::I32(0));
++            initial
++                .params
++                .insert("band_0_freq".into(), ParamValue::F32(125.0));
++            initial
++                .params
++                .insert("band_0_q".into(), ParamValue::F32(2.0));
++            initial
++                .params
++                .insert("band_0_gain".into(), ParamValue::F32(9.0));
++            plugin.params.apply_initialization_test_state(&initial);
++            let layout = SotfLinearPhaseEQ::AUDIO_IO_LAYOUTS[0];
++            let config = BufferConfig {
++                sample_rate: 96_000.0,
++                min_buffer_size: Some(1),
++                max_buffer_size: 128,
++                process_mode: ProcessMode::Realtime,
++            };
++            let mut context = LatencyContext(std::cell::Cell::new(u32::MAX));
++            assert!(plugin.initialize(&layout, &config, &mut context));
++            let manual_latency = context.0.get();
++            assert_eq!(
++                manual_latency as usize,
++                plugin.inner.as_ref().unwrap().latency_samples()
++            );
++            let before = plugin.params.state_for_initialization_test();
++            let mut only_mode = PluginState {
++                version: before.version.clone(),
++                params: std::collections::BTreeMap::from([(
++                    "accuracy_mode".into(),
++                    ParamValue::Bool(true),
++                )]),
++                fields: std::collections::BTreeMap::new(),
++            };
++            assert!(admit_and_store(&plugin, &mut only_mode, false, false));
++            let mut changed = plugin.params.state_for_initialization_test();
++            changed.params.remove("accuracy_mode");
++            let mut original = before.clone();
++            original.params.remove("accuracy_mode");
++            assert_eq!(
++                serde_json::to_vec(&changed).unwrap(),
++                serde_json::to_vec(&original).unwrap()
++            );
++            assert_ne!(
++                plugin.params.structural_fingerprint(),
++                plugin.structural_fingerprint
++            );
++            assert!(plugin.initialize(&layout, &config, &mut context));
++            let automatic_latency = context.0.get();
++            assert!(automatic_latency > manual_latency);
++            assert_eq!(
++                automatic_latency as usize,
++                plugin.inner.as_ref().unwrap().latency_samples()
++            );
++            assert_eq!(
++                plugin
++                    .inner
++                    .as_ref()
++                    .unwrap()
++                    .get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
++                Some(sotf_host::ParameterValue::Bool(true))
++            );
++            assert_eq!(
++                plugin
++                    .inner
++                    .as_ref()
++                    .unwrap()
++                    .get_parameter(&sotf_host::ParameterId::from("fir_length_index")),
++                Some(sotf_host::ParameterValue::Int(0))
++            );
++
++            // A complete pre-feature native state has no flag. Loading it
++            // into a true-mode instance must restore the manual backend/PDC.
++            let mut legacy = before.clone();
++            legacy.params.remove("accuracy_mode");
++            let live = plugin.params.state_for_initialization_test();
++            let live_bytes = serde_json::to_vec(&live).unwrap();
++            let mut control = SotfLinearPhaseEQ::default();
++            control.params.apply_initialization_test_state(&live);
++            let mut control_context = LatencyContext(std::cell::Cell::new(u32::MAX));
++            assert!(control.initialize(&layout, &config, &mut control_context));
++            let mut submitted = 0;
++            let mut control_submitted = 0;
++            let prefix = (0..16384)
++                .map(|index| (index as f32 * 0.017).sin() * 0.2)
++                .collect::<Vec<_>>();
++            assert_eq!(
++                render_native_backend(&mut plugin, &prefix, &mut submitted),
++                render_native_backend(&mut control, &prefix, &mut control_submitted)
++            );
++            let backend: *const dyn sotf_host::Plugin = plugin.inner.as_ref().unwrap().as_ref();
++            for (active, audio) in [(true, false), (false, true)] {
++                let mut rejected = legacy.clone();
++                assert!(!admit_and_store(&plugin, &mut rejected, active, audio));
++                assert_eq!(
++                    serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
++                    live_bytes
++                );
++                assert!(std::ptr::eq(
++                    backend,
++                    plugin.inner.as_ref().unwrap().as_ref()
++                ));
++                assert_eq!(context.0.get(), automatic_latency);
++            }
++            // Known-clock qualification must reject before primitive native
++            // parameter stores, retaining the populated backend's history.
++            let mut unsupported = live.clone();
++            unsupported
++                .params
++                .insert("band_0_freq".into(), ParamValue::F32(20.0));
++            unsupported
++                .params
++                .insert("band_0_q".into(), ParamValue::F32(50.0));
++            unsupported
++                .params
++                .insert("band_0_gain".into(), ParamValue::F32(24.0));
++            assert!(!admit_and_store(&plugin, &mut unsupported, false, false));
++            assert_eq!(
++                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
++                live_bytes
++            );
++            assert!(std::ptr::eq(
++                backend,
++                plugin.inner.as_ref().unwrap().as_ref()
++            ));
++            assert_eq!(context.0.get(), automatic_latency);
++            let continuation = (0..8192)
++                .map(|index| (index as f32 * 0.031).cos() * 0.1)
++                .collect::<Vec<_>>();
++            let continued = render_native_backend(&mut plugin, &continuation, &mut submitted);
++            assert!(continued.iter().any(|sample| sample.abs() > 0.01));
++            assert_eq!(
++                continued,
++                render_native_backend(&mut control, &continuation, &mut control_submitted)
++            );
++
++            // A state submitted before any actual clock is known stays
++            // pending; admission must not invent a provisional rate.
++            assert!(
++                plugin
++                    .params
++                    .validate_state(&unsupported, false, false, None)
++            );
++            assert!(admit_and_store(&plugin, &mut legacy, false, false));
++            assert!(plugin.initialize(&layout, &config, &mut context));
++            assert_eq!(context.0.get(), manual_latency);
++            assert_eq!(
++                plugin
++                    .inner
++                    .as_ref()
++                    .unwrap()
++                    .get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
++                Some(sotf_host::ParameterValue::Bool(false))
++            );
++
++            // Both explicit modern values survive the migration unchanged.
++            for value in [true, false] {
++                let mut modern = before.clone();
++                modern
++                    .params
++                    .insert("accuracy_mode".into(), ParamValue::Bool(value));
++                assert!(admit_and_store(&plugin, &mut modern, false, false));
++                assert!(plugin.initialize(&layout, &config, &mut context));
++                assert_eq!(
++                    context.0.get(),
++                    if value {
++                        automatic_latency
++                    } else {
++                        manual_latency
++                    }
++                );
++            }
++            let current =
++                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap();
++            let mut invalid = before;
++            invalid
++                .params
++                .insert("accuracy_mode".into(), ParamValue::I32(1));
++            assert!(!admit_and_store(&plugin, &mut invalid, false, false));
++            assert_eq!(
++                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
++                current
++            );
++            println!(
++                "native_accuracy_mode_pdc rate=96000 manual={manual_latency} automatic={automatic_latency} legacy_restore={manual_latency}"
++            );
++        }
+     }
+ }
+ 
+diff --git a/crates/sotf-plugins/crates/plugins-nih/src/params.rs b/crates/sotf-plugins/crates/plugins-nih/src/params.rs
+index 11abcc4..d921d1d 100644
+--- a/crates/sotf-plugins/crates/plugins-nih/src/params.rs
++++ b/crates/sotf-plugins/crates/plugins-nih/src/params.rs
+@@ -831,6 +831,28 @@ pub fn scrub_hiss_momentary_state(state: &mut PluginState) {
+     }
+ }
+ 
++/// Default an old complete native preset to manual FIR support.
++///
++/// Control-thread migration. Modern states retain their explicit flag. The
++/// wrapper refuses legacy audio-thread restores before this can allocate.
++#[doc(hidden)]
++pub fn migrate_linear_phase_eq_state(state: &mut PluginState) {
++    if !state.params.contains_key("accuracy_mode") {
++        state
++            .params
++            .insert("accuracy_mode".to_string(), NativeParamValue::Bool(false));
++    }
++}
++
++/// Refuse legacy migration or invalid mode types before audio-thread mutation.
++#[doc(hidden)]
++pub fn linear_phase_eq_state_restore_allows_audio_thread(state: &PluginState) -> bool {
++    matches!(
++        state.params.get("accuracy_mode"),
++        Some(NativeParamValue::Bool(_))
++    )
++}
++
+ impl DynamicParams {
+     pub fn from_infos(infos: &[BridgedParamInfo]) -> Arc<Self> {
+         Self::from_infos_for_plugin("", infos)
+@@ -2828,6 +2850,52 @@ impl DynamicParams {
+         Some(self.value_for_entry(entry))
+     }
+ 
++    #[cfg(all(test, feature = "linear-phase-eq"))]
++    pub(crate) fn state_for_initialization_test(&self) -> PluginState {
++        let params = self
++            .sync_entries
++            .iter()
++            .filter_map(|entry| {
++                let value = match self.value(entry.id.as_str())? {
++                    ParameterValue::Bool(value) => NativeParamValue::Bool(value),
++                    ParameterValue::Int(value) => NativeParamValue::I32(value),
++                    ParameterValue::Float(value) => NativeParamValue::F32(value),
++                    ParameterValue::String(value) => NativeParamValue::String(value),
++                };
++                Some((entry.id.to_string(), value))
++            })
++            .collect();
++        PluginState {
++            version: env!("CARGO_PKG_VERSION").into(),
++            params,
++            fields: BTreeMap::new(),
++        }
++    }
++
++    #[cfg(all(test, feature = "linear-phase-eq"))]
++    pub(crate) fn apply_initialization_test_state(&self, state: &PluginState) {
++        // Match NIH's primitive parameter-store leg after filter/admission.
++        // Tests invoke actual wrapper initialization separately, so support
++        // and host PDC are observed from the real reconstructed backend.
++        for (id, value) in &state.params {
++            let Some(entry) = self.param_map.get(id) else {
++                continue;
++            };
++            match (entry.kind, value) {
++                (ParamKind::Bool, NativeParamValue::Bool(value)) => {
++                    self.bool_params[entry.index].set_plain_value_for_initialization(*value);
++                }
++                (ParamKind::Int, NativeParamValue::I32(value)) => {
++                    self.int_params[entry.index].set_plain_value_for_initialization(*value);
++                }
++                (ParamKind::Float, NativeParamValue::F32(value)) => {
++                    self.float_params[entry.index].set_plain_value_for_initialization(*value);
++                }
++                _ => panic!("invalid test fixture parameter {id}"),
++            }
++        }
++    }
++
+     #[cfg(feature = "convolution")]
+     // Interactive editor removed; retained for the convolution service tests.
+     #[allow(dead_code)]
+@@ -2853,15 +2921,29 @@ impl DynamicParams {
+     /// `stereo`/`left`/`right`/`mid`/`side`. Hosts apply these values when
+     /// they recreate/initialize the plugin, never from the render callback.
+     pub(crate) fn linear_phase_eq_config_json(&self) -> Result<String, String> {
+-        let int_value = |id: &str| match self.value(id) {
++        self.linear_phase_eq_config_json_with_state(None)
++    }
++
++    fn linear_phase_eq_config_json_with_state(
++        &self,
++        state: Option<&PluginState>,
++    ) -> Result<String, String> {
++        let value = |id: &str| match state.and_then(|state| state.params.get(id)) {
++            Some(NativeParamValue::I32(value)) => Some(ParameterValue::Int(*value)),
++            Some(NativeParamValue::F32(value)) => Some(ParameterValue::Float(*value)),
++            Some(NativeParamValue::Bool(value)) => Some(ParameterValue::Bool(*value)),
++            Some(NativeParamValue::String(_)) => None,
++            None => self.value(id),
++        };
++        let int_value = |id: &str| match value(id) {
+             Some(ParameterValue::Int(value)) => Ok(value),
+             _ => Err(format!("missing LinearPhaseEQ integer parameter '{id}'")),
+         };
+-        let float_value = |id: &str| match self.value(id) {
++        let float_value = |id: &str| match value(id) {
+             Some(ParameterValue::Float(value)) => Ok(value),
+             _ => Err(format!("missing LinearPhaseEQ float parameter '{id}'")),
+         };
+-        let bool_value = |id: &str| match self.value(id) {
++        let bool_value = |id: &str| match value(id) {
+             Some(ParameterValue::Bool(value)) => Ok(value),
+             _ => Err(format!("missing LinearPhaseEQ boolean parameter '{id}'")),
+         };
+@@ -2890,7 +2972,7 @@ impl DynamicParams {
+                 "gain_db": float_value(&format!("band_{index}_gain"))?,
+                 "active": bool_value(&format!("band_{index}_active"))?,
+             });
+-            match self.value(&format!("band_{index}_placement")) {
++            match value(&format!("band_{index}_placement")) {
+                 None | Some(ParameterValue::Int(0)) => {}
+                 Some(ParameterValue::Int(placement)) => {
+                     let label = usize::try_from(placement)
+@@ -2916,6 +2998,7 @@ impl DynamicParams {
+             "fir_length_index": int_value("fir_length")?,
+             "phase_mode_index": int_value("phase_mode")?,
+             "auto_gain": bool_value("auto_gain")?,
++            "accuracy_mode": bool_value("accuracy_mode")?,
+             "mix": float_value("mix")?,
+             "filters": filters,
+         }))
+@@ -2983,6 +3066,42 @@ unsafe impl Params for DynamicParams {
+         is_audio_thread: bool,
+         sample_rate: Option<f64>,
+     ) -> bool {
++        if self.param_map.contains_key("accuracy_mode") && self.param_map.contains_key("fir_length")
++        {
++            let requested = match state.params.get("accuracy_mode") {
++                Some(NativeParamValue::Bool(value)) => *value,
++                None => false,
++                Some(_) => return false,
++            };
++            // A mode transition can change prepared support and host PDC.
++            // Keep both native controls and the old backend untouched until
++            // an inactive control-thread restore/reinitialization can occur.
++            if (is_active || is_audio_thread)
++                && self.value("accuracy_mode") != Some(ParameterValue::Bool(requested))
++            {
++                return false;
++            }
++            if requested {
++                // Qualification can allocate and can legitimately fail even
++                // for valid parameter ranges. Refuse before native stores;
++                // never design on active/audio state-restore paths.
++                if is_active || is_audio_thread {
++                    return false;
++                }
++                if let Some(rate) = sample_rate {
++                    let Ok(config) = self.linear_phase_eq_config_json_with_state(Some(state))
++                    else {
++                        return false;
++                    };
++                    if plugins_bridge::create_plugin("LinearPhaseEQ", 2, rate, &config).is_err() {
++                        return false;
++                    }
++                }
++                // Before first initialization there is no actual clock.
++                // Keep the request pending; initialize will select or refuse
++                // at the real clock rather than a provisional guessed rate.
++            }
++        }
+         // NIH reinitializes an already prepared plugin after every accepted snapshot,
+         // including scalar-only and sparse snapshots. Reject before any mutation so
+         // active FFT history and published latency survive until host deactivation.
+@@ -3255,6 +3374,39 @@ mod tests {
+         infos
+     }
+ 
++    #[test]
++    fn linear_phase_eq_accuracy_boolean_roundtrips_through_native_config_at_96k() {
++        let mut infos = linear_phase_infos();
++        for info in &mut infos {
++            info.default_value = match info.id.as_str() {
++                "accuracy_mode" => 1.0,
++                "num_filters" => 1.0,
++                "fir_length" => 0.0,
++                "band_0_freq" => 125.0,
++                "band_0_q" => 2.0,
++                "band_0_gain" => 9.0,
++                _ => info.default_value,
++            };
++        }
++        let params = DynamicParams::from_infos(&infos);
++        let config = params.linear_phase_eq_config_json().unwrap();
++        let saved: serde_json::Value = serde_json::from_str(&config).unwrap();
++        assert_eq!(saved["accuracy_mode"], true);
++        assert_eq!(saved["fir_length_index"], 0);
++        let mut plugin =
++            plugins_bridge::create_plugin("LinearPhaseEQ", 2, 96_000.0, &config).unwrap();
++        plugin.initialize(96_000.0).unwrap();
++        assert!(plugin.latency_samples() > 544);
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("accuracy_mode")),
++            Some(ParameterValue::Bool(true))
++        );
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("fir_length_index")),
++            Some(ParameterValue::Int(0))
++        );
++    }
++
+     #[test]
+     fn structural_linear_state_builds_adapter_with_matching_latency_and_bands() {
+         let mut infos = linear_phase_infos();
+@@ -3433,6 +3585,7 @@ mod tests {
+             "fir_length",
+             "phase_mode",
+             "auto_gain",
++            "accuracy_mode",
+             "band_0_gain",
+             "band_0_placement",
+         ] {
+diff --git a/crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs b/crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs
+index 683edfa..21ca020 100644
+--- a/crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs
++++ b/crates/sotf-plugins/crates/plugins-nih/src/wrapper.rs
+@@ -1364,9 +1364,14 @@ macro_rules! sotf_nih_plugin {
+ 
+                 // Build param infos for DynamicParams
+                 let mut infos = Vec::new();
++                let mut accuracy_info = None;
+                 for i in 0..bridge_inner.count() {
+                     if let Some(info) = bridge_inner.info(i) {
+-                        infos.push(info);
++                        if matches!($plugin_type, "LinearPhaseEQ") && info.id == "accuracy_mode" {
++                            accuracy_info = Some(info);
++                        } else {
++                            infos.push(info);
++                        }
+                     }
+                 }
+ 
+@@ -1391,6 +1396,12 @@ macro_rules! sotf_nih_plugin {
+                     }
+                 }
+ 
++                if let Some(info) = accuracy_info {
++                    if !infos.iter().any(|existing| existing.id == info.id) {
++                        infos.push(info);
++                    }
++                }
++
+                 if matches!($plugin_type, "EQ") {
+                     for info in $crate::params::native_eq_pair_route_param_infos() {
+                         if !infos.iter().any(|existing| existing.id == info.id) {
+@@ -1526,6 +1537,8 @@ macro_rules! sotf_nih_plugin {
+                     $crate::wrapper::migrate_crossover_state(state);
+                 } else if matches!($plugin_type, "EQ") {
+                     $crate::params::migrate_eq_native_state(state);
++                } else if matches!($plugin_type, "LinearPhaseEQ") {
++                    $crate::params::migrate_linear_phase_eq_state(state);
+                 } else if matches!($plugin_type, "HissReducer") {
+                     $crate::params::scrub_hiss_momentary_state(state);
+                 }
+@@ -1539,6 +1552,9 @@ macro_rules! sotf_nih_plugin {
+                 if matches!($plugin_type, "Upmixer") {
+                     return false;
+                 }
++                if matches!($plugin_type, "LinearPhaseEQ") {
++                    return $crate::params::linear_phase_eq_state_restore_allows_audio_thread(state);
++                }
+                 if matches!($plugin_type, "EQ") {
+                     return $crate::params::eq_state_restore_allows_audio_thread(state);
+                 }
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/CHANGELOG.md b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/CHANGELOG.md
+index 362cd29..25c7a45 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/CHANGELOG.md
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/CHANGELOG.md
+@@ -1,5 +1,14 @@
+ # Unreleased
+ 
++- Add default-off `accuracy_mode`: choose the shortest supported FIR meeting
++  the declared sampled magnitude/cascade criterion, expose actual support and
++  full/additional route latency before audio, and fail clearly at maximum
++  support. Preserve manual choices, defaults and old automation addresses.
++- Keep automatic-mode dynamic updates at the resolved fixed length; refuse
++  targets requiring a structural rebuild. Qualify retained f32 taps in both
++  phases, preserve explicit near-null residual policy, and reject real rate
++  changes before mutation until reconstruction at the actual clock.
++
+ - Enforce centered linear-phase symmetry without changing N-tap support or
+   N/2+32 per-stage delay: discard the unpaired endpoint and average pairs before
+   f32 conversion. Minimum-phase design is unchanged. Independent streamed
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md
+index 79c9483..d157c59 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md
+@@ -40,6 +40,88 @@ filter histories. Mix remains
+ realtime-automatable and is smoothed per sample. Linear-phase latency is
+ `N/2 + 32` samples; minimum phase reports the 32-sample partition latency.
+ 
++## Automatic sampled accuracy
++
++Set `accuracy_mode: true` in the constructor configuration to select the shortest
++qualifying support from 1024, 2048, 4096 and 8192 taps. The default is `false`;
++all four manual indices, their normalized automation values, and old presets
++retain their meaning. The stored manual choice is preserved while automatic
++selection is active, so rebuilding with accuracy mode off restores that choice.
++The new structural boolean is appended after existing external band addresses.
++
++Complete older native states and named FFI presets without `accuracy_mode`
++restore manual mode. Raw FFI maps also support partial overlays: missing fields
++preserve current values unless the map contains all five old globals and all
++six canonical fields for every incoming band, identifying a complete prior
++snapshot. Older raw maps missing placement remain partial overlays; use the
++explicit preset-import envelope to restore those as complete presets. Explicit
++modern `true` or `false` values always take precedence. Native mode changes
++require inactive control-thread restoration and reinitialization, following the
++existing structural FIR rebuild protocol.
++At a known clock, native automatic snapshots are qualified before native
++parameter stores; unsupported targets preserve controls, backend, latency and
++audio history. Before first initialization the actual clock is unknown, so the
++request remains pending until initialization selects or refuses at that clock.
++
++```json
++{
++  "num_filters": 1,
++  "fir_length_index": 0,
++  "phase_mode_index": 0,
++  "accuracy_mode": true,
++  "filters": [{"filter_type": "Peak", "frequency": 500.0, "q": 2.0, "gain_db": 9.0}]
++}
++```
++
++Construct at the actual input sample rate. After successful `from_params`,
++`selected_fir_taps()` and `accuracy_report()` expose the selected support and
++complete route latency before audio. The report includes the saved manual
++choice's latency and any additional samples. Hosts use the constructed
++instance's actual latency; `linear_phase_eq_latency_samples()` remains a helper
++for explicit fixed lengths. Minimum-phase support can grow without increasing
++its existing 32-sample partition delay per stage. Both modes may require more
++processing work; automatic selection is not a callback-capacity guarantee.
++
++Qualification evaluates the **final retained f32 taps**, including symmetry,
++phase design and Auto Gain, independently of the designer's response grid.
++It checks DC through Nyquist on an FFT grid with at least 32-fold zero-padding
++(minimum FFT length 32768), 257 logarithmic points and Q-aware neighborhoods of
++every active configured band center. Feature points use a direct f64 DTFT.
++These are sampled checks, not a continuous-frequency guarantee or four fitted
++audit probes.
++
++The scalar magnitude criterion is
++`abs(actual - target) <= (1 - 10^(-0.05/20)) * max(target, 1e-4)`.
++Above the -80 dB reference floor this conservatively implies at most 0.05 dB
++magnitude error. Below it the explicit absolute residual allowance is about
++`5.74e-7` amplitude; clipping both magnitudes to the floor is not used. Auto Gain
++uses the ideal meaningful DC reference, otherwise meaningful Nyquist, otherwise
++unchanged scale, when defining the accuracy target.
++
++Ordered routes also check the complete complex 2x2 paired cascade, in band
++order, with an operator-error bound relative to its weakest target direction
++and the same explicit floor. Unpaired channels are checked separately. Linear
++stages remove their actual N/2 delay before comparison. For minimum phase, each
++target stage combines independent ideal magnitude with the constructed FIR
++stage's unit phase. This qualifies the cascade given actual stage phase; it
++does not replace the existing independent phase/energy/latency tests. The
++report identifies paired operator qualification. Auto Gain with explicit
++L/R/M/S placements remains unsupported.
++
++Construction returns a clear error if no supported length qualifies, including
++failure at 8192 taps. It never relaxes the criterion or silently falls back.
++A real sample-rate change in accuracy mode also refuses before changing state;
++rebuild/reprepare at that actual rate so latency can be published safely.
++Same-rate initialization and reset preserve the selected support.
++
++Dynamic band preparation keeps the current selected length fixed. It qualifies
++the complete proposed target off audio and refuses an unqualified target with
++an explicit rebuild/reprepare error. An accepted target retains the current
++length and latency even if a fresh instance could use fewer taps. Snapshots
++carry the resolved length and accuracy flag; ordinary parameter getters still
++report the saved manual length. Qualification adds no work or allocation to
++rendering or realtime commit.
++
+ ## Per-band channel routing
+ 
+ Each band accepts an optional `placement` (`stereo`, `left`, `right`, `mid`,
+@@ -303,5 +385,6 @@ even the configured 500 Hz center's 0.05 dB constraint requires at least 8.07%
+ more RMS relative error than the current design. Independent scalar cosine
+ verification agrees with the numerical dual bound. This concerns the added
+ pilot RMS nonregression guard; it does not prove the four original probes alone
+-are infeasible. No response tolerance, production coefficients or length
+-selection behavior changes follow from this analysis.
++are infeasible. That analysis did not change coefficients, tolerances or length selection.
++Automatic sampled accuracy above is a separately authorized support/latency
++tradeoff; the original fixed-1024 FIR-M1 diagnostic remains unchanged.
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs
+index cc19432..70d563d 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs
+@@ -160,6 +160,7 @@ fn scenario(rate: u32, channels: usize, stages: usize, phase: usize, frames: usi
+     let mut update = bands[stages - 1].clone();
+     update.gain_db += 3.0;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: stages,
+         fir_length_index: 3,
+         phase_mode_index: phase,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs
+index 54a5231..5afd570 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq.rs
+@@ -21,6 +21,7 @@ fn main() {
+     let sample_rate = 48000;
+     let channels = 1;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 1, // Medium FIR length
+         phase_mode_index: 0,
+@@ -84,6 +85,7 @@ fn main() {
+                 channels,
+                 sample_rate,
+                 LinearPhaseEqPluginParams {
++                    accuracy_mode: false,
+                     num_filters: 1,
+                     fir_length_index,
+                     phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs
+index b6b8cbe..8c8c880 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/dynamic_host.rs
+@@ -353,6 +353,7 @@ pub struct LinearPhaseEqControlHandle {
+     accepted_phase_mode_index: usize,
+     /// Immutable auto gain flag.
+     accepted_auto_gain: bool,
++    accepted_accuracy_mode: bool,
+     /// Immutable per-band placements for the configured prefix.
+     accepted_placements: [Option<LinearPhaseEqBandPlacement>; MAX_FILTERS],
+     /// Immutable explicit stereo pairs.
+@@ -534,6 +535,7 @@ impl LinearPhaseEqControlHandle {
+                         fir_length_index: self.accepted_fir_length_index,
+                         phase_mode_index: self.accepted_phase_mode_index,
+                         auto_gain: self.accepted_auto_gain,
++                        accuracy_mode: self.accepted_accuracy_mode,
+                         bands,
+                         stereo_pairs: self.accepted_pairs.clone(),
+                     },
+@@ -704,6 +706,7 @@ impl LinearPhaseEqDynamicPlugin {
+             accepted_fir_length_index: initial.fir_length_index,
+             accepted_phase_mode_index: initial.phase_mode_index,
+             accepted_auto_gain: initial.auto_gain,
++            accepted_accuracy_mode: initial.accuracy_mode,
+             accepted_placements,
+             accepted_pairs: initial.stereo_pairs.clone(),
+             accepted_sample_rate: AtomicU64::new(initial.sample_rate.to_bits()),
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs
+index 90ef0b3..533151e 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib.rs
+@@ -2,6 +2,11 @@
+ pub mod dynamic_host;
+ pub mod params;
+ 
++#[path = "lib/accuracy.rs"]
++mod accuracy;
++#[doc(inline)]
++pub use accuracy::{ACCURACY_REFERENCE_FLOOR, ACCURACY_TOLERANCE_DB, FirAccuracyReport};
++
+ #[path = "lib/default.rs"]
+ mod default;
+ #[cfg(test)]
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/drain_tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/drain_tests.rs
+index 594ed5e..645f51e 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/drain_tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/drain_tests.rs
+@@ -62,6 +62,7 @@ fn make(channels: usize, rate: u32, length: usize, phase: usize, mix: f32) -> Li
+         channels,
+         rate,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: length,
+             phase_mode_index: phase,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs
+index 8bf9cfb..79df382 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/dynamic_tests.rs
+@@ -33,6 +33,7 @@ fn band(
+ fn params_for(bands: Vec<BandConfig>, mix: f32) -> LinearPhaseEqPluginParams {
+     let num_filters = bands.len();
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -710,7 +711,8 @@ fn cached_parameter_layout_matches_commit_indices() {
+     );
+     // band_1 entries sit at 5 + 1*6 + {0..4} by construction.
+     let schema = plugin.parameter_schema();
+-    assert_eq!(schema.len(), 5 + 2 * 6);
++    assert_eq!(schema.len(), 5 + 2 * 6 + 1);
++    assert_eq!(schema.last().unwrap().id.as_str(), "accuracy_mode");
+     assert_eq!(schema[5 + 6 + 3].id.as_str(), "band_1_gain");
+     assert_eq!(schema[5 + 6 + 3].default_value, ParameterValue::Float(4.5));
+     assert_eq!(
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs
+index 5208274..15c738c 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/linear_phase_eq_plugin.rs
+@@ -25,6 +25,7 @@ use super::types::PreparedBandUpdate;
+ use super::types::RouteBanks;
+ use super::types::StageBanks;
+ use super::types::{FilterRevision, MAX_FILTER_REVISION, PreparedPriming, PreparedUpdateProgress};
++use crate::accuracy::{self, ACCURACY_TOLERANCE_DB, FirAccuracyReport, Measurement};
+ use crate::params::{FIR_LENGTH_OPTIONS, MAX_FILTERS, PARAMS as LP_PARAMS, PHASE_MODE_OPTIONS};
+ 
+ /// The streaming latency contract shared by the DSP and its editor summary.
+@@ -84,6 +85,9 @@ pub struct LinearPhaseEqPlugin {
+     pub(super) sample_rate: f64,
+     pub(super) num_filters: usize,
+     pub(super) fir_length_index: usize,
++    configured_fir_length_index: usize,
++    accuracy_mode: bool,
++    accuracy_measurement: Option<Measurement>,
+     pub(super) phase_mode_index: usize,
+     pub(super) auto_gain: bool,
+     pub(super) mix_value: f32,
+@@ -212,7 +216,6 @@ impl LinearPhaseEqPlugin {
+         }
+         let fir_length_index = params.fir_length_index.min(FIR_LENGTH_OPTIONS.len() - 1);
+         let phase_mode_index = params.phase_mode_index.min(PHASE_MODE_OPTIONS.len() - 1);
+-        let fir_length = fir_length_from_index(fir_length_index);
+         let num_filters = params.num_filters.clamp(1, MAX_FILTERS);
+         let sr = sample_rate;
+ 
+@@ -260,18 +263,66 @@ impl LinearPhaseEqPlugin {
+             ));
+         }
+ 
+-        Ok(Self::build(
++        let selected_index = if params.accuracy_mode {
++            Self::select_accuracy_length(
++                sample_rate,
++                phase_mode_index,
++                &bands,
++                params.auto_gain,
++                channels,
++                &stereo_pairs,
++            )?
++            .0
++        } else {
++            fir_length_index
++        };
++        let mut plugin = Self::build(
+             channels,
+             sample_rate,
+             num_filters,
+-            fir_length_index,
+-            fir_length,
++            selected_index,
++            fir_length_from_index(selected_index),
+             phase_mode_index,
+             params.auto_gain,
+             params.mix,
+             bands,
+             stereo_pairs,
+-        ))
++        );
++        plugin.configured_fir_length_index = fir_length_index;
++        plugin.accuracy_mode = params.accuracy_mode;
++        plugin.accuracy_measurement = if params.accuracy_mode {
++            // Qualify the retained f32 kernels, not just a trial design that
++            // was discarded while selecting support.
++            let firs: Vec<Vec<f32>> = if plugin.is_ordered_route() {
++                plugin
++                    .ordered_stages
++                    .iter()
++                    .map(|stage| stage.fir.clone())
++                    .collect()
++            } else {
++                vec![plugin.fir_coeffs.clone()]
++            };
++            let measured = accuracy::measure(
++                &firs,
++                &plugin.bands,
++                plugin.is_ordered_route(),
++                plugin.phase_mode_index,
++                plugin.auto_gain,
++                plugin.channels,
++                &plugin.stereo_pairs,
++                plugin.sample_rate,
++            )?;
++            if measured.maximum_error_db > ACCURACY_TOLERANCE_DB {
++                return Err(
++                    "final retained FIR kernels failed sampled accuracy qualification".into(),
++                );
++            }
++            Some(measured)
++        } else {
++            None
++        };
++        plugin.rebuild_cached_parameters();
++        Ok(plugin)
+     }
+ 
+     fn validate_band(frequency: f64, q: f64, gain_db: f64, sample_rate: f64) -> Result<(), String> {
+@@ -358,6 +409,9 @@ impl LinearPhaseEqPlugin {
+             sample_rate,
+             num_filters,
+             fir_length_index,
++            configured_fir_length_index: fir_length_index,
++            accuracy_mode: false,
++            accuracy_measurement: None,
+             phase_mode_index,
+             auto_gain,
+             mix_value: mix,
+@@ -420,6 +474,132 @@ impl LinearPhaseEqPlugin {
+         fir_length_from_index(self.fir_length_index)
+     }
+ 
++    /// Return actual FIR support per stage, including automatic selection.
++    pub fn selected_fir_taps(&self) -> usize {
++        self.fir_length()
++    }
++
++    /// Report automatic qualification and complete route latency before audio.
++    ///
++    /// Manual mode returns `None`. During a dynamic blend, the measurement
++    /// describes the committed target, as does `channel_complex_response`.
++    pub fn accuracy_report(&self) -> Option<FirAccuracyReport> {
++        self.accuracy_measurement
++            .map(|measurement| FirAccuracyReport {
++                selected_taps: self.fir_length(),
++                stage_count: if self.is_ordered_route() {
++                    self.num_filters
++                } else {
++                    1
++                },
++                latency_samples: self.latency_samples(),
++                manual_latency_samples: linear_phase_eq_latency_samples(
++                    self.configured_fir_length_index,
++                    self.phase_mode_index,
++                    self.stage_count(),
++                ),
++                additional_latency_samples: self.latency_samples().saturating_sub(
++                    linear_phase_eq_latency_samples(
++                        self.configured_fir_length_index,
++                        self.phase_mode_index,
++                        self.stage_count(),
++                    ),
++                ),
++                sample_rate: self.sample_rate,
++                maximum_error_db: measurement.maximum_error_db,
++                worst_frequency_hz: measurement.worst_frequency_hz,
++                frequency_points: measurement.frequency_points,
++                paired_operator_qualified: measurement.paired_operator_qualified,
++            })
++    }
++
++    fn accuracy_firs(
++        sample_rate: f64,
++        taps: usize,
++        phase: usize,
++        bands: &[EqBand],
++        auto_gain: bool,
++    ) -> Vec<Vec<f32>> {
++        let ordered = bands
++            .iter()
++            .any(|b| b.placement.is_some_and(|p| p.requires_stereo_pair()));
++        let mut frequencies = Vec::new();
++        let mut magnitudes = Vec::new();
++        if ordered {
++            bands
++                .iter()
++                .map(|band| {
++                    if band.active {
++                        Self::design_fir_coefficients(
++                            sample_rate,
++                            taps,
++                            phase,
++                            std::slice::from_ref(band),
++                            false,
++                            &mut frequencies,
++                            &mut magnitudes,
++                        )
++                    } else {
++                        design_identity_fir(taps, phase)
++                    }
++                })
++                .collect()
++        } else {
++            vec![Self::design_fir_coefficients(
++                sample_rate,
++                taps,
++                phase,
++                bands,
++                auto_gain,
++                &mut frequencies,
++                &mut magnitudes,
++            )]
++        }
++    }
++
++    fn select_accuracy_length(
++        sample_rate: f64,
++        phase: usize,
++        bands: &[EqBand],
++        auto_gain: bool,
++        channels: usize,
++        pairs: &[[usize; 2]],
++    ) -> Result<(usize, Measurement), String> {
++        let ordered = bands
++            .iter()
++            .any(|b| b.placement.is_some_and(|p| p.requires_stereo_pair()));
++        let mut last = None;
++        for index in 0..FIR_LENGTH_OPTIONS.len() {
++            let firs = Self::accuracy_firs(
++                sample_rate,
++                fir_length_from_index(index),
++                phase,
++                bands,
++                auto_gain,
++            );
++            let measurement = accuracy::measure(
++                &firs,
++                bands,
++                ordered,
++                phase,
++                auto_gain,
++                channels,
++                pairs,
++                sample_rate,
++            )?;
++            if measurement.maximum_error_db <= ACCURACY_TOLERANCE_DB {
++                return Ok((index, measurement));
++            }
++            last = Some(measurement);
++        }
++        let detail = last
++            .map(|m| format!("{} dB at {} Hz", m.maximum_error_db, m.worst_frequency_hz))
++            .unwrap_or_else(|| "no supported FIR lengths".into());
++        Err(format!(
++            "accuracy mode cannot meet sampled 0.05 dB criterion at maximum 8192 taps ({detail}); no filter was installed"
++        ))
++    }
++
+     pub(super) fn band_contribution_db(bands: &[EqBand], freq: f64) -> f64 {
+         let mut combined_db = 0.0;
+         for band in bands {
+@@ -644,7 +824,7 @@ impl LinearPhaseEqPlugin {
+             Parameter::new_int(
+                 "fir_length_index",
+                 "FIR Length",
+-                self.fir_length_index as i32,
++                self.configured_fir_length_index as i32,
+                 0,
+                 (FIR_LENGTH_OPTIONS.len() - 1) as i32,
+             )
+@@ -735,6 +915,15 @@ impl LinearPhaseEqPlugin {
+             );
+         }
+ 
++        // Append after every legacy band slot: existing numeric addresses stay fixed.
++        params.push(
++            Parameter::new_bool("accuracy_mode", "Automatic Accuracy", self.accuracy_mode)
++                .with_description(
++                    "Choose FIR support for sampled 0.05 dB accuracy; rebuild required",
++                )
++                .with_group("Quality")
++                .with_update_mode(UpdateMode::Structural),
++        );
+         apply_spec_update_modes(&mut params, LP_PARAMS);
+         self.cached_parameters = params;
+     }
+@@ -807,7 +996,7 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
+         );
+         values.insert(
+             ParameterId::from("fir_length_index"),
+-            ParameterValue::Int(self.fir_length_index as i32),
++            ParameterValue::Int(self.configured_fir_length_index as i32),
+         );
+         values.insert(
+             ParameterId::from("phase_mode_index"),
+@@ -851,6 +1040,10 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
+                 ParameterValue::Int(placement_to_index(band.placement) as i32),
+             );
+         }
++        values.insert(
++            ParameterId::from("accuracy_mode"),
++            ParameterValue::Bool(self.accuracy_mode),
++        );
+         values
+     }
+ 
+@@ -862,7 +1055,8 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
+             let id_str = id.as_str();
+ 
+             match id_str {
+-                "num_filters" | "fir_length_index" | "phase_mode_index" | "auto_gain" => {
++                "num_filters" | "fir_length_index" | "phase_mode_index" | "auto_gain"
++                | "accuracy_mode" => {
+                     return Err(format!(
+                         "{id_str} is structural; rebuild the plugin to change it"
+                     ));
+@@ -892,6 +1086,9 @@ impl ParametricInPlacePlugin for LinearPhaseEqPlugin {
+         if !sample_rate.is_finite() || sample_rate <= 0.0 {
+             return Err("sample rate must be positive".into());
+         }
++        if self.accuracy_mode && sample_rate != self.sample_rate {
++            return Err("accuracy mode sample-rate changes require structural rebuild/reprepare at the actual rate".into());
++        }
+         let reset_stream = self.drain_remaining.is_some() || sample_rate != self.sample_rate;
+         if sample_rate != self.sample_rate {
+             if self.filter_revision >= MAX_FILTER_REVISION {
+@@ -1493,6 +1690,7 @@ impl LinearPhaseEqPlugin {
+             fir_length_index: self.fir_length_index,
+             phase_mode_index: self.phase_mode_index,
+             auto_gain: self.auto_gain,
++            accuracy_mode: self.accuracy_mode,
+             bands: self
+                 .bands
+                 .iter()
+@@ -1520,6 +1718,7 @@ impl LinearPhaseEqPlugin {
+             && base.fir_length_index == self.fir_length_index
+             && base.phase_mode_index == self.phase_mode_index
+             && base.auto_gain == self.auto_gain
++            && base.accuracy_mode == self.accuracy_mode
+             && base.stereo_pairs == self.stereo_pairs
+             && base.bands.len() == self.num_filters.min(self.bands.len())
+             && self
+@@ -1649,6 +1848,27 @@ impl LinearPhaseEqPlugin {
+                 &mut scratch_mags,
+             ));
+         }
++        let accuracy_measurement = if base.accuracy_mode {
++            let measured = accuracy::measure(
++                &firs,
++                &design_bands,
++                ordered,
++                base.phase_mode_index,
++                base.auto_gain,
++                base.channels,
++                &base.stereo_pairs,
++                sr,
++            )?;
++            if measured.maximum_error_db > ACCURACY_TOLERANCE_DB {
++                return Err(format!(
++                    "accuracy target cannot qualify at fixed {} taps (sampled error {} dB at {} Hz); structural rebuild/reprepare required",
++                    fir_length, measured.maximum_error_db, measured.worst_frequency_hz
++                ));
++            }
++            Some(measured)
++        } else {
++            None
++        };
+         let placements: Vec<LinearPhaseEqBandPlacement> = if ordered {
+             design_bands
+                 .iter()
+@@ -1680,6 +1900,7 @@ impl LinearPhaseEqPlugin {
+             new_biquad,
+             target,
+             priming: None,
++            accuracy_measurement,
+         })
+     }
+ 
+@@ -1855,6 +2076,7 @@ impl LinearPhaseEqPlugin {
+         // Validation above prevents wrap; even an accepted no-op consumes its
+         // revision so an older worker cannot revive after equal controls.
+         self.filter_revision += 1;
++        self.accuracy_measurement = owned.accuracy_measurement;
+         // Install the new design data. Lengths and placements already match;
+         // copies keep every allocation on the preparation side.
+         if self.is_ordered_route() {
+@@ -1887,9 +2109,10 @@ impl LinearPhaseEqPlugin {
+         // gain, active at 5 + band*6 + {0..4} by construction; placement never
+         // changes here). No allocation: the schema shape is untouched.
+         let base = 5 + band_index * 6;
++        // The accuracy flag follows all legacy band slots; their offsets stay fixed.
+         debug_assert_eq!(
+             self.cached_parameters.len(),
+-            5 + self.num_filters.min(self.bands.len()) * 6
++            5 + self.num_filters.min(self.bands.len()) * 6 + 1
+         );
+         if let Some(slot) = self.cached_parameters.get_mut(base) {
+             slot.default_value = ParameterValue::Int(new.filter_type_index as i32);
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/placement_tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/placement_tests.rs
+index 2b22d65..d9bd655 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/placement_tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/placement_tests.rs
+@@ -261,6 +261,7 @@ fn run_exact_case(
+         channels,
+         rate,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: filters.len(),
+             fir_length_index: length_index,
+             phase_mode_index: phase,
+@@ -557,6 +558,7 @@ fn swapped_placement_order_does_not_commute() {
+             2,
+             48_000,
+             LinearPhaseEqPluginParams {
++                accuracy_mode: false,
+                 num_filters: 2,
+                 fir_length_index: 0,
+                 phase_mode_index: 0,
+@@ -622,6 +624,7 @@ fn placed_params(
+ ) -> LinearPhaseEqPluginParams {
+     let num_filters = filters.len();
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -790,6 +793,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
+         2,
+         48_000,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 2,
+             fir_length_index: 1,
+             phase_mode_index: 0,
+@@ -815,6 +819,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
+         2,
+         48_000,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 2,
+             fir_length_index: 1,
+             phase_mode_index: 0,
+@@ -886,6 +891,7 @@ fn legacy_defaults_routing_and_audio_are_unchanged() {
+             "band_1_gain",
+             "band_1_active",
+             "band_1_placement",
++            "accuracy_mode",
+         ]
+     );
+     assert_eq!(
+@@ -922,6 +928,7 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
+                     2,
+                     48_000,
+                     LinearPhaseEqPluginParams {
++                        accuracy_mode: false,
+                         num_filters,
+                         fir_length_index: length_index,
+                         phase_mode_index: phase,
+@@ -949,6 +956,7 @@ fn latency_and_tail_scale_with_stages_taps_and_phase() {
+                     2,
+                     48_000,
+                     LinearPhaseEqPluginParams {
++                        accuracy_mode: false,
+                         num_filters,
+                         fir_length_index: length_index,
+                         phase_mode_index: phase,
+@@ -1093,6 +1101,7 @@ fn channel_response_matches_streamed_impulse_per_channel() {
+                 2,
+                 48_000,
+                 LinearPhaseEqPluginParams {
++                    accuracy_mode: false,
+                     num_filters,
+                     fir_length_index: 0,
+                     phase_mode_index: *phase,
+@@ -1161,6 +1170,7 @@ fn mid_stopband_response_matches_single_channel_excitation() {
+             2,
+             48_000,
+             LinearPhaseEqPluginParams {
++                accuracy_mode: false,
+                 num_filters: 1,
+                 fir_length_index: 0,
+                 phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests.rs
+index adf6b2d..eac595f 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests.rs
+@@ -66,6 +66,7 @@ fn test_process_rejects_short_and_preserves_oversized_buffer_tail() {
+ #[test]
+ fn test_from_params_rejects_nonfinite_and_above_nyquist_values() {
+     let mut params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -97,6 +98,7 @@ fn test_large_block_is_chunked_not_silently_bypassed() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 1,
+         phase_mode_index: 0,
+@@ -140,6 +142,7 @@ fn test_large_block_ola_matches_small_chunks() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0, // 1024 taps, fft_size 2048, max valid block 1025
+         phase_mode_index: 0,
+@@ -277,6 +280,7 @@ fn test_dc_gain_not_hardcoded() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2, // 4096 taps
+         phase_mode_index: 0,
+@@ -307,6 +311,7 @@ fn test_dc_gain_not_hardcoded() {
+ #[test]
+ fn auto_gain_does_not_explode_highpass_design() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -356,6 +361,7 @@ fn auto_gain_does_not_explode_highpass_design() {
+ #[test]
+ fn auto_gain_normalizes_lowshelf_dc_to_unity() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -383,6 +389,7 @@ fn auto_gain_normalizes_lowshelf_dc_to_unity() {
+ #[test]
+ fn auto_gain_keeps_narrow_lowpass_unity_and_bounded() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -546,6 +553,7 @@ fn test_initialize_changes_sample_rate() {
+ #[test]
+ fn test_from_params_fills_missing_bands() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 3,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -629,6 +637,7 @@ fn test_process_with_mix() {
+         channels,
+         sr,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests/misc.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests/misc.rs
+index 2aed50e..9dbc1ee 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests/misc.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/tests/misc.rs
+@@ -16,6 +16,7 @@ fn test_linear_phase_eq_passthrough() {
+     let channels = 2;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 3,
+         fir_length_index: 1, // 2048 taps
+         phase_mode_index: 0,
+@@ -103,6 +104,7 @@ fn test_linear_phase_eq_boost() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2, // 4096 taps
+         phase_mode_index: 0,
+@@ -175,6 +177,7 @@ fn test_linear_phase_eq_phase_linearity() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 1, // 2048 taps
+         phase_mode_index: 0,
+@@ -283,6 +286,7 @@ fn rms_after_latency(
+ fn test_highpass_attenuates_below_cutoff() {
+     let sr = 48000u32;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2, // 4096 taps for clean HP response
+         phase_mode_index: 0,
+@@ -335,6 +339,7 @@ fn test_lowshelf_cut_attenuates_low_frequencies() {
+     let sr = 48000u32;
+     // -12 dB lowshelf at 500 Hz should visibly attenuate a 100 Hz tone.
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2,
+         phase_mode_index: 0,
+@@ -381,6 +386,7 @@ fn test_lowpass_zero_gain_not_skipped() {
+     let channels = 1;
+     let sr = 48000;
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2, // 4096 taps
+         phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs
+index b39c9c0..f3647c3 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/types.rs
+@@ -64,6 +64,16 @@ pub struct LinearPhaseEqPluginParams {
+     pub phase_mode_index: usize,
+     #[serde(default)]
+     pub auto_gain: bool,
++    /// Select the shortest supported FIR meeting sampled magnitude accuracy.
++    ///
++    /// Opt-in and structural. The saved manual length remains unchanged. The
++    /// final f32 coefficients must meet the sampled 0.05 dB residual criterion
++    /// with the explicit [`crate::ACCURACY_REFERENCE_FLOOR`] near nulls;
++    /// construction fails if 8192 taps cannot qualify. Inspect actual support
++    /// and full route latency through [`crate::LinearPhaseEqPlugin::accuracy_report`]
++    /// before audio. This is not a continuous-frequency guarantee.
++    #[serde(default)]
++    pub accuracy_mode: bool,
+     #[serde(default = "default_mix")]
+     pub mix: f32,
+     #[serde(default)]
+@@ -159,9 +169,12 @@ pub struct LiveFilterSnapshot {
+     pub channels: usize,
+     pub sample_rate: f64,
+     pub num_filters: usize,
++    /// Resolved actual support; accuracy mode may differ from the saved manual choice.
+     pub fir_length_index: usize,
+     pub phase_mode_index: usize,
+     pub auto_gain: bool,
++    /// Whether dynamic targets must qualify at the resolved fixed support.
++    pub accuracy_mode: bool,
+     pub bands: Vec<BandSnapshot>,
+     pub stereo_pairs: Vec<[usize; 2]>,
+ }
+@@ -204,6 +217,7 @@ pub struct PreparedBandUpdate {
+     pub(crate) new_biquad: Biquad,
+     pub(crate) target: RouteBanks,
+     pub(crate) priming: Option<PreparedPriming>,
++    pub(crate) accuracy_measurement: Option<crate::accuracy::Measurement>,
+ }
+ 
+ /// Progress of one budgeted prepared-update attempt.
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/params.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/params.rs
+index eaca3e6..f46437e 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/params.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/params.rs
+@@ -70,6 +70,10 @@ pub const PARAMS: &[ParamSpec] = &[
+         .scaled(100.0)
+         .output()
+         .doc("Dry/wet mix"),
++    ParamSpec::bool_param("Automatic Accuracy", "accuracy_mode", false, "Quality")
++        .setup()
++        .structural()
++        .doc("Select shortest FIR meeting sampled 0.05 dB magnitude accuracy; may add latency"),
+ ];
+ 
+ // ============================================================================
+@@ -122,6 +126,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
+         ControlSpec::knob(0),     // num_filters
+         ControlSpec::selector(1), // fir_length
+         ControlSpec::selector(2), // phase_mode
++        ControlSpec::toggle(5),   // accuracy_mode
+     ],
+     main: &[],
+     output: &[
+@@ -159,6 +164,8 @@ pub struct Params {
+     pub auto_gain: f64,
+     #[serde(default = "d_mix")]
+     pub mix: f64,
++    #[serde(default = "d_accuracy_mode")]
++    pub accuracy_mode: f64,
+ }
+ 
+ fn d_num_filters() -> f64 {
+@@ -173,6 +180,9 @@ fn d_phase_mode() -> f64 {
+ fn d_auto_gain() -> f64 {
+     pk(PARAMS, "auto_gain").default_f64()
+ }
++fn d_accuracy_mode() -> f64 {
++    pk(PARAMS, "accuracy_mode").default_f64()
++}
+ fn d_mix() -> f64 {
+     pk(PARAMS, "mix").default_f64()
+ }
+@@ -185,6 +195,7 @@ impl Default for Params {
+             phase_mode: d_phase_mode(),
+             auto_gain: d_auto_gain(),
+             mix: d_mix(),
++            accuracy_mode: d_accuracy_mode(),
+         }
+     }
+ }
+@@ -206,6 +217,7 @@ impl PluginParamDef for Params {
+             2 => Some(self.phase_mode),
+             3 => Some(self.auto_gain),
+             4 => Some(self.mix),
++            5 => Some(self.accuracy_mode),
+             _ => None,
+         }
+     }
+@@ -217,6 +229,7 @@ impl PluginParamDef for Params {
+             2 => self.phase_mode = PARAMS[2].clamp_f64(value),
+             3 => self.auto_gain = PARAMS[3].clamp_f64(value),
+             4 => self.mix = PARAMS[4].clamp_f64(value),
++            5 => self.accuracy_mode = PARAMS[5].clamp_f64(value),
+             _ => {}
+         }
+     }
+@@ -256,6 +269,7 @@ mod tests {
+         assert_eq!(original.phase_mode, restored.phase_mode);
+         assert_eq!(original.auto_gain, restored.auto_gain);
+         assert_eq!(original.mix, restored.mix);
++        assert_eq!(original.accuracy_mode, restored.accuracy_mode);
+     }
+ 
+     #[test]
+@@ -266,6 +280,7 @@ mod tests {
+         assert_eq!(p.phase_mode, pk(PARAMS, "phase_mode_index").default_f64());
+         assert_eq!(p.auto_gain, pk(PARAMS, "auto_gain").default_f64());
+         assert_eq!(p.mix, pk(PARAMS, "mix").default_f64());
++        assert_eq!(p.accuracy_mode, pk(PARAMS, "accuracy_mode").default_f64());
+     }
+ 
+     #[test]
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs
+index 93a415a..e82ee03 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs
+@@ -44,6 +44,7 @@ fn impulse_response(
+         1,
+         rate,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: bands.len(),
+             fir_length_index: length_index,
+             phase_mode_index: phase,
+@@ -518,6 +519,7 @@ fn centered_fir_support_and_latency_hold_for_legacy_and_ordered_routes() {
+                             2,
+                             rate,
+                             LinearPhaseEqPluginParams {
++                                accuracy_mode: false,
+                                 num_filters: 2,
+                                 fir_length_index: length_index,
+                                 phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs
+index 2a01cdf..0345f5f 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/audit_dynamic_response.rs
+@@ -73,6 +73,7 @@ fn params(length: usize, phase: usize, ordered: bool, gain: f64) -> LinearPhaseE
+         vec![band(gain, None)]
+     };
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: filters.len(),
+         fir_length_index: length,
+         phase_mode_index: phase,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/channel_placement.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/channel_placement.rs
+index 7817b66..0f16b30 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/channel_placement.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/channel_placement.rs
+@@ -29,6 +29,7 @@ fn placed_band(
+ fn params_for(bands: Vec<BandConfig>) -> LinearPhaseEqPluginParams {
+     let num_filters = bands.len();
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs
+index 835064f..75769a8 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_detached_control.rs
+@@ -88,6 +88,7 @@ fn band(filter_type: &str, frequency: f64, q: f64, gain_db: f64) -> BandConfig {
+ fn params_for(bands: Vec<BandConfig>) -> LinearPhaseEqPluginParams {
+     let num_filters = bands.len();
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_updates.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_updates.rs
+index 18cf90d..6502ce6 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_updates.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/dynamic_updates.rs
+@@ -26,6 +26,7 @@ fn band(filter_type: &str, frequency: f64, gain_db: f64) -> BandConfig {
+ fn params_for(bands: Vec<BandConfig>) -> LinearPhaseEqPluginParams {
+     let num_filters = bands.len();
+     LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/integration.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/integration.rs
+index 25471b3..dcb79d8 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/integration.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/integration.rs
+@@ -93,6 +93,7 @@ fn parameter_roundtrip() {
+ fn dry_mix_passthrough() {
+     // With mix=0 the plugin should pass the input straight through.
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -138,6 +139,7 @@ fn dry_mix_passthrough() {
+ #[test]
+ fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0, // 1024 taps -> 512 group delay + 32 partition latency
+         phase_mode_index: 0,
+@@ -184,6 +186,7 @@ fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
+ #[test]
+ fn eq_boost_changes_amplitude() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 0,
+@@ -225,6 +228,7 @@ fn eq_boost_changes_amplitude() {
+ #[test]
+ fn latency_matches_fir_length() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 2, // 4096 taps
+         phase_mode_index: 0,
+@@ -300,6 +304,7 @@ fn reset_then_process_is_stable() {
+ #[test]
+ fn minimum_phase_processes_finite_audio() {
+     let params = LinearPhaseEqPluginParams {
++        accuracy_mode: false,
+         num_filters: 1,
+         fir_length_index: 0,
+         phase_mode_index: 1,
+@@ -336,6 +341,7 @@ fn wet_impulse_peak_matches_reported_even_tap_latency() {
+         1,
+         48_000,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+@@ -374,6 +380,7 @@ fn mix_automation_is_block_partition_invariant() {
+             1,
+             48_000,
+             LinearPhaseEqPluginParams {
++                accuracy_mode: false,
+                 num_filters: 1,
+                 fir_length_index: 0,
+                 phase_mode_index: 0,
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/property_tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/property_tests.rs
+index e92689d..eb7c855 100644
+--- a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/property_tests.rs
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/property_tests.rs
+@@ -20,6 +20,7 @@ fn minimal_plugin() -> LinearPhaseEqPlugin {
+         1,
+         48000,
+         LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+@@ -54,6 +55,7 @@ proptest! {
+     #[test]
+     fn process_finite_output_with_active_band(buffer in mono_buffer_strategy()) {
+         let params = LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+@@ -102,6 +104,7 @@ proptest! {
+     fn dry_mix_passthrough(buffer in mono_buffer_strategy()) {
+         // Construct with mix=0 from the start so the smoother begins at target.
+         let params = LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+@@ -130,6 +133,7 @@ proptest! {
+     #[test]
+     fn inactive_bands_approximately_passthrough_after_latency(buffer in mono_buffer_strategy()) {
+         let params = LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 2,
+             fir_length_index: 0,
+             phase_mode_index: 0,
+@@ -186,6 +190,7 @@ proptest! {
+         freq in 200.0f32..8000.0f32
+     ) {
+         let params = LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0, // 1024 taps
+             phase_mode_index: 0,
+@@ -213,6 +218,7 @@ proptest! {
+         freq in 200.0f32..8000.0f32
+     ) {
+         let params = LinearPhaseEqPluginParams {
++            accuracy_mode: false,
+             num_filters: 1,
+             fir_length_index: 0,
+             phase_mode_index: 1,
+diff --git a/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy.rs b/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy.rs
+new file mode 100644
+index 0000000..9798c9c
+--- /dev/null
++++ b/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy.rs
+@@ -0,0 +1,77 @@
++//! Ordinary factory resolves automatic FIR support at the actual device clock.
++
++// Rust guideline compliant 2026-02-21
++use plugins_bridge::create_plugin;
++use sotf_host::{ParameterId, ParameterValue, ProcessContext};
++use sotf_plugin_linear_phase_eq::LinearPhaseEqDynamicPlugin;
++
++#[test]
++fn ordinary_factory_resolves_96k_automatic_support_before_reporting_latency() {
++    for phase in [0, 1] {
++        let config = serde_json::json!({
++            "num_filters":3,"fir_length_index":0,"accuracy_mode":true,"phase_mode_index":phase,
++            "filters":[
++                {"filter_type":"Peak","frequency":500.0,"q":2.0,"gain_db":9.0},
++                {"filter_type":"Peak","frequency":2000.0,"q":1.5,"gain_db":-6.0},
++                {"filter_type":"Lowshelf","frequency":150.0,"gain_db":3.0}
++            ]
++        });
++        let mut plugin = create_plugin("LinearPhaseEQ", 2, 96_000.0, &config.to_string()).unwrap();
++        let dynamic = plugin
++            .as_any()
++            .unwrap()
++            .downcast_ref::<LinearPhaseEqDynamicPlugin>()
++            .unwrap();
++        let report = dynamic.inner().accuracy_report().unwrap();
++        assert_eq!(report.sample_rate, 96_000.0);
++        assert_eq!(
++            report.manual_latency_samples,
++            if phase == 0 { 544 } else { 32 }
++        );
++        assert_eq!(
++            report.additional_latency_samples,
++            report
++                .latency_samples
++                .saturating_sub(report.manual_latency_samples)
++        );
++        if phase == 0 {
++            assert!(report.additional_latency_samples > 0);
++        }
++        println!(
++            "automatic_factory rate={} phase={phase} taps={} total_latency={} manual_latency={} additional_latency={}",
++            report.sample_rate,
++            report.selected_taps,
++            report.latency_samples,
++            report.manual_latency_samples,
++            report.additional_latency_samples
++        );
++        assert_eq!(plugin.latency_samples(), report.latency_samples);
++        assert_eq!(plugin.signal_delay_samples(), report.latency_samples as f64);
++        assert_eq!(
++            dynamic.snapshot_for_update().fir_length_index,
++            report.selected_taps.ilog2() as usize - 10
++        );
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("fir_length_index")),
++            Some(ParameterValue::Int(0))
++        );
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("accuracy_mode")),
++            Some(ParameterValue::Bool(true))
++        );
++        plugin.initialize(96_000.0).unwrap();
++        assert_eq!(plugin.latency_samples(), report.latency_samples);
++        let input = vec![0.0; 2 * 127];
++        let mut output = vec![1.0; input.len()];
++        assert_eq!(
++            plugin
++                .process(&input, &mut output, &ProcessContext::new(96_000, 127))
++                .unwrap(),
++            127
++        );
++        assert!(output.iter().all(|value| value.is_finite()));
++        let before = plugin.latency_samples();
++        assert!(plugin.initialize(48_000.0).unwrap_err().contains("rebuild"));
++        assert_eq!(plugin.latency_samples(), before);
++    }
++}
+diff --git a/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy_pdc.rs b/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy_pdc.rs
+new file mode 100644
+index 0000000..8b95433
+--- /dev/null
++++ b/crates/sotf-plugins/crates/plugins-bridge/tests/linear_eq_accuracy_pdc.rs
+@@ -0,0 +1,149 @@
++//! Verify host PDC uses automatic FIR support in actual parallel-branch audio.
++
++// Rust guideline compliant 2026-02-21
++use plugins_bridge::create_plugin;
++use sotf_host::{DawHost, GraphEdge, Plugin, ProcessContext};
++use sotf_plugin_linear_phase_eq::LinearPhaseEqDynamicPlugin;
++
++const RATE: u32 = 96_000;
++const CHANNELS: usize = 2;
++const CONFIG: &str = r#"{
++    "num_filters": 3,
++    "fir_length_index": 0,
++    "accuracy_mode": true,
++    "phase_mode_index": 0,
++    "auto_gain": false,
++    "mix": 1.0,
++    "filters": [
++        {"filter_type":"Peak","frequency":500.0,"q":2.0,"gain_db":9.0},
++        {"filter_type":"Peak","frequency":2000.0,"q":1.5,"gain_db":-6.0},
++        {"filter_type":"Lowshelf","frequency":150.0,"gain_db":3.0}
++    ]
++}"#;
++
++fn unity() -> Box<dyn Plugin> {
++    create_plugin("Gain", CHANNELS, f64::from(RATE), r#"{"gain_db":0.0}"#).unwrap()
++}
++
++#[test]
++fn parallel_dry_branch_aligns_with_resolved_automatic_fir_latency() {
++    let mut wet = create_plugin("LinearPhaseEQ", CHANNELS, f64::from(RATE), CONFIG).unwrap();
++    let report = wet
++        .as_any()
++        .unwrap()
++        .downcast_ref::<LinearPhaseEqDynamicPlugin>()
++        .unwrap()
++        .inner()
++        .accuracy_report()
++        .unwrap();
++    let manual_delay = 1024 / 2 + 32;
++    let actual_delay = report.selected_taps / 2 + 32;
++    assert_eq!(report.manual_latency_samples, manual_delay);
++    assert!(report.selected_taps > 1024);
++    assert!(actual_delay > manual_delay);
++    assert_eq!(report.latency_samples, actual_delay);
++    wet.initialize(f64::from(RATE)).unwrap();
++
++    let mut host = DawHost::new(CHANNELS, RATE);
++    let input_node = host.add_node("input".into(), unity()).unwrap();
++    let wet_node = host
++        .add_node(
++            "automatic EQ".into(),
++            create_plugin("LinearPhaseEQ", CHANNELS, f64::from(RATE), CONFIG).unwrap(),
++        )
++        .unwrap();
++    let dry_node = host.add_node("dry".into(), unity()).unwrap();
++    let merge_node = host.add_node("sum".into(), unity()).unwrap();
++    for (from, to) in [
++        (input_node, wet_node),
++        (input_node, dry_node),
++        (wet_node, merge_node),
++        (dry_node, merge_node),
++    ] {
++        host.add_edge(GraphEdge::new(from, to)).unwrap();
++    }
++    host.build().unwrap();
++    assert_eq!(host.total_latency_samples(), actual_delay);
++
++    let source_frames = 317;
++    // Two channel-distinct markers check both initial alignment and the final
++    // source sample. Zero continuation covers the entire causal FIR support.
++    let total_frames = source_frames + report.selected_taps + 32 + 29;
++    let mut source = vec![0.0_f32; total_frames * CHANNELS];
++    source[0] = 0.25;
++    source[1] = -0.125;
++    source[(source_frames - 1) * CHANNELS] = -0.0625;
++    source[(source_frames - 1) * CHANNELS + 1] = 0.1875;
++
++    let mut reference_wet = vec![f32::NAN; source.len()];
++    let mut cursor = 0;
++    for frames in [127, 1, 509, 31, 1024, 7].into_iter().cycle() {
++        if cursor == total_frames {
++            break;
++        }
++        let end = (cursor + frames).min(total_frames);
++        let range = cursor * CHANNELS..end * CHANNELS;
++        assert_eq!(
++            wet.process(
++                &source[range.clone()],
++                &mut reference_wet[range],
++                &ProcessContext::new(RATE, end - cursor)
++            )
++            .unwrap(),
++            end - cursor,
++        );
++        cursor = end;
++    }
++    let mut actual = vec![f32::NAN; source.len()];
++    cursor = 0;
++    // Deliberately differ from the standalone partitioning so a common callback
++    // boundary mistake cannot hide behind an identical reference schedule.
++    for frames in [1, 257, 13, 1024, 31, 7, 509].into_iter().cycle() {
++        if cursor == total_frames {
++            break;
++        }
++        let end = (cursor + frames).min(total_frames);
++        let range = cursor * CHANNELS..end * CHANNELS;
++        assert_eq!(
++            host.process(&source[range.clone()], &mut actual[range])
++                .unwrap(),
++            end - cursor
++        );
++        cursor = end;
++    }
++
++    let mut maximum_error = 0.0_f64;
++    let mut wrong_manual_error = 0.0_f64;
++    for frame in 0..total_frames {
++        for channel in 0..CHANNELS {
++            let index = frame * CHANNELS + channel;
++            let dry = if frame >= actual_delay {
++                source[(frame - actual_delay) * CHANNELS + channel]
++            } else {
++                0.0
++            };
++            let manual_dry = if frame >= manual_delay {
++                source[(frame - manual_delay) * CHANNELS + channel]
++            } else {
++                0.0
++            };
++            let expected = f64::from(reference_wet[index]) + f64::from(dry);
++            let observed = f64::from(actual[index]);
++            assert!(observed.is_finite() && expected.is_finite());
++            maximum_error = maximum_error.max((observed - expected).abs());
++            wrong_manual_error = wrong_manual_error
++                .max((observed - f64::from(reference_wet[index]) - f64::from(manual_dry)).abs());
++        }
++    }
++    // The allowance covers independent f32 convolution/mixing roundoff, while
++    // the quarter-scale dry marker makes an incorrect compensation observable.
++    assert!(maximum_error < 1e-5, "PDC waveform error {maximum_error}");
++    assert!(
++        wrong_manual_error > 0.1,
++        "fixture did not distinguish manual support"
++    );
++    println!(
++        "automatic_host_pdc rate={RATE} selected_taps={} actual_delay={actual_delay} manual_delay={manual_delay} frames={total_frames} maximum_error={maximum_error:e} wrong_manual_error={wrong_manual_error:e}",
++        report.selected_taps
++    );
++}
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy.rs
+new file mode 100644
+index 0000000..44ed7f5
+--- /dev/null
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy.rs
+@@ -0,0 +1,357 @@
++//! Sampled final-coefficient qualification for opt-in automatic FIR support.
++
++// Rust guideline compliant 2026-02-21
++use super::eq_band::EqBand;
++use super::types::LinearPhaseEqBandPlacement as Placement;
++use math_audio_iir_fir::BiquadFilterType;
++use num_complex::Complex;
++use realfft::RealFftPlanner;
++
++/// Maximum sampled magnitude-deviation bound requested by accuracy mode.
++pub const ACCURACY_TOLERANCE_DB: f64 = 0.05;
++/// Absolute reference floor for the sampled magnitude-residual criterion.
++///
++/// Below -80 dB, qualification bounds absolute magnitude residual by
++/// `(1 - 10^(-0.05/20)) * 1e-4`, approximately 5.74e-7 amplitude.
++pub const ACCURACY_REFERENCE_FLOOR: f64 = 1e-4;
++
++/// Resolved FIR support and sampled response qualification before processing.
++///
++/// This reports the complete wet route, including each ordered stage's
++/// partition latency. The finite grid is not a continuous-frequency proof.
++/// Scalar routes qualify magnitude residual. Ordered paired routes additionally
++/// qualify complex operator error relative to the target's weakest direction
++/// (with the explicit reference floor near nulls). Minimum-phase target stages
++/// retain each constructed FIR's unit phase and replace only its magnitude by
++/// the independent ideal magnitude. This qualifies the cascade given actual
++/// stage phase; existing phase-design tests remain separate.
++#[derive(Debug, Clone, Copy, PartialEq)]
++pub struct FirAccuracyReport {
++    /// Actual selected support per stage, independent of the saved manual choice.
++    pub selected_taps: usize,
++    /// Number of convolution stages in the complete route.
++    pub stage_count: usize,
++    /// Full reported algorithmic latency in input samples.
++    pub latency_samples: usize,
++    /// Complete route latency for the unchanged saved manual FIR choice.
++    pub manual_latency_samples: usize,
++    /// Extra samples over the manual choice, zero when selection is shorter.
++    pub additional_latency_samples: usize,
++    /// Prepared sample rate used by this qualification.
++    pub sample_rate: f64,
++    /// Largest conservative sampled magnitude-deviation bound in dB.
++    pub maximum_error_db: f64,
++    /// Frequency of the largest sampled deviation.
++    pub worst_frequency_hz: f64,
++    /// Number of dense and feature-aware frequency checks.
++    pub frequency_points: usize,
++    /// Whether the ordered paired route also qualified its complex operator error.
++    pub paired_operator_qualified: bool,
++}
++
++#[derive(Clone, Copy, Debug)]
++pub(super) struct Measurement {
++    pub(super) maximum_error_db: f64,
++    pub(super) worst_frequency_hz: f64,
++    pub(super) frequency_points: usize,
++    pub(super) paired_operator_qualified: bool,
++}
++
++type C = Complex<f64>;
++type Matrix = [[C; 2]; 2];
++const ONE: C = C::new(1.0, 0.0);
++const ZERO: C = C::new(0.0, 0.0);
++
++/// Independent bilinear analog prototype, without production biquad coefficients.
++fn prototype(band: &EqBand, frequency: f64, rate: f64) -> C {
++    if !band.active {
++        return ONE;
++    }
++    let a = 10.0_f64.powf(band.gain_db / 40.0);
++    if frequency >= rate * 0.5 {
++        return match band.filter_type {
++            BiquadFilterType::Lowpass => ZERO,
++            BiquadFilterType::Highshelf => C::new(a * a, 0.0),
++            _ => ONE,
++        };
++    }
++    let ratio = (std::f64::consts::PI * frequency / rate).tan()
++        / (std::f64::consts::PI * band.frequency / rate).tan();
++    let square = -ratio * ratio;
++    let p = C::new(0.0, ratio);
++    match band.filter_type {
++        BiquadFilterType::Peak => {
++            (C::new(1.0 + square, 0.0) + p * (a / band.q))
++                / (C::new(1.0 + square, 0.0) + p / (a * band.q))
++        }
++        BiquadFilterType::Lowpass => ONE / (C::new(1.0 + square, 0.0) + p / band.q),
++        BiquadFilterType::Highpass => {
++            C::new(square, 0.0) / (C::new(1.0 + square, 0.0) + p / band.q)
++        }
++        BiquadFilterType::Lowshelf => {
++            a * (C::new(a + square, 0.0) + p * (2.0 * a).sqrt())
++                / (C::new(1.0 + a * square, 0.0) + p * (2.0 * a).sqrt())
++        }
++        BiquadFilterType::Highshelf => {
++            a * (C::new(1.0 + a * square, 0.0) + p * (2.0 * a).sqrt())
++                / (C::new(a + square, 0.0) + p * (2.0 * a).sqrt())
++        }
++        _ => ONE,
++    }
++}
++
++fn stage_matrix(value: C, placement: Placement) -> Matrix {
++    match placement {
++        Placement::Stereo => [[value, ZERO], [ZERO, value]],
++        Placement::Left => [[value, ZERO], [ZERO, ONE]],
++        Placement::Right => [[ONE, ZERO], [ZERO, value]],
++        Placement::Mid => {
++            let diagonal = (ONE + value) * 0.5;
++            let cross = (value - ONE) * 0.5;
++            [[diagonal, cross], [cross, diagonal]]
++        }
++        Placement::Side => {
++            let diagonal = (ONE + value) * 0.5;
++            let cross = (ONE - value) * 0.5;
++            [[diagonal, cross], [cross, diagonal]]
++        }
++    }
++}
++
++fn multiply(a: Matrix, b: Matrix) -> Matrix {
++    std::array::from_fn(|i| std::array::from_fn(|j| a[i][0] * b[0][j] + a[i][1] * b[1][j]))
++}
++
++fn singular_values(matrix: Matrix) -> (f64, f64) {
++    let power = matrix.iter().flatten().map(Complex::norm_sqr).sum::<f64>();
++    let determinant = (matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]).norm();
++    let maximum = ((power
++        + (power * power - 4.0 * determinant * determinant)
++            .max(0.0)
++            .sqrt())
++        * 0.5)
++        .sqrt();
++    let minimum = if maximum > 0.0 {
++        determinant / maximum
++    } else {
++        0.0
++    };
++    (minimum, maximum)
++}
++
++fn operator_upper_bound(matrix: Matrix) -> f64 {
++    let frobenius = matrix
++        .iter()
++        .flatten()
++        .map(Complex::norm_sqr)
++        .sum::<f64>()
++        .sqrt();
++    // The discriminant can lose relative precision at repeated singular
++    // values. Cover its square-root amplification instead of using a tiny
++    // relative padding on the computed singular value alone.
++    singular_values(matrix).1 + 8.0 * f64::EPSILON.sqrt() * frobenius
++}
++
++fn minimum_singular_lower_bound(matrix: Matrix) -> f64 {
++    let first = matrix[0][0] * matrix[1][1];
++    let second = matrix[0][1] * matrix[1][0];
++    let determinant = (first - second).norm();
++    // Cancellation in the complex determinant must not overstate the weak
++    // direction of a highly conditioned cascade. An unresolved determinant
++    // lowers the reference to zero; the declared absolute floor then applies.
++    let allowance = 32.0 * f64::EPSILON * (first.norm() + second.norm());
++    let maximum = operator_upper_bound(matrix);
++    if maximum > 0.0 {
++        (determinant - allowance).max(0.0) / maximum
++    } else {
++        0.0
++    }
++}
++
++fn deviation_bound_db(residual: f64, reference: f64) -> f64 {
++    let relative = residual / reference.max(ACCURACY_REFERENCE_FLOOR);
++    if relative.is_finite() && relative < 1.0 {
++        -20.0 * (-relative).ln_1p() / std::f64::consts::LN_10
++    } else {
++        f64::INFINITY
++    }
++}
++
++fn dtft(taps: &[f32], frequency: f64, rate: f64) -> C {
++    let step = C::from_polar(1.0, -std::f64::consts::TAU * frequency / rate);
++    let mut phase = ONE;
++    let mut response = ZERO;
++    for &tap in taps {
++        response += phase * f64::from(tap);
++        phase *= step;
++    }
++    response
++}
++
++fn feature_frequencies(bands: &[EqBand], rate: f64) -> Vec<f64> {
++    let nyquist = rate * 0.5;
++    let mut points = vec![0.0, nyquist];
++    // An independent logarithmic grid supplements uniformly spaced FFT bins.
++    for i in 0..=256 {
++        points.push((nyquist.ln() * i as f64 / 256.0).exp().min(nyquist));
++    }
++    for band in bands.iter().filter(|band| band.active) {
++        // Resolve centers and Q-dependent transition neighborhoods without
++        // supplying any audit/test probe frequencies to the selector.
++        for offset in -64..=64 {
++            points.push(
++                (band.frequency * 2.0_f64.powf(f64::from(offset) / (16.0 * band.q)))
++                    .clamp(0.0, nyquist),
++            );
++        }
++    }
++    points.sort_by(f64::total_cmp);
++    points.dedup();
++    points
++}
++
++/// Qualify final f32 stage coefficients and their complete channel-domain route.
++#[allow(
++    clippy::too_many_arguments,
++    reason = "explicit immutable prepared route description"
++)]
++pub(super) fn measure(
++    firs: &[Vec<f32>],
++    bands: &[EqBand],
++    ordered: bool,
++    phase_mode: usize,
++    auto_gain: bool,
++    channels: usize,
++    pairs: &[[usize; 2]],
++    rate: f64,
++) -> Result<Measurement, String> {
++    let taps = firs.first().map_or(0, Vec::len);
++    if taps == 0 || channels == 0 || firs.iter().any(|fir| fir.len() != taps) {
++        return Err("accuracy mode requires nonempty equal-length FIR stages and channels".into());
++    }
++    let size = (32 * taps).next_power_of_two().max(32768);
++    let mut planner = RealFftPlanner::<f64>::new();
++    let forward = planner.plan_fft_forward(size);
++    let mut spectra = Vec::with_capacity(firs.len());
++    for fir in firs {
++        let mut input = forward.make_input_vec();
++        for (dst, &src) in input.iter_mut().zip(fir) {
++            *dst = f64::from(src);
++        }
++        let mut output = forward.make_output_vec();
++        forward
++            .process(&mut input, &mut output)
++            .map_err(|error| format!("accuracy qualification FFT failed: {error}"))?;
++        spectra.push(output);
++    }
++    let mut target_scale = 1.0;
++    if auto_gain {
++        let combined = |frequency| {
++            bands
++                .iter()
++                .map(|band| prototype(band, frequency, rate))
++                .product::<C>()
++                .norm()
++        };
++        let dc = combined(0.0);
++        let nyquist = combined(rate * 0.5);
++        let reference = if dc > 1e-4 {
++            dc
++        } else if nyquist > 1e-4 {
++            nyquist
++        } else {
++            1.0
++        };
++        target_scale = 1.0 / reference;
++    }
++    let features = feature_frequencies(bands, rate);
++    let mut result = Measurement {
++        maximum_error_db: 0.0,
++        worst_frequency_hz: 0.0,
++        frequency_points: size / 2 + 1 + features.len(),
++        paired_operator_qualified: ordered && !pairs.is_empty(),
++    };
++    let mut compare = |residual: f64, reference: f64, frequency: f64| {
++        let error = deviation_bound_db(residual, reference);
++        if error > result.maximum_error_db {
++            result.maximum_error_db = error;
++            result.worst_frequency_hz = frequency;
++        }
++    };
++    let mut actual = vec![ZERO; firs.len()];
++    for (index, frequency) in (0..=size / 2)
++        .map(|i| (Some(i), i as f64 * rate / size as f64))
++        .chain(features.iter().copied().map(|frequency| (None, frequency)))
++    {
++        let dephase = if phase_mode == 0 {
++            C::from_polar(
++                1.0,
++                std::f64::consts::TAU * frequency * (taps / 2) as f64 / rate,
++            )
++        } else {
++            ONE
++        };
++        for (stage, fir) in firs.iter().enumerate() {
++            actual[stage] = index
++                .map_or_else(|| dtft(fir, frequency, rate), |bin| spectra[stage][bin])
++                * dephase;
++        }
++        if !ordered {
++            let target = bands
++                .iter()
++                .map(|band| prototype(band, frequency, rate))
++                .product::<C>();
++            let target = (target * target_scale).norm();
++            compare((actual[0].norm() - target).abs(), target, frequency);
++            continue;
++        }
++        let mut actual_pair = [[ONE, ZERO], [ZERO, ONE]];
++        let mut target_pair = actual_pair;
++        let mut actual_unpaired = ONE;
++        let mut target_unpaired = ONE;
++        for (stage, band) in bands.iter().enumerate() {
++            let raw_target = prototype(band, frequency, rate);
++            // Minimum-phase qualification follows actual stage phase. This
++            // checks magnitudes/cascade, not an independent phase oracle.
++            let target = if phase_mode == 0 || actual[stage].norm() == 0.0 {
++                C::new(raw_target.norm(), 0.0)
++            } else {
++                actual[stage] / actual[stage].norm() * raw_target.norm()
++            };
++            compare(
++                (actual[stage].norm() - target.norm()).abs(),
++                target.norm(),
++                frequency,
++            );
++            let placement = band.placement.unwrap_or(Placement::Stereo);
++            actual_pair = multiply(stage_matrix(actual[stage], placement), actual_pair);
++            target_pair = multiply(stage_matrix(target, placement), target_pair);
++            if placement == Placement::Stereo {
++                actual_unpaired *= actual[stage];
++                target_unpaired *= target;
++            }
++        }
++        if !pairs.is_empty() {
++            let difference = std::array::from_fn(|row| {
++                std::array::from_fn(|col| actual_pair[row][col] - target_pair[row][col])
++            });
++            compare(
++                operator_upper_bound(difference),
++                minimum_singular_lower_bound(target_pair),
++                frequency,
++            );
++        }
++        if channels > 2 * pairs.len() {
++            compare(
++                (actual_unpaired - target_unpaired).norm(),
++                target_unpaired.norm(),
++                frequency,
++            );
++        }
++    }
++    Ok(result)
++}
++
++#[cfg(test)]
++#[path = "accuracy_tests.rs"]
++mod tests;
+diff --git a/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy_tests.rs b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy_tests.rs
+new file mode 100644
+index 0000000..794c07d
+--- /dev/null
++++ b/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/accuracy_tests.rs
+@@ -0,0 +1,350 @@
++//! Independent response checks and automatic-support lifecycle regressions.
++
++// Rust guideline compliant 2026-02-21
++use super::*;
++use crate::{BandConfig, LinearPhaseEqPlugin, LinearPhaseEqPluginParams};
++use sotf_host::{ParameterId, ParameterValue, ParametricInPlacePlugin, ProcessContext};
++
++fn params(bands: serde_json::Value, phase: usize) -> LinearPhaseEqPluginParams {
++    serde_json::from_value(serde_json::json!({
++        "num_filters": bands.as_array().unwrap().len().max(1),
++        "fir_length_index": 3,
++        "phase_mode_index": phase,
++        "accuracy_mode": true,
++        "filters": bands,
++    }))
++    .unwrap()
++}
++
++fn dft(taps: &[f32], frequency: f64, rate: f64) -> C {
++    taps.iter()
++        .enumerate()
++        .map(|(n, &tap)| {
++            C::from_polar(
++                f64::from(tap),
++                -std::f64::consts::TAU * frequency * n as f64 / rate,
++            )
++        })
++        .sum()
++}
++
++#[test]
++fn null_policy_and_matrix_operator_do_not_hide_residuals_or_cancellation() {
++    // A dual-clipping rule would call both -100 and -81 dB "zero error".
++    let expected = 1e-5;
++    let actual = 10.0_f64.powf(-81.0 / 20.0);
++    assert!(deviation_bound_db(actual - expected, expected) > ACCURACY_TOLERANCE_DB);
++    let epsilon = 1.0 - 10.0_f64.powf(-ACCURACY_TOLERANCE_DB / 20.0);
++    assert!(
++        deviation_bound_db(0.99 * epsilon * ACCURACY_REFERENCE_FLOOR, 0.0) < ACCURACY_TOLERANCE_DB
++    );
++    assert!(
++        deviation_bound_db(1.01 * epsilon * ACCURACY_REFERENCE_FLOOR, 0.0) > ACCURACY_TOLERANCE_DB
++    );
++    let matrix = [
++        [C::new(2.0, 0.0), C::new(1.0, 0.0)],
++        [C::new(1.0, 0.0), C::new(2.0, 0.0)],
++    ];
++    let (small, large) = singular_values(matrix);
++    assert!((small - 1.0).abs() < 1e-14 && (large - 3.0).abs() < 1e-14);
++    // Rank-one perturbation has norm two although each entry has norm one.
++    assert!((singular_values([[ONE; 2]; 2]).1 - 2.0).abs() < 1e-14);
++}
++
++#[test]
++fn automatic_selection_preserves_manual_choice_defaults_and_lifecycle() {
++    let original: LinearPhaseEqPluginParams = serde_json::from_str("{}").unwrap();
++    assert!(!original.accuracy_mode);
++    assert_eq!(original.fir_length_index, 1);
++    for phase in [0, 1] {
++        let saved = params(serde_json::json!([]), phase);
++        let mut plugin = LinearPhaseEqPlugin::from_params(2, 96_000, saved.clone()).unwrap();
++        assert_eq!(plugin.selected_fir_taps(), 1024);
++        let report = plugin.accuracy_report().unwrap();
++        assert_eq!(report.latency_samples, if phase == 0 { 544 } else { 32 });
++        assert_eq!(report.sample_rate, 96_000.0);
++        assert_eq!(report.latency_samples, plugin.latency_samples());
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("fir_length_index")),
++            Some(ParameterValue::Int(3))
++        );
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("accuracy_mode")),
++            Some(ParameterValue::Bool(true))
++        );
++        let base = plugin.snapshot_config();
++        assert!(base.accuracy_mode);
++        assert_eq!(base.fir_length_index, 0);
++        let parameters = plugin.parameters();
++        assert_eq!(parameters[5].id.as_str(), "band_0_type");
++        assert_eq!(parameters.last().unwrap().id.as_str(), "accuracy_mode");
++        plugin.initialize(96_000.0).unwrap();
++        plugin.reset();
++        assert_eq!(plugin.accuracy_report(), Some(report));
++        let before = plugin.snapshot_config();
++        assert!(plugin.initialize(48_000.0).unwrap_err().contains("rebuild"));
++        assert_eq!(plugin.snapshot_config(), before);
++        assert_eq!(plugin.accuracy_report(), Some(report));
++        assert!(
++            plugin
++                .set_parameter(
++                    ParameterId::from("accuracy_mode"),
++                    ParameterValue::Bool(false)
++                )
++                .unwrap_err()
++                .contains("structural")
++        );
++        let mut manual = saved;
++        manual.accuracy_mode = false;
++        let manual = LinearPhaseEqPlugin::from_params(2, 96_000, manual).unwrap();
++        assert_eq!(manual.selected_fir_taps(), 8192);
++        assert!(manual.accuracy_report().is_none());
++    }
++}
++
++#[test]
++fn automatic_gain_uses_ideal_endpoint_reference_and_final_f32_support() {
++    for phase in [0, 1] {
++        for shape in ["Peak", "Lowshelf", "Highshelf", "Lowpass", "Highpass"] {
++            let mut settings = params(
++                serde_json::json!([
++                    {"filter_type":shape,"frequency":6000.0,"q":0.7,"gain_db":6.0}
++                ]),
++                phase,
++            );
++            settings.auto_gain = true;
++            let plugin = LinearPhaseEqPlugin::from_params(2, 48_000, settings).unwrap();
++            let report = plugin.accuracy_report().unwrap();
++            assert!(report.maximum_error_db <= 0.05);
++            let taps = plugin.stage_fir(0).unwrap();
++            if shape == "Highpass" {
++                assert!(dft(taps, 0.0, 48_000.0).norm() < 5.75e-7);
++                assert!((dft(taps, 24_000.0, 48_000.0).norm() - 1.0).abs() < 1e-5);
++            } else {
++                assert!((dft(taps, 0.0, 48_000.0).norm() - 1.0).abs() < 1e-5);
++            }
++        }
++    }
++}
++
++#[test]
++fn final_f32_response_meets_independent_biquad_and_direct_dft_checks() {
++    let bands = serde_json::json!([
++        {"filter_type":"Peak", "frequency":500.0, "q":2.0, "gain_db":9.0},
++        {"filter_type":"Peak", "frequency":2000.0, "q":1.5, "gain_db":-6.0},
++        {"filter_type":"Lowshelf", "frequency":150.0, "q":1.0, "gain_db":3.0}
++    ]);
++    for phase in [0, 1] {
++        let settings = params(bands.clone(), phase);
++        let plugin = LinearPhaseEqPlugin::from_params(2, 96_000, settings).unwrap();
++        let report = plugin.accuracy_report().unwrap();
++        println!(
++            "automatic_accuracy rate=96000 phase={phase} taps={} latency={} manual_latency={} additional_latency={} maximum_error_db={} worst_hz={} points={}",
++            report.selected_taps,
++            report.latency_samples,
++            report.manual_latency_samples,
++            report.additional_latency_samples,
++            report.maximum_error_db,
++            report.worst_frequency_hz,
++            report.frequency_points
++        );
++        assert!(report.maximum_error_db <= ACCURACY_TOLERANCE_DB);
++        assert!(report.frequency_points >= 16385);
++        let taps = plugin.stage_fir(0).unwrap();
++        let mut maximum = 0.0_f64;
++        // Different grid, direct trigonometric DFT and the independent library
++        // biquad target; no production qualifier/interpolation call here.
++        for i in 0..=2048 {
++            let frequency = i as f64 * 48_000.0 / 2048.0;
++            let expected = 10.0_f64.powf(
++                plugin
++                    .bands
++                    .iter()
++                    .map(|b| b.biquad.log_result(frequency))
++                    .sum::<f64>()
++                    / 20.0,
++            );
++            let actual = dft(taps, frequency, 96_000.0).norm();
++            maximum = maximum.max(20.0 * (actual / expected).log10().abs());
++        }
++        assert!(
++            maximum <= 0.05,
++            "phase={phase} taps={} error={maximum}",
++            taps.len()
++        );
++        // The historical fixed-1024 FIR-M1 limitation remains observable.
++        let fixed = LinearPhaseEqPlugin::from_params(
++            2,
++            96_000,
++            serde_json::from_value(serde_json::json!({
++                "num_filters":3, "fir_length_index":0, "phase_mode_index":phase, "filters":bands,
++            }))
++            .unwrap(),
++        )
++        .unwrap();
++        let fixed_qualified = crate::accuracy::measure(
++            &[fixed.stage_fir(0).unwrap().to_vec()],
++            &fixed.bands,
++            false,
++            phase,
++            false,
++            2,
++            &[[0, 1]],
++            96_000.0,
++        )
++        .unwrap();
++        if fixed_qualified.maximum_error_db > 0.05 {
++            assert!(plugin.selected_fir_taps() > 1024);
++        }
++        for shorter in [1024_usize, 2048, 4096, 8192]
++            .into_iter()
++            .take_while(|n| *n < plugin.selected_fir_taps())
++        {
++            let index = shorter.ilog2() as usize - 10;
++            let fixed = LinearPhaseEqPlugin::from_params(2, 96_000, serde_json::from_value(serde_json::json!({
++                "num_filters":3, "fir_length_index":index, "phase_mode_index":phase, "filters":bands,
++            })).unwrap()).unwrap();
++            assert!(
++                crate::accuracy::measure(
++                    &[fixed.stage_fir(0).unwrap().to_vec()],
++                    &fixed.bands,
++                    false,
++                    phase,
++                    false,
++                    2,
++                    &[[0, 1]],
++                    96_000.0
++                )
++                .unwrap()
++                .maximum_error_db
++                    > 0.05
++            );
++        }
++    }
++}
++
++#[test]
++fn max_support_failure_and_fixed_length_dynamic_refusal_are_explicit() {
++    let impossible = params(
++        serde_json::json!([
++            {"filter_type":"Peak", "frequency":20.0, "q":10.0, "gain_db":24.0}
++        ]),
++        0,
++    );
++    let failure = LinearPhaseEqPlugin::from_params(2, 192_000, impossible)
++        .err()
++        .unwrap();
++    assert!(failure.contains("8192") && failure.contains("0.05"));
++    for phase in [0, 1] {
++        let mut plugin =
++            LinearPhaseEqPlugin::from_params(2, 96_000, params(serde_json::json!([]), phase))
++                .unwrap();
++        let base = plugin.snapshot_config();
++        let latency = plugin.latency_samples();
++        let demanding: BandConfig = serde_json::from_value(serde_json::json!({
++            "filter_type":"Peak", "frequency":20.0, "q":10.0, "gain_db":24.0,
++        }))
++        .unwrap();
++        let failure = LinearPhaseEqPlugin::prepare_band_update(&base, 0, demanding)
++            .err()
++            .unwrap();
++        assert!(failure.contains("fixed 1024") && failure.contains("rebuild"));
++        assert_eq!(plugin.snapshot_config(), base);
++        assert_eq!(plugin.latency_samples(), latency);
++        let gentle: BandConfig = serde_json::from_value(serde_json::json!({
++            "filter_type":"Peak", "frequency":6000.0, "q":0.7, "gain_db":3.0,
++        }))
++        .unwrap();
++        let prepared = LinearPhaseEqPlugin::prepare_band_update(&base, 0, gentle).unwrap();
++        plugin.commit_prepared_update(prepared).unwrap();
++        assert_eq!(plugin.latency_samples(), latency);
++        assert_eq!(plugin.selected_fir_taps(), 1024);
++        assert!(plugin.accuracy_report().unwrap().maximum_error_db <= 0.05);
++    }
++}
++
++#[test]
++fn accepted_update_keeps_resolved_long_support_when_new_target_could_be_shorter() {
++    for phase in [0, 1] {
++        let original = params(
++            serde_json::json!([
++                {"filter_type":"Peak","frequency":125.0,"q":2.0,"gain_db":9.0}
++            ]),
++            phase,
++        );
++        let mut plugin = LinearPhaseEqPlugin::from_params(2, 96_000, original.clone()).unwrap();
++        let taps = plugin.selected_fir_taps();
++        assert!(taps > 1024);
++        let latency = plugin.latency_samples();
++        let mut prefix = vec![0.125; 257 * 2];
++        let (counts, processed) = crate::drain_tests::count_allocs(|| {
++            plugin.process_in_place(&mut prefix, &ProcessContext::new(96_000, 257))
++        });
++        assert_eq!(counts, (0, 0));
++        processed.unwrap();
++        let base = plugin.snapshot_config();
++        let mut new_band = original.filters[0].clone();
++        new_band.gain_db = 0.0;
++        let mut fresh_params = original;
++        fresh_params.filters[0] = new_band.clone();
++        let fresh = LinearPhaseEqPlugin::from_params(2, 96_000, fresh_params).unwrap();
++        assert_eq!(fresh.selected_fir_taps(), 1024);
++        let update = LinearPhaseEqPlugin::prepare_band_update(&base, 0, new_band).unwrap();
++        let mut prepared = Some(update);
++        let (counts, committed) =
++            crate::drain_tests::count_allocs(|| plugin.try_commit_prepared_update(&mut prepared));
++        assert_eq!(counts, (0, 0));
++        committed.unwrap();
++        assert!(prepared.is_none());
++        assert_eq!(plugin.selected_fir_taps(), taps);
++        assert_eq!(plugin.latency_samples(), latency);
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("fir_length_index")),
++            Some(ParameterValue::Int(3))
++        );
++        assert_eq!(
++            plugin.get_parameter(&ParameterId::from("accuracy_mode")),
++            Some(ParameterValue::Bool(true))
++        );
++        let accepted = plugin.snapshot_config();
++        assert!(accepted.accuracy_mode);
++        assert_eq!(accepted.fir_length_index, base.fir_length_index);
++        let (counts, ()) = crate::drain_tests::count_allocs(|| plugin.reset());
++        assert_eq!(counts, (0, 0));
++        assert_eq!(plugin.snapshot_config(), accepted);
++        assert_eq!(plugin.accuracy_report().unwrap().selected_taps, taps);
++        assert_eq!(plugin.latency_samples(), latency);
++    }
++}
++
++#[test]
++fn placed_route_qualifies_actual_paired_cascade_and_full_latency() {
++    for phase in [0, 1] {
++        let mut settings = params(
++            serde_json::json!([
++                {"filter_type":"Peak","frequency":4000.0,"q":0.7,"gain_db":2.0,"placement":"left"},
++                {"filter_type":"Peak","frequency":6000.0,"q":0.7,"gain_db":-2.0,"placement":"mid"}
++            ]),
++            phase,
++        );
++        settings.stereo_pairs = Some(vec![[0, 1]]);
++        let mut plugin = LinearPhaseEqPlugin::from_params(3, 48_000, settings).unwrap();
++        let report = plugin.accuracy_report().unwrap();
++        assert!(report.paired_operator_qualified);
++        assert_eq!(report.stage_count, 2);
++        assert_eq!(
++            report.latency_samples,
++            2 * (if phase == 0 {
++                report.selected_taps / 2 + 32
++            } else {
++                32
++            })
++        );
++        let mut silence = vec![0.0; 3 * 127];
++        plugin
++            .process_in_place(&mut silence, &ProcessContext::new(48_000, 127))
++            .unwrap();
++        plugin.reset();
++        assert_eq!(plugin.accuracy_report(), Some(report));
++    }
++}

@@ -93,6 +93,7 @@ fn parameter_roundtrip() {
 fn dry_mix_passthrough() {
     // With mix=0 the plugin should pass the input straight through.
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -138,6 +139,7 @@ fn dry_mix_passthrough() {
 #[test]
 fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0, // 1024 taps -> 512 group delay + 32 partition latency
         phase_mode_index: 0,
@@ -184,6 +186,7 @@ fn dry_wet_mix_aligns_dry_with_linear_phase_latency() {
 #[test]
 fn eq_boost_changes_amplitude() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 0,
@@ -225,6 +228,7 @@ fn eq_boost_changes_amplitude() {
 #[test]
 fn latency_matches_fir_length() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 2, // 4096 taps
         phase_mode_index: 0,
@@ -300,6 +304,7 @@ fn reset_then_process_is_stable() {
 #[test]
 fn minimum_phase_processes_finite_audio() {
     let params = LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters: 1,
         fir_length_index: 0,
         phase_mode_index: 1,
@@ -336,6 +341,7 @@ fn wet_impulse_peak_matches_reported_even_tap_latency() {
         1,
         48_000,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: 0,
             phase_mode_index: 0,
@@ -374,6 +380,7 @@ fn mix_automation_is_block_partition_invariant() {
             1,
             48_000,
             LinearPhaseEqPluginParams {
+                accuracy_mode: false,
                 num_filters: 1,
                 fir_length_index: 0,
                 phase_mode_index: 0,

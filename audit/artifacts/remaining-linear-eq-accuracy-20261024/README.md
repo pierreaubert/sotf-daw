@@ -1,0 +1,29 @@
+# Opt-in LinearPhaseEQ sampled accuracy
+
+User-approved implementation: a default-false structural `accuracy_mode` flag preserves the four manual length choices, their normalized values, existing global/band addresses, and the stored manual choice. Automatic construction selects the shortest passing length among 1024/2048/4096/8192 at the actual input rate. It qualifies final retained f32 kernels and refuses if 8192 fails. There are no production FIR-design changes or performance claims.
+
+## Final qualification policy
+
+The scalar magnitude residual is bounded by `(1 - 10^(-0.05/20)) * max(target, 1e-4)`. Above the -80 dB reference floor it conservatively implies <=0.05 dB; below the floor it explicitly allows about 5.74e-7 absolute amplitude residual. Magnitudes are not jointly clipped. AutoGain uses an independent ideal DC/Nyquist reference. FFT sampling uses >=32*N points (minimum32768), plus logarithmic and configured center/Q feature points; direct feature evaluation uses f64 DTFT. This is finite sampled qualification, not a continuous-frequency certificate.
+
+Ordered paired routes qualify the whole complex 2x2 cascade against the weakest target direction using a conservative operator norm/singular-value bound; per-stage magnitudes and unpaired products are also checked. Linear stages remove the actual N/2 delay. Minimum-phase target stages use independent ideal magnitude and each constructed actual FIR stage's unit phase, then compose in route order. This qualifies magnitudes given actual phase, not ideal IIR phase. Original independent phase/energy gates remain unchanged. `implementation-plan-initial.txt` preserves the initial phase wording; `implementation-plan.txt` and subsequent phase clarification record the final policy.
+
+Reports contain actual selected taps, full route latency, saved manual latency, added latency, rate and sampled residual/check count. Ordinary96k factories use actualFs; hosts consume instance latency before audio. Fixed-length helpers retain their fixed-only contract. Dynamic accepted updates keep the current selected N, even when fresh construction could shrink it. Targets needing greater support refuse until structural rebuild. Real rate changes in auto mode refuse before mutation; same-rate init and reset preserve support. Report metadata is Copy, qualification remains off audio, and true-mode render/commit/reset heap checks pass.
+
+## State compatibility
+
+Native complete states missing the flag migrate to false before parameter application; migration is refused on audio. Active/audio mode changes reject before live native parameters/backend/PDC change. Actual native wrapper initialization tests exercise mode-only toggles and legacy restoration, observing real backend latency and host notification. At a known clock, inactive automatic native snapshots are prequalified before native stores; unsupported snapshots preserve controls/backend/PDC/history. Active/audio automatic restores refuse before allocation or design. Before first initialization there is no actual clock, so requests remain pending until initialization selects/refuses at the real rate.
+
+FFI named preset envelopes missing the flag restore manual mode. Raw maps retain partial-overlay semantics unless they contain all five prior globals and all six canonical fields for every incoming band, identifying a complete old snapshot. Raw pre-placement maps remain overlays; explicit preset import disambiguates those. Modern explicit bools take precedence; manual index/phase aliases are preserved. Failed candidate construction leaves config, state, latency and populated audio history intact.
+
+## Evidence and limitations
+
+Successful current source evidence is indexed in `summary.json`. Core final suite:152pass/2preserved ignores, plus separate debug auto/manual and true-mode heap tests, scoped strict Clippy. Ordinary bridge96k auto linear selects2048/1056 vs saved manual1024/544 (+512). Partner observable DawHost parallel dry/wet PDC test compares the entire waveform against standalone wet plus dry delayed by actual latency: max error1.490116e-8, wrong manual reference0.250000015.
+
+`core-full-initial.json` retains the two initial metadata assertions missing the new appended flag. `ffi-coherent-qa.json` retains the initial65-vs66 exact-count failure. They were corrected by appending the new flag while preserving old addresses; no DSP threshold changed.
+
+Ordinary main FFI validation fails69 preexisting duplicate-GPUI type errors (`ffi-linear.json`). Root provided a known coherent isolated dependency fixture; successful fixture tests validate the current symlinked source only under that explicit baseline. Main manifests/lock are unchanged by this feature. Fixture/main lock hashes are recorded around every FFI run. Initial missing-cache/setup/compile diagnostics are retained rather than presented as passing tests.
+
+The NIH activation matrix retains a preexisting1234.5678Hz failure: its default1000Hz band violates the unchanged0.99*Nyquist validation. `nih-low-rate-baseline-source-trace.json` proves the validation and default configuration are unchanged except the default-false flag. That guard/test/default was not relaxed. Targeted valid-rate native checks and strict Clippy are separate evidence. Release-profile FFI strict Clippy retains three preexisting unnecessary-literal-unwrap errors in untouched release process wrappers; normal-profile strict results are recorded separately. No claim of full NIH matrix pass, ordinary-main FFI pass, external DAW/OS validation, continuous response guarantee, or callback capacity improvement is made.
+
+Historical manual1024 FIR-M1 and deadline failures remain in the audit ledger and earlier archives. This opt-in mode does not erase those fixed-contract results. Ledger ownership remains with parent.

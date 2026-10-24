@@ -40,6 +40,88 @@ filter histories. Mix remains
 realtime-automatable and is smoothed per sample. Linear-phase latency is
 `N/2 + 32` samples; minimum phase reports the 32-sample partition latency.
 
+## Automatic sampled accuracy
+
+Set `accuracy_mode: true` in the constructor configuration to select the shortest
+qualifying support from 1024, 2048, 4096 and 8192 taps. The default is `false`;
+all four manual indices, their normalized automation values, and old presets
+retain their meaning. The stored manual choice is preserved while automatic
+selection is active, so rebuilding with accuracy mode off restores that choice.
+The new structural boolean is appended after existing external band addresses.
+
+Complete older native states and named FFI presets without `accuracy_mode`
+restore manual mode. Raw FFI maps also support partial overlays: missing fields
+preserve current values unless the map contains all five old globals and all
+six canonical fields for every incoming band, identifying a complete prior
+snapshot. Older raw maps missing placement remain partial overlays; use the
+explicit preset-import envelope to restore those as complete presets. Explicit
+modern `true` or `false` values always take precedence. Native mode changes
+require inactive control-thread restoration and reinitialization, following the
+existing structural FIR rebuild protocol.
+At a known clock, native automatic snapshots are qualified before native
+parameter stores; unsupported targets preserve controls, backend, latency and
+audio history. Before first initialization the actual clock is unknown, so the
+request remains pending until initialization selects or refuses at that clock.
+
+```json
+{
+  "num_filters": 1,
+  "fir_length_index": 0,
+  "phase_mode_index": 0,
+  "accuracy_mode": true,
+  "filters": [{"filter_type": "Peak", "frequency": 500.0, "q": 2.0, "gain_db": 9.0}]
+}
+```
+
+Construct at the actual input sample rate. After successful `from_params`,
+`selected_fir_taps()` and `accuracy_report()` expose the selected support and
+complete route latency before audio. The report includes the saved manual
+choice's latency and any additional samples. Hosts use the constructed
+instance's actual latency; `linear_phase_eq_latency_samples()` remains a helper
+for explicit fixed lengths. Minimum-phase support can grow without increasing
+its existing 32-sample partition delay per stage. Both modes may require more
+processing work; automatic selection is not a callback-capacity guarantee.
+
+Qualification evaluates the **final retained f32 taps**, including symmetry,
+phase design and Auto Gain, independently of the designer's response grid.
+It checks DC through Nyquist on an FFT grid with at least 32-fold zero-padding
+(minimum FFT length 32768), 257 logarithmic points and Q-aware neighborhoods of
+every active configured band center. Feature points use a direct f64 DTFT.
+These are sampled checks, not a continuous-frequency guarantee or four fitted
+audit probes.
+
+The scalar magnitude criterion is
+`abs(actual - target) <= (1 - 10^(-0.05/20)) * max(target, 1e-4)`.
+Above the -80 dB reference floor this conservatively implies at most 0.05 dB
+magnitude error. Below it the explicit absolute residual allowance is about
+`5.74e-7` amplitude; clipping both magnitudes to the floor is not used. Auto Gain
+uses the ideal meaningful DC reference, otherwise meaningful Nyquist, otherwise
+unchanged scale, when defining the accuracy target.
+
+Ordered routes also check the complete complex 2x2 paired cascade, in band
+order, with an operator-error bound relative to its weakest target direction
+and the same explicit floor. Unpaired channels are checked separately. Linear
+stages remove their actual N/2 delay before comparison. For minimum phase, each
+target stage combines independent ideal magnitude with the constructed FIR
+stage's unit phase. This qualifies the cascade given actual stage phase; it
+does not replace the existing independent phase/energy/latency tests. The
+report identifies paired operator qualification. Auto Gain with explicit
+L/R/M/S placements remains unsupported.
+
+Construction returns a clear error if no supported length qualifies, including
+failure at 8192 taps. It never relaxes the criterion or silently falls back.
+A real sample-rate change in accuracy mode also refuses before changing state;
+rebuild/reprepare at that actual rate so latency can be published safely.
+Same-rate initialization and reset preserve the selected support.
+
+Dynamic band preparation keeps the current selected length fixed. It qualifies
+the complete proposed target off audio and refuses an unqualified target with
+an explicit rebuild/reprepare error. An accepted target retains the current
+length and latency even if a fresh instance could use fewer taps. Snapshots
+carry the resolved length and accuracy flag; ordinary parameter getters still
+report the saved manual length. Qualification adds no work or allocation to
+rendering or realtime commit.
+
 ## Per-band channel routing
 
 Each band accepts an optional `placement` (`stereo`, `left`, `right`, `mid`,
@@ -303,5 +385,6 @@ even the configured 500 Hz center's 0.05 dB constraint requires at least 8.07%
 more RMS relative error than the current design. Independent scalar cosine
 verification agrees with the numerical dual bound. This concerns the added
 pilot RMS nonregression guard; it does not prove the four original probes alone
-are infeasible. No response tolerance, production coefficients or length
-selection behavior changes follow from this analysis.
+are infeasible. That analysis did not change coefficients, tolerances or length selection.
+Automatic sampled accuracy above is a separately authorized support/latency
+tradeoff; the original fixed-1024 FIR-M1 diagnostic remains unchanged.

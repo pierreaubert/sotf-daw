@@ -417,9 +417,310 @@ mod plugin {
     #[cfg(test)]
     mod tests {
         use super::SotfLinearPhaseEQ;
-        use nih_plug::prelude::Plugin;
+        use nih_plug::prelude::{
+            BufferConfig, InitContext, Params, Plugin, PluginApi, ProcessMode,
+        };
+        use nih_plug::wrapper::state::{ParamValue, PluginState};
 
         const _: () = assert!(SotfLinearPhaseEQ::SAMPLE_ACCURATE_AUTOMATION);
+
+        #[test]
+        fn linear_phase_eq_native_accuracy_preserves_legacy_host_ids() {
+            let plugin = SotfLinearPhaseEQ::default();
+            let params = plugin.params();
+            // NIH's legacy Params map enumerates a HashMap, so enumeration
+            // positions were never stable addresses. Host IDs are strings.
+            let ids = params
+                .param_map()
+                .into_iter()
+                .map(|(id, _, _)| id)
+                .collect::<std::collections::HashSet<_>>();
+            assert_eq!(ids.len(), 66);
+            for id in [
+                "num_filters",
+                "fir_length",
+                "phase_mode",
+                "auto_gain",
+                "mix",
+                "accuracy_mode",
+            ] {
+                assert!(ids.contains(id));
+            }
+            for band in 0..10 {
+                for field in ["type", "freq", "q", "gain", "active", "placement"] {
+                    assert!(ids.contains(&format!("band_{band}_{field}")));
+                }
+            }
+        }
+
+        struct LatencyContext(std::cell::Cell<u32>);
+        impl InitContext<SotfLinearPhaseEQ> for LatencyContext {
+            fn plugin_api(&self) -> PluginApi {
+                PluginApi::Clap
+            }
+            fn execute(&self, _: ()) {}
+            fn set_latency_samples(&self, latency: u32) {
+                self.0.set(latency);
+            }
+            fn set_current_voice_capacity(&self, _: u32) {}
+        }
+
+        fn admit_and_store(
+            plugin: &SotfLinearPhaseEQ,
+            state: &mut PluginState,
+            active: bool,
+            audio: bool,
+        ) -> bool {
+            // NIH runs this hook before allocating migration or applying any
+            // parameters. The fixture follows that same pinned codec order.
+            if audio && !SotfLinearPhaseEQ::state_restore_allows_audio_thread(state) {
+                return false;
+            }
+            SotfLinearPhaseEQ::filter_state(state);
+            if !plugin
+                .params
+                .validate_state(state, active, audio, Some(96_000.0))
+            {
+                return false;
+            }
+            plugin.params.apply_initialization_test_state(state);
+            true
+        }
+
+        fn render_native_backend(
+            plugin: &mut SotfLinearPhaseEQ,
+            input: &[f32],
+            submitted: &mut u64,
+        ) -> Vec<f32> {
+            let mut output = vec![f32::NAN; input.len()];
+            for (source, destination) in input.chunks(256).zip(output.chunks_mut(256)) {
+                let frames = source.len() / 2;
+                plugin
+                    .inner
+                    .as_mut()
+                    .unwrap()
+                    .process(
+                        source,
+                        destination,
+                        &sotf_host::ProcessContext::new(96_000, frames),
+                    )
+                    .unwrap();
+                *submitted += frames as u64;
+                let adapter = plugin
+                    .inner
+                    .as_ref()
+                    .unwrap()
+                    .as_any()
+                    .unwrap()
+                    .downcast_ref::<sotf_host::AsyncTimelinePlugin>()
+                    .unwrap();
+                let quantum = adapter.quantum_frames() as u64;
+                let target = *submitted / quantum * quantum;
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+                while target != 0 && adapter.completed_frame() < target {
+                    assert!(std::time::Instant::now() < deadline);
+                    std::thread::sleep(std::time::Duration::from_micros(100));
+                }
+            }
+            output
+        }
+
+        #[test]
+        fn linear_phase_eq_native_mode_only_rebuild_and_legacy_restore_publish_actual_pdc() {
+            let mut plugin = SotfLinearPhaseEQ::default();
+            let mut initial = plugin.params.state_for_initialization_test();
+            initial
+                .params
+                .insert("num_filters".into(), ParamValue::I32(1));
+            initial
+                .params
+                .insert("fir_length".into(), ParamValue::I32(0));
+            initial
+                .params
+                .insert("band_0_freq".into(), ParamValue::F32(125.0));
+            initial
+                .params
+                .insert("band_0_q".into(), ParamValue::F32(2.0));
+            initial
+                .params
+                .insert("band_0_gain".into(), ParamValue::F32(9.0));
+            plugin.params.apply_initialization_test_state(&initial);
+            let layout = SotfLinearPhaseEQ::AUDIO_IO_LAYOUTS[0];
+            let config = BufferConfig {
+                sample_rate: 96_000.0,
+                min_buffer_size: Some(1),
+                max_buffer_size: 128,
+                process_mode: ProcessMode::Realtime,
+            };
+            let mut context = LatencyContext(std::cell::Cell::new(u32::MAX));
+            assert!(plugin.initialize(&layout, &config, &mut context));
+            let manual_latency = context.0.get();
+            assert_eq!(
+                manual_latency as usize,
+                plugin.inner.as_ref().unwrap().latency_samples()
+            );
+            let before = plugin.params.state_for_initialization_test();
+            let mut only_mode = PluginState {
+                version: before.version.clone(),
+                params: std::collections::BTreeMap::from([(
+                    "accuracy_mode".into(),
+                    ParamValue::Bool(true),
+                )]),
+                fields: std::collections::BTreeMap::new(),
+            };
+            assert!(admit_and_store(&plugin, &mut only_mode, false, false));
+            let mut changed = plugin.params.state_for_initialization_test();
+            changed.params.remove("accuracy_mode");
+            let mut original = before.clone();
+            original.params.remove("accuracy_mode");
+            assert_eq!(
+                serde_json::to_vec(&changed).unwrap(),
+                serde_json::to_vec(&original).unwrap()
+            );
+            assert_ne!(
+                plugin.params.structural_fingerprint(),
+                plugin.structural_fingerprint
+            );
+            assert!(plugin.initialize(&layout, &config, &mut context));
+            let automatic_latency = context.0.get();
+            assert!(automatic_latency > manual_latency);
+            assert_eq!(
+                automatic_latency as usize,
+                plugin.inner.as_ref().unwrap().latency_samples()
+            );
+            assert_eq!(
+                plugin
+                    .inner
+                    .as_ref()
+                    .unwrap()
+                    .get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
+                Some(sotf_host::ParameterValue::Bool(true))
+            );
+            assert_eq!(
+                plugin
+                    .inner
+                    .as_ref()
+                    .unwrap()
+                    .get_parameter(&sotf_host::ParameterId::from("fir_length_index")),
+                Some(sotf_host::ParameterValue::Int(0))
+            );
+
+            // A complete pre-feature native state has no flag. Loading it
+            // into a true-mode instance must restore the manual backend/PDC.
+            let mut legacy = before.clone();
+            legacy.params.remove("accuracy_mode");
+            let live = plugin.params.state_for_initialization_test();
+            let live_bytes = serde_json::to_vec(&live).unwrap();
+            let mut control = SotfLinearPhaseEQ::default();
+            control.params.apply_initialization_test_state(&live);
+            let mut control_context = LatencyContext(std::cell::Cell::new(u32::MAX));
+            assert!(control.initialize(&layout, &config, &mut control_context));
+            let mut submitted = 0;
+            let mut control_submitted = 0;
+            let prefix = (0..16384)
+                .map(|index| (index as f32 * 0.017).sin() * 0.2)
+                .collect::<Vec<_>>();
+            assert_eq!(
+                render_native_backend(&mut plugin, &prefix, &mut submitted),
+                render_native_backend(&mut control, &prefix, &mut control_submitted)
+            );
+            let backend: *const dyn sotf_host::Plugin = plugin.inner.as_ref().unwrap().as_ref();
+            for (active, audio) in [(true, false), (false, true)] {
+                let mut rejected = legacy.clone();
+                assert!(!admit_and_store(&plugin, &mut rejected, active, audio));
+                assert_eq!(
+                    serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
+                    live_bytes
+                );
+                assert!(std::ptr::eq(
+                    backend,
+                    plugin.inner.as_ref().unwrap().as_ref()
+                ));
+                assert_eq!(context.0.get(), automatic_latency);
+            }
+            // Known-clock qualification must reject before primitive native
+            // parameter stores, retaining the populated backend's history.
+            let mut unsupported = live.clone();
+            unsupported
+                .params
+                .insert("band_0_freq".into(), ParamValue::F32(20.0));
+            unsupported
+                .params
+                .insert("band_0_q".into(), ParamValue::F32(50.0));
+            unsupported
+                .params
+                .insert("band_0_gain".into(), ParamValue::F32(24.0));
+            assert!(!admit_and_store(&plugin, &mut unsupported, false, false));
+            assert_eq!(
+                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
+                live_bytes
+            );
+            assert!(std::ptr::eq(
+                backend,
+                plugin.inner.as_ref().unwrap().as_ref()
+            ));
+            assert_eq!(context.0.get(), automatic_latency);
+            let continuation = (0..8192)
+                .map(|index| (index as f32 * 0.031).cos() * 0.1)
+                .collect::<Vec<_>>();
+            let continued = render_native_backend(&mut plugin, &continuation, &mut submitted);
+            assert!(continued.iter().any(|sample| sample.abs() > 0.01));
+            assert_eq!(
+                continued,
+                render_native_backend(&mut control, &continuation, &mut control_submitted)
+            );
+
+            // A state submitted before any actual clock is known stays
+            // pending; admission must not invent a provisional rate.
+            assert!(
+                plugin
+                    .params
+                    .validate_state(&unsupported, false, false, None)
+            );
+            assert!(admit_and_store(&plugin, &mut legacy, false, false));
+            assert!(plugin.initialize(&layout, &config, &mut context));
+            assert_eq!(context.0.get(), manual_latency);
+            assert_eq!(
+                plugin
+                    .inner
+                    .as_ref()
+                    .unwrap()
+                    .get_parameter(&sotf_host::ParameterId::from("accuracy_mode")),
+                Some(sotf_host::ParameterValue::Bool(false))
+            );
+
+            // Both explicit modern values survive the migration unchanged.
+            for value in [true, false] {
+                let mut modern = before.clone();
+                modern
+                    .params
+                    .insert("accuracy_mode".into(), ParamValue::Bool(value));
+                assert!(admit_and_store(&plugin, &mut modern, false, false));
+                assert!(plugin.initialize(&layout, &config, &mut context));
+                assert_eq!(
+                    context.0.get(),
+                    if value {
+                        automatic_latency
+                    } else {
+                        manual_latency
+                    }
+                );
+            }
+            let current =
+                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap();
+            let mut invalid = before;
+            invalid
+                .params
+                .insert("accuracy_mode".into(), ParamValue::I32(1));
+            assert!(!admit_and_store(&plugin, &mut invalid, false, false));
+            assert_eq!(
+                serde_json::to_vec(&plugin.params.state_for_initialization_test()).unwrap(),
+                current
+            );
+            println!(
+                "native_accuracy_mode_pdc rate=96000 manual={manual_latency} automatic={automatic_latency} legacy_restore={manual_latency}"
+            );
+        }
     }
 }
 

@@ -1,0 +1,89 @@
+--- a/crates/sotf-engine/src/plugin_param_accessors.rs
++++ b/crates/sotf-engine/src/plugin_param_accessors.rs
+@@ -640,7 +640,7 @@
+         layout: Some(&param_specs::linear_phase_eq::LAYOUT),
+         fields: [
+             num_filters: f64, fir_length: f64,
+-            phase_mode: f64, auto_gain: bool, mix: f64,
++            phase_mode: f64, auto_gain: bool, mix: f64, accuracy_mode: bool,
+         ]
+     },
+     AAE {
+--- a/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs
++++ b/crates/sotf-engine/src/plugins/plugin_config_converter/eq.rs
+@@ -13,6 +13,7 @@
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         mix,
+         filters,
+         stereo_pairs,
+@@ -42,9 +43,48 @@
+             "fir_length_index": *fir_length as usize,
+             "phase_mode_index": *phase_mode as usize,
+             "auto_gain": auto_gain,
++            "accuracy_mode": accuracy_mode,
+             "mix": *mix as f32,
+             "filters": band_configs,
+             "stereo_pairs": stereo_pairs,
+         }),
+     ))
+ }
++
++#[cfg(test)]
++mod accuracy_tests {
++    use super::*;
++
++    #[test]
++    fn linear_phase_eq_accuracy_converter_preserves_opt_in_and_manual_length() {
++        for accuracy in [false, true] {
++            let settings: PluginSettings = serde_json::from_value(json!({
++                "LinearPhaseEq": {
++                    "fir_length": 2.0,
++                    "accuracy_mode": accuracy,
++                    "filters": [],
++                }
++            }))
++            .unwrap();
++            assert_eq!(settings.param_value(1), Some(2.0));
++            assert_eq!(settings.param_value(5), Some(f64::from(accuracy)));
++            let config = convert_linear_phase_eq(&settings, 96_000.0).unwrap();
++            assert_eq!(config.parameters["fir_length_index"], 2);
++            assert_eq!(config.parameters["accuracy_mode"], accuracy);
++            let restored: PluginSettings =
++                serde_json::from_value(serde_json::to_value(&settings).unwrap()).unwrap();
++            assert_eq!(
++                convert_linear_phase_eq(&restored, 96_000.0)
++                    .unwrap()
++                    .parameters,
++                config.parameters
++            );
++        }
++        let old: PluginSettings =
++            serde_json::from_value(json!({"LinearPhaseEq":{"fir_length":2.0}})).unwrap();
++        assert_eq!(
++            convert_linear_phase_eq(&old, 96_000.0).unwrap().parameters["accuracy_mode"],
++            false
++        );
++    }
++}
+--- a/crates/sotf-engine/src/plugins/plugin_settings.rs
++++ b/crates/sotf-engine/src/plugins/plugin_settings.rs
+@@ -1868,6 +1868,8 @@
+         phase_mode: f64,
+         #[serde(default)]
+         auto_gain: bool,
++        #[serde(default)]
++        accuracy_mode: bool,
+         #[serde(default = "default_lpeq_mix")]
+         mix: f64,
+         #[serde(default)]
+@@ -2790,6 +2792,7 @@
+                     fir_length: p(lp, "fir_length_index").default_f64(),
+                     phase_mode: p(lp, "phase_mode_index").default_f64(),
+                     auto_gain: p(lp, "auto_gain").default_bool(),
++                    accuracy_mode: p(lp, "accuracy_mode").default_bool(),
+                     mix: p(lp, "mix").default_f64(),
+                     filters,
+                     stereo_pairs: None,

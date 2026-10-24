@@ -29,6 +29,7 @@ fn placed_band(
 fn params_for(bands: Vec<BandConfig>) -> LinearPhaseEqPluginParams {
     let num_filters = bands.len();
     LinearPhaseEqPluginParams {
+        accuracy_mode: false,
         num_filters,
         fir_length_index: 0,
         phase_mode_index: 0,

@@ -1,0 +1,36 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "plugins-nih",
+    "--no-default-features",
+    "--features",
+    "linear-phase-eq",
+    "--all-targets",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "cwd": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw",
+  "exit_code": 0,
+  "elapsed_seconds": 2.3922936669550836,
+  "stdout": "",
+  "stderr": "    Checking plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 2.29s\n",
+  "locks_sha256_before": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_sha256_after": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_unchanged": true
+}

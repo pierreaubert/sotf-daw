@@ -1,0 +1,23 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--lib",
+    "accuracy",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 34.6047614577692,
+  "stdout": "\nrunning 5 tests\ntest accuracy::tests::null_policy_and_matrix_operator_do_not_hide_residuals_or_cancellation ... ok\ntest accuracy::tests::automatic_selection_preserves_manual_choice_defaults_and_lifecycle ... ok\ntest accuracy::tests::placed_route_qualifies_actual_paired_cascade_and_full_latency ... ok\ntest accuracy::tests::max_support_failure_and_fixed_length_dynamic_refusal_are_explicit ... ok\ntest accuracy::tests::final_f32_response_meets_independent_biquad_and_direct_dft_checks ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 81 filtered out; finished in 0.05s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `release` profile [optimized] target(s) in 34.49s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_linear_phase_eq-ebc541b501a0edd8)\n"
+}

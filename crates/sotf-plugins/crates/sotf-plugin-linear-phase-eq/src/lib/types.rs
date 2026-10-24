@@ -64,6 +64,16 @@ pub struct LinearPhaseEqPluginParams {
     pub phase_mode_index: usize,
     #[serde(default)]
     pub auto_gain: bool,
+    /// Select the shortest supported FIR meeting sampled magnitude accuracy.
+    ///
+    /// Opt-in and structural. The saved manual length remains unchanged. The
+    /// final f32 coefficients must meet the sampled 0.05 dB residual criterion
+    /// with the explicit [`crate::ACCURACY_REFERENCE_FLOOR`] near nulls;
+    /// construction fails if 8192 taps cannot qualify. Inspect actual support
+    /// and full route latency through [`crate::LinearPhaseEqPlugin::accuracy_report`]
+    /// before audio. This is not a continuous-frequency guarantee.
+    #[serde(default)]
+    pub accuracy_mode: bool,
     #[serde(default = "default_mix")]
     pub mix: f32,
     #[serde(default)]
@@ -159,9 +169,12 @@ pub struct LiveFilterSnapshot {
     pub channels: usize,
     pub sample_rate: f64,
     pub num_filters: usize,
+    /// Resolved actual support; accuracy mode may differ from the saved manual choice.
     pub fir_length_index: usize,
     pub phase_mode_index: usize,
     pub auto_gain: bool,
+    /// Whether dynamic targets must qualify at the resolved fixed support.
+    pub accuracy_mode: bool,
     pub bands: Vec<BandSnapshot>,
     pub stereo_pairs: Vec<[usize; 2]>,
 }
@@ -204,6 +217,7 @@ pub struct PreparedBandUpdate {
     pub(crate) new_biquad: Biquad,
     pub(crate) target: RouteBanks,
     pub(crate) priming: Option<PreparedPriming>,
+    pub(crate) accuracy_measurement: Option<crate::accuracy::Measurement>,
 }
 
 /// Progress of one budgeted prepared-update attempt.

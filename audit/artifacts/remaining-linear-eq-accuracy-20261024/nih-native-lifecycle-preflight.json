@@ -1,0 +1,36 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-nih",
+    "--lib",
+    "--no-default-features",
+    "--features",
+    "linear-phase-eq",
+    "linear_phase_eq_native_mode_only",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "cwd": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw",
+  "exit_code": 0,
+  "elapsed_seconds": 77.97300962498412,
+  "stdout": "\nrunning 1 test\nnative_accuracy_mode_pdc rate=96000 manual=800 automatic=4384 legacy_restore=800\ntest plugin::tests::linear_phase_eq_native_mode_only_rebuild_and_legacy_restore_publish_actual_pdc ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 240 filtered out; finished in 0.25s\n\n",
+  "stderr": "   Compiling plugins-nih v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-nih)\n    Finished `release` profile [optimized] target(s) in 1m 17s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_nih-e2c266286c9717f8)\n",
+  "locks_sha256_before": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_sha256_after": {
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/Cargo.lock": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+    "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u/Cargo.lock": "a8f31103ca49d1635eee467f84e1d2187fe7fd9f23128cf222486a9f76b5cf62"
+  },
+  "locks_unchanged": true
+}

@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--lib",
+    "accepted_update_keeps_resolved_long_support",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 60.99883266608231,
+  "stdout": "\nrunning 1 test\ntest accuracy::tests::accepted_update_keeps_resolved_long_support_when_new_target_could_be_shorter ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 87 filtered out; finished in 0.15s\n\n",
+  "stderr": "   Compiling num-traits v0.2.19\n   Compiling syn v3.0.9\n   Compiling libc v0.2.191\n   Compiling serde_core v1.0.229\n   Compiling bytemuck_derive v1.12.1\n   Compiling bytemuck v1.25.2\n   Compiling num-complex v0.4.6\n   Compiling num-integer v0.1.47\n   Compiling serde_derive v1.0.229\n   Compiling memchr v2.8.3\n   Compiling transpose v0.2.3\n   Compiling getrandom v0.4.3\n   Compiling aho-corasick v1.1.5\n   Compiling serde v1.0.229\n   Compiling primal-check v0.3.4\n   Compiling oxiblas-core v0.2.2\n   Compiling either v1.19.0\n   Compiling rayon v1.12.0\n   Compiling oxiblas-matrix v0.2.2\n   Compiling rustfft v6.4.1\n   Compiling regex-automata v0.4.18\n   Compiling thiserror-impl v2.0.21\n   Compiling serde_json v1.0.154\n   Compiling crc32fast v1.5.3\n   Compiling log v0.4.34\n   Compiling clap_derive v4.6.7\n   Compiling thiserror v2.0.21\n   Compiling regex v1.13.1\n   Compiling oxiblas-blas v0.2.2\n   Compiling ndarray v0.17.2\n   Compiling wide v1.7.1\n   Compiling approx v0.5.1\n   Compiling simd-adler32 v0.3.10\n   Compiling simba v0.10.2\n   Compiling miniz_oxide v0.9.1\n   Compiling audioadapter-sample v5.2.0\n   Compiling rustix v1.1.5\n   Compiling rand v0.10.3\n   Compiling oxiblas-lapack v0.2.2\n   Compiling env_filter v2.0.0\n   Compiling clap v4.6.7\n   Compiling realfft v3.5.0\n   Compiling num-rational v0.4.2\n   Compiling errno v0.3.14\n   Compiling cpufeatures v0.3.1\n   Compiling syn v2.0.119\n   Compiling smallvec v1.16.4\n   Compiling rusqlite v0.38.0\n   Compiling visibility v0.1.1\n   Compiling audioadapter-buffers v5.2.0\n   Compiling gpui-pretext v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n   Compiling math-iir-fir v0.5.27 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-iir-fir)\n   Compiling bincode v2.0.1\n   Compiling sha2 v0.11.1\n   Compiling oxiblas-ndarray v0.2.2\n   Compiling sotf-nalgebra v0.35.0 (https://github.com/pierreaubert/sotf-3rdparties#1fe02c0b)\n   Compiling flate2 v1.1.10\n   Compiling env_logger v0.11.11\n   Compiling windowfunctions v0.1.1\n   Compiling once_cell v1.21.4\n   Compiling tempfile v3.27.0\n   Compiling sotf-rubato v5.0.0 (https://github.com/pierreaubert/sotf-3rdparties#1fe02c0b)\n   Compiling arc-swap v1.9.3\n   Compiling sofa-reader v0.2.1 (https://github.com/pierreaubert/sofa-reader#c2ba490d)\n   Compiling math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n   Compiling gpui-builder v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n   Compiling chrono v0.4.45\n   Compiling gpui-design v0.10.44 (https://github.com/pierreaubert/gpui-toolkit#483ea7c7)\n   Compiling wait-timeout v0.2.1\n   Compiling memmap2 v0.9.12\n   Compiling rusty-fork v0.3.1\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling proptest v1.12.0\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-linear-phase-eq v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq)\n    Finished `test` profile [optimized + debuginfo] target(s) in 1m 00s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_plugin_linear_phase_eq-dc694d330b199859)\n",
+  "lock_sha256_before": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_sha256_after": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "lock_unchanged": true
+}

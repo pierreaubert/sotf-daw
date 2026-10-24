@@ -62,6 +62,7 @@ fn make(channels: usize, rate: u32, length: usize, phase: usize, mix: f32) -> Li
         channels,
         rate,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: 1,
             fir_length_index: length,
             phase_mode_index: phase,

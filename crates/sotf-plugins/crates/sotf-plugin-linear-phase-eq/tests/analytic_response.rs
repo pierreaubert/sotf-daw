@@ -44,6 +44,7 @@ fn impulse_response(
         1,
         rate,
         LinearPhaseEqPluginParams {
+            accuracy_mode: false,
             num_filters: bands.len(),
             fir_length_index: length_index,
             phase_mode_index: phase,
@@ -518,6 +519,7 @@ fn centered_fir_support_and_latency_hold_for_legacy_and_ordered_routes() {
                             2,
                             rate,
                             LinearPhaseEqPluginParams {
+                                accuracy_mode: false,
                                 num_filters: 2,
                                 fir_length_index: length_index,
                                 phase_mode_index: 0,
