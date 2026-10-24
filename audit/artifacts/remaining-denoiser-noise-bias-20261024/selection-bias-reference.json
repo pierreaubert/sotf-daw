@@ -1,0 +1,92 @@
+[
+  {
+    "fast": false,
+    "threshold": 0.1,
+    "quiet_update_weight": 0.09999999999999998,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9972854877458921,
+    "numerical_integral": 0.9972854877468184,
+    "bias_db": -0.011805006606421625
+  },
+  {
+    "fast": false,
+    "threshold": 0.5,
+    "quiet_update_weight": 0.09999999999999998,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9909020401043105,
+    "numerical_integral": 0.9909020401049298,
+    "bias_db": -0.03969277447100279
+  },
+  {
+    "fast": false,
+    "threshold": 1.0,
+    "quiet_update_weight": 0.09999999999999998,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9889636167648567,
+    "numerical_integral": 0.9889636167652303,
+    "bias_db": -0.0481968547957205
+  },
+  {
+    "fast": false,
+    "threshold": 2.0,
+    "quiet_update_weight": 0.09999999999999998,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9918798830058032,
+    "numerical_integral": 0.9918798830059381,
+    "bias_db": -0.035409178723376455
+  },
+  {
+    "fast": false,
+    "threshold": 5.0,
+    "quiet_update_weight": 0.09999999999999998,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9989893079501372,
+    "numerical_integral": 0.9989893079501433,
+    "bias_db": -0.004391599452939067
+  },
+  {
+    "fast": true,
+    "threshold": 0.1,
+    "quiet_update_weight": 0.18999999999999995,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9891419509835685,
+    "numerical_integral": 0.9891419509844948,
+    "bias_db": -0.047413786706800846
+  },
+  {
+    "fast": true,
+    "threshold": 0.5,
+    "quiet_update_weight": 0.18999999999999995,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.963608160417242,
+    "numerical_integral": 0.9636081604178612,
+    "bias_db": -0.16099530789539296
+  },
+  {
+    "fast": true,
+    "threshold": 1.0,
+    "quiet_update_weight": 0.18999999999999995,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9558544670594269,
+    "numerical_integral": 0.9558544670598006,
+    "bias_db": -0.19608225887428704
+  },
+  {
+    "fast": true,
+    "threshold": 2.0,
+    "quiet_update_weight": 0.18999999999999995,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.967519532023213,
+    "numerical_integral": 0.9675195320233478,
+    "bias_db": -0.1434025880075281
+  },
+  {
+    "fast": true,
+    "threshold": 5.0,
+    "quiet_update_weight": 0.18999999999999995,
+    "indicator_update_weight": 0.06999999999999995,
+    "expected_next_noise_ratio": 0.9959572318005487,
+    "numerical_integral": 0.9959572318005547,
+    "bias_db": -0.017593105640696317
+  }
+]

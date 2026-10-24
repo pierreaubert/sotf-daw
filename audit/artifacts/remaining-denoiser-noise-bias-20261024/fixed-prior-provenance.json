@@ -1,0 +1,9 @@
+{
+  "source_url": "https://fiona.uni-hamburg.de/11888f86/noisepowproposed.m",
+  "author_software_page": "https://www.inf.uni-hamburg.de/en/inst/ab/sp/publications/taslp12noisepsd.%20html",
+  "source_sha256": "a5cc2dd68393e3e1e5e10f99c829359887ade29e6b2b5115ee547ad12d195ab1",
+  "reference_version": "v1.0 (October 2011)",
+  "license": "Three-clause BSD-style redistribution conditions inspected and notice retained",
+  "author_code_copied_into_production": false,
+  "production_port_selected": false
+}

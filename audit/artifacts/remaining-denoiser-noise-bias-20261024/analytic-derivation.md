@@ -1,0 +1,9 @@
+# Analytic noise-only PSD baseline
+
+Assume independent zero-mean uniform samples x[n] in [-a,a], variance sigma²=a²/3 and fourth cumulant kappa=-6 sigma⁴/5. With the declared analysis window w[n]=sin(pi n/N), the unnormalized DFT obeys E|X[k]|²=sigma² sum(w²)=a²N/6 for every bin. For a changing amplitude envelope, expectation is instead sum(sigma[n]² w[n]²), including zeros outside source support; no stationarity assumption is needed for this first moment.
+
+For constant variance, the squared window has only three DFT components: N/2 at lag zero and -N/4 at lags +/-1. For K contiguous positive bins whose pair sums avoid DC/Nyquist wrap, Gaussian periodogram covariance has only the diagonal and adjacent-bin terms. Uniform fourth-cumulant correction contributes kappa sum(w⁴), with sum(w⁴)=3N/8. The normalized variance of the average periodogram is therefore (3K-1)/(2K²)-9/(5N).
+
+`analytic-reference.py` verifies the window energy/fourth moment and recomputes all required covariance DFTs and bin-pair sums directly in f64, separately from the closed form and from production FFTs. The 100–4000 Hz bands are 166 bins at FFT2048 and 41 at FFT512. For 64 independent seeds and three disjoint windows, the raw periodogram mean has the single-window variance divided by 192. This does not give a variance formula for nonlinear MCRA estimates, and it does not calibrate MCRA p.
+
+The planned deterministic PRNG fixtures approximate independent uniform noise; their finite-grid/f32 effects and pseudo-random dependence are limitations, not exact population guarantees. Report both the observed raw mean and the estimated MCRA PSD against analytic expectation, and retain seed/window distributions. Neither a low raw-power error nor a lower PSD bias proves speech preservation or native realtime acceptance. All previously declared waveform/quality/noise/zero/heap gates remain fixed.

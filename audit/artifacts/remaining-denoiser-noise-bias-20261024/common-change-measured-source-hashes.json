@@ -1,0 +1,9 @@
+{
+  "base_commit": "ac4700c986abb030d9512b6ad7a406693b726ca0",
+  "shipping_checkpoint": "21806c0",
+  "hashes": {
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib.rs": "dda7618d0fffcc8cd49ba0953ff25da3624cc4c2a11a00233791c2ab8f888d54",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/noise_bias_tests.rs": "d71e1f80b24b69006e6f67de65bba1694145a80e64d8732c45d532a706df08f9",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/noise_change_diagnostics.rs": "157fd75ae8d474371832d9f75c99a8954bcd198453f36d89e180e4ab8d716882"
+  }
+}

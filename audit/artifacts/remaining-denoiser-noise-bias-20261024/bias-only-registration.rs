@@ -1,0 +1,36 @@
+pub use config::DenoiserPluginParams;
+pub use reduction_curve::{DENOISER_CURVE_ANCHOR_HZ, ReductionCurve};
+
+mod config;
+mod fft;
+mod masking;
+mod mcra;
+mod multi_resolution;
+mod noise_profile;
+pub mod params;
+mod polyphonic;
+mod reduction_curve;
+mod spectral_sub;
+mod wiener;
+mod zero_reduction;
+
+#[cfg(test)]
+mod captured_profile_tests;
+#[path = "lib/denoiser_data.rs"]
+mod denoiser_data;
+#[path = "lib/denoiser_plugin.rs"]
+mod denoiser_plugin;
+#[path = "lib/misc.rs"]
+mod misc;
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
+
+pub use denoiser_data::*;
+pub use denoiser_plugin::*;
+
+#[cfg(test)]
+mod estimator_component_tests;
+
+#[cfg(test)]
+mod noise_bias_tests;

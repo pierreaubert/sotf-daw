@@ -1,0 +1,79 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/analytic-reference.py"
+    ],
+    "exit_code": 0,
+    "stdout": "[\n  {\n    \"fft_size\": 512,\n    \"first_bin\": 2,\n    \"last_bin\": 42,\n    \"bins\": 41,\n    \"window_energy\": 256.0,\n    \"window_fourth_sum\": 192.0,\n    \"normalized_band_mean_variance\": 0.0327722988548483,\n    \"closed_form_variance\": 0.0327722988548483,\n    \"relative_sd_single\": 0.18103120961549227,\n    \"relative_sd_64_seeds_3_disjoint_windows\": 0.013064802200403503\n  },\n  {\n    \"fft_size\": 2048,\n    \"first_bin\": 5,\n    \"last_bin\": 170,\n    \"bins\": 166,\n    \"window_energy\": 1024.0,\n    \"window_fourth_sum\": 768.0,\n    \"normalized_band_mean_variance\": 0.008139093459682101,\n    \"closed_form_variance\": 0.008139093459682101,\n    \"relative_sd_single\": 0.09021692446366203,\n    \"relative_sd_64_seeds_3_disjoint_windows\": 0.006510845703069427\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/selection-bias-reference.py"
+    ],
+    "exit_code": 0,
+    "stdout": "Independent single-step adaptive-averaging selection bias: 10 quadrature cases pass.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/fixed-prior-reference.py"
+    ],
+    "exit_code": 0,
+    "stdout": "Fixed-prior SPP reference: short 40 dB mean-power step remains untracked before the anti-stall cap at all three clocks; no production port selected.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/gaussian-ratio-oracle.py"
+    ],
+    "exit_code": 0,
+    "stdout": "[\n  {\n    \"fft_size\": 2048,\n    \"hop\": 1024,\n    \"bins\": 83,\n    \"hourly_familywise_budget\": 0.001,\n    \"per_frame_budget\": 5.925925925925926e-09,\n    \"mean_t_threshold\": 0.3548100590648318,\n    \"exact_tail_at_rational_threshold\": 5.925925925924477e-09,\n    \"rational_threshold\": \"24967538277995/70368744177664\",\n    \"h1_lower_bounds\": [\n      {\n        \"variance_scale\": 10,\n        \"all_bins_exceed_lower_bound\": 1.3465558208954904e-07\n      },\n      {\n        \"variance_scale\": 100,\n        \"all_bins_exceed_lower_bound\": 0.17820176769462565\n      },\n      {\n        \"variance_scale\": 10000,\n        \"all_bins_exceed_lower_bound\": 0.9827239446089341\n      }\n    ],\n    \"scope\": \"real white Gaussian only; proper independent interior bins and single disjoint-window raw reference\"\n  },\n  {\n    \"fft_size\": 512,\n    \"hop\": 256,\n    \"bins\": 21,\n    \"hourly_familywise_budget\": 0.001,\n    \"per_frame_budget\": 1.4814814814814814e-09,\n    \"mean_t_threshold\": 0.6858900300278671,\n    \"exact_tail_at_rational_threshold\": 1.4814814814813962e-09,\n    \"rational_threshold\": \"193060880228165/281474976710656\",\n    \"h1_lower_bounds\": [\n      {\n        \"variance_scale\": 10,\n        \"all_bins_exceed_lower_bound\": 0.0001206458192015499\n      },\n      {\n        \"variance_scale\": 100,\n        \"all_bins_exceed_lower_bound\": 0.33356928100114647\n      },\n      {\n        \"variance_scale\": 10000,\n        \"all_bins_exceed_lower_bound\": 0.9887951574646999\n      }\n    ],\n    \"scope\": \"real white Gaussian only; proper independent interior bins and single disjoint-window raw reference\"\n  }\n]\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/analyze-bias.py"
+    ],
+    "exit_code": 0,
+    "stdout": "Fixed 1280-row noise-PSD analysis replayed; no population/posterior acceptance.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/physical-clock-h0-reference.py"
+    ],
+    "exit_code": 0,
+    "stdout": "Physical-clock known-H0 reference replayed; downward ratios are not independently classified as bugs.\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "python3",
+      "audit/artifacts/remaining-denoiser-noise-bias-20261024/analyze-ratio.py"
+    ],
+    "exit_code": 0,
+    "stdout": "{\n  \"decision\": \"NO-GO for production state rebase\",\n  \"false_control_reports\": 221,\n  \"false_control_events\": 1257,\n  \"positive_guards\": [\n    {\n      \"condition\": \"gaussian_step_40db\",\n      \"low_latency\": false,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    },\n    {\n      \"condition\": \"gaussian_step_40db\",\n      \"low_latency\": true,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    },\n    {\n      \"condition\": \"uniform_step_40db\",\n      \"low_latency\": false,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    },\n    {\n      \"condition\": \"uniform_step_40db\",\n      \"low_latency\": true,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    },\n    {\n      \"condition\": \"ar95_step_40db\",\n      \"low_latency\": false,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    },\n    {\n      \"condition\": \"ar95_step_40db\",\n      \"low_latency\": true,\n      \"seeds\": 64,\n      \"timely_detections\": 64,\n      \"required\": 61,\n      \"off_change_events\": 0,\n      \"passed\": true\n    }\n  ],\n  \"summary\": [\n    {\n      \"condition\": \"ar95_step_40db\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 320,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"ar95_step_40db\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 303,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"gaussian_step_10db\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 256,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"gaussian_step_10db\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 95,\n      \"reports_with_events\": 55\n    },\n    {\n      \"condition\": \"gaussian_step_20db\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 276,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"gaussian_step_20db\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 256,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"gaussian_step_40db\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 320,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"gaussian_step_40db\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 298,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"recorded_wanted\",\n      \"low_latency\": false,\n      \"reports\": 8,\n      \"comparisons\": 1099,\n      \"events\": 158,\n      \"reports_with_events\": 8\n    },\n    {\n      \"condition\": \"recorded_wanted\",\n      \"low_latency\": true,\n      \"reports\": 8,\n      \"comparisons\": 4482,\n      \"events\": 113,\n      \"reports_with_events\": 7\n    },\n    {\n      \"condition\": \"stationary_ar95\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_ar95\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_ar995\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_ar995\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_gaussian\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_gaussian\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_uniform\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"stationary_uniform\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 0,\n      \"reports_with_events\": 0\n    },\n    {\n      \"condition\": \"uniform_step_40db\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 320,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"uniform_step_40db\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 299,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"wanted_harmonic\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 257,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"wanted_harmonic\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 14,\n      \"reports_with_events\": 14\n    },\n    {\n      \"condition\": \"wanted_unvoiced_bandpass\",\n      \"low_latency\": false,\n      \"reports\": 64,\n      \"comparisons\": 2432,\n      \"events\": 371,\n      \"reports_with_events\": 64\n    },\n    {\n      \"condition\": \"wanted_unvoiced_bandpass\",\n      \"low_latency\": true,\n      \"reports\": 64,\n      \"comparisons\": 10496,\n      \"events\": 344,\n      \"reports_with_events\": 64\n    }\n  ]\n}\n",
+    "stderr": ""
+  }
+]

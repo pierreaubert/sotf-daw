@@ -1,0 +1,54 @@
+{
+  "cases": [
+    {
+      "fft_size": 2048,
+      "hop": 1024,
+      "bins": 83,
+      "hourly_familywise_budget": 0.001,
+      "per_frame_budget": 5.925925925925926e-09,
+      "mean_t_threshold": 0.3548100590648318,
+      "exact_tail_at_rational_threshold": 5.925925925924477e-09,
+      "rational_threshold": "24967538277995/70368744177664",
+      "h1_lower_bounds": [
+        {
+          "variance_scale": 10,
+          "all_bins_exceed_lower_bound": 1.3465558208954904e-07
+        },
+        {
+          "variance_scale": 100,
+          "all_bins_exceed_lower_bound": 0.17820176769462565
+        },
+        {
+          "variance_scale": 10000,
+          "all_bins_exceed_lower_bound": 0.9827239446089341
+        }
+      ],
+      "scope": "real white Gaussian only; proper independent interior bins and single disjoint-window raw reference"
+    },
+    {
+      "fft_size": 512,
+      "hop": 256,
+      "bins": 21,
+      "hourly_familywise_budget": 0.001,
+      "per_frame_budget": 1.4814814814814814e-09,
+      "mean_t_threshold": 0.6858900300278671,
+      "exact_tail_at_rational_threshold": 1.4814814814813962e-09,
+      "rational_threshold": "193060880228165/281474976710656",
+      "h1_lower_bounds": [
+        {
+          "variance_scale": 10,
+          "all_bins_exceed_lower_bound": 0.0001206458192015499
+        },
+        {
+          "variance_scale": 100,
+          "all_bins_exceed_lower_bound": 0.33356928100114647
+        },
+        {
+          "variance_scale": 10000,
+          "all_bins_exceed_lower_bound": 0.9887951574646999
+        }
+      ],
+      "scope": "real white Gaussian only; proper independent interior bins and single disjoint-window raw reference"
+    }
+  ]
+}

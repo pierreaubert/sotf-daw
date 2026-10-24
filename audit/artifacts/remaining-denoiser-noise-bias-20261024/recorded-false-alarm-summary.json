@@ -1,0 +1,124 @@
+[
+  {
+    "source": "speech-1272",
+    "low_latency": false,
+    "events": 31,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "speech-1272",
+    "low_latency": true,
+    "events": 23,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "speech-1462",
+    "low_latency": false,
+    "events": 34,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "speech-1462",
+    "low_latency": true,
+    "events": 35,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "speech-174",
+    "low_latency": false,
+    "events": 34,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "speech-174",
+    "low_latency": true,
+    "events": 16,
+    "events_centered_in_fixed_regions": {}
+  },
+  {
+    "source": "s",
+    "low_latency": false,
+    "events": 21,
+    "events_centered_in_fixed_regions": {
+      "fricative": 8,
+      "vowel_after_fricative": 0
+    }
+  },
+  {
+    "source": "s",
+    "low_latency": true,
+    "events": 9,
+    "events_centered_in_fixed_regions": {
+      "fricative": 0,
+      "vowel_after_fricative": 0
+    }
+  },
+  {
+    "source": "sh",
+    "low_latency": false,
+    "events": 12,
+    "events_centered_in_fixed_regions": {
+      "fricative": 5,
+      "vowel_after_fricative": 0
+    }
+  },
+  {
+    "source": "sh",
+    "low_latency": true,
+    "events": 13,
+    "events_centered_in_fixed_regions": {
+      "fricative": 0,
+      "vowel_after_fricative": 0
+    }
+  },
+  {
+    "source": "p",
+    "low_latency": false,
+    "events": 11,
+    "events_centered_in_fixed_regions": {
+      "plosive_speech": 11,
+      "plosive_burst": 7
+    }
+  },
+  {
+    "source": "p",
+    "low_latency": true,
+    "events": 12,
+    "events_centered_in_fixed_regions": {
+      "plosive_speech": 12,
+      "plosive_burst": 12
+    }
+  },
+  {
+    "source": "violin",
+    "low_latency": false,
+    "events": 9,
+    "events_centered_in_fixed_regions": {
+      "bright_bowed_string": 9
+    }
+  },
+  {
+    "source": "violin",
+    "low_latency": true,
+    "events": 0,
+    "events_centered_in_fixed_regions": {
+      "bright_bowed_string": 0
+    }
+  },
+  {
+    "source": "cymbal",
+    "low_latency": false,
+    "events": 6,
+    "events_centered_in_fixed_regions": {
+      "cymbal_hit_and_decay": 6
+    }
+  },
+  {
+    "source": "cymbal",
+    "low_latency": true,
+    "events": 5,
+    "events_centered_in_fixed_regions": {
+      "cymbal_hit_and_decay": 5
+    }
+  }
+]
