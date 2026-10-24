@@ -20,5 +20,6 @@
     "--nocapture"
   ],
   "exit_code": 0,
-  "elapsed_seconds": 10.954562708036974
+  "elapsed_seconds": 10.954562708036974,
+  "output_file": "audit/artifacts/ml-gate-20261025/gate-development-recordings.txt"
 }

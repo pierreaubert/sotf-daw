@@ -215,6 +215,15 @@
         "violin_passing_fraction": 0.948051948051948,
         "cymbal_passing_fraction": 0.056265984654731455,
         "interpretation": "Strong false speech evidence on this violin clip. Speech clips lack window labels and include pauses; their passing fractions are not speech recall. Unknown training overlap. Experimental implementation only; no adoption or general quality claim."
+      },
+      "verification": {
+        "feature_enabled_tests_passed": 108,
+        "feature_disabled_tests_passed": 103,
+        "final_mode_tests_passed": 4,
+        "strict_clippy": "all targets, with and without neural-speech",
+        "engine": "Combined neural-speech/neural-pitch/deep-filter test compilation and typed preset roundtrip passed with QA feature.",
+        "sibling_cli": "Default player-cli release/offline/locked check passed; compatibility edits remain uncommitted in sibling checkout.",
+        "formatting": "Focused rustfmt --check and git diff --check passed."
       }
     },
     {

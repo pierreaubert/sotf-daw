@@ -19,5 +19,6 @@
     "warnings"
   ],
   "exit_code": 0,
-  "elapsed_seconds": 0.6511218750383705
+  "elapsed_seconds": 0.6511218750383705,
+  "output_file": "audit/artifacts/ml-gate-20261025/gate-feature-clippy.txt"
 }

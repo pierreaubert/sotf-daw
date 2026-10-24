@@ -32,6 +32,10 @@
     "gate-final-mode-tests": {
       "exit_code": 0,
       "elapsed_seconds": 15.779156417120248
+    },
+    "sibling-cli-check": {
+      "exit_code": 0,
+      "observed_build_duration": "3m 09s"
     }
   },
   "evidence_limits": [
@@ -41,5 +45,5 @@
     "Offline model replay excludes async deadlines and gain smoothing.",
     "Workspace-wide release/format/QA gates were not run; focused Rust formatting and diff checks used."
   ],
-  "compatibility": "Sibling CLI explicitly preserves classical Gate behavior. Its existing PND compatibility edit is retained. Sibling lock refresh recorded separately; application compile is still in progress at this checkpoint."
+  "compatibility": "Sibling player-cli release/offline/locked compilation passed with classical defaults. Sibling CLI and lock compatibility edits remain uncommitted alongside existing user changes; unrelated changes preserved."
 }

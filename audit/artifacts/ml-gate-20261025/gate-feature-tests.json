@@ -17,5 +17,6 @@
     "--nocapture"
   ],
   "exit_code": 0,
-  "elapsed_seconds": 10.05412358394824
+  "elapsed_seconds": 10.05412358394824,
+  "output_file": "audit/artifacts/ml-gate-20261025/gate-feature-tests.txt"
 }

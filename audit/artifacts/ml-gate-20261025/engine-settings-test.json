@@ -17,5 +17,6 @@
     "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
   ],
   "exit_code": 0,
-  "elapsed_seconds": 232.31461337488145
+  "elapsed_seconds": 232.31461337488145,
+  "output_file": "audit/artifacts/ml-gate-20261025/engine-settings-test.txt"
 }

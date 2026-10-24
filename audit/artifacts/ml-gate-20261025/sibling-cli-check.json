@@ -1,0 +1,27 @@
+{
+  "command": [
+    "cargo",
+    "check",
+    "-p",
+    "app-cli",
+    "--bin",
+    "player-cli",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "cwd": "/Volumes/home_tmp/src/all_of_sotf/sotf",
+  "exit_code": 0,
+  "observed_build_duration": "3m 09s",
+  "scope": "Sibling CLI classical Gate constructor and default feature build; no neural speech runtime quality or platform-host claim.",
+  "warning": "Dependency block 0.1.6 has a future Rust incompatibility warning.",
+  "source_edits": [
+    "crates/app-cli/bin/sotf_player_cli/build.rs: speech_protection None; existing neural_pitch None preserved",
+    "Cargo.lock: local crate version alignment and plugins-denoiser serde edge; exact resolver delta retained separately."
+  ],
+  "sibling_changes_committed": false
+}

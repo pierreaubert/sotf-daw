@@ -19,5 +19,6 @@
     "--nocapture"
   ],
   "exit_code": 0,
-  "elapsed_seconds": 15.779156417120248
+  "elapsed_seconds": 15.779156417120248,
+  "output_file": "audit/artifacts/ml-gate-20261025/gate-final-mode-tests.txt"
 }
