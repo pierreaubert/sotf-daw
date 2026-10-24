@@ -1,0 +1,11 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 9m 48s
+warning: the following packages contain code that will be rejected by a future version of Rust: block v0.1.6
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_audio_player-8152db4be0dc2711)
+
+running 2 tests
+test controllers::plugin::linear_phase::accuracy_integration_tests::accuracy_mode_tui_rows_follow_descriptors_without_aliasing_bands ... ok
+test controllers::plugin::linear_phase::accuracy_integration_tests::accuracy_mode_keeps_desktop_addresses_and_saved_manual_length ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 851 filtered out; finished in 0.00s
+

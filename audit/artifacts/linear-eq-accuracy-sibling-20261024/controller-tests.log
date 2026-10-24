@@ -1,0 +1,86 @@
+
+running 67 tests
+test controllers::plugin::crossover::tests::channel_addresses_edit_reset_and_preserve_neighbors ... ok
+test controllers::plugin::linear_phase::accuracy_integration_tests::accuracy_mode_keeps_desktop_addresses_and_saved_manual_length ... ok
+test controllers::plugin::linear_phase::accuracy_integration_tests::accuracy_mode_tui_rows_follow_descriptors_without_aliasing_bands ... ok
+test controllers::plugin::parameter_metadata::target_tests::eq_target_readback_and_mutation_use_the_same_channel_bank ... ok
+test controllers::plugin::parameter_metadata::target_tests::table_prerequisites_follow_subharmonic_enable_without_disabling_the_switch ... ok
+test controllers::plugin::parameter_metadata::tests::eq_table_frequency_address_updates_frequency_instead_of_filter_count ... ok
+test controllers::plugin::parameter_metadata::tests::fir_sparse_mix_address_preserves_bands_and_stores_display_percent ... ok
+test controllers::plugin::set::tests::dynamic_eq_global_dynamics_preserve_inheritance_across_serialization ... ok
+test controllers::plugin::parameter_metadata::tests::dynamic_parameter_addresses_have_unique_metadata_and_real_readback ... ok
+test controllers::plugin::set::tests::multiband_compressor_range_hold_reset_restores_current_global_values ... ok
+test controllers::plugin::set::tests::multiband_count_preserves_retained_band_activation ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_frequency_field ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_gain_clamped ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_q_notch_allows_up_to_40 ... ok
+test controllers::plugin::set::tests::multiband_sparse_overrides_materialize_only_for_valid_edits ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_q_peak_clamps_to_20 ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_type_field ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_eq_type_switch_clamps_q ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_fir_eq_active_field_controls_mute_state ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_gain ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_linear_phase_eq_uses_five_param_band_stride ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_multiband_compressor_band_dynamics ... ok
+test controllers::plugin::set::tests::set_plugin_param_value_returns_false_for_out_of_range_index ... ok
+test controllers::plugin::tests::add_and_pop_eq_kautz_section ... ok
+test controllers::plugin::tests::add_eq_band_by_node_id_appends_a_filter ... ok
+test controllers::plugin::tests::add_eq_band_by_node_id_rejects_non_eq_plugin ... ok
+test controllers::plugin::tests::add_eq_band_by_node_id_rejects_unknown_node ... ok
+test controllers::plugin::tests::ab_config_source_path_persists_for_linear_and_node_addressing ... ok
+test controllers::plugin::tests::crossover_and_band_split_edits_follow_engine_channel_width ... ok
+test controllers::plugin::tests::custom_ambisonics_choice_without_geometry_preserves_the_working_chain ... ok
+test controllers::plugin::tests::cycle_eq_filter_lambda_no_op_when_band_missing ... ok
+test controllers::plugin::tests::cycle_eq_filter_lambda_no_op_when_not_warped ... ok
+test controllers::plugin::tests::cycle_eq_filter_lambda_only_walks_when_warped ... ok
+test controllers::plugin::tests::cycle_eq_filter_lambda_snaps_off_preset_imports ... ok
+test controllers::plugin::tests::cycle_eq_filter_topology_keeps_per_channel_filters_in_sync ... ok
+test controllers::plugin::tests::cycle_eq_filter_topology_no_op_when_no_band ... ok
+test controllers::plugin::tests::cycle_eq_filter_topology_walks_biquad_warped_kautz ... ok
+test controllers::plugin::tests::dynamic_eq_reset_preserves_global_inheritance_in_linear_and_node_routes ... ok
+test controllers::plugin::tests::eq_band_by_node_id_does_not_affect_sibling_node ... ok
+test controllers::plugin::tests::eq_order_edit_targets_one_channel_and_rejects_svf ... ok
+test controllers::plugin::tests::dynamic_eq_new_band_fields_set_adjust_reset_in_both_routes ... ok
+test controllers::plugin::tests::global_svf_rejects_high_order_without_mutation ... ok
+test controllers::plugin::tests::high_order_band_rejects_incompatible_topology_without_losing_order ... ok
+test controllers::plugin::tests::linear_de_esser_rejects_unrouted_external_sidechain_without_mutation ... ok
+test controllers::plugin::tests::linear_gate_rejects_unrouted_external_sidechain_without_mutation ... ok
+test controllers::plugin::tests::incompatible_linear_modes_preserve_the_existing_chain ... ok
+test controllers::plugin::tests::linear_phase_eq_band_actions_keep_dsp_count_in_sync ... ok
+test controllers::plugin::tests::linear_phase_eq_dense_addresses_preserve_band_stride_and_globals ... FAILED
+test controllers::plugin::tests::linear_phase_eq_apo_import_keeps_count_and_rejects_unsupported_sizes ... ok
+test controllers::plugin::tests::multiband_adjust_below_min_rebuilds_inherited_band_state ... ok
+test controllers::plugin::tests::move_user_plugin_by_index_swaps_two_user_plugins ... ok
+test controllers::plugin::tests::multiband_band_reset_restores_inheritance_without_erasing_other_edits ... ok
+test controllers::plugin::tests::multiband_count_reset_preserves_band_overrides ... ok
+test controllers::plugin::tests::multiband_direct_entry_clamps_before_float_conversion ... ok
+test controllers::plugin::tests::multiband_incremental_edits_materialize_sparse_overrides ... ok
+test controllers::plugin::tests::node_id_output_layout_edit_normalizes_downstream_matrix ... ok
+test controllers::plugin::tests::per_channel_eq_reset_uses_dynamic_band_defaults ... ok
+test controllers::plugin::tests::per_channel_eq_target_isolated_and_copy_actions_are_explicit ... ok
+test controllers::plugin::tests::per_channel_eq_topology_edit_does_not_touch_global_or_siblings ... ok
+test controllers::plugin::tests::profile_actions_dispatch_named_commands_without_latching_saved_flags ... ok
+test controllers::plugin::tests::remove_eq_band_by_node_id_drops_the_band ... ok
+test controllers::plugin::tests::output_layout_choices_normalize_downstream_matrix_before_save ... ok
+test controllers::plugin::tests::toggle_eq_band_mute_by_node_id_flips_the_flag ... ok
+test controllers::plugin::tests::toggle_eq_band_solo_by_node_id_flips_the_flag ... ok
+test controllers::plugin::tests::spectrum_controller_edits_share_widget_ranges_and_steps ... ok
+test controllers::plugin::tests::try_add_plugin_selects_the_inserted_plugin ... ok
+test controllers::plugin::tests::try_add_plugin_returns_channel_error_without_mutating_graph_or_selection ... ok
+
+failures:
+
+---- controllers::plugin::tests::linear_phase_eq_dense_addresses_preserve_band_stride_and_globals stdout ----
+
+thread 'controllers::plugin::tests::linear_phase_eq_dense_addresses_preserve_band_stride_and_globals' (359665017) panicked at crates/sotf-player/src/controllers/plugin/tests.rs:1776:9:
+assertion `left == right` failed
+  left: 24
+ right: 23
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    controllers::plugin::tests::linear_phase_eq_dense_addresses_preserve_band_stride_and_globals
+
+test result: FAILED. 66 passed; 1 failed; 0 ignored; 0 measured; 786 filtered out; finished in 0.01s
+
