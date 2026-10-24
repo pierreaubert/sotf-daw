@@ -1,0 +1,12 @@
+{
+  "main_commit": "28cb0c8c50bedd78e6635ba495cd07bc25fa00ff",
+  "isolated_source_commit": "0410b1da6ae35b9ad830baadb1dc785360f4732d",
+  "parent": "6bbb6f239e49a0c8bdc65aab7f0db0197c612063",
+  "paths": [
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer.rs",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/encryption_control.rs",
+    "crates/driver-hal/src/shared_memory/shared_audio_buffer/prepared_write.rs"
+  ],
+  "all_main_index_entries_preserved": true,
+  "working_source_bytes_preserved": true
+}

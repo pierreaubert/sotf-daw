@@ -2207,7 +2207,7 @@
         {
           "requirement": "Fence compatibility encryption mode/key publication and ring flush against active audio commits and stale untouched fields.",
           "status": "implemented_and_verified",
-          "result": "Isolated commit 0410b1d acquires existing bounded control ownership for compatibility mode/key setters and flush; each field is read/updated only under ownership, with release on success/error/unwind. Three active-IO baseline failures and three stale-field intermediate failures become zero. Baseline122 and current137 full release driver tests pass; strict all-target Clippy passes both. Isolated native input/output each pass32 rate/channel cases with stable hashes, no live transport opened and zero output callback allocations. Current port preserves preexisting user generation changes; clean fix introduces no header/ABI change. Reviewable isolated commit and current owner-only patch exclude unrelated driver/engine work. Main parent file remains mixed with user changes and is not committed wholesale. Raw header publication, Swift owner compliance, clean session ABA, automatic scheduling, clock/device/deadline/listening proof remain open. Both HAL plugins stay partial.",
+          "result": "Isolated commit 0410b1d acquires existing bounded control ownership for compatibility mode/key setters and flush; each field is read/updated only under ownership, with release on success/error/unwind. Three active-IO baseline failures and three stale-field intermediate failures become zero. Baseline122 and current137 full release driver tests pass; strict all-target Clippy passes both. Isolated native input/output each pass32 rate/channel cases with stable hashes, no live transport opened and zero output callback allocations. Current port preserves preexisting user generation changes; clean fix introduces no header/ABI change. Reviewable isolated commit and current owner-only patch exclude unrelated driver/engine work. Main parent file remains mixed with user changes and is not committed wholesale. Raw header publication, Swift owner compliance, clean session ABA, automatic scheduling, clock/device/deadline/listening proof remain open. Both HAL plugins stay partial. The reviewed clean patch is landed on the audit branch as28cb0c8 via an isolated Git index, with committed files identical to0410b1d, all main staged blobs preserved and current source bytes unchanged.",
           "evidence": [
             "audit/artifacts/remaining-hal-encryption-20261024/README.md",
             "audit/artifacts/remaining-hal-encryption-20261024/clean-commit.json",
@@ -2221,7 +2221,8 @@
             "audit/artifacts/remaining-hal-encryption-20261024/native-validation.json",
             "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
             "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
-            "audit/artifacts/remaining-hal-encryption-20261024/verify.py"
+            "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
+            "audit/artifacts/remaining-hal-encryption-20261024/main-integration.json"
           ]
         }
       ],
@@ -2259,7 +2260,8 @@
         "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
         "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
         "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
-        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md"
+        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md",
+        "audit/artifacts/remaining-hal-encryption-20261024/main-integration.json"
       ]
     },
     {
@@ -2330,7 +2332,7 @@
         {
           "requirement": "Fence compatibility encryption mode/key publication and ring flush against active audio commits and stale untouched fields.",
           "status": "implemented_and_verified",
-          "result": "Isolated commit 0410b1d acquires existing bounded control ownership for compatibility mode/key setters and flush; each field is read/updated only under ownership, with release on success/error/unwind. Three active-IO baseline failures and three stale-field intermediate failures become zero. Baseline122 and current137 full release driver tests pass; strict all-target Clippy passes both. Isolated native input/output each pass32 rate/channel cases with stable hashes, no live transport opened and zero output callback allocations. Current port preserves preexisting user generation changes; clean fix introduces no header/ABI change. Reviewable isolated commit and current owner-only patch exclude unrelated driver/engine work. Main parent file remains mixed with user changes and is not committed wholesale. Raw header publication, Swift owner compliance, clean session ABA, automatic scheduling, clock/device/deadline/listening proof remain open. Both HAL plugins stay partial.",
+          "result": "Isolated commit 0410b1d acquires existing bounded control ownership for compatibility mode/key setters and flush; each field is read/updated only under ownership, with release on success/error/unwind. Three active-IO baseline failures and three stale-field intermediate failures become zero. Baseline122 and current137 full release driver tests pass; strict all-target Clippy passes both. Isolated native input/output each pass32 rate/channel cases with stable hashes, no live transport opened and zero output callback allocations. Current port preserves preexisting user generation changes; clean fix introduces no header/ABI change. Reviewable isolated commit and current owner-only patch exclude unrelated driver/engine work. Main parent file remains mixed with user changes and is not committed wholesale. Raw header publication, Swift owner compliance, clean session ABA, automatic scheduling, clock/device/deadline/listening proof remain open. Both HAL plugins stay partial. The reviewed clean patch is landed on the audit branch as28cb0c8 via an isolated Git index, with committed files identical to0410b1d, all main staged blobs preserved and current source bytes unchanged.",
           "evidence": [
             "audit/artifacts/remaining-hal-encryption-20261024/README.md",
             "audit/artifacts/remaining-hal-encryption-20261024/clean-commit.json",
@@ -2344,7 +2346,8 @@
             "audit/artifacts/remaining-hal-encryption-20261024/native-validation.json",
             "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
             "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
-            "audit/artifacts/remaining-hal-encryption-20261024/verify.py"
+            "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
+            "audit/artifacts/remaining-hal-encryption-20261024/main-integration.json"
           ]
         }
       ],
@@ -2370,7 +2373,8 @@
         "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
         "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
         "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
-        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md"
+        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md",
+        "audit/artifacts/remaining-hal-encryption-20261024/main-integration.json"
       ],
       "remaining": [
         "Establish session-generation/ABA fencing and all-owner compliance for concurrent encryption publication. Clean isolated compatibility setters/flush now hold the same quiesced protocol as audio commits; current user generation work is preserved but is not clean Swift/device/ABA certification. Raw header stores bypass the protocol.",
