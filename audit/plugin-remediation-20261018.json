@@ -1761,6 +1761,22 @@
             "audit/artifacts/remaining-denoiser-snr-risk-20261024/README.md",
             "audit/artifacts/remaining-denoiser-snr-risk-20261024/verify.py"
           ]
+        },
+        {
+          "requirement": "Reject direct common-noise-change rebasing when wanted-source false alarms fail the fixed qualification gate.",
+          "status": "diagnostic_qualification_failed_restored",
+          "result": "Archive3595f8e preserves1280noisePSD observations and1424score reports. StationaryPSDtruth~.97..1.02; qualityupstep.1155..1512 isseparatefromdownstepordinarysmoothingmemory,whosephysicalclockreferencewasexplicitlycorrected. ExactGaussian/disjointraw-reference IrwinHalloracle and lifecycle/reset/grouping/gainindependence/heap checks pass; uniform/colored/wantedcontrolsremainempirical. Allsixpositive40dBgroups64/64timely, butwantedcontrols1257falseevents/221reports,15/16recordedrows+allsyntheticunvoiced. Fixedzero-falseeventgateFAILS: NOproductionstate rebase, no thresholdretuning. Bothdiagnosticmodules/registrationsremoved; all46activeANDindexedcratefilesexact21806c0, previously134tests/4ignores+Clippyvalidated. Sevenindependentreplays/verifierpass. No newestimator/gain/default/allocation. Nextmodelmustqualifywantedsource discriminationbeforeunchangedvowel/SDR/noise/zero/profile/heap/latency/EOFgates.",
+          "evidence": [
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/README.md",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/verify.py",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/restoration.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/analysis.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/physical-clock-h0-reference.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/ratio-analysis.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/recorded-false-alarm-summary.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/gaussian-ratio-oracle.json",
+            "audit/artifacts/remaining-denoiser-noise-bias-20261024/independent-replay.json"
+          ]
         }
       ],
       "evidence": [
@@ -1807,12 +1823,22 @@
         "audit/artifacts/remaining-denoiser-presence-risk-20261024/README.md",
         "audit/artifacts/remaining-denoiser-presence-risk-20261024/verify.py",
         "audit/artifacts/remaining-denoiser-snr-risk-20261024/README.md",
-        "audit/artifacts/remaining-denoiser-snr-risk-20261024/verify.py"
+        "audit/artifacts/remaining-denoiser-snr-risk-20261024/verify.py",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/README.md",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/verify.py",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/restoration.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/analysis.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/physical-clock-h0-reference.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/ratio-analysis.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/recorded-false-alarm-summary.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/gaussian-ratio-oracle.json",
+        "audit/artifacts/remaining-denoiser-noise-bias-20261024/independent-replay.json"
       ],
       "remaining": [
         "Investigate initial speech contamination during the106.6667ms bootstrap and later vowel loss. Correcting fast adaptation to exactly two ordinary updates changes original later-vowel projections0.09458/0.12125to0.09460/0.12429,stillpoor. Six-source development matrix has small mixed SDR changes; no speech-preservation or listening acceptance claim.",
         "Extend genuinely held-out multi-speaker/language/music/recorded-noise mixtures with provenance and nonstationary adaptation evidence. Current36row development matrix reuses three English speakers, one phoneme and violin/cymbal with two synthetic-noise recipes. Exact channel order/polarity/mono matching does not establish arbitrary stereo phase/image quality.",
-        "Measure optional multi-resolution/analysis workload and validate spatial/other optional modes under the target deadline; retain deterministic Wiener/MCRA baselines and separate optional learned music-mask research."
+        "Measure optional multi-resolution/analysis workload and validate spatial/other optional modes under the target deadline; retain deterministic Wiener/MCRA baselines and separate optional learned music-mask research.",
+        "Qualify independent wanted-source discrimination before any common-change rebase: the fixed Gaussian score detects noise changes but produces1257wantedfalseevents. Its H0 likelihood direction is not speech identity; preserve the rejected detector and unchanged quality guards. Down-step residual ratios alone are not bugs when explained by the declared PSD smoothing clock."
       ]
     },
     {
@@ -3590,6 +3616,17 @@
             "audit/artifacts/remaining-spatial-20261024/xtc-uncertainty-validation.json",
             "audit/artifacts/remaining-spatial-20261024/spatial-summary.json"
           ]
+        },
+        {
+          "requirement": "Distinguish raw leakage and intended-gain contracts before accepting an uncertainty-based LF remedy.",
+          "status": "rejected_exploratory_contract_restored",
+          "result": "Archive298d155 retains96-case modal reconstructionmax1.112e-7,29independentreferences/strictClippy and exactproduction/indexrestoration. Correct nominalreportremains16/17 at4.810583311dB;146/600degradedpermode andmeasured4/140 unchanged. Exactcorrelatedrow-ratio disk validatesrawfiltered/passthrough bounds withcomplexboundaryerror7.335e-10dB. Exploratoryrobustsolver usedNEWworst-casegainfloor.996817 andinventednominalceiling1.25; feasiblewitnessnominal1.197089 is+1.59dB and isREJECTEDasunchanged-loudnessremedy. Unitceiling1.0 makes thatstrongerrobustfloorinfeasible,NOTtheoriginalnominalLF/mismatchrequirements. Initialabsoluteseparationresultisnotrawattenuation; allmetric/scope correctionsretained. No uncertaintysetting/defaultcalibration/filtergenerationchange ships. Separateoriginal-nominalprojectionhypothesis remainsresearch.",
+          "evidence": [
+            "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/README.md",
+            "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/verify.py",
+            "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/baseline-source.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/nominal-correct-filter.json"
+          ]
         }
       ],
       "evidence": [
@@ -3646,7 +3683,11 @@
         "audit/artifacts/remaining-spatial-20261024/xtc-measured-pose-baseline.json",
         "audit/artifacts/remaining-spatial-20261024/xtc-measured-pose-fixed.json",
         "audit/artifacts/remaining-spatial-20261024/xtc-uncertainty-validation.json",
-        "audit/artifacts/remaining-spatial-20261024/spatial-summary.json"
+        "audit/artifacts/remaining-spatial-20261024/spatial-summary.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/README.md",
+        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/verify.py",
+        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/baseline-source.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/nominal-correct-filter.json"
       ],
       "remaining": [
         "Extend controlled rendered/supplied-matrix evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Historical normalization-off six-frequency subset retains140/360degraded rows; expanded10frequency matrices have146/600degraded rows in each explicit normalization mode,worstabout-5.382084dB. Correcting normalization improves some rendered on-mode separation but does not establish measured robustness.",
