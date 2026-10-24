@@ -1,0 +1,401 @@
+{
+  "base_commit": "21806c0",
+  "decision": "rejected; restore exact baseline; no retuning",
+  "functional_exit": 0,
+  "test_results": [
+    "test result: ok. 89 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s",
+    "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+    "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s",
+    "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s",
+    "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+    "test result: ok. 2 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+    "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.55s",
+    "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s",
+    "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s",
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+    "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+  ],
+  "source_hashes": {
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib.rs": "fac4b1f563342a0399b560743cc6720ec9d880b53964803a8caafacdf420e980",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "a5835dadbe30cb78703486ca38b12a7ddd49453a9501f32acf3275afc8b94086",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/wiener/consts.rs": "2eb780ddb23030489d4ce9ab1bc630812d1def4b36325776bd8882b71071d08f",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/estimator_component_tests.rs": "efa152fce0b2daee3d2ace9793f5158c7f366fba67223baa42c9b38c856a5400",
+    "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/decision_directed.rs": "40f0b9331f775924c26de082e254e821aeb2470c2136779271ba66fc6f206d43"
+  },
+  "vowel_guard": [
+    {
+      "low_latency": false,
+      "projection": 0.19137315486666562,
+      "passed": false
+    },
+    {
+      "low_latency": true,
+      "projection": 0.33395682615145805,
+      "passed": false
+    }
+  ],
+  "development_sdr_deltas": [
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 1.203305304377322,
+      "candidate_sdr_db": 1.698003366295896,
+      "delta_db": 0.4946980619185739,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 1.6115515211770925,
+      "candidate_sdr_db": 2.3911271593277283,
+      "delta_db": 0.7795756381506358,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 0.8535616370115494,
+      "candidate_sdr_db": 0.8537472522733427,
+      "delta_db": 0.00018561526179328158,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 0.8866797734547665,
+      "candidate_sdr_db": 0.8935418867843534,
+      "delta_db": 0.006862113329586972,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 0.9862475202704026,
+      "candidate_sdr_db": 1.0242292966758437,
+      "delta_db": 0.03798177640544109,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 1.0689692724694608,
+      "candidate_sdr_db": 1.8100574309808248,
+      "delta_db": 0.741088158511364,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 1.5899735457084472,
+      "candidate_sdr_db": 1.8885454806142878,
+      "delta_db": 0.29857193490584066,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 1.803522121826477,
+      "candidate_sdr_db": 2.4050399658866177,
+      "delta_db": 0.6015178440601407,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 1.3727907079046977,
+      "candidate_sdr_db": 1.3723360161478262,
+      "delta_db": -0.00045469175687151697,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 1.5073831382403817,
+      "candidate_sdr_db": 1.5070954467493123,
+      "delta_db": -0.0002876914910694417,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 1.5160017303452826,
+      "candidate_sdr_db": 1.7540725653849567,
+      "delta_db": 0.23807083503967408,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 1.686976918300477,
+      "candidate_sdr_db": 2.0228683023209046,
+      "delta_db": 0.3358913840204276,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 1.8020955735500557,
+      "candidate_sdr_db": 2.380857350339972,
+      "delta_db": 0.5787617767899162,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 1.8172996468093447,
+      "candidate_sdr_db": 4.351313166397233,
+      "delta_db": 2.534013519587888,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 1.02464105977212,
+      "candidate_sdr_db": 1.0963287428943058,
+      "delta_db": 0.07168768312218576,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 1.0355361869036406,
+      "candidate_sdr_db": 1.3458058695879198,
+      "delta_db": 0.31026968268427924,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 1.5648045307980116,
+      "candidate_sdr_db": 2.117379730669852,
+      "delta_db": 0.5525751998718402,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 1.292648996121549,
+      "candidate_sdr_db": 2.9732615213908313,
+      "delta_db": 1.6806125252692823,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 1.407295484301606,
+      "candidate_sdr_db": 1.6786674764594212,
+      "delta_db": 0.27137199215781527,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 2.3084238525857876,
+      "candidate_sdr_db": 4.173696920163211,
+      "delta_db": 1.8652730675774234,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 1.1246302733843019,
+      "candidate_sdr_db": 1.1253983263027434,
+      "delta_db": 0.0007680529184415086,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 1.2617767024868525,
+      "candidate_sdr_db": 1.2611639185944954,
+      "delta_db": -0.0006127838923570827,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 1.3481528552143194,
+      "candidate_sdr_db": 1.404336712480173,
+      "delta_db": 0.05618385726585373,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 1.5782716466627669,
+      "candidate_sdr_db": 2.33931244807256,
+      "delta_db": 0.7610408014097931,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 3.067350759604964,
+      "candidate_sdr_db": 3.455475222320101,
+      "delta_db": 0.3881244627151368,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 1.0339712036644806,
+      "candidate_sdr_db": 1.037178711077074,
+      "delta_db": 0.0032075074125934577,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 0.667694857300065,
+      "candidate_sdr_db": 0.8185857005942179,
+      "delta_db": 0.15089084329415292,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 0.6098609579528179,
+      "candidate_sdr_db": 0.6099840664214188,
+      "delta_db": 0.00012310846860086322,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 2.1795194138285963,
+      "candidate_sdr_db": 2.2398086492330926,
+      "delta_db": 0.06028923540449638,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 0.8682669048027887,
+      "candidate_sdr_db": 0.86727329340883,
+      "delta_db": -0.0009936113939587043,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline_sdr_db": 2.444447285059457,
+      "candidate_sdr_db": 4.06156191781012,
+      "delta_db": 1.6171146327506625,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline_sdr_db": 6.166865022026165,
+      "candidate_sdr_db": 6.980022567423961,
+      "delta_db": 0.8131575453977957,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline_sdr_db": 0.7432826616151089,
+      "candidate_sdr_db": 0.7559495534030319,
+      "delta_db": 0.012666891787923018,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline_sdr_db": 0.7093110585140822,
+      "candidate_sdr_db": 1.7342966325964855,
+      "delta_db": 1.0249855740824034,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "baseline_sdr_db": 0.866487612290514,
+      "candidate_sdr_db": 1.3013818477877233,
+      "delta_db": 0.4348942354972093,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "baseline_sdr_db": 0.8916029656700943,
+      "candidate_sdr_db": 3.3671508544065754,
+      "delta_db": 2.475547888736481,
+      "passed": true
+    }
+  ],
+  "noise_guard": [
+    {
+      "low_latency": false,
+      "baseline_gain_db": -19.999994772696056,
+      "candidate_gain_db": -19.9999947733756,
+      "attenuation_loss_db": -6.795453089125658e-10,
+      "passed": true
+    },
+    {
+      "low_latency": true,
+      "baseline_gain_db": -19.99999054309764,
+      "candidate_gain_db": -19.99999054309764,
+      "attenuation_loss_db": 0.0,
+      "passed": true
+    }
+  ],
+  "independent_checks": [
+    "clean_power_reference cases=240 maximum_scaled_error=1.68720741197644e-7",
+    "clean_power_control_invariance configurations=5 frames=9 exact=true reset=true",
+    "component_trace_summary records=720 maximum_scaled_power_error=3.949983600896863e-7 estimator_invariant=true"
+  ],
+  "heldout_acceptance": false,
+  "native_deadline_acceptance": false,
+  "restored_verification": {
+    "tests_passed": 134,
+    "tests_failed": 0,
+    "tests_ignored": 4,
+    "strict_clippy_exit": 0,
+    "recorded_positive_depth_rows_exact": 48,
+    "current_source_hashes": {
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib.rs": "f1b39ab4c60ab87a35a799c4faf6003fef5160f15795521980e4bbd3eef04d5a",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "fab67f432029629f69c7da6b81185cb1a172aed223374ab0b4735a409253807a",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/wiener/consts.rs": "38547ad1ec1d3ce335f8d3ee549e13824de6b24bd30ec470b2efb0f38be582a5",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/estimator_component_tests.rs": "5a4fb45ad147a622d2ff9dc17d803b97755208b62ba9cbf59fe98eccf867757a"
+    }
+  }
+}

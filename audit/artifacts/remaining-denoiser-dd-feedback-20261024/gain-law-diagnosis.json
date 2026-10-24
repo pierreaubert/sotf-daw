@@ -1,0 +1,55 @@
+{
+  "status": "analysis only; no further candidate authorized or measured",
+  "equation": "Existing G=xi/(xi+10^(R/10)); positive-depth semantics amplify the noise denominator, rather than limiting output attenuation.",
+  "rows": [
+    {
+      "prior_snr_db": -10,
+      "xi": 0.1,
+      "ordinary_wiener": 0.09090909090909091,
+      "legacy_reduction20": 0.0009990009990009992,
+      "candidate_bounded_depth20": 0.18181818181818182,
+      "legacy_default_reduction10": 0.009900990099009901,
+      "candidate_bounded_depth10": 0.3783888781971254
+    },
+    {
+      "prior_snr_db": 0,
+      "xi": 1.0,
+      "ordinary_wiener": 0.5,
+      "legacy_reduction20": 0.009900990099009901,
+      "candidate_bounded_depth20": 0.55,
+      "legacy_default_reduction10": 0.09090909090909091,
+      "candidate_bounded_depth10": 0.658113883008419
+    },
+    {
+      "prior_snr_db": 8.12876,
+      "xi": 6.499440914527466,
+      "ordinary_wiener": 0.8666567266283997,
+      "legacy_reduction20": 0.061027934594921285,
+      "candidate_bounded_depth20": 0.8799910539655598,
+      "legacy_default_reduction10": 0.3939188575053367,
+      "candidate_bounded_depth10": 0.9088235720800732
+    },
+    {
+      "prior_snr_db": 20,
+      "xi": 100.0,
+      "ordinary_wiener": 0.9900990099009901,
+      "legacy_reduction20": 0.5,
+      "candidate_bounded_depth20": 0.9910891089108911,
+      "legacy_default_reduction10": 0.9090909090909091,
+      "candidate_bounded_depth10": 0.9932299778813549
+    },
+    {
+      "prior_snr_db": 40,
+      "xi": 10000.0,
+      "ordinary_wiener": 0.9999000099990001,
+      "legacy_reduction20": 0.9900990099009901,
+      "candidate_bounded_depth20": 0.9999100089991001,
+      "legacy_default_reduction10": 0.999000999000999,
+      "candidate_bounded_depth10": 0.9999316296136402
+    }
+  ],
+  "note": "Selected-bin true source SNR is diagnostic ground truth, not the actual estimated prior. These are conditional analytic values, not rendered performance. A bounded-depth natural mask is only a proposed separate behavioral contract.",
+  "public_reduction_default_db": 10.0,
+  "public_floor_default_db": -20.0,
+  "contract_conflict": "At default Reduction=10 dB, existing noise-only output reaches the independent Floor=-20 dB. A literal maximum-depth 10 dB mask must instead settle at -10 dB and therefore violates the preserved <=1 dB independent-noise regression guard. The proposed bounded-depth equation is not an eligible drop-in candidate under all current guards; positive-depth semantics need explicit review."
+}

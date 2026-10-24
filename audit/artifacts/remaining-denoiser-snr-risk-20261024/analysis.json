@@ -1,0 +1,513 @@
+{
+  "declared_quality_guards_passed": false,
+  "vowel_guard": [
+    {
+      "low_latency": false,
+      "projection": 0.32262636276970785,
+      "passed": false
+    },
+    {
+      "low_latency": true,
+      "projection": 0.48057385473476544,
+      "passed": false
+    }
+  ],
+  "development_sdr": [
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 1.203305304377322,
+      "candidate": 2.1811393618039805,
+      "delta_db": 0.9778340574266584,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 1.6115515211770925,
+      "candidate": 2.8503116129622996,
+      "delta_db": 1.238760091785207,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 0.8535616370115494,
+      "candidate": 0.8562734424043958,
+      "delta_db": 0.0027118053928464336,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 0.8866797734547665,
+      "candidate": 0.9047563547410775,
+      "delta_db": 0.018076581286311066,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 0.9862475202704026,
+      "candidate": 1.0204515935323786,
+      "delta_db": 0.03420407326197594,
+      "passed": true
+    },
+    {
+      "source": "speech-1272",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 1.0689692724694608,
+      "candidate": 2.3496923694596696,
+      "delta_db": 1.2807230969902088,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 1.5899735457084472,
+      "candidate": 2.1028956627652438,
+      "delta_db": 0.5129221170567966,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 1.803522121826477,
+      "candidate": 2.7643224752064692,
+      "delta_db": 0.9608003533799923,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 1.3727907079046977,
+      "candidate": 1.3723360161478262,
+      "delta_db": -0.00045469175687151697,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 1.5073831382403817,
+      "candidate": 1.5070954467493123,
+      "delta_db": -0.0002876914910694417,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 1.5160017303452826,
+      "candidate": 1.8211119165113632,
+      "delta_db": 0.30511018616608054,
+      "passed": true
+    },
+    {
+      "source": "speech-1462",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 1.686976918300477,
+      "candidate": 2.232036812716067,
+      "delta_db": 0.5450598944155898,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 1.8020955735500557,
+      "candidate": 2.7727313641950184,
+      "delta_db": 0.9706357906449627,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 1.8172996468093447,
+      "candidate": 5.82667397764089,
+      "delta_db": 4.009374330831545,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 1.02464105977212,
+      "candidate": 1.203801692729912,
+      "delta_db": 0.17916063295779194,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 1.0355361869036406,
+      "candidate": 1.7092785765638752,
+      "delta_db": 0.6737423896602346,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 1.5648045307980116,
+      "candidate": 2.415584646751492,
+      "delta_db": 0.8507801159534802,
+      "passed": true
+    },
+    {
+      "source": "speech-174",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 1.292648996121549,
+      "candidate": 3.958146079788991,
+      "delta_db": 2.665497083667442,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 1.407295484301606,
+      "candidate": 2.1269509334216696,
+      "delta_db": 0.7196554491200637,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 2.3084238525857876,
+      "candidate": 5.794133429411087,
+      "delta_db": 3.485709576825299,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 1.1246302733843019,
+      "candidate": 1.137983439719792,
+      "delta_db": 0.013353166335490219,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 1.2617767024868525,
+      "candidate": 1.267754273185032,
+      "delta_db": 0.005977570698179502,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 1.3481528552143194,
+      "candidate": 1.4781522036461263,
+      "delta_db": 0.12999934843180694,
+      "passed": true
+    },
+    {
+      "source": "phoneme-s",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 1.5782716466627669,
+      "candidate": 3.2481810249357093,
+      "delta_db": 1.6699093782729424,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 3.067350759604964,
+      "candidate": 3.9679205206980623,
+      "delta_db": 0.9005697610930983,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 1.0339712036644806,
+      "candidate": 1.044198359573858,
+      "delta_db": 0.010227155909377394,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 0.667694857300065,
+      "candidate": 0.9902277637411661,
+      "delta_db": 0.3225329064411011,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 0.6098609579528179,
+      "candidate": 0.6099840664214188,
+      "delta_db": 0.00012310846860086322,
+      "passed": true
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 2.1795194138285963,
+      "candidate": 1.868140095079017,
+      "delta_db": -0.31137931874957925,
+      "passed": false
+    },
+    {
+      "source": "violin",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 0.8682669048027887,
+      "candidate": 0.8221731414812071,
+      "delta_db": -0.04609376332158155,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": false,
+      "baseline": 2.444447285059457,
+      "candidate": 5.6761847044019245,
+      "delta_db": 3.2317374193424673,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "clean",
+      "low_latency": true,
+      "baseline": 6.166865022026165,
+      "candidate": 7.86972449185555,
+      "delta_db": 1.7028594698293844,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": false,
+      "baseline": 0.7432826616151089,
+      "candidate": 0.8531535589914494,
+      "delta_db": 0.10987089737634048,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "stationary",
+      "low_latency": true,
+      "baseline": 0.7093110585140822,
+      "candidate": 2.537042633480433,
+      "delta_db": 1.827731574966351,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": false,
+      "baseline": 0.866487612290514,
+      "candidate": 2.075782773729389,
+      "delta_db": 1.2092951614388747,
+      "passed": true
+    },
+    {
+      "source": "cymbal",
+      "condition": "step",
+      "low_latency": true,
+      "baseline": 0.8916029656700943,
+      "candidate": 4.780325103602381,
+      "delta_db": 3.888722137932287,
+      "passed": true
+    }
+  ],
+  "settled_noise_guard": [
+    {
+      "low_latency": false,
+      "attenuation_loss_db": -6.795453089125658e-10,
+      "passed": true
+    },
+    {
+      "low_latency": true,
+      "attenuation_loss_db": 0.0,
+      "passed": true
+    }
+  ],
+  "added_noise_step_guard": [
+    {
+      "channel": 0,
+      "end_frame": 21600,
+      "gain_db": -5.692934503106218,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 14400,
+      "baseline_gain_db": -19.779536189754023,
+      "attenuation_loss_db": 14.086601686647803,
+      "passed": false
+    },
+    {
+      "channel": 0,
+      "end_frame": 33600,
+      "gain_db": -7.3354307737450775,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 28800,
+      "baseline_gain_db": -19.977747938900702,
+      "attenuation_loss_db": 12.642317165155625,
+      "passed": false
+    },
+    {
+      "channel": 0,
+      "end_frame": 45600,
+      "gain_db": -18.36531923046538,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 40800,
+      "baseline_gain_db": -19.997805900669594,
+      "attenuation_loss_db": 1.6324866702042122,
+      "passed": false
+    },
+    {
+      "channel": 1,
+      "end_frame": 21600,
+      "gain_db": -19.789882329982426,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 14400,
+      "baseline_gain_db": -19.78968452517478,
+      "attenuation_loss_db": -0.00019780480764453046,
+      "passed": true
+    },
+    {
+      "channel": 1,
+      "end_frame": 33600,
+      "gain_db": -19.999252515530152,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 28800,
+      "baseline_gain_db": -19.999251925609272,
+      "attenuation_loss_db": -5.899208801452005e-07,
+      "passed": true
+    },
+    {
+      "channel": 1,
+      "end_frame": 45600,
+      "gain_db": -19.9999947733756,
+      "latency_frames": 2048,
+      "low_latency": false,
+      "start_frame": 40800,
+      "baseline_gain_db": -19.999994772696056,
+      "attenuation_loss_db": -6.795453089125658e-10,
+      "passed": true
+    },
+    {
+      "channel": 0,
+      "end_frame": 21600,
+      "gain_db": -7.828717274964921,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 14400,
+      "baseline_gain_db": -19.577242231334218,
+      "attenuation_loss_db": 11.748524956369296,
+      "passed": false
+    },
+    {
+      "channel": 0,
+      "end_frame": 33600,
+      "gain_db": -19.274754111046015,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 28800,
+      "baseline_gain_db": -19.998111639691743,
+      "attenuation_loss_db": 0.7233575286457281,
+      "passed": true
+    },
+    {
+      "channel": 0,
+      "end_frame": 45600,
+      "gain_db": -19.99501416352565,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 40800,
+      "baseline_gain_db": -19.999986333845484,
+      "attenuation_loss_db": 0.004972170319835101,
+      "passed": true
+    },
+    {
+      "channel": 1,
+      "end_frame": 21600,
+      "gain_db": -19.608491396692628,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 14400,
+      "baseline_gain_db": -19.60777147852206,
+      "attenuation_loss_db": -0.0007199181705672686,
+      "passed": true
+    },
+    {
+      "channel": 1,
+      "end_frame": 33600,
+      "gain_db": -19.99860215882752,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 28800,
+      "baseline_gain_db": -19.99859920184602,
+      "attenuation_loss_db": -2.9569815005459077e-06,
+      "passed": true
+    },
+    {
+      "channel": 1,
+      "end_frame": 45600,
+      "gain_db": -19.99999054309764,
+      "latency_frames": 512,
+      "low_latency": true,
+      "start_frame": 40800,
+      "baseline_gain_db": -19.99999054309764,
+      "attenuation_loss_db": 0.0,
+      "passed": true
+    }
+  ],
+  "functional_exit": 101,
+  "independent_checks": [
+    "noise_fraction_risk_reference cases=40 maximum_gain_error=4.8609613223504766e-8",
+    "clean_power_reference cases=240 maximum_scaled_error=1.68720741197644e-7",
+    "clean_power_control_invariance configurations=5 frames=9 exact=true reset=true",
+    "noise_presence_trace_summary records=144 checked_records=128 maximum_scaled_power_error=3.675387292737552e-7",
+    "component_trace_summary records=720 maximum_scaled_power_error=3.949983600896863e-7 estimator_invariant=true"
+  ],
+  "native_deadline_acceptance": false,
+  "heldout_acceptance": false,
+  "restored_verification": {
+    "base_commit": "21806c0",
+    "test_totals": [
+      134,
+      0,
+      4
+    ],
+    "strict_clippy_exit": 0,
+    "recorded_characterizations_exact": 48,
+    "source_hashes": {
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib.rs": "f1b39ab4c60ab87a35a799c4faf6003fef5160f15795521980e4bbd3eef04d5a",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "fab67f432029629f69c7da6b81185cb1a172aed223374ab0b4735a409253807a",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/wiener/consts.rs": "38547ad1ec1d3ce335f8d3ee549e13824de6b24bd30ec470b2efb0f38be582a5",
+      "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/estimator_component_tests.rs": "5a4fb45ad147a622d2ff9dc17d803b97755208b62ba9cbf59fe98eccf867757a"
+    }
+  }
+}

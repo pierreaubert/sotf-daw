@@ -1,0 +1,5 @@
+{
+  "exit_code": 0,
+  "stdout": "\n                                                                              \n  --------                                                                    \n                                                                              \n  **@pierre** wrote on 2026-10-24 15:33:                                      \n                                                                              \n  Diagnostic-only ablation after both DD-only and SNR-risk candidates were    \n  rejected: measure the preserved natural-DD-only implementation on the newly \n  declared independent noise-step windows, with the original applied gain law.\n  This isolates estimator-feedback separation from the SNR-dependent gain     \n  change. No retuning, acceptance, or reinstatement of either rejected        \n  candidate. Preserve raw/noise/component results and exact source snapshot,  \n  then restore 21806c0. Existing declared guards remain unchanged.            \n\n",
+  "stderr": ""
+}

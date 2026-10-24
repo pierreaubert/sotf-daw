@@ -1,0 +1,22 @@
+{
+  "base_commit": "21806c0",
+  "declared_before_candidate_measurement": true,
+  "primary_reference": {
+    "landing_page": "https://www.isca-archive.org/interspeech_2008/alam08_interspeech.html",
+    "paper": "https://www.isca-archive.org/interspeech_2008/alam08_interspeech.pdf",
+    "doi": "10.21437/Interspeech.2008-48",
+    "access": "Publisher HTML and existing search-index converted equation excerpt; configured Headroom MarkItDown executable is absent, so no local binary PDF was read.",
+    "model": "The estimator Wiener gain is H0=xi/(1+xi). Predict clean power with H0(previous)^2*P(previous), normalized by current noise PSD, plus the instantaneous posterior-minus-one term. Application attenuation/floor/curve/smoothing stay outside this estimator state."
+  },
+  "candidate": "Prepare a separate per-channel/bin previous-clean-power buffer; natural estimator gain updates it before user gain shaping. Preserve current-noise normalization, the delivered gain law, noise estimation, bootstrap duration, captured-profile authority and zero-depth semantics.",
+  "guards": {
+    "vowel_projection_minimum_both_fft_modes": 0.5,
+    "development_full_sdr_regression_max_db": 0.25,
+    "settled_noise_attenuation_regression_max_db": 1.0,
+    "independent_clean_power_reference_scaled_error_maximum": 3e-06,
+    "component_dft_scaled_error_maximum": 2e-06
+  },
+  "invariance": "The clean-power estimator must be identical across user reduction/floor/transparency/curve/smoothing changes for identical input and noise PSD. Preserve all720 component/noise-PSD invariance records.",
+  "limits": "Primary equations motivate a candidate, not acceptance. Preserve all old data, tone-energy characterization, failed guards and finite/zero-heap/latency/EOF tests. Reject rather than tune after guard failure. Held-out, listening and native evidence remain pending.",
+  "baseline_prototype_note": "The initial scalar prototype included C=1, which isolates the historical Wiener recurrence but does not represent the newly fixed whole-node zero-depth branch. Retain it as limited evidence; the final baseline uses strictly positive-depth C=2,10,100 so the post-gain zero endpoint is inactive."
+}

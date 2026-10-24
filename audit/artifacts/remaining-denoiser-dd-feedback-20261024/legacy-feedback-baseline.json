@@ -1,0 +1,21 @@
+{
+  "build_command": [
+    "rtk",
+    "proxy",
+    "rustc",
+    "--edition",
+    "2024",
+    "-O",
+    "audit/artifacts/remaining-denoiser-dd-feedback-20261024/legacy-feedback-baseline.rs",
+    "-o",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/denoiser-dd-legacy-feedback"
+  ],
+  "command": [
+    "rtk",
+    "proxy",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-nupc-temp/denoiser-dd-legacy-feedback"
+  ],
+  "exit_code": 101,
+  "stdout": "{\"controls\":3,\"frames\":9,\"maximum_prior_spread\":7.378394,\"histories\":[[0.0, 9.8e-5, 0.380098, 1.2798706, 1.8722612, 4.8620486, 7.459864, 3.0471106, 0.35720447], [0.0, 9.8e-5, 0.380098, 0.8062811, 0.43455648, 0.31399387, 0.09362404, 0.00049, 9.8e-5], [0.0, 9.8e-5, 0.380098, 0.78195995, 0.38097998, 0.28196, 0.08147, 0.00049, 9.8e-5]]}\n",
+  "stderr": "\nthread 'main' (357827326) panicked at audit/artifacts/remaining-denoiser-dd-feedback-20261024/legacy-feedback-baseline.rs:28:5:\nuser attenuation must not alter the inferred source SNR\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+}

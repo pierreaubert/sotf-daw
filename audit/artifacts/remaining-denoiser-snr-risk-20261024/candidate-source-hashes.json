@@ -1,0 +1,7 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib.rs": "fac4b1f563342a0399b560743cc6720ec9d880b53964803a8caafacdf420e980",
+  "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/lib/denoiser_plugin.rs": "a5835dadbe30cb78703486ca38b12a7ddd49453a9501f32acf3275afc8b94086",
+  "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/wiener/consts.rs": "0c5fe18c0bfcc6611468ec880d9684612cdb77f7fa03aa9bb5f20c340d5888a8",
+  "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/decision_directed.rs": "3281ce719b9e5d58ea7ac56c519013a7a72fb313c1ce6f8f1c319628f41d72ec",
+  "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/estimator_component_tests.rs": "df0d4a6f0c99b8fc096ace8fb5dd2619ad05e6e86e1bacec565792a2e9ba0b6e"
+}
