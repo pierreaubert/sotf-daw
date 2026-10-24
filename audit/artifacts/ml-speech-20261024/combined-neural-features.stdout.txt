@@ -1,0 +1,42 @@
+   Compiling num-traits v0.2.19
+    Checking ndarray v0.16.1
+   Compiling half v2.7.1
+   Compiling num-integer v0.1.47
+   Compiling num-bigint v0.4.8
+   Compiling tract-linalg v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling enum-ordinalize v3.1.15
+   Compiling educe v0.4.23
+    Checking tract-data v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+   Compiling sotf-tract-linalg v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking sotf-tract-data v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking tract-core v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking tract-nnef v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking sotf-tract-core v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking tract-pulse-opl v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking tract-onnx-opl v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking autoeq-optim v0.5.64 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-optim)
+    Checking tract-hir v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking tract-onnx v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking tract-pulse v0.18.3-pre (https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7e)
+    Checking sotf-tract-nnef v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking sotf-deep-filter-runtime v0.3.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/vendor/deep-filter-runtime)
+    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)
+    Checking roomeq-engine v0.5.84 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-engine)
+    Checking sotf-tract-onnx-opl v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking sotf-tract-hir v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking sotf-tract-onnx v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking roomeq-export v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-export)
+    Checking autoeq-plot v0.5.5 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-plot)
+    Checking sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)
+    Checking roomeq-workflow v0.5.36 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-workflow)
+    Checking autoeq-workflow v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-workflow)
+    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)
+    Checking sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)
+    Checking sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)
+    Checking sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
+    Checking sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)
+    Checking autoeq v0.5.78 (/Volumes/home_tmp/src/all_of_sotf/autoeq)
+    Checking sotf-capture v0.6.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-capture)
+    Checking sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)
+    Checking sotf-testkit v0.1.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-testkit)
+    Finished `release` profile [optimized] target(s) in 25.34s

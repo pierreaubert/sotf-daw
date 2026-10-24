@@ -1,0 +1,77 @@
+{
+  "runtime_release": "v0.3.1",
+  "runtime_revision": "af5d24a125cc20759f483d4e354fdf70f7951024",
+  "tract_revision": "ed00ff7eadc84b345318b042f134602ed743879d",
+  "compile_check": {
+    "command": "cargo check -p plugins-denoiser --features deep-filter --release --jobs 2",
+    "exit_code": 0,
+    "duration_seconds": 50.29
+  },
+  "bridge_validation": {
+    "release_lib_tests": 17,
+    "test_failures": 0,
+    "strict_all_targets_clippy": "passed after test-only fixed-array and comparison lint fixes"
+  },
+  "actual_model_tests": {
+    "status": "passed",
+    "tests": 4,
+    "failures": 0,
+    "command": "cargo test -p plugins-denoiser --features deep-filter --test deep_filter --release --offline --locked --jobs 2 -- --nocapture",
+    "unity_mask_measured_delay_samples": 2400,
+    "unity_mask_maximum_waveform_error": 8.940697e-08,
+    "pristine_reset_maximum_waveform_error": 0,
+    "wrapper_pinned_runtime_maximum_waveform_error": 0,
+    "comparison_limit": "Wrapper consistency uses the same extracted runner; this is not independent upstream algorithm equivalence or held-out enhancement quality."
+  },
+  "claims_excluded": [
+    "Independent quality advantage over RNNoise",
+    "Held-out multilingual/noise validation",
+    "Linux/Windows DAW validation",
+    "Linked-stereo completion",
+    "Default playout deadline acceptance"
+  ],
+  "host_model_tests": {
+    "status": "passed on final private-backend storage",
+    "tests": 4,
+    "failures": 0,
+    "sample_rates_hz": [
+      44100,
+      48000,
+      96000
+    ],
+    "processing_and_reset_heap_activity": [
+      0,
+      0
+    ],
+    "serving_test": {
+      "playout_packets": 16,
+      "timely_packets": 79,
+      "fallback_packets": 5,
+      "warmup_packets": 5,
+      "dropped_inputs": 0,
+      "changed_energy": 637.6878851458482
+    },
+    "command": "cargo test -p sotf-plugin-speech-denoiser --features deep-filter,qa --test deep_filter --release --offline --locked --jobs 2 -- --nocapture"
+  },
+  "final_feature_enabled_regression": {
+    "status": "passed",
+    "unit_tests": 7,
+    "host_model_tests": 4,
+    "legacy_integration_tests": 13,
+    "failures": 0,
+    "command": "cargo test -p sotf-plugin-speech-denoiser --features deep-filter,qa --lib --test integration --test deep_filter --release --offline --locked --jobs 2 -- --nocapture"
+  },
+  "engine_policy_roundtrip": {
+    "status": "passed",
+    "executed_tests": 1,
+    "filtered_out": 835,
+    "features": "deep-filter,sotf-plugins/qa",
+    "qualification": "Targeted policy serialization/conversion test; not the full engine suite"
+  },
+  "feature_disabled_speech": {
+    "unit_tests": 7,
+    "integration_tests": 14,
+    "failures": 0
+  },
+  "checkpoint_status": "Local mono implementation validated; full speech candidate acceptance remains open"
+}

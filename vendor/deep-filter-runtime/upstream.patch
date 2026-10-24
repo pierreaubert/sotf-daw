@@ -1,0 +1,213 @@
+--- upstream/lib.rs
++++ src/lib.rs
+@@ -11,26 +11,7 @@
+ pub const MEAN_NORM_INIT: [f32; 2] = [-60., -90.];
+ pub const UNIT_NORM_INIT: [f32; 2] = [0.001, 0.0001];
+ 
+-#[cfg(any(feature = "transforms", feature = "dataset"))]
+-pub mod transforms;
+-#[cfg(feature = "dataset")]
+-#[path = ""]
+-mod reexport_dataset_modules {
+-    pub mod augmentations;
+-    pub mod dataloader;
+-    pub mod dataset;
+-    pub mod hdf5_key_cache;
+-    pub mod util;
+-    pub mod wav_utils;
+-}
+-#[cfg(feature = "dataset")]
+-pub use reexport_dataset_modules::*;
+-#[cfg(feature = "cache")]
+-mod cache;
+-#[cfg(feature = "tract")]
+ pub mod tract;
+-#[cfg(all(feature = "wav-utils", not(feature = "dataset")))]
+-pub mod wav_utils;
+ 
+ pub(crate) fn freq2erb(freq_hz: f32) -> f32 {
+     9.265 * (freq_hz / (24.7 * 9.265)).ln_1p()
+@@ -523,37 +504,3 @@
+     sum / n as f32
+ }
+ 
+-#[cfg(test)]
+-mod tests {
+-    use rand::distributions::{Distribution, Uniform};
+-
+-    use super::*;
+-
+-    #[test]
+-    fn test_erb_inout() {
+-        let sr = 24000;
+-        let n_fft = 192;
+-        let n_freqs = n_fft / 2 + 1;
+-        let hop = n_fft / 2;
+-        let nb_bands = 24;
+-        let state = DFState::new(sr, n_fft, hop, nb_bands, 1);
+-        let d = Uniform::new(-1., 1.);
+-        let mut input = Vec::with_capacity(n_freqs);
+-        let mut rng = rand::thread_rng();
+-        for _ in 0..(n_freqs) {
+-            input.push(Complex32::new(d.sample(&mut rng), d.sample(&mut rng)))
+-        }
+-        let mut mask = vec![1.; nb_bands];
+-        mask[3] = 0.3;
+-        mask[nb_bands - 1] = 0.5;
+-        let mut output = input.clone();
+-        apply_band_gain(&mut output, mask.as_slice(), &state.erb);
+-        let mut cumsum = 0;
+-        for (erb_idx, erb_w) in state.erb.iter().enumerate() {
+-            for i in cumsum..cumsum + erb_w {
+-                assert_eq!(input[i] * mask[erb_idx], output[i])
+-            }
+-            cumsum += erb_w;
+-        }
+-    }
+-}
+--- upstream/tract.rs
++++ src/tract.rs
+@@ -15,7 +15,6 @@
+ use tract_onnx::{prelude::*, tract_hir::shapefactoid};
+ use tract_pulse::{internal::ToDim, model::*};
+ 
+-use crate::transforms::find_max_abs;
+ use crate::*;
+ 
+ #[derive(Clone)]
+@@ -31,7 +30,7 @@
+         let file = File::open(tar_file).context("Could not open model tar file.")?;
+         Self::from_targz(file)
+     }
+-    pub fn from_bytes(tar_buf: &'static [u8]) -> Result<Self> {
++    pub fn from_bytes(tar_buf: &[u8]) -> Result<Self> {
+         Self::from_targz(tar_buf)
+     }
+     fn from_targz<R: Read>(f: R) -> Result<Self> {
+@@ -92,6 +91,11 @@
+     reduce_mask: ReduceMask,
+ }
+ impl RuntimeParams {
++    /// Default enhancement policy from the upstream command-line runner.
++    pub fn default_with_ch(channels: usize) -> Self {
++        Self::new(channels, false, 100., -10., 30., 20., ReduceMask::MEAN)
++    }
++
+     pub fn new(
+         n_ch: usize,
+         post_filter: bool,
+@@ -115,6 +119,7 @@
+ 
+ pub type TractModel = TypedSimpleState<TypedModel, TypedSimplePlan<TypedModel>>;
+ 
++#[derive(Clone)]
+ pub struct DfTract {
+     enc: TractModel,
+     erb_dec: TractModel,
+@@ -202,10 +207,9 @@
+             Some(10f32.powf(-atten_lim / 20.))
+         };
+         let spec_shape = [1, 1, 1, n_freqs, 2];
+-        let spec_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &spec_shape)? };
+-        let erb_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &[1, 1, 1, nb_erb])? };
+-        let cplx_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &[1, 1, nb_df, 2])? };
+-        // let mut cplx_buf_t = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &[1, 2, 1, nb_df])? };
++        let spec_buf = Tensor::zero::<f32>(&spec_shape)?;
++        let erb_buf = Tensor::zero::<f32>(&[1, 1, 1, nb_erb])?;
++        let cplx_buf = Tensor::zero::<f32>(&[1, 1, nb_df, 2])?;
+         let m_zeros = vec![0.; nb_erb];
+ 
+         let model_type = config.section(Some("train")).unwrap().get("model").unwrap();
+@@ -322,7 +326,10 @@
+         debug_assert_eq!(noisy.len_of(Axis(0)), enh.len_of(Axis(0)));
+         debug_assert_eq!(noisy.len_of(Axis(1)), enh.len_of(Axis(1)));
+         debug_assert_eq!(noisy.len_of(Axis(1)), self.hop_size);
+-        let max_a = find_max_abs(noisy.iter()).expect("NaN");
++        let max_a = noisy.iter().try_fold(0f32, |acc, &v| {
++            if !v.is_finite() { bail!("Non-finite input") }
++            Ok(acc.max(v.abs()))
++        })?;
+         if max_a > 0.99 {
+             log::warn!("Possible clipping detected ({:.3}).", max_a)
+         }
+@@ -699,61 +706,24 @@
+     a
+ }
+ 
++// Safe representation casts require num-complex's checked Pod implementation.
+ pub fn as_slice_mut_complex(buffer: &mut [f32]) -> &mut [Complex32] {
+-    unsafe {
+-        let ptr = buffer.as_ptr() as *mut Complex32;
+-        let len = buffer.len();
+-        std::slice::from_raw_parts_mut(ptr, len / 2)
+-    }
+-}
+-
++    bytemuck::cast_slice_mut(buffer)
++}
+ pub fn as_slice_mut_real(buffer: &mut [Complex32]) -> &mut [f32] {
+-    unsafe {
+-        let ptr = buffer.as_ptr() as *mut f32;
+-        let len = buffer.len();
+-        std::slice::from_raw_parts_mut(ptr, len * 2)
+-    }
+-}
+-
+-pub fn slice_as_arrayview<'a>(
+-    buffer: &[f32],
+-    shape: &[usize], // having an explicit shape parameter allows to also squeeze axes.
+-) -> ArrayViewD<'a, f32> {
+-    debug_assert_eq!(buffer.len(), shape.iter().product::<usize>());
+-    unsafe {
+-        let ptr = buffer.as_ptr(); // as *mut Complex32;
+-        ArrayViewD::from_shape_ptr(shape, ptr)
+-    }
+-}
+-pub fn mut_slice_as_arrayviewmut<'a>(
+-    buffer: &mut [f32],
+-    shape: &[usize], // having an explicit shape parameter allows to also squeeze axes.
+-) -> ArrayViewMutD<'a, f32> {
+-    debug_assert_eq!(buffer.len(), shape.iter().product::<usize>());
+-    unsafe {
+-        let ptr = buffer.as_mut_ptr(); // as *mut Complex32;
+-        ArrayViewMutD::from_shape_ptr(shape, ptr)
+-    }
+-}
+-pub fn as_arrayview_complex<'a>(
+-    buffer: ArrayViewD<'a, f32>,
+-    shape: &[usize], // having an explicit shape parameter allows to also squeeze axes.
+-) -> ArrayViewD<'a, Complex32> {
+-    debug_assert_eq!(buffer.shape().last().unwrap(), &2);
+-    debug_assert_eq!(buffer.len(), 2 * shape.iter().product::<usize>());
+-    unsafe {
+-        let ptr = buffer.as_ptr() as *mut Complex32;
+-        ArrayViewD::from_shape_ptr(shape, ptr)
+-    }
+-}
+-pub fn as_array_mut_complex<'a>(
+-    buffer: ArrayViewMutD<'a, f32>,
+-    shape: &[usize], // having an explicit shape parameter allows to also squeeze axes.
+-) -> ArrayViewMutD<'a, Complex32> {
+-    debug_assert_eq!(buffer.shape().last().unwrap(), &2);
+-    debug_assert_eq!(buffer.len(), 2 * shape.iter().product::<usize>());
+-    unsafe {
+-        let ptr = buffer.as_ptr() as *mut Complex32;
+-        ArrayViewMutD::from_shape_ptr(shape, ptr)
+-    }
+-}
++    bytemuck::cast_slice_mut(buffer)
++}
++pub fn slice_as_arrayview<'a>(buffer: &'a [f32], shape: &[usize]) -> ArrayViewD<'a, f32> {
++    ArrayViewD::from_shape(shape, buffer).expect("Matching contiguous tensor shape")
++}
++pub fn mut_slice_as_arrayviewmut<'a>(buffer: &'a mut [f32], shape: &[usize]) -> ArrayViewMutD<'a, f32> {
++    ArrayViewMutD::from_shape(shape, buffer).expect("Matching contiguous tensor shape")
++}
++pub fn as_arrayview_complex<'a>(buffer: ArrayViewD<'a, f32>, shape: &[usize]) -> ArrayViewD<'a, Complex32> {
++    let values = buffer.to_slice().expect("Contiguous complex tensor");
++    ArrayViewD::from_shape(shape, bytemuck::cast_slice(values)).expect("Matching complex shape")
++}
++pub fn as_array_mut_complex<'a>(buffer: ArrayViewMutD<'a, f32>, shape: &[usize]) -> ArrayViewMutD<'a, Complex32> {
++    let values = buffer.into_slice().expect("Contiguous complex tensor");
++    ArrayViewMutD::from_shape(shape, bytemuck::cast_slice_mut(values)).expect("Matching complex shape")
++}

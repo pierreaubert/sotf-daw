@@ -1389,6 +1389,9 @@ pub enum PluginSettings {
         captured_profile: Option<NoiseProfileData>,
     },
     SpeechDenoiser {
+        /// Optional framed DeepFilterNet2 backend; omission retains RNNoise.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        deep_filter: Option<sotf_plugins::plugin_speech_denoiser::DeepFilterConfig>,
         #[serde(default = "default_speech_denoiser_enabled")]
         enabled: bool,
         #[serde(default = "default_speech_denoiser_strength")]
@@ -2491,6 +2494,7 @@ impl PluginSettings {
             PluginType::SpeechDenoiser => {
                 let sd = speech_denoiser_specs::PARAMS;
                 Self::SpeechDenoiser {
+                    deep_filter: None,
                     enabled: p(sd, "enabled").default_bool(),
                     strength: p(sd, "strength").default_f64(),
                     model: p(sd, "model").default_choice_label(),

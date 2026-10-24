@@ -14,6 +14,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Mutex, TryLockError};
 use std::thread::JoinHandle;
 
+pub mod framed_audio;
+
 /// A model runnable off the audio thread.
 ///
 /// `run` executes on the worker thread, so it may block, allocate, and call

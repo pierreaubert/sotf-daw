@@ -1,0 +1,27 @@
+[
+  {
+    "name": "engine-check",
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "check",
+      "-p",
+      "sotf-engine",
+      "--tests",
+      "--features",
+      "deep-filter",
+      "--release",
+      "--offline",
+      "--locked",
+      "--jobs",
+      "2",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+    ],
+    "status": "failed",
+    "started_unix": 1792875411.218878,
+    "exit_code": 101,
+    "finished_unix": 1792875733.640834
+  }
+]

@@ -1,0 +1,36 @@
+{
+  "source": "https://github.com/Rikorose/DeepFilterNet",
+  "revision": "af5d24a125cc20759f483d4e354fdf70f7951024",
+  "model": "DeepFilterNet2_onnx.tar.gz",
+  "sha256": "412e81d8d1779b8f925ac4b53472655a9f866c4af73dbf930ab587359f631628",
+  "license": "MIT OR Apache-2.0",
+  "model_clock_hz": 48000,
+  "hop_frames": 480,
+  "fft_frames": 960,
+  "model_lookahead_hops": 4,
+  "intrinsic_delay_frames": 2400,
+  "default_worker_playout_hops": 4,
+  "default_total_model_clock_delay_frames": 4320,
+  "training_overlap": "unknown; local recorded excerpts do not establish held-out quality",
+  "files": {
+    "tmp/export/enc.onnx": {
+      "bytes": 2608628,
+      "sha256": "0b57c9923fd095e5770aee3b02a62aaaeccf595f880f51f452060bd920d7198d"
+    },
+    "tmp/export/erb_dec.onnx": {
+      "bytes": 3325237,
+      "sha256": "75da682bfe749ab480d69c66359072c61191acde5eeca1a6a4dd7ab89a48073f"
+    },
+    "tmp/export/df_dec.onnx": {
+      "bytes": 3335117,
+      "sha256": "7a2ba4b6fe85301debd84f8f5eb31a3e24e508bf29084f427d6345e32f514dca"
+    },
+    "tmp/export/config.ini": {
+      "bytes": 1823,
+      "sha256": "7593bc752512a37379ab5d3273ecfbefa2ac42fbc2be5061ac381a3a6afe4ed5"
+    }
+  },
+  "release": "v0.3.1",
+  "runtime_manifest": "../../../../vendor/deep-filter-runtime/upstream.json",
+  "validation_status": "Local mono model/host tests, feature-disabled legacy tests, and engine policy roundtrip pass. Linked stereo, independent golden audio, held-out quality, and real-DAW/default-budget acceptance remain open."
+}

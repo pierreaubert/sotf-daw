@@ -1,0 +1,20 @@
+{
+  "upstream": "https://github.com/Rikorose/DeepFilterNet",
+  "release": "v0.3.1",
+  "revision": "af5d24a125cc20759f483d4e354fdf70f7951024",
+  "source_sha256": {
+    "lib.rs": "5dfa85aa3077e21faac48bee574f0983c831ae30f4b05759207961a05cb995e5",
+    "tract.rs": "3966fdf513c714848bfdd55b54ca807be13d8964a3d0bce900f537f530927d94"
+  },
+  "tract_revision": "ed00ff7eadc84b345318b042f134602ed743879d",
+  "status": "integration under validation",
+  "local_sha256": {
+    "Cargo.toml": "d5ac4601085c80e05befad5f00593e21f8efbf3ba5ad25a34b9d967c2818d0a1",
+    "src/lib.rs": "c23cba903926be0396d6f30e4061c05d0c478308492f9ff3c3f6fbd7e93b03ab",
+    "src/tract.rs": "50f025a688195a220b6893d92ed78aa7eb09dcbc12a9c01b36ef05127dcbe236",
+    "upstream.patch": "7c7ca773a92fcf79929c139d9860ed399f4deb0c434a5093008539f321e758b2",
+    "LICENSE": "f7ef673bf046d823dcd775bdd0768432bd8855f81d0e5e1290a0a48c42e2dca3",
+    "LICENSE-MIT": "24e6bb09c928af8d8e56268082f87413247ce36b39dd5d33add2f9893968065e",
+    "LICENSE-APACHE": "1eaee808c5fb6b4e895ba30425285a5cdc5dd25bba2cd230f264c2200c331aec"
+  }
+}

@@ -130,6 +130,7 @@ fn render(
         channels,
         SpeechDenoiserPluginParams {
             enabled: true,
+            deep_filter: None,
             strength,
             model,
         },

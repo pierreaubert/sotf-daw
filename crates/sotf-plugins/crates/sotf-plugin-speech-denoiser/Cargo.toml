@@ -14,6 +14,7 @@ path = "src/lib.rs"
 
 [features]
 qa = ["sotf-host/qa"]
+deep-filter = ["plugins-denoiser/deep-filter"]
 
 [[bin]]
 name = "qa-speech-denoiser"

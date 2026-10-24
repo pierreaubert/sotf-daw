@@ -41,6 +41,7 @@ fn configured(
         channels,
         SpeechDenoiserPluginParams {
             enabled,
+            deep_filter: None,
             strength,
             model,
         },
@@ -221,6 +222,7 @@ fn fresh_restore_is_deterministic_per_model() {
         for model in ALL_MODELS {
             let input = signal(2 * SPEECH_DENOISER_FRAME_SIZE + 55, channels, 0xE570);
             let params = SpeechDenoiserPluginParams {
+                deep_filter: None,
                 enabled: true,
                 strength: 0.75,
                 model,

@@ -1,0 +1,13 @@
+   Compiling plugins-inference v0.1.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-inference)
+   Compiling plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)
+    Finished `release` profile [optimized] target(s) in 58.88s
+     Running tests/deep_filter.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/deep_filter-09fea46e26d99bc4)
+
+running 4 tests
+test hash_and_playout_fail_before_model_adoption ... ok
+test independently_measured_unity_mask_delay_matches_reported_latency ... ok
+test verified_wrapper_matches_the_pinned_runtime ... ok
+test pristine_reset_restores_recurrent_normalization_and_stft_state ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+

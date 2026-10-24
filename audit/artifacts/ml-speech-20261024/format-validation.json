@@ -1,0 +1,34 @@
+{
+  "workspace_format": {
+    "command": "cargo fmt --all -- --check",
+    "exit_code": 1,
+    "reason": "cargo metadata: driver-common is a member of the wrong workspace; parent workspace expected, DAW workspace actual"
+  },
+  "focused_rustfmt": {
+    "command": [
+      "rtk",
+      "proxy",
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-engine/src/plugins/plugin_config_converter/effects.rs",
+      "crates/sotf-engine/src/plugins/plugin_settings.rs",
+      "crates/sotf-plugins/crates/plugins-denoiser/src/lib.rs",
+      "crates/sotf-plugins/crates/plugins-inference/src/lib.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/lib.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/rate_adapter.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/integration.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/model_audio.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/recorded_audio.rs",
+      "crates/sotf-plugins/crates/plugins-denoiser/src/deep_filter.rs",
+      "crates/sotf-plugins/crates/plugins-denoiser/src/deep_filter_config.rs",
+      "crates/sotf-plugins/crates/plugins-denoiser/tests/deep_filter.rs",
+      "crates/sotf-plugins/crates/plugins-inference/src/framed_audio.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/src/backend.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/deep_filter.rs"
+    ],
+    "exit_code": 0,
+    "files": 15
+  }
+}

@@ -104,6 +104,9 @@ logs
 *.sln
 *.sw?
 vendor
+!/vendor/
+/vendor/*
+!/vendor/deep-filter-runtime/
 TAGS
 ETAGS
 CTAGS

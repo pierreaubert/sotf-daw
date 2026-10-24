@@ -65,6 +65,7 @@ members = [
     "crates/driver-hal",
 ]
 exclude = [
+    "vendor/deep-filter-runtime",
 ]
 resolver = "3"
 

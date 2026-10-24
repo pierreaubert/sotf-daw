@@ -615,6 +615,7 @@ pub fn convert_speech_denoiser(
     _sample_rate: f64,
 ) -> Option<PluginConfig> {
     let PluginSettings::SpeechDenoiser {
+        deep_filter,
         enabled,
         strength,
         model,
@@ -622,14 +623,15 @@ pub fn convert_speech_denoiser(
     else {
         return None;
     };
-    Some(PluginConfig::new(
-        "speech_denoiser",
-        json!({
-            "enabled": enabled,
-            "strength": strength,
-            "model": model,
-        }),
-    ))
+    let mut parameters = json!({
+        "enabled": enabled,
+        "strength": strength,
+        "model": model,
+    });
+    if let Some(config) = deep_filter {
+        parameters["deep_filter"] = serde_json::to_value(config).ok()?;
+    }
+    Some(PluginConfig::new("speech_denoiser", parameters))
 }
 
 pub fn convert_pnd(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
@@ -726,6 +728,28 @@ pub fn convert_ab_compare(settings: &PluginSettings, _sample_rate: f64) -> Optio
 mod tests {
     use super::*;
     use crate::plugins::plugin_type::PluginType;
+
+    #[test]
+    fn speech_backend_policy_survives_serialization_and_engine_conversion() {
+        let mut settings = PluginSettings::default_for(&PluginType::SpeechDenoiser).unwrap();
+        let legacy = convert_speech_denoiser(&settings, 48_000.0).unwrap();
+        assert!(legacy.parameters.get("deep_filter").is_none());
+        let policy = json!({
+            "model_path": "models/DeepFilterNet2_onnx.tar.gz",
+            "sha256": "412e81d8d1779b8f925ac4b53472655a9f866c4af73dbf930ab587359f631628",
+            "playout_packets": 8
+        });
+        let PluginSettings::SpeechDenoiser { deep_filter, .. } = &mut settings else {
+            unreachable!()
+        };
+        *deep_filter = Some(serde_json::from_value(policy.clone()).unwrap());
+        let saved = serde_json::to_value(&settings).unwrap();
+        let restored: PluginSettings = serde_json::from_value(saved).unwrap();
+        let config = convert_speech_denoiser(&restored, 96_000.0).unwrap();
+        assert_eq!(config.parameters["deep_filter"], policy);
+        assert_eq!(config.parameters["model"], legacy.parameters["model"]);
+        assert_eq!(config.parameters["strength"], legacy.parameters["strength"]);
+    }
 
     #[test]
     fn dither_defaults_and_values_reach_engine_config() {

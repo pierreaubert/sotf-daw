@@ -229,6 +229,7 @@ fn integration_from_params_applies_initial_state() {
         1,
         SpeechDenoiserPluginParams {
             enabled: false,
+            deep_filter: None,
             strength: 0.5,
             model: SpeechDenoiserModel::RnnoiseFull,
         },
@@ -398,4 +399,22 @@ fn factory_parameter_json_is_strict_and_backward_compatible() {
             "strength {strength} must be rejected"
         );
     }
+}
+
+#[cfg(not(feature = "deep-filter"))]
+#[test]
+fn explicit_deep_filter_request_requires_compiled_backend() {
+    let mut plugin = SpeechDenoiserPlugin::from_params(
+        1,
+        SpeechDenoiserPluginParams {
+            deep_filter: Some(sotf_plugin_speech_denoiser::DeepFilterConfig {
+                model_path: "must-not-be-opened.onnx.tar.gz".into(),
+                sha256: "0".repeat(64),
+                playout_packets: 4,
+            }),
+            ..SpeechDenoiserPluginParams::default()
+        },
+    );
+    let error = plugin.initialize(48_000.0).unwrap_err();
+    assert!(error.contains("deep-filter build feature"), "{error}");
 }

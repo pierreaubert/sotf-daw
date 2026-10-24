@@ -1,5 +1,7 @@
 //! Prepared streaming rate conversion around the fixed 48 kHz RNNoise model.
 
+use crate::backend::FrameBackend;
+#[cfg(test)]
 use plugins_denoiser::rnnoise::RnnoiseBackend;
 use sotf_host::fractional_delay::fractional_delay_coefficients;
 use sotf_host::plugin::{Plugin, PluginResult, ProcessContext};
@@ -143,6 +145,14 @@ pub(super) struct RateAdapter {
 
 impl RateAdapter {
     pub(super) fn new(host_rate: f64, channels: usize) -> PluginResult<Self> {
+        Self::with_model_latency(host_rate, channels, 960)
+    }
+
+    pub(super) fn with_model_latency(
+        host_rate: f64,
+        channels: usize,
+        model_latency: usize,
+    ) -> PluginResult<Self> {
         if !host_rate.is_finite() || host_rate <= 0.0 || !(1..=2).contains(&channels) {
             return Err("speech adapter needs a finite positive rate and mono/stereo".into());
         }
@@ -160,7 +170,9 @@ impl RateAdapter {
         // delayed host dry path, and the wet FIFO before constructing rubato.
         // Final capacities are still checked and fallibly reserved below.
         let prepared_bytes = PREPARED_SINC_TABLE_BYTES
-            + (maximum_chunk_frames * 8.0 + host_ratio * 1_200.0 * 4.0 + 4_096.0)
+            + (maximum_chunk_frames * 8.0
+                + host_ratio * (model_latency as f64 + 240.0) * 4.0
+                + 4_096.0)
                 * (channels * size_of::<f32>()) as f64;
         if !prepared_bytes.is_finite() || prepared_bytes > MAX_PREPARED_AUDIO_BYTES {
             return Err("speech adapter prepared audio exceeds memory budget".into());
@@ -176,7 +188,8 @@ impl RateAdapter {
             .output_frames_envelope(model_frames)
             .ok_or("speech adapter output envelope unavailable")?;
         let ratio = host_rate / MODEL_RATE;
-        let delay = (input.signal_delay_samples() + 960.0) * ratio + output.signal_delay_samples();
+        let delay = (input.signal_delay_samples() + model_latency as f64) * ratio
+            + output.signal_delay_samples();
         if !delay.is_finite() || delay < 0.0 {
             return Err("speech adapter has invalid signal delay".into());
         }
@@ -261,7 +274,7 @@ impl RateAdapter {
         &mut self,
         buffer: &mut [f32],
         dry_output: &mut [f32],
-        backend: &mut RnnoiseBackend,
+        backend: &mut impl FrameBackend,
         bypass: bool,
     ) -> PluginResult<()> {
         let frames = buffer.len() / self.channels;

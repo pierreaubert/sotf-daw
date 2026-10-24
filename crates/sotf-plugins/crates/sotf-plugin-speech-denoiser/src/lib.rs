@@ -1,20 +1,25 @@
-//! RNNoise speech denoiser host adapter.
+//! Speech denoising with legacy RNNoise and optional framed DeepFilterNet2.
 //!
 //! Wraps the shared [`RnnoiseBackend`](plugins_denoiser::rnnoise::RnnoiseBackend)
 //! with SOTF host traits, a suppression-strength blend, and a validated model
 //! registry. RNNoise runs at 48 kHz; mono/stereo host streams at other finite
 //! positive rates use a prepared streaming converter. Wider layouts are rejected.
-//! The dry path stays at the full host bandwidth. At host rates above 48 kHz,
-//! the 100%-wet path is limited by RNNoise's 24 kHz Nyquist frequency.
+//! The dry path stays at the full host bandwidth. Both backends run at 48 kHz;
+//! their wet path has a 24 kHz Nyquist limit. DeepFilterNet2 currently requires
+//! explicit mono configuration; linked stereo remains under development.
 
+mod backend;
 pub mod model;
 pub mod params;
 mod rate_adapter;
 
+pub use backend::DeepFilterData;
+use backend::{Backend, FrameBackend};
+pub use plugins_denoiser::deep_filter_config::DeepFilterConfig;
+
 pub use crate::model::SpeechDenoiserModel;
 use crate::params::PARAMS as SP;
 use crate::rate_adapter::RateAdapter;
-use plugins_denoiser::rnnoise::RnnoiseBackend;
 pub use plugins_denoiser::rnnoise::{
     RNNOISE_BAND_COUNT, RnnoiseAnalyzerData as SpeechDenoiserData,
 };
@@ -84,6 +89,9 @@ fn resolve_model(value: &ParameterValue) -> PluginResult<SpeechDenoiserModel> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SpeechDenoiserPluginParams {
+    /// Optional structural DeepFilterNet2 mode; omission preserves RNNoise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deep_filter: Option<DeepFilterConfig>,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
     #[serde(default = "default_strength")]
@@ -103,6 +111,7 @@ fn default_strength() -> f32 {
 impl Default for SpeechDenoiserPluginParams {
     fn default() -> Self {
         Self {
+            deep_filter: None,
             enabled: default_enabled(),
             strength: default_strength(),
             model: SpeechDenoiserModel::default(),
@@ -110,15 +119,18 @@ impl Default for SpeechDenoiserPluginParams {
     }
 }
 
-/// RNNoise speech denoiser with a fixed 960-frame processing latency.
+/// Speech denoiser with a fixed latency selected during model preparation.
 ///
 /// Suppression strength blends latency-aligned wet and dry audio per sample:
 /// `out = dry + s * (wet - dry)`, where `dry` is the sanitized input delayed
-/// by exactly the 960-frame signal latency and `wet` is the RNNoise output.
+/// by the prepared signal latency and `wet` is the selected model output.
 /// Strength slews toward its target over 480 frames; the 0.0 and 1.0 endpoints
 /// emit dry and wet bit-exactly, so default and disabled audio are unchanged.
 ///
-/// Enabled end-of-stream drain emits one 960-frame zero-continuation window to
+/// RNNoise retains its 960-frame delay; optional DeepFilterNet2 adds explicit
+/// worker playout to its intrinsic delay. DeepFilterNet2 currently requires
+/// mono; linked-stereo preparation remains an explicit unimplemented contract.
+/// Enabled end-of-stream drain emits one latency-length continuation window to
 /// release accepted programme audio, then resets the backend. The model and
 /// high-pass response remain `Unknown`; this declared render cutoff does not
 /// claim that their natural recursive response is finite.
@@ -128,7 +140,9 @@ pub struct SpeechDenoiserPlugin {
     strength_target: f32,
     strength_current: f32,
     model: SpeechDenoiserModel,
-    inner: RnnoiseBackend,
+    inner: Backend,
+    deep_filter_config: Option<DeepFilterConfig>,
+    deep_filter_cache: RealTimeCache<DeepFilterData>,
     dry_delay: Vec<Vec<f32>>,
     dry_pos: usize,
     rate_adapter: Option<RateAdapter>,
@@ -161,7 +175,13 @@ impl SpeechDenoiserPlugin {
             strength_target: strength,
             strength_current: strength,
             model: params.model,
-            inner: RnnoiseBackend::new(),
+            inner: Backend::new(),
+            deep_filter_config: params.deep_filter,
+            deep_filter_cache: RealTimeCache::new_triplet(
+                DeepFilterData::default(),
+                DeepFilterData::default(),
+                DeepFilterData::default(),
+            ),
             dry_delay: Vec::new(),
             dry_pos: 0,
             rate_adapter: None,
@@ -191,6 +211,7 @@ impl SpeechDenoiserPlugin {
             ));
         }
         validate_strength(params.strength)?;
+        backend::validate_request(channels, params.deep_filter.as_ref())?;
         Ok(Self::from_params(channels, params))
     }
 
@@ -416,7 +437,7 @@ impl SpeechDenoiserPlugin {
             .process(chunk, chunk_frames, channels, !self.enabled);
         if written != chunk_frames {
             return Err(format!(
-                "RNNoise processed {written} of {chunk_frames} requested frames"
+                "Speech denoiser backend processed {written} of {chunk_frames} requested frames"
             ));
         }
         if self.enabled {
@@ -442,11 +463,7 @@ impl SpeechDenoiserPlugin {
             self.process_chunk(&mut buffer[start..end], chunk_frames)?;
             processed += chunk_frames;
         }
-        let analyzer_data = self.inner.analyzer_data();
-        if analyzer_data.model_frames != self.published_model_frames {
-            self.analyzer_cache.update(|data| *data = analyzer_data);
-            self.published_model_frames = analyzer_data.model_frames;
-        }
+        self.publish_analyzer();
         Ok(frames)
     }
 
@@ -479,19 +496,32 @@ impl SpeechDenoiserPlugin {
             }
             processed += chunk_frames;
         }
-        let analyzer_data = self.inner.analyzer_data();
-        if analyzer_data.model_frames != self.published_model_frames {
-            self.analyzer_cache.update(|data| *data = analyzer_data);
-            self.published_model_frames = analyzer_data.model_frames;
-        }
+        self.publish_analyzer();
         Ok(frames)
+    }
+
+    fn publish_analyzer(&mut self) {
+        if let Some(analyzer) = self.inner.analyzer_data()
+            && analyzer.model_frames != self.published_model_frames
+        {
+            self.analyzer_cache.update(|data| *data = analyzer);
+            self.published_model_frames = analyzer.model_frames;
+        }
+        if let Some(analyzer) = self.inner.deep_filter_data() {
+            self.deep_filter_cache.update(|data| *data = analyzer);
+        }
     }
 }
 
 impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     fn info(&self) -> PluginInfo {
-        PluginInfo::new("Speech Denoiser", env!("CARGO_PKG_VERSION"), "SotF")
-            .with_description("RNNoise speech denoiser")
+        PluginInfo::new("Speech Denoiser", env!("CARGO_PKG_VERSION"), "SotF").with_description(
+            if self.deep_filter_config.is_some() {
+                "DeepFilterNet2 speech enhancement with timed dry fallback"
+            } else {
+                "RNNoise speech denoiser"
+            },
+        )
     }
 
     fn cost_class(&self) -> PluginCostClass {
@@ -584,10 +614,18 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("Speech denoiser sample rate must be finite and positive".into());
         }
+        let inner = Backend::prepare(self.channels, self.model, self.deep_filter_config.as_ref())?;
+        let latency = inner.latency_samples();
         let adapter = if sample_rate == 48_000.0 {
             None
-        } else {
+        } else if self.deep_filter_config.is_none() {
             Some(RateAdapter::new(sample_rate, self.channels)?)
+        } else {
+            Some(RateAdapter::with_model_latency(
+                sample_rate,
+                self.channels,
+                latency,
+            )?)
         };
         let strength_frames = (sample_rate * 0.01).round();
         if !strength_frames.is_finite()
@@ -596,10 +634,7 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         {
             return Err("Speech denoiser strength horizon is unsupported".into());
         }
-        self.inner
-            .initialize_with_model(48_000, self.channels, self.model.backend_id())?;
-        let latency = self.inner.latency_samples();
-        debug_assert_eq!(latency, SPEECH_DENOISER_LATENCY_FRAMES);
+        self.inner = inner;
         self.dry_delay = if adapter.is_none() {
             vec![vec![0.0; latency]; self.channels]
         } else {
@@ -615,6 +650,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         self.published_model_frames = 0;
         self.analyzer_cache
             .update(|data| *data = SpeechDenoiserData::default());
+        let deep = self.inner.deep_filter_data().unwrap_or_default();
+        self.deep_filter_cache.update(|data| *data = deep);
         Ok(())
     }
 
@@ -633,6 +670,8 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
         self.published_model_frames = 0;
         self.analyzer_cache
             .update(|data| *data = SpeechDenoiserData::default());
+        let deep = self.inner.deep_filter_data().unwrap_or_default();
+        self.deep_filter_cache.update(|data| *data = deep);
     }
 
     fn process_in_place(
@@ -812,7 +851,11 @@ impl ParametricInPlacePlugin for SpeechDenoiserPlugin {
     }
 
     fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
-        Some(self.analyzer_cache.load() as Arc<dyn Any + Send + Sync>)
+        if self.inner.deep_filter_data().is_some() {
+            Some(self.deep_filter_cache.load() as Arc<dyn Any + Send + Sync>)
+        } else {
+            Some(self.analyzer_cache.load() as Arc<dyn Any + Send + Sync>)
+        }
     }
 
     /// Returns the prepared host-frame latency regardless of the `enabled` flag.
