@@ -184,24 +184,6 @@ pub(super) fn select_playback_device(
     }
 }
 
-#[cfg(target_os = "macos")]
-pub(super) fn set_output_access_status(
-    event_tx: &crossbeam::channel::Sender<ThreadEvent>,
-    status: &mut OutputAccessStatus,
-    new_status: OutputAccessStatus,
-    context: &str,
-) {
-    if *status == new_status {
-        return;
-    }
-    *status = new_status;
-    send_playback_event(
-        event_tx,
-        ThreadEvent::PlaybackOutputAccessChanged(new_status),
-        context,
-    );
-}
-
 pub(super) fn initial_buffer_size(
     status: OutputAccessStatus,
     frame_size: usize,

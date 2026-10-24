@@ -428,6 +428,7 @@ fn test_thread_event_playback_underrun() {
 #[test]
 fn test_thread_event_playback_stats() {
     let event = ThreadEvent::PlaybackStats {
+        output_generation: 12,
         callback_count: 12,
         buffer_fill_percent: 75,
         stream_error_count: 1,
@@ -439,6 +440,7 @@ fn test_thread_event_playback_stats() {
     };
 
     if let ThreadEvent::PlaybackStats {
+        output_generation,
         callback_count,
         buffer_fill_percent,
         stream_error_count,
@@ -449,6 +451,7 @@ fn test_thread_event_playback_stats() {
         epoch,
     } = event
     {
+        assert_eq!(output_generation, 12);
         assert_eq!(callback_count, 12);
         assert_eq!(buffer_fill_percent, 75);
         assert_eq!(stream_error_count, 1);

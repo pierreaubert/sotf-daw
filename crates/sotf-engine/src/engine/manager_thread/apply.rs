@@ -260,7 +260,14 @@ fn apply_plugin_update_once(
     let (actual_playback_channels, actual_playback_sample_rate) =
         if playback_channels != old_playback_channels || output_sample_rate != old_sample_rate {
             match playback.reconfigure(output_sample_rate, playback_channels) {
-                Ok(actual) => (actual.channels, actual.sample_rate),
+                Ok(actual) => {
+                    // Fence queued output events before publishing the synchronous commit.
+                    super::thread_event_visitor::adopt_output_generation(
+                        &mut new_state,
+                        actual.output_generation,
+                    );
+                    (actual.channels, actual.sample_rate)
+                }
                 Err(error) => {
                     let reason = format!(
                         "Plugin host committed, but playback output reconfiguration failed: {error}"
@@ -419,7 +426,14 @@ pub(in crate::engine::manager_thread) fn apply_plugin_graph_update(
         || output_sample_rate != old_sample_rate
     {
         match playback.reconfigure(output_sample_rate, playback_channels) {
-            Ok(actual) => (actual.channels, actual.sample_rate),
+            Ok(actual) => {
+                // Fence queued output events before publishing the synchronous commit.
+                super::thread_event_visitor::adopt_output_generation(
+                    &mut new_state,
+                    actual.output_generation,
+                );
+                (actual.channels, actual.sample_rate)
+            }
             Err(error) => {
                 let reason = format!(
                     "Plugin graph committed, but playback output reconfiguration failed: {error}"

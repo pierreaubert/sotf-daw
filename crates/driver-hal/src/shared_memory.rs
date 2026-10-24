@@ -40,7 +40,9 @@
 
 use std::sync::atomic::{AtomicU32, AtomicU64};
 
+mod backing;
 mod consts;
+mod control;
 mod current;
 mod encrypted;
 mod ensure;
@@ -55,6 +57,8 @@ mod types;
 mod validate;
 
 pub use consts::*;
+#[doc(inline)]
+pub use control::ConfigurationSnapshot;
 pub use hal_input_reader::*;
 pub use hal_output_writer::*;
 pub use misc::*;
@@ -106,10 +110,7 @@ pub struct SharedAudioHeader {
     // Encryption fields (version 2+)
     /// Encryption enabled flag: 0 = disabled, 1 = enabled
     pub encrypted: AtomicU32,
-    /// Output volume scalar as `f32::to_bits` (version 7+, in the padding
-    /// before `key_fingerprint`). Written by whichever side last changed
-    /// the volume: the HAL driver for OS media keys/sliders, the daemon
-    /// for IPC `set_volume`. Meaningful only when `volume_generation != 0`.
+    /// Reserved version 7 scalar word; version 8 uses `volume_state`.
     pub volume_scalar_bits: AtomicU32,
     /// First 8 bytes of SHA256 hash of the encryption key, stored in
     /// big-endian byte order (so `to_be_bytes` gives the canonical 8-byte
@@ -133,9 +134,7 @@ pub struct SharedAudioHeader {
     pub config_source: AtomicU32,
     /// Error code if config_status=3
     pub config_error_code: AtomicU32,
-    /// Output mute flag: 0 = audible, 1 = muted (version 7+, in the
-    /// padding before `encryption_overflow_count`). Same ownership and
-    /// validity rules as `volume_scalar_bits`.
+    /// Reserved version 7 mute word; version 8 uses `volume_state`.
     pub output_muted: AtomicU32,
 
     // Statistics
@@ -154,9 +153,20 @@ pub struct SharedAudioHeader {
     /// Channel count requested by the initiator. The live `channel_count`
     /// field changes only inside `reconfigure_quiesced`.
     pub requested_channel_count: AtomicU32,
-    /// Monotonic counter bumped on every volume/mute publication
-    /// (version 7+, in the former tail padding). Zero means no volume has
-    /// been published yet; pollers compare generations to detect changes
-    /// without racing the value fields.
+    /// Reserved version 7 generation word; version 8 uses `volume_state`.
     pub volume_generation: AtomicU32,
+
+    // Version 8 coherent control-plane publication. Never acquired by audio IO.
+    /// Bounded control-plane publication gate, released after a complete tuple.
+    pub control_lock: AtomicU32,
+    /// Actual negotiated/restored channel count in a matching acknowledgement.
+    pub actual_channel_count: AtomicU32,
+    /// Identity of the latest complete configuration request.
+    pub config_request_id: AtomicU64,
+    /// Identity to which the actual tuple and status belong.
+    pub config_ack_id: AtomicU64,
+    /// Atomic scalar/mute/generation tuple; supersedes version 7 volume words.
+    pub volume_state: AtomicU64,
+    /// Identity advanced for every ring reset, flush, or encryption transition.
+    pub ring_generation: AtomicU64,
 }

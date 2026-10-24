@@ -2313,6 +2313,7 @@ dependencies = [
  "memmap2",
  "proptest",
  "rand 0.10.3",
+ "rustix",
  "serde_json",
  "serial_test",
  "sha2",

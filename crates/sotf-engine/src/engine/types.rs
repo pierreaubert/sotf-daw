@@ -137,6 +137,8 @@ impl HostUpdateTicket {
 pub struct PlaybackConfiguration {
     pub(super) sample_rate: u32,
     pub(super) channels: usize,
+    /// Actual output-stream identity; zero in a request.
+    pub(super) output_generation: u64,
 }
 
 #[derive(Clone, Debug)]
@@ -902,14 +904,21 @@ pub enum ThreadEvent {
     DecoderError(String),
     /// Live stream metadata update (ICY/content-type/bitrate).
     StreamMetadataChanged(Option<StreamMetadata>),
-    PlaybackChannelsChanged(usize),
-    PlaybackOutputDeviceChanged(String),
-    PlaybackOutputAccessChanged(crate::OutputAccessStatus),
+    /// One complete output snapshot, scoped to the stream that produced it.
+    PlaybackOutputChanged {
+        incident: Option<crate::PlaybackIncident>,
+        generation: u64,
+        channels: usize,
+        device: Option<String>,
+        access: crate::OutputAccessStatus,
+    },
     /// Playback thread hardware-consumption diagnostics changed.
     ///
-    /// `epoch` is the playback-side stream generation; the manager applies
-    /// only snapshots whose epoch matches the current playback epoch.
+    /// The play epoch and output-stream generation must both match the
+    /// manager's current state before historical counters can be adopted.
     PlaybackStats {
+        /// Output-stream identity independent of the playback epoch.
+        output_generation: u64,
         callback_count: u64,
         buffer_fill_percent: u64,
         stream_error_count: u64,
@@ -970,6 +979,22 @@ impl ThreadEvent {
         Self::DecoderTagged {
             attempt,
             event: Box::new(self),
+        }
+    }
+}
+
+/// Allocate a process-wide stream/incident identity on a control thread.
+/// Failed candidates consume an identity; retired identities are never reused.
+pub(in crate::engine) fn next_playback_identity() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let mut current = NEXT.load(Ordering::Relaxed);
+    loop {
+        let next = current
+            .checked_add(1)
+            .expect("output stream identity exhausted");
+        match NEXT.compare_exchange_weak(current, next, Ordering::Relaxed, Ordering::Relaxed) {
+            Ok(_) => return current,
+            Err(observed) => current = observed,
         }
     }
 }

@@ -297,3 +297,49 @@ fn test_request_config_times_out_without_hal_ack() {
 
     assert!(matches!(result, ConfigResult::Error(_)));
 }
+
+#[test]
+fn config_ack_contention_is_retried_without_claiming_readiness_or_losing_identity() {
+    let file = NamedTempFile::new().unwrap();
+    let buffer = SharedAudioBuffer::create_or_open(file.path(), 48_000, 64, 2).unwrap();
+    let id = buffer
+        .publish_config_request(DriverConfig::new(96_000, 128, 8), 1)
+        .unwrap();
+    let mut driver = HalDriver::new();
+    driver.config_buffer = Some(buffer);
+    assert_eq!(driver.poll_config_request().unwrap().request_id, id);
+    driver
+        .config_buffer
+        .as_ref()
+        .unwrap()
+        .header()
+        .control_lock
+        .store(1, Ordering::Release);
+    assert!(driver.config_request_is_current(id));
+    let actual = DriverConfig::new(44_100, 256, 4);
+    assert!(!driver.acknowledge_config_request(
+        id,
+        actual,
+        ConfigResult::negotiated(44_100, 256, 4)
+    ));
+    assert!(driver.set_engine_ready_checked(true).is_err());
+    assert!(!driver.config_buffer.as_ref().unwrap().engine_ready());
+    driver
+        .config_buffer
+        .as_ref()
+        .unwrap()
+        .header()
+        .control_lock
+        .store(0, Ordering::Release);
+    assert!(driver.poll_config_request().is_none());
+    let snapshot = driver
+        .config_buffer
+        .as_ref()
+        .unwrap()
+        .configuration_snapshot()
+        .unwrap();
+    assert_eq!(snapshot.request.request_id, id);
+    assert_eq!(snapshot.actual, actual);
+    assert_eq!(snapshot.status, 2);
+    assert!(!snapshot.pending);
+}

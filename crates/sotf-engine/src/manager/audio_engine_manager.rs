@@ -604,6 +604,41 @@ impl AudioEngineManager {
         sink_type: SinkType,
         capture_source: Option<driver_common::CaptureSource>,
     ) -> AudioDecoderResult<()> {
+        self.start_driver_playback_with_graph_and_source(
+            output_device,
+            plugins,
+            output_channels,
+            sample_rate,
+            buffer_frames,
+            input_channels,
+            sink_type,
+            capture_source,
+            None,
+        )
+    }
+
+    /// Start driver capture only after the complete initial graph is installed.
+    ///
+    /// A supplied graph replaces the flat plugin list. Geometry is negotiated
+    /// against its output before playback or capture starts.
+    ///
+    /// # Errors
+    /// Returns an error for invalid graphs, failed host construction or commits,
+    /// unavailable output, or failed engine acknowledgments. Capture does not
+    /// start if graph initialization fails.
+    #[allow(clippy::too_many_arguments)]
+    pub fn start_driver_playback_with_graph_and_source(
+        &mut self,
+        output_device: Option<String>,
+        plugins: Vec<PluginConfig>,
+        output_channels: usize,
+        sample_rate: u32,
+        buffer_frames: u32,
+        input_channels: usize,
+        sink_type: SinkType,
+        capture_source: Option<driver_common::CaptureSource>,
+        graph: Option<crate::engine::PluginGraphConfig>,
+    ) -> AudioDecoderResult<()> {
         let _guard = lock_recover(&self.cmd_mutex, "cmd_mutex");
         let input_channels = input_channels.max(1);
         let frame_size = buffer_frames.max(1) as usize;
@@ -632,7 +667,8 @@ impl AudioEngineManager {
             input_channels,
             output_channels,
             output_device,
-            plugins,
+            plugins: if graph.is_some() { Vec::new() } else { plugins },
+            initial_graph: graph,
             volume,
             muted,
             config_path: None,
@@ -659,6 +695,13 @@ impl AudioEngineManager {
         engine
             .set_bypass(self.current_bypassed.load(Ordering::Relaxed))
             .map_err(AudioDecoderError::IoError)?;
+
+        // Driver source setup can leave the committed transport Stopped.
+        // Activate through acknowledged commands before publishing Playing.
+        if engine.get_state().playback_state == PlaybackState::Stopped {
+            engine.pause().map_err(AudioDecoderError::IoError)?;
+        }
+        engine.resume().map_err(AudioDecoderError::IoError)?;
 
         // Store engine handle lock-free
         #[allow(clippy::arc_with_non_send_sync)]

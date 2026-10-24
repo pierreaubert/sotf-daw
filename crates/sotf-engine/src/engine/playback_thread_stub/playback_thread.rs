@@ -31,6 +31,11 @@ pub struct PlaybackThread {
 }
 
 impl PlaybackThread {
+    #[cfg(all(feature = "test-util", target_os = "ios"))]
+    pub(in crate::engine) fn lab_pcm_probe(&self) -> Option<Arc<crate::lab_pcm::LabPcmProbe>> {
+        None
+    }
+
     #[cfg(target_os = "ios")]
     pub fn new(
         message_rx: Receiver<ProcessingMessage>,
@@ -169,6 +174,7 @@ impl PlaybackThread {
         let ticket = HostUpdateTicket::new();
         self.send_command(PlaybackCommand::Reconfigure(PlaybackReconfigureRequest {
             requested: PlaybackConfiguration {
+                output_generation: 0,
                 sample_rate,
                 channels,
             },

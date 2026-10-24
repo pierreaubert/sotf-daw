@@ -38,38 +38,51 @@ impl HalInputReader {
         log::info!("[HAL INPUT] Attempting to open SharedMemory at: {:?}", path);
 
         match SharedAudioBuffer::open_default() {
-            Ok(buffer) => {
-                log::info!(
-                    "[HAL INPUT] SharedMemory opened: sample_rate={}, buffer_frames={}, channels={}, driver_ready={}, active={}",
-                    buffer.sample_rate(),
-                    buffer.buffer_frames(),
-                    buffer.channel_count(),
-                    buffer.driver_ready(),
-                    buffer.is_active()
-                );
-
-                let pre_alloc = pre_alloc_capacity_samples();
-                let encrypted_slots = encrypted_record_slots(pre_alloc).unwrap_or(pre_alloc * 2);
-                let ciphertext_bytes =
-                    encrypted_record_total_bytes(pre_alloc).unwrap_or(pre_alloc * 8);
-
-                let cipher = load_initial_cipher(&buffer);
-
-                Some(Self {
-                    buffer: Some(buffer),
-                    cipher,
-                    encrypted_samples_buf: Vec::with_capacity(encrypted_slots),
-                    ciphertext_buf: Vec::with_capacity(ciphertext_bytes),
-                    decrypted_record_buf: Vec::with_capacity(pre_alloc),
-                    pending: StagedPlaintext::new(pre_alloc),
-                    key_mismatch_count: AtomicU64::new(0),
-                })
-            }
+            Ok(buffer) => Some(Self::from_buffer(buffer)),
             Err(e) => {
                 log::error!("[HAL INPUT] Failed to open SharedMemory: {}", e);
                 None
             }
         }
+    }
+
+    fn from_buffer(buffer: SharedAudioBuffer) -> Self {
+        log::info!(
+            "[HAL INPUT] SharedMemory opened: sample_rate={}, buffer_frames={}, channels={}, driver_ready={}, active={}",
+            buffer.sample_rate(),
+            buffer.buffer_frames(),
+            buffer.channel_count(),
+            buffer.driver_ready(),
+            buffer.is_active()
+        );
+
+        let pre_alloc = pre_alloc_capacity_samples();
+        let encrypted_slots = encrypted_record_slots(pre_alloc).unwrap_or(pre_alloc * 2);
+        let ciphertext_bytes = encrypted_record_total_bytes(pre_alloc).unwrap_or(pre_alloc * 8);
+
+        let cipher = load_initial_cipher(&buffer);
+
+        Self {
+            buffer: Some(buffer),
+            cipher,
+            encrypted_samples_buf: Vec::with_capacity(encrypted_slots),
+            ciphertext_buf: Vec::with_capacity(ciphertext_bytes),
+            decrypted_record_buf: Vec::with_capacity(pre_alloc),
+            pending: StagedPlaintext::new(pre_alloc),
+            key_mismatch_count: AtomicU64::new(0),
+        }
+    }
+
+    /// Use the production read path with an explicitly owned legacy fixture.
+    ///
+    /// # Safety
+    /// The harness must keep its private fixture extent fixed until this reader
+    /// is dropped, and all participants must obey the audio/header protocol.
+    #[cfg(feature = "swift-stress-worker")]
+    pub unsafe fn new_for_fixture() -> Option<Self> {
+        // SAFETY: the harness supplies the fixture lifetime/extent guarantee.
+        let buffer = unsafe { SharedAudioBuffer::open_fixture(get_shared_memory_path()).ok()? };
+        Some(Self::from_buffer(buffer))
     }
 
     /// Re-load the session key from disk and replace the cached cipher.

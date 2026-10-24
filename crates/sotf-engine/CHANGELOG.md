@@ -2,6 +2,9 @@
 
 ## Changes
 
+- Publish complete output snapshots tagged by an immutable stream identity, carry that identity in synchronous reconfiguration replies, and reject retired-stream metadata/statistics.
+- Track recoverable output incidents by typed cause and identity. Resolve them only after fresh hardware callbacks, preserve unrelated fatal errors, and retain the latest complete output notification under event-queue contention.
+
 - Preserve finite-stream and crossfade state across playback/decoder transitions, propagate worker failures, and validate graph drain behavior.
 - Forward Denoiser reduction-curve and residual-audition controls with legacy preset defaults; retain exact legacy-audio and rejected-candidate state checks.
 

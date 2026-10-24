@@ -22,7 +22,10 @@ pub use plugin_config::{
     PluginGraphNodeConfig,
 };
 pub use sink::{SinkConfig, SinkOpenResult, SinkType};
-pub use state::{AudioEngineState, AudioFrame, PlaybackState, StreamMetadata};
+pub use state::{
+    AudioEngineState, AudioFrame, PlaybackIncident, PlaybackIncidentKind,
+    PlaybackIncidentResolution, PlaybackState, StreamMetadata,
+};
 pub use state::{
     IsolatedExternalPluginSandboxBackend, IsolatedExternalPluginSandboxStatus,
     IsolatedExternalPluginWorkerEvent, IsolatedExternalPluginWorkerStatus,

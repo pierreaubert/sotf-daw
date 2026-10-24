@@ -3,6 +3,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 
 pub(super) struct PlaybackState {
+    pub(super) output_generation: u64,
     pub(super) capacity: usize,
     pub(super) volume: Arc<AtomicU32>,
     pub(super) muted: Arc<AtomicBool>,
@@ -38,6 +39,7 @@ impl PlaybackState {
     #[cfg_attr(target_os = "ios", allow(dead_code))]
     pub(super) fn new(capacity: usize) -> Self {
         Self {
+            output_generation: crate::engine::types::next_playback_identity(),
             capacity,
             volume: Arc::new(AtomicU32::new(1.0f32.to_bits())),
             muted: Arc::new(AtomicBool::new(false)),
@@ -59,6 +61,7 @@ impl PlaybackState {
     /// state-local (fresh zero): clips have no death-fold consumer.
     pub(super) fn new_sharing_peak(capacity: usize, output_peak_bits: Arc<AtomicU32>) -> Self {
         Self {
+            output_generation: crate::engine::types::next_playback_identity(),
             capacity,
             volume: Arc::new(AtomicU32::new(1.0f32.to_bits())),
             muted: Arc::new(AtomicBool::new(false)),

@@ -41,7 +41,7 @@ fn driver_capture_runs_through_dsp_and_device_free_output() {
             }
             let mut remaining = self.0.lock().unwrap();
             let frames = (*remaining).min(output.len() / 2);
-            for frame in output[..frames * 2].chunks_exact_mut(2) {
+            for frame in output[..frames * 2].as_chunks_mut::<2>().0 {
                 frame.copy_from_slice(&[0.5, -0.25]);
             }
             *remaining -= frames;
@@ -66,7 +66,10 @@ fn driver_capture_runs_through_dsp_and_device_free_output() {
             Some(source),
         )
         .unwrap();
-    let deadline = Instant::now() + Duration::from_secs(5);
+    assert_eq!(manager.get_playback_state(), crate::PlaybackState::Playing);
+    // Published progress/meters have a five-second cadence; allow a full report
+    // interval plus scheduling margin rather than racing the exact boundary.
+    let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let state = manager.get_engine_state();
         if state.playback_peak_max_linear > 0.01 {
@@ -84,6 +87,60 @@ fn driver_capture_runs_through_dsp_and_device_free_output() {
         }
         std::thread::sleep(Duration::from_millis(10));
     }
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn invalid_initial_driver_graph_never_admits_capture_or_output() {
+    use driver_common::{CaptureInput, CaptureSource, DriverConfig};
+
+    #[derive(Debug)]
+    struct ObservedCapture(Arc<AtomicUsize>);
+    impl CaptureInput for ObservedCapture {
+        fn configuration(&self) -> DriverConfig {
+            DriverConfig::new(48_000, 512, 2)
+        }
+        fn available_frames(&self) -> usize {
+            4096
+        }
+        fn read_frames(&self, _output: &mut [f32], _expected: DriverConfig) -> usize {
+            self.0.fetch_add(1, Ordering::Relaxed);
+            0
+        }
+    }
+
+    let output = crate::lab_pcm::TestOutput::new("Graph failure output");
+    let probe = output.probe();
+    probe.arm();
+    let reads = Arc::new(AtomicUsize::new(0));
+    let graph: crate::engine::PluginGraphConfig = serde_json::from_value(serde_json::json!({
+        "nodes":[{"id":7,"plugin_type":"missing-graph-startup-fixture","parameters":{},"input_channels":2}],
+        "edges":[]
+    })).unwrap();
+    let mut manager = AudioEngineManager::new();
+    let result = manager.start_driver_playback_with_graph_and_source(
+        Some(output.name().to_owned()),
+        Vec::new(),
+        2,
+        48_000,
+        512,
+        2,
+        crate::SinkType::TestOutput(output),
+        Some(CaptureSource::new(ObservedCapture(Arc::clone(&reads)))),
+        Some(graph),
+    );
+    assert!(result.is_err(), "an unbuildable graph must fail startup");
+    manager.stop().unwrap();
+    assert_eq!(
+        reads.load(Ordering::Relaxed),
+        0,
+        "capture started before graph validation/commit"
+    );
+    assert_eq!(
+        probe.disarm().unwrap().blocks,
+        0,
+        "output opened before graph construction succeeded"
+    );
 }
 
 #[cfg(feature = "test-util")]

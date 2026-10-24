@@ -17,8 +17,6 @@ use super::misc::prefill_silence;
 use super::misc::recycle_frame_data;
 use super::misc::select_playback_device;
 use super::misc::send_playback_event;
-#[cfg(target_os = "macos")]
-use super::misc::set_output_access_status;
 use super::misc::snapshot_output_meter;
 use super::pick::choose_output_format;
 use super::playback::playback_buffer_capacity;
@@ -30,7 +28,10 @@ use super::playback_state::request_flush;
 use super::playback_state::{copy_playback_controls, read_ring_buffer};
 use super::types::FlushMode;
 use super::types::{RebuildPlaybackParams, RebuiltPlaybackStream};
-use crate::{OutputAccessMode, OutputAccessStatus, SinkType};
+use crate::{
+    OutputAccessMode, OutputAccessStatus, PlaybackIncident, PlaybackIncidentKind,
+    PlaybackIncidentResolution, SinkType,
+};
 use cpal::traits::{DeviceTrait, StreamTrait};
 use cpal::{Device, SampleFormat, Stream, StreamConfig};
 use rtrb::{Consumer, Producer, RingBuffer};
@@ -59,6 +60,7 @@ pub(super) fn run_playback_thread(
     sink_type: SinkType,
     shared_output_peak_bits: Arc<AtomicU32>,
     shared_clipped_sample_count: Arc<AtomicU64>,
+    #[cfg(feature = "test-util")] lab_pcm_probe: Option<Arc<crate::lab_pcm::LabPcmProbe>>,
     startup_tx: SyncSender<Result<(), String>>,
 ) -> Result<(), String> {
     let mut runtime = match PlaybackRuntime::new(PlaybackRuntimeParams {
@@ -76,6 +78,8 @@ pub(super) fn run_playback_thread(
         sink_type,
         shared_output_peak_bits,
         shared_clipped_sample_count,
+        #[cfg(feature = "test-util")]
+        lab_pcm_probe,
     }) {
         Ok(runtime) => runtime,
         Err(err) => {
@@ -104,9 +108,16 @@ struct PlaybackRuntimeParams {
     sink_type: SinkType,
     shared_output_peak_bits: Arc<AtomicU32>,
     shared_clipped_sample_count: Arc<AtomicU64>,
+    #[cfg(feature = "test-util")]
+    lab_pcm_probe: Option<Arc<crate::lab_pcm::LabPcmProbe>>,
 }
 
 struct PlaybackRuntime {
+    #[cfg(feature = "test-util")]
+    lab_pcm_probe: Option<Arc<crate::lab_pcm::LabPcmProbe>>,
+    incident: Option<PlaybackIncident>,
+    incident_baseline: (u64, u64),
+    pending_output_event: Option<ThreadEvent>,
     message_rx: Receiver<ProcessingMessage>,
     command_rx: Receiver<PlaybackCommand>,
     event_tx: crossbeam::channel::Sender<ThreadEvent>,
@@ -394,6 +405,9 @@ struct LabOutput {
     next_tick: Instant,
 }
 
+// Bound catch-up work between control/feeder turns. This is a simulator
+// budget, not a native callback period or permission to skip elapsed ticks.
+const LAB_MAX_CATCHUP_FRAMES: usize = 4096;
 const LAB_MAX_CHANNELS: usize = 16;
 const LAB_SAMPLE_RATES: [u32; 6] = [44_100, 48_000, 88_200, 96_000, 176_400, 192_000];
 
@@ -421,8 +435,138 @@ mod lab_tests {
             sink_type: SinkType::LabNull,
             shared_output_peak_bits: Arc::new(AtomicU32::new(0)),
             shared_clipped_sample_count: Arc::new(AtomicU64::new(0)),
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe: Some(Arc::new(crate::lab_pcm::LabPcmProbe::default())),
         })
         .expect("lab runtime")
+    }
+
+    #[test]
+    fn output_incident_requires_callback_advance_and_retains_identity_across_rebuild() {
+        let mut runtime = runtime();
+        runtime.state.callback_count.store(42, Ordering::Relaxed);
+        runtime.raise_output_incident(
+            PlaybackIncidentKind::CallbacksStalled,
+            "arbitrary diagnostic text".into(),
+        );
+        let original = runtime.incident.clone().unwrap();
+        runtime.resolve_output_incident_if_healthy();
+        assert!(runtime.incident.as_ref().unwrap().is_active());
+        let actual = runtime.rebuild_lab_output(96_000, 8, None).unwrap();
+        runtime.resolve_output_incident_if_healthy();
+        assert!(runtime.incident.as_ref().unwrap().is_active());
+        runtime.lab_output.as_mut().unwrap().next_tick = Instant::now();
+        runtime.tick_lab_output();
+        runtime.resolve_output_incident_if_healthy();
+        let resolved = runtime.incident.as_ref().unwrap();
+        assert_eq!(resolved.id, original.id);
+        assert_eq!(resolved.stream_generation, original.stream_generation);
+        assert!(!resolved.is_active());
+        let receipt = resolved.resolution.unwrap();
+        assert_eq!(receipt.output_generation, actual.output_generation);
+        assert!(receipt.callback_count > 0);
+    }
+
+    #[test]
+    fn resumed_stream_resolution_requires_new_callbacks_without_additional_errors() {
+        let mut runtime = runtime();
+        runtime.state.callback_count.store(42, Ordering::Relaxed);
+        runtime.state.stream_error_count.store(1, Ordering::Relaxed);
+        runtime.raise_output_incident(PlaybackIncidentKind::StreamError, "symptom".into());
+        runtime.resolve_output_incident_if_healthy();
+        assert!(runtime.incident.as_ref().unwrap().is_active());
+        runtime.state.callback_count.store(43, Ordering::Relaxed);
+        runtime.state.stream_error_count.store(2, Ordering::Relaxed);
+        runtime.resolve_output_incident_if_healthy();
+        assert!(runtime.incident.as_ref().unwrap().is_active());
+        runtime.raise_output_incident(PlaybackIncidentKind::RebuildFailed, "retry failure".into());
+        runtime.state.callback_count.store(44, Ordering::Relaxed);
+        runtime.resolve_output_incident_if_healthy();
+        assert!(!runtime.incident.as_ref().unwrap().is_active());
+    }
+
+    #[test]
+    fn full_event_queue_retains_only_the_latest_complete_output_snapshot() {
+        let mut runtime = runtime();
+        let (tx, rx) = crossbeam::channel::bounded(1);
+        tx.try_send(ThreadEvent::ProcessingWarning("occupied".into()))
+            .unwrap();
+        runtime.event_tx = tx;
+        let old_generation = runtime.state.output_generation;
+        runtime.publish_output_configuration();
+        assert!(runtime.pending_output_event.is_some());
+        let actual = runtime.rebuild_lab_output(96_000, 8, None).unwrap();
+        assert!(actual.output_generation > old_generation);
+        assert_eq!(actual.output_generation, runtime.state.output_generation);
+        assert!(runtime.pending_output_event.is_some());
+        rx.try_recv().unwrap();
+        runtime.flush_output_configuration();
+        assert!(runtime.pending_output_event.is_none());
+        match rx.try_recv().unwrap() {
+            ThreadEvent::PlaybackOutputChanged {
+                incident: _,
+                generation,
+                channels,
+                device,
+                access,
+            } => {
+                assert_eq!(generation, actual.output_generation);
+                assert_eq!(channels, 8);
+                assert_eq!(device.as_deref(), Some("Systemwide Lab Output"));
+                assert_eq!(access, OutputAccessStatus::Shared);
+            }
+            event => panic!("unexpected output notification: {event:?}"),
+        }
+        assert!(rx.try_recv().is_err());
+    }
+
+    #[test]
+    fn lab_clock_consumes_elapsed_blocks_without_drifting_or_running_early() {
+        let mut runtime = runtime();
+        while runtime.lab_output.as_mut().unwrap().consumer.pop().is_ok() {}
+        let now = Instant::now();
+        let period = Duration::from_secs_f64(64.0 / 48_000.0);
+        runtime.lab_output.as_mut().unwrap().next_tick = now + period;
+        for _ in 0..4 * 64 * 2 {
+            runtime.producer.push(0.25).unwrap();
+        }
+        runtime.tick_lab_output_at(now);
+        assert_eq!(runtime.state.callback_count.load(Ordering::Relaxed), 0);
+        assert_eq!(
+            runtime.producer.slots(),
+            runtime.buffer_capacity - 4 * 64 * 2
+        );
+        runtime.tick_lab_output_at(now + period * 4);
+        assert_eq!(runtime.state.callback_count.load(Ordering::Relaxed), 4);
+        assert_eq!(runtime.producer.slots(), runtime.buffer_capacity);
+        assert_eq!(
+            runtime.lab_output.as_ref().unwrap().next_tick,
+            now + period * 5
+        );
+    }
+
+    #[test]
+    fn lab_clock_bounds_catchup_work_and_retains_remaining_debt() {
+        let mut runtime = runtime();
+        while runtime.lab_output.as_mut().unwrap().consumer.pop().is_ok() {}
+        let now = Instant::now();
+        runtime.lab_output.as_mut().unwrap().next_tick = now - Duration::from_secs(1);
+        for _ in 0..(LAB_MAX_CATCHUP_FRAMES + 64) * 2 {
+            runtime.producer.push(0.25).unwrap();
+        }
+        runtime.tick_lab_output_at(now);
+        assert_eq!(
+            runtime.state.callback_count.load(Ordering::Relaxed),
+            (LAB_MAX_CATCHUP_FRAMES / 64) as u64
+        );
+        assert_eq!(runtime.producer.slots(), runtime.buffer_capacity - 64 * 2);
+        assert!(runtime.lab_output.as_ref().unwrap().next_tick <= now);
+        runtime.tick_lab_output_at(now);
+        assert_eq!(runtime.producer.slots(), runtime.buffer_capacity);
+        assert_eq!(
+            runtime.state.callback_count.load(Ordering::Relaxed),
+            (2 * LAB_MAX_CATCHUP_FRAMES / 64) as u64
+        );
     }
 
     #[test]
@@ -517,6 +661,8 @@ impl PlaybackRuntime {
             sink_type: _,
             shared_output_peak_bits,
             shared_clipped_sample_count,
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe,
         } = params;
         set_realtime_priority(sample_rate, frame_size);
 
@@ -596,22 +742,17 @@ impl PlaybackRuntime {
             .play()
             .map_err(|e| format!("Failed to start stream: {}", e))?;
 
-        send_playback_event(
+        let pending_output_event = try_publish_output_event(
             &event_tx,
-            ThreadEvent::PlaybackChannelsChanged(initial_channels),
-            "initial playback channels",
+            output_configuration_event(
+                &state,
+                initial_channels,
+                &device_name,
+                output_access_status,
+                None,
+            ),
         );
         let coreaudio_device_id = coreaudio_output_device_id(&device_name);
-        send_playback_event(
-            &event_tx,
-            ThreadEvent::PlaybackOutputDeviceChanged(device_name.clone()),
-            "initial playback output device",
-        );
-        send_playback_event(
-            &event_tx,
-            ThreadEvent::PlaybackOutputAccessChanged(output_access_status),
-            "initial playback output access",
-        );
 
         log::info!(
             "[Playback Thread] Started - {}Hz, {} channels, format: {:?}, access: {:?}, device: '{}'",
@@ -649,6 +790,11 @@ impl PlaybackRuntime {
         );
 
         Ok(Self {
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe,
+            incident: None,
+            incident_baseline: (0, 0),
+            pending_output_event,
             message_rx,
             command_rx,
             event_tx,
@@ -730,12 +876,10 @@ impl PlaybackRuntime {
             sink_type,
             shared_output_peak_bits,
             shared_clipped_sample_count,
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe,
         } = params;
-        let output_name = if sink_type.is_test_file_output() {
-            "Test File Output"
-        } else {
-            "Systemwide Lab Output"
-        };
+        let output_name = sink_type.lab_output_name().expect("lab backend selected");
         if !LAB_SAMPLE_RATES.contains(&sample_rate)
             || initial_channels == 0
             || initial_channels > LAB_MAX_CHANNELS
@@ -747,7 +891,7 @@ impl PlaybackRuntime {
         } else {
             output_device
                 .as_deref()
-                .is_some_and(|device| device != "Systemwide Lab Output")
+                .is_some_and(|device| device != output_name)
         };
         if invalid_output_device {
             return Err("Lab backend cannot open a physical output device".to_string());
@@ -763,23 +907,23 @@ impl PlaybackRuntime {
             shared_output_peak_bits,
             shared_clipped_sample_count,
         ));
-        send_playback_event(
+        let pending_output_event = try_publish_output_event(
             &event_tx,
-            ThreadEvent::PlaybackChannelsChanged(initial_channels),
-            "lab channels",
-        );
-        send_playback_event(
-            &event_tx,
-            ThreadEvent::PlaybackOutputDeviceChanged(output_name.to_string()),
-            "lab output",
-        );
-        send_playback_event(
-            &event_tx,
-            ThreadEvent::PlaybackOutputAccessChanged(OutputAccessStatus::Shared),
-            "lab access",
+            output_configuration_event(
+                &state,
+                initial_channels,
+                output_name,
+                OutputAccessStatus::Shared,
+                None,
+            ),
         );
         let now = Instant::now();
         Ok(Self {
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe,
+            incident: None,
+            incident_baseline: (0, 0),
+            pending_output_event,
             message_rx,
             command_rx,
             event_tx,
@@ -852,37 +996,49 @@ impl PlaybackRuntime {
     }
 
     fn tick_lab_output(&mut self) {
+        self.tick_lab_output_at(Instant::now());
+    }
+
+    fn tick_lab_output_at(&mut self, now: Instant) {
         let Some(lab) = self.lab_output.as_mut() else {
             return;
         };
-        let now = Instant::now();
-        if now < lab.next_tick {
-            return;
-        }
         let frames = self.frame_size.max(1);
         let period = Duration::from_secs_f64(frames as f64 / self.config.sample_rate as f64);
-        lab.next_tick = now + period;
-        self.state
-            .output_callback_active
-            .store(true, Ordering::Release);
-        self.state.callback_count.fetch_add(1, Ordering::Relaxed);
-        let count = lab.scratch.len();
-        read_ring_buffer(
-            &mut lab.consumer,
-            &mut lab.scratch,
-            count,
-            &self.state,
-            self.buffer_capacity,
-        );
-        apply_volume_clamp(
-            &mut lab.scratch,
-            &self.state,
-            self.channels,
-            self.config.sample_rate,
-        );
-        self.state
-            .output_callback_active
-            .store(false, Ordering::Release);
+        let budget = (LAB_MAX_CATCHUP_FRAMES / frames).max(1);
+        for _ in 0..budget {
+            if now < lab.next_tick {
+                break;
+            }
+            // Preserve phase instead of slowing the simulated sample clock
+            // whenever the feeder sleeps longer than one output block.
+            lab.next_tick += period;
+            self.state
+                .output_callback_active
+                .store(true, Ordering::Release);
+            self.state.callback_count.fetch_add(1, Ordering::Relaxed);
+            let count = lab.scratch.len();
+            read_ring_buffer(
+                &mut lab.consumer,
+                &mut lab.scratch,
+                count,
+                &self.state,
+                self.buffer_capacity,
+            );
+            apply_volume_clamp(
+                &mut lab.scratch,
+                &self.state,
+                self.channels,
+                self.config.sample_rate,
+            );
+            #[cfg(feature = "test-util")]
+            if let Some(probe) = &self.lab_pcm_probe {
+                probe.observe(&lab.scratch, self.channels, self.state.output_generation);
+            }
+            self.state
+                .output_callback_active
+                .store(false, Ordering::Release);
+        }
     }
 
     fn rebuild_lab_output(
@@ -927,20 +1083,78 @@ impl PlaybackRuntime {
         self.drain.callback_flushed();
         self.drain.end_of_stream = false;
         self.drain.drain_start = None;
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::PlaybackChannelsChanged(channels),
-            "lab reconfigure channels",
-        );
+        self.publish_output_configuration();
         Ok(PlaybackConfiguration {
+            output_generation: self.state.output_generation,
             sample_rate,
             channels,
         })
     }
 
+    fn raise_output_incident(&mut self, kind: PlaybackIncidentKind, message: String) {
+        self.incident_baseline = (
+            self.state.callback_count.load(Ordering::Relaxed),
+            self.state.stream_error_count.load(Ordering::Relaxed),
+        );
+        self.incident = Some(PlaybackIncident {
+            id: super::super::types::next_playback_identity(),
+            stream_generation: self.state.output_generation,
+            kind,
+            message,
+            resolution: None,
+        });
+        self.publish_output_configuration();
+    }
+
+    fn resolve_output_incident_if_healthy(&mut self) {
+        let Some(incident) = self
+            .incident
+            .as_mut()
+            .filter(|incident| incident.is_active())
+        else {
+            return;
+        };
+        let generation = self.state.output_generation;
+        let callbacks = self.state.callback_count.load(Ordering::Relaxed);
+        let errors = self.state.stream_error_count.load(Ordering::Relaxed);
+        let baseline = if generation == incident.stream_generation {
+            self.incident_baseline
+        } else {
+            (0, 0)
+        };
+        if callbacks > baseline.0 && errors == baseline.1 {
+            incident.resolution = Some(PlaybackIncidentResolution {
+                output_generation: generation,
+                callback_count: callbacks,
+            });
+            self.publish_output_configuration();
+        }
+    }
+
+    fn publish_output_configuration(&mut self) {
+        self.pending_output_event = try_publish_output_event(
+            &self.event_tx,
+            output_configuration_event(
+                &self.state,
+                self.logical_channels,
+                &self.device_name,
+                self.output_access_status,
+                self.incident.clone(),
+            ),
+        );
+    }
+
+    fn flush_output_configuration(&mut self) {
+        if let Some(event) = self.pending_output_event.take() {
+            self.pending_output_event = try_publish_output_event(&self.event_tx, event);
+        }
+    }
+
     fn run(&mut self) -> Result<(), String> {
         loop {
+            self.flush_output_configuration();
             self.tick_lab_output();
+            self.resolve_output_incident_if_healthy();
             if let Ok(command) = self.command_rx.try_recv()
                 && self.handle_command(command) == RuntimeDecision::Break
             {
@@ -1131,6 +1345,7 @@ impl PlaybackRuntime {
             return (
                 RuntimeDecision::Proceed,
                 Ok(PlaybackConfiguration {
+                    output_generation: self.state.output_generation,
                     sample_rate: self.config.sample_rate,
                     channels: self.logical_channels,
                 }),
@@ -1172,6 +1387,7 @@ impl PlaybackRuntime {
         ) {
             Ok(rebuilt) => {
                 let actual = PlaybackConfiguration {
+                    output_generation: rebuilt.state.output_generation,
                     sample_rate: rebuilt.config.sample_rate,
                     channels: rebuilt.logical_channels,
                 };
@@ -1320,11 +1536,7 @@ impl PlaybackRuntime {
                         new_buffer_capacity,
                         new_format,
                     );
-                    send_playback_event(
-                        &self.event_tx,
-                        ThreadEvent::PlaybackChannelsChanged(self.logical_channels),
-                        "sample-rate rebuild channels",
-                    );
+                    self.publish_output_configuration();
                     self.drain_pending_messages();
                     log::info!(
                         "[Playback Thread] STREAM REBUILT successfully with {}Hz {}ch",
@@ -1415,11 +1627,7 @@ impl PlaybackRuntime {
                 self.channels
             );
             self.logical_channels = logical_channels;
-            send_playback_event(
-                &self.event_tx,
-                ThreadEvent::PlaybackChannelsChanged(self.logical_channels),
-                "logical playback channels changed",
-            );
+            self.publish_output_configuration();
             return RuntimeDecision::Proceed;
         }
 
@@ -1491,11 +1699,7 @@ impl PlaybackRuntime {
                         new_buffer_capacity,
                         new_format,
                     );
-                    send_playback_event(
-                        &self.event_tx,
-                        ThreadEvent::PlaybackChannelsChanged(logical_channels),
-                        "channel rebuild channels",
-                    );
+                    self.publish_output_configuration();
                     self.logical_channels = logical_channels;
 
                     let final_drained = self.drain_pending_messages();
@@ -1542,14 +1746,10 @@ impl PlaybackRuntime {
                     "[Playback Thread] Falling back to old stream ({} channels) after rebuild failure",
                     self.channels
                 );
-                send_playback_event(
-                    &self.event_tx,
-                    ThreadEvent::ProcessingWarning(format!(
-                        "Playback stream rebuild failed for {} channels, falling back to previous configuration",
-                        new_channels
-                    )),
-                    "channel rebuild fallback",
-                );
+                self.raise_output_incident(PlaybackIncidentKind::ConfigurationFallback, format!(
+                    "Playback stream rebuild failed for {} channels, falling back to previous configuration",
+                    new_channels
+                ));
                 RuntimeDecision::Proceed
             }
         }
@@ -1591,7 +1791,7 @@ impl PlaybackRuntime {
             coreaudio_identity_reason,
         );
 
-        let Some(reason) = recovery_reason else {
+        let Some((kind, reason)) = recovery_reason else {
             return RuntimeDecision::Proceed;
         };
 
@@ -1611,11 +1811,7 @@ impl PlaybackRuntime {
             warning,
             drained_count
         );
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::ProcessingWarning(warning),
-            "stream recovery warning",
-        );
+        self.raise_output_incident(kind, warning);
 
         if let Err(e) = self.stream.as_ref().expect("CPAL stream").pause() {
             log::warn!(
@@ -1631,12 +1827,8 @@ impl PlaybackRuntime {
                 .activate_for_device(&self.device_name, self.output_access)
             {
                 Ok(status) => {
-                    set_output_access_status(
-                        &self.event_tx,
-                        &mut self.output_access_status,
-                        status,
-                        "recovered playback output access",
-                    );
+                    self.output_access_status = status;
+                    self.publish_output_configuration();
                 }
                 Err(e) => {
                     log::error!("[Playback Thread] {}", e);
@@ -1673,11 +1865,7 @@ impl PlaybackRuntime {
                     self.device_name, e
                 );
                 log::error!("[Playback Thread] {}", msg);
-                send_playback_event(
-                    &self.event_tx,
-                    ThreadEvent::ProcessingWarning(msg),
-                    "stream recovery failure",
-                );
+                self.raise_output_incident(PlaybackIncidentKind::RebuildFailed, msg);
                 if let Err(resume_err) = self.stream.as_ref().expect("CPAL stream").play() {
                     log::warn!(
                         "[Playback Thread] Failed to resume previous stream after recovery failure: {}",
@@ -1749,16 +1937,7 @@ impl PlaybackRuntime {
         self.drain.end_of_stream = false;
         self.drain.drain_start = None;
 
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::PlaybackChannelsChanged(self.logical_channels),
-            "playback channels changed",
-        );
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::PlaybackOutputDeviceChanged(self.device_name.clone()),
-            "playback output device changed",
-        );
+        self.publish_output_configuration();
     }
 
     #[allow(
@@ -1797,12 +1976,11 @@ impl PlaybackRuntime {
                     "[Playback Thread] {}, resumed previous stream configuration",
                     start_failure
                 );
-                send_playback_event(
-                    &self.event_tx,
-                    ThreadEvent::ProcessingWarning(format!(
-                        "{start_failure}; resumed previous playback stream"
-                    )),
-                    fallback_context,
+                self.raise_output_incident(
+                    PlaybackIncidentKind::ConfigurationFallback,
+                    format!(
+                        "{fallback_context}: {start_failure}; resumed previous playback stream"
+                    ),
                 );
                 RuntimeDecision::Proceed
             }
@@ -1890,6 +2068,7 @@ impl PlaybackRuntime {
         send_playback_event(
             &self.event_tx,
             ThreadEvent::PlaybackStats {
+                output_generation: self.state.output_generation,
                 callback_count: total_cb,
                 buffer_fill_percent: fill as u64,
                 stream_error_count: self.state.stream_error_count.load(Ordering::Relaxed),
@@ -2360,4 +2539,29 @@ pub(super) fn should_emit_underrun_milestone(
     }
 
     current_underruns == 1 || current_underruns.is_multiple_of(100) || last_reported_underruns == 0
+}
+
+fn output_configuration_event(
+    state: &PlaybackState,
+    channels: usize,
+    device: &str,
+    access: OutputAccessStatus,
+    incident: Option<PlaybackIncident>,
+) -> ThreadEvent {
+    ThreadEvent::PlaybackOutputChanged {
+        incident,
+        generation: state.output_generation,
+        channels,
+        device: Some(device.to_owned()),
+        access,
+    }
+}
+
+fn try_publish_output_event(
+    tx: &crossbeam::channel::Sender<ThreadEvent>,
+    event: ThreadEvent,
+) -> Option<ThreadEvent> {
+    tx.try_send(event)
+        .err()
+        .map(crossbeam::channel::TrySendError::into_inner)
 }

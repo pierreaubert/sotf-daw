@@ -181,7 +181,8 @@ fn macos_exclusive_output_uses_coreaudio_hog_mode_guard() {
             && source.contains("toggle_hog_mode(device_id)")
             && source.contains("impl Drop for CoreAudioExclusiveModeGuard")
             && source.contains("activate_for_device(&device_name, output_access)")
-            && source.contains("PlaybackOutputAccessChanged(new_status)"),
+            && source.contains("self.output_access_status = status;")
+            && source.contains("self.publish_output_configuration();"),
         "macOS exclusive output should acquire CoreAudio hog mode before stream build, publish access changes, and release ownership on drop"
     );
 }
@@ -507,6 +508,7 @@ fn acknowledged_reconfigure_returns_actual_playback_configuration() {
         request
             .reply_tx
             .send(Ok(super::super::PlaybackConfiguration {
+                output_generation: 0,
                 sample_rate: 48_000,
                 channels: 2,
             }))

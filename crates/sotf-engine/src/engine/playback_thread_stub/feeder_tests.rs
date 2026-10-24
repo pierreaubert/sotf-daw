@@ -56,6 +56,7 @@ unsafe impl GlobalAlloc for CallbackAllocator {
 static ALLOCATOR: CallbackAllocator = CallbackAllocator;
 
 const FORMAT: PlaybackConfiguration = PlaybackConfiguration {
+    output_generation: 0,
     sample_rate: 48_000,
     channels: 2,
 };
@@ -149,6 +150,27 @@ impl Fixture {
             );
             stopped_tx.send(result).ok();
         });
+        // Validate the worker's initial metadata separately from drain/error
+        // receipts, which the tests below continue to match exactly.
+        match event_rx
+            .recv_timeout(WAIT)
+            .expect("initial output snapshot")
+        {
+            ThreadEvent::PlaybackOutputChanged {
+                generation,
+                channels,
+                device,
+                access,
+                incident,
+            } => {
+                assert_eq!(generation, callback_state.output_generation);
+                assert_eq!(channels, FORMAT.channels);
+                assert!(device.is_none());
+                assert_eq!(access, crate::OutputAccessStatus::Shared);
+                assert!(incident.is_none());
+            }
+            event => panic!("unexpected startup event: {event:?}"),
+        }
         Self {
             worker: PlaybackThread {
                 command_tx,
@@ -356,7 +378,14 @@ fn stop_and_resume_keep_dropping_old_audio_until_fifo_flush() {
     fixture.send(frame(0.25, 2));
     fixture.expect_recycled(0.25, 4);
     assert_eq!(fixture.callback(12), vec![0.0; 12]);
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     fixture.send(frame(0.5, 2));
     fixture.expect_recycled(0.5, 4);
     assert_eq!(fixture.callback(4), vec![0.0; 4]);
@@ -399,7 +428,14 @@ fn pause_resume_waits_for_callback_flush_and_accepts_audio_afterwards() {
                 .unwrap();
         }
         // This later command reply is a FIFO barrier for Resume processing.
-        assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+        {
+            let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+            assert_eq!(
+                (actual.sample_rate, actual.channels),
+                (FORMAT.sample_rate, FORMAT.channels)
+            );
+            assert!(actual.output_generation > 0);
+        }
         fixture.send(frame(0.75, 2));
         fixture.expect_recycled(0.75, 4);
         assert_eq!(fixture.callback(4), vec![0.75; 4]);
@@ -445,7 +481,14 @@ fn invalid_source_format_or_dimensions_report_error_without_relabeling_audio() {
 #[test]
 fn legacy_reconfiguration_reports_support_and_honors_cancelled_tickets() {
     let mut fixture = Fixture::new(&[0.75; 12]);
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     assert!(fixture.worker.reconfigure(44_100, 2).is_err());
     assert!(fixture.worker.reconfigure(48_000, 6).is_err());
     let ticket = HostUpdateTicket::new();
@@ -582,7 +625,14 @@ fn resume_with_new_epoch_fences_old_eos_and_tags_fresh_drained() {
         .send_command(PlaybackCommand::Resume { epoch: 1 })
         .unwrap();
     // FIFO barrier: this reply proves the Resume was processed.
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     // Fresh stream markers + audio + EOS. The Flush clears the (already
     // fenced) EOS flags and starts the callback drain; the fresh frame is
     // retained until that drain can no longer erase it, so it survives.
@@ -677,7 +727,14 @@ fn stop_answers_quiesce_terminal_and_flush_rearms_callback() {
         .send_command(PlaybackCommand::Resume { epoch: 0 })
         .unwrap();
     // FIFO barrier: this reply proves the Resume was processed.
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     fixture.send(frame(0.5, 2));
     fixture.expect_recycled(0.5, 4);
     assert_eq!(fixture.callback(4), vec![0.5; 4]);
@@ -710,7 +767,14 @@ fn resume_clears_stop_latch_without_any_flush() {
         .send_command(PlaybackCommand::Resume { epoch: 0 })
         .unwrap();
     // FIFO barrier: this reply proves the Resume was processed.
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     assert!(!fixture.context.state.stop_latched.load(Ordering::Acquire));
     fixture.finish();
 }
@@ -994,7 +1058,14 @@ fn stub_natural_drain_carries_cumulative_peak() {
         .send_command(PlaybackCommand::Resume { epoch: 1 })
         .unwrap();
     // FIFO barrier: this reply proves the Resume was processed.
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     fixture.send(frame(0.5, 4));
     fixture.send(frame(0.25, 2));
     fixture.expect_recycled(0.5, 8);
@@ -1023,7 +1094,14 @@ fn stub_drain_timeout_carries_cumulative_partial() {
         .worker
         .send_command(PlaybackCommand::Resume { epoch: 1 })
         .unwrap();
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     fixture.send(frame(0.5, 4));
     fixture.expect_recycled(0.5, 8);
     // Render half: 0.5 accumulates, 4 samples hold the ring non-empty
@@ -1054,7 +1132,14 @@ fn stub_disconnect_drain_carries_cumulative_peak() {
         .worker
         .send_command(PlaybackCommand::Resume { epoch: 1 })
         .unwrap();
-    assert_eq!(fixture.worker.reconfigure(48_000, 2).unwrap(), FORMAT);
+    {
+        let actual = fixture.worker.reconfigure(48_000, 2).unwrap();
+        assert_eq!(
+            (actual.sample_rate, actual.channels),
+            (FORMAT.sample_rate, FORMAT.channels)
+        );
+        assert!(actual.output_generation > 0);
+    }
     fixture.send(frame(0.5, 4));
     fixture.expect_recycled(0.5, 8);
     // mpsc FIFO + drain-then-disconnect semantics: the feeder provably

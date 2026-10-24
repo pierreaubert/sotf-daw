@@ -86,6 +86,27 @@ pub struct DriverConfig {
     pub channel_count: u32,
 }
 
+/// A driver configuration intent with an end-to-end transport identity.
+///
+/// Identity zero is reserved for drivers without a transactional transport.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DriverConfigRequest {
+    /// Nonzero transport identity, or zero for an untracked native event.
+    pub request_id: u64,
+    /// Requested geometry.
+    pub config: DriverConfig,
+}
+
+impl DriverConfigRequest {
+    /// Wrap an event from a driver without a request mailbox.
+    pub const fn untracked(config: DriverConfig) -> Self {
+        Self {
+            request_id: 0,
+            config,
+        }
+    }
+}
+
 impl DriverConfig {
     /// A request that leaves every driver setting unchanged.
     pub const fn keep_current() -> Self {
@@ -420,6 +441,46 @@ pub trait AudioDriver: Send + 'static {
 
     /// Acknowledge a driver-initiated config change with the actual values used.
     fn acknowledge_config_change(&mut self, actual: DriverConfig, result: ConfigResult);
+
+    /// Poll a request while preserving its transport identity.
+    fn poll_config_request(&mut self) -> Option<DriverConfigRequest> {
+        self.poll_config_change()
+            .map(DriverConfigRequest::untracked)
+    }
+
+    /// Whether an identified request is still the latest driver intent.
+    fn config_request_is_current(&mut self, request_id: u64) -> bool {
+        request_id == 0
+    }
+
+    /// Acknowledge one request without clearing a newer request.
+    ///
+    /// Returns false for superseded requests or temporary publication failure.
+    fn acknowledge_config_request(
+        &mut self,
+        request_id: u64,
+        actual: DriverConfig,
+        result: ConfigResult,
+    ) -> bool {
+        if request_id != 0 {
+            return false;
+        }
+        self.acknowledge_config_change(actual, result);
+        true
+    }
+
+    /// Patch one user control without replacing the other control's intent.
+    fn patch_output_volume(
+        &mut self,
+        volume: Option<f32>,
+        muted: Option<bool>,
+    ) -> Option<(f32, bool, u32)> {
+        let (old_volume, old_muted, _) = self.output_volume()?;
+        let volume = volume.unwrap_or(old_volume);
+        let muted = muted.unwrap_or(old_muted);
+        let generation = self.set_output_volume(volume, muted)?;
+        Some((volume, muted, generation))
+    }
 
     /// Current driver-side output volume as (scalar, muted, generation),
     /// when the driver exposes an OS-visible volume control (for example a

@@ -26,6 +26,13 @@ pub(super) fn run_feeder(
         return Err("iOS feeder requires a valid format and space for one audio frame".into());
     }
     let buffer_capacity = state.capacity;
+    let mut pending_output_event = Some(ThreadEvent::PlaybackOutputChanged {
+        incident: None,
+        generation: state.output_generation,
+        channels,
+        device: None,
+        access: crate::OutputAccessStatus::Shared,
+    });
     // End-of-stream drain tracking
     let mut end_of_stream = false;
     let mut drain_start: Option<std::time::Instant> = None;
@@ -45,6 +52,12 @@ pub(super) fn run_feeder(
     let mut pending_frame: Option<(crate::AudioFrame, usize)> = None;
     // Main loop: read from processing queue and write to ring buffer
     loop {
+        if let Some(event) = pending_output_event.take() {
+            pending_output_event = event_tx
+                .try_send(event)
+                .err()
+                .map(crossbeam::channel::TrySendError::into_inner);
+        }
         // Check for commands
         if let Ok(command) = command_rx.try_recv() {
             match command {
@@ -136,6 +149,7 @@ pub(super) fn run_feeder(
                         request
                             .reply_tx
                             .send(Ok(super::super::PlaybackConfiguration {
+                                output_generation: state.output_generation,
                                 sample_rate,
                                 channels,
                             }))

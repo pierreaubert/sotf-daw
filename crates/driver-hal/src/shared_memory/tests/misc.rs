@@ -427,12 +427,15 @@ fn cross_process_plain_ring_stress_reconfigures_only_between_spsc_commits() {
         let reader = reader;
         let mut output = vec![0.0_f32; 64];
         for _ in 0..2_000 {
-            let channels = reader.channel_count() as usize;
+            let Some(mut commit) = reader.try_read_commit() else {
+                continue;
+            };
+            let channels = commit.identity().channel_count as usize;
             if channels == 0 {
                 reader_error_count.fetch_add(1, Ordering::Relaxed);
                 continue;
             }
-            let read = reader.read_audio(&mut output);
+            let read = commit.read_audio(&mut output);
             if read > output.len() / channels || output.iter().any(|sample| !sample.is_finite()) {
                 reader_error_count.fetch_add(1, Ordering::Relaxed);
             }
@@ -494,11 +497,12 @@ fn cross_process_encrypted_ring_stress_reconfigures_without_stale_records() {
             }
             let frames = (step % 4) + 1;
             let samples = sequential_audio(frames, channels, step * 32);
-            let written = writer.write_audio_encrypted_into(
+            let written = writer.write_audio_encrypted_into_with_channel_count(
                 &samples,
                 &cipher,
                 &mut ciphertext,
                 &mut encrypted,
+                channels,
             );
             if written > frames {
                 writer_error_count.fetch_add(1, Ordering::Relaxed);
@@ -512,17 +516,31 @@ fn cross_process_encrypted_ring_stress_reconfigures_without_stale_records() {
         let (mut encrypted, mut ciphertext) = encrypted_staging_buffers();
         let reader = reader;
         let mut output = vec![0.0_f32; 64];
+        let capacity = super::super::consts::pre_alloc_capacity_samples();
+        let mut decrypted = Vec::with_capacity(capacity);
+        let mut pending = crate::reader_state::StagedPlaintext::new(capacity);
         for _ in 0..512 {
-            let channels = reader.channel_count() as usize;
+            let Some(mut commit) = reader.try_read_commit() else {
+                continue;
+            };
+            let identity = commit.identity();
+            let channels = identity.channel_count as usize;
             if channels == 0 {
                 reader_error_count.fetch_add(1, Ordering::Relaxed);
                 continue;
             }
-            let read = reader.read_audio_encrypted_into(
+            // Use the production staging function and compare against the
+            // geometry held by its lease, never a pre-call channel snapshot.
+            pending.observe(identity);
+            let read = super::super::types::read_encrypted_with_staging(
+                &mut commit,
+                identity,
                 &mut output,
                 &cipher,
                 &mut ciphertext,
                 &mut encrypted,
+                &mut decrypted,
+                &mut pending,
             );
             if read > output.len() / channels || output.iter().any(|sample| !sample.is_finite()) {
                 reader_error_count.fetch_add(1, Ordering::Relaxed);
@@ -1577,4 +1595,85 @@ fn hal_reader_commit_prevents_geometry_change_until_release() {
     );
     assert_eq!(controller.header().read_position.load(Ordering::Acquire), 0);
     assert_eq!(controller.header().configuring.load(Ordering::Acquire), 0);
+}
+
+#[test]
+fn staged_plaintext_cannot_survive_unobserved_reset_or_encryption_aba() {
+    for transition in 0..5 {
+        let fixture = create_mock_shared_memory_with_max_geometry(48_000, 64, 2, 128, 8);
+        let mut writer = SharedAudioBuffer::open(fixture.path()).unwrap();
+        let cipher = test_audio_cipher();
+        writer
+            .configure_encryption(true, *cipher.fingerprint(), false)
+            .unwrap();
+        let mut reader = staging_test_reader(fixture.path());
+        assert_eq!(writer.write_audio_encrypted(&[1.; 32], &cipher), 16);
+        assert_eq!(reader.read(&mut [0.; 2]), 1);
+        assert_eq!(reader.available_read_frames(), 15);
+        let previous = writer.header().ring_generation.load(Ordering::Acquire);
+        match transition {
+            0 => {
+                writer.reconfigure_quiesced(Some(96_000), Some(128), Some(8));
+                writer.reconfigure_quiesced(Some(48_000), Some(64), Some(2));
+            }
+            1 => writer.reconfigure_quiesced(None, None, None),
+            2 => writer.flush_audio(),
+            3 => {
+                writer
+                    .configure_encryption(false, *cipher.fingerprint(), true)
+                    .unwrap();
+                writer
+                    .configure_encryption(true, *cipher.fingerprint(), true)
+                    .unwrap();
+            }
+            4 => {
+                writer.configure_encryption(true, [0xab; 8], true).unwrap();
+                writer
+                    .configure_encryption(true, *cipher.fingerprint(), true)
+                    .unwrap();
+            }
+            _ => unreachable!(),
+        }
+        assert!(writer.header().ring_generation.load(Ordering::Acquire) > previous);
+        assert_eq!(reader.available_read_frames(), 0, "transition {transition}");
+        assert_eq!(writer.write_audio_encrypted(&[0.75; 32], &cipher), 16);
+        let mut output = [9.; 35];
+        assert_eq!(reader.read(&mut output), 16, "transition {transition}");
+        assert_eq!(&output[..32], &[0.75; 32], "transition {transition}");
+        assert_eq!(&output[32..], &[9.; 3]);
+    }
+}
+
+#[test]
+fn encryption_publication_rejects_busy_io_and_exhausted_identity() {
+    let fixture = create_mock_shared_memory(48_000, 64, 2);
+    let buffer = SharedAudioBuffer::open(fixture.path()).unwrap();
+    let commit = buffer.try_read_commit().unwrap();
+    assert_eq!(
+        buffer
+            .configure_encryption(true, [1; 8], true)
+            .unwrap_err()
+            .kind(),
+        std::io::ErrorKind::WouldBlock
+    );
+    assert!(!buffer.is_encrypted());
+    assert_eq!(buffer.key_fingerprint(), [0; 8]);
+    drop(commit);
+    buffer
+        .header()
+        .ring_generation
+        .store(u64::MAX, Ordering::Release);
+    assert_eq!(
+        buffer
+            .configure_encryption(true, [1; 8], true)
+            .unwrap_err()
+            .kind(),
+        std::io::ErrorKind::InvalidData
+    );
+    assert!(!buffer.is_encrypted());
+    assert_eq!(buffer.header().configuring.load(Ordering::Acquire), 0);
+    assert_eq!(
+        buffer.header().ring_generation.load(Ordering::Acquire),
+        u64::MAX
+    );
 }

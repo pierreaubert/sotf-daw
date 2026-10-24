@@ -305,11 +305,29 @@ fn test_handle_thread_event_uses_actual_underrun_count() {
 fn test_handle_thread_event_updates_playback_channels() {
     let state = Arc::new(ArcSwap::from_pointee(AudioEngineState::default()));
 
-    handle_thread_event(ThreadEvent::PlaybackChannelsChanged(6), &state);
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputChanged {
+            incident: None,
+            generation: 1,
+            channels: 6,
+            device: None,
+            access: crate::OutputAccessStatus::Shared,
+        },
+        &state,
+    );
     assert_eq!(state.load().playback_channels, 6);
     assert_eq!(state.load().num_channels, 2);
 
-    handle_thread_event(ThreadEvent::PlaybackChannelsChanged(2), &state);
+    handle_thread_event(
+        ThreadEvent::PlaybackOutputChanged {
+            incident: None,
+            generation: 1,
+            channels: 2,
+            device: None,
+            access: crate::OutputAccessStatus::Shared,
+        },
+        &state,
+    );
     assert_eq!(state.load().playback_channels, 2);
 }
 
@@ -318,7 +336,13 @@ fn test_handle_thread_event_updates_playback_output_device() {
     let state = Arc::new(ArcSwap::from_pointee(AudioEngineState::default()));
 
     handle_thread_event(
-        ThreadEvent::PlaybackOutputDeviceChanged("ADAM Audio D3V".to_string()),
+        ThreadEvent::PlaybackOutputChanged {
+            incident: None,
+            generation: 1,
+            channels: 2,
+            device: Some("ADAM Audio D3V".to_string()),
+            access: crate::OutputAccessStatus::Shared,
+        },
         &state,
     );
 
@@ -333,7 +357,13 @@ fn test_handle_thread_event_updates_output_access_status() {
     let state = Arc::new(ArcSwap::from_pointee(AudioEngineState::default()));
 
     handle_thread_event(
-        ThreadEvent::PlaybackOutputAccessChanged(crate::OutputAccessStatus::FallbackShared),
+        ThreadEvent::PlaybackOutputChanged {
+            incident: None,
+            generation: 1,
+            channels: 2,
+            device: None,
+            access: crate::OutputAccessStatus::FallbackShared,
+        },
         &state,
     );
 
@@ -349,6 +379,7 @@ fn test_handle_thread_event_updates_playback_stats() {
 
     handle_thread_event(
         ThreadEvent::PlaybackStats {
+            output_generation: state.load().playback_output_generation,
             callback_count: 12,
             buffer_fill_percent: 75,
             stream_error_count: 1,
@@ -1110,6 +1141,7 @@ fn test_handle_thread_event_stale_stats_rejected_by_epoch() {
     // Stale snapshot from the previous epoch: counters untouched.
     handle_thread_event(
         ThreadEvent::PlaybackStats {
+            output_generation: state.load().playback_output_generation,
             callback_count: 9999,
             buffer_fill_percent: 99,
             stream_error_count: 9,
@@ -1130,6 +1162,7 @@ fn test_handle_thread_event_stale_stats_rejected_by_epoch() {
     // Mis-tagged future epoch: the gate is equality, direction-agnostic.
     handle_thread_event(
         ThreadEvent::PlaybackStats {
+            output_generation: state.load().playback_output_generation,
             callback_count: 8888,
             buffer_fill_percent: 88,
             stream_error_count: 8,
@@ -1150,6 +1183,7 @@ fn test_handle_thread_event_stale_stats_rejected_by_epoch() {
     // Current epoch: applied.
     handle_thread_event(
         ThreadEvent::PlaybackStats {
+            output_generation: state.load().playback_output_generation,
             callback_count: 60,
             buffer_fill_percent: 10,
             stream_error_count: 0,

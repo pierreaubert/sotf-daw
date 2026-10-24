@@ -22,7 +22,6 @@ pub use types::*;
 use build::build_output_stream;
 use misc::is_virtual_output_device_name;
 use misc::playback_buffer_capacity;
-use misc::send_thread_event;
 use misc::should_fallback_from_virtual_default;
 use misc::write_chunk_bulk;
 use pick::{choose_output_format, choose_wider_hardware_retry};
@@ -42,6 +41,7 @@ pub struct CpalSink {
     event_tx: Option<crossbeam::channel::Sender<ThreadEvent>>,
     allow_virtual_output: bool,
     stall_check: StallCheckState,
+    pending_output_event: Option<ThreadEvent>,
 }
 
 impl Default for CpalSink {
@@ -65,6 +65,7 @@ impl CpalSink {
             event_tx: None,
             allow_virtual_output: false,
             stall_check: StallCheckState::default(),
+            pending_output_event: None,
         }
     }
 
@@ -310,11 +311,16 @@ impl AudioSink for CpalSink {
             }
         };
 
-        send_thread_event(
-            &event_tx,
-            ThreadEvent::PlaybackChannelsChanged(logical_channels),
-            "open channel update",
-        );
+        self.pending_output_event = event_tx
+            .try_send(ThreadEvent::PlaybackOutputChanged {
+                incident: None,
+                generation: state.output_generation,
+                channels: logical_channels,
+                device: Some(self.device_name.clone()),
+                access: crate::OutputAccessStatus::Shared,
+            })
+            .err()
+            .map(crossbeam::channel::TrySendError::into_inner);
 
         log::info!(
             "[CpalSink] Opened - {}Hz, {} logical channels ({} hardware channels), format: {:?}, device: '{}'",
@@ -356,6 +362,14 @@ impl AudioSink for CpalSink {
     }
 
     fn write(&mut self, data: &[f32]) -> Result<usize, String> {
+        if let Some(event) = self.pending_output_event.take()
+            && let Some(tx) = self.event_tx.as_ref()
+        {
+            self.pending_output_event = tx
+                .try_send(event)
+                .err()
+                .map(crossbeam::channel::TrySendError::into_inner);
+        }
         let producer = self.producer.as_mut().ok_or("Sink not open")?;
 
         match producer.write_chunk_uninit(data.len()) {
@@ -529,11 +543,16 @@ impl AudioSink for CpalSink {
             }
         };
 
-        send_thread_event(
-            &event_tx,
-            ThreadEvent::PlaybackChannelsChanged(logical_channels),
-            "reconfigure channel update",
-        );
+        self.pending_output_event = event_tx
+            .try_send(ThreadEvent::PlaybackOutputChanged {
+                incident: None,
+                generation: state.output_generation,
+                channels: logical_channels,
+                device: Some(self.device_name.clone()),
+                access: crate::OutputAccessStatus::Shared,
+            })
+            .err()
+            .map(crossbeam::channel::TrySendError::into_inner);
 
         log::info!(
             "[CpalSink] Reconfigured - {}Hz, {} logical channels ({} hardware channels), format: {:?}",
@@ -591,6 +610,7 @@ impl AudioSink for CpalSink {
     }
 
     fn close(&mut self) {
+        self.pending_output_event = None;
         self.stream = None;
         self.producer = None;
         self.state = None;

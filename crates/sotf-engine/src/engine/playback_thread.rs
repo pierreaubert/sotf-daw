@@ -51,6 +51,8 @@ pub struct PlaybackThread {
     /// rebuild via `new_sharing_meters`), so the manager can fold the
     /// residual peak after a worker death even though the runtime is gone.
     retained_output_peak_bits: Arc<AtomicU32>,
+    #[cfg(feature = "test-util")]
+    lab_pcm_probe: Option<Arc<crate::lab_pcm::LabPcmProbe>>,
 }
 
 impl PlaybackThread {
@@ -64,6 +66,8 @@ impl PlaybackThread {
                 pending_stop_acks: PendingStopAcks::default(),
                 exit_status: WorkerExitStatus::new(),
                 retained_output_peak_bits: Arc::new(AtomicU32::new(0.0f32.to_bits())),
+                #[cfg(feature = "test-util")]
+                lab_pcm_probe: None,
             },
             command_rx,
         )
@@ -126,6 +130,15 @@ impl PlaybackThread {
         let retained_output_peak_bits = Arc::clone(&shared_output_peak_bits);
         let shared_clipped_sample_count = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
+        #[cfg(feature = "test-util")]
+        let lab_pcm_probe = sink_type.uses_lab_output().then(|| {
+            sink_type
+                .test_output_probe()
+                .unwrap_or_else(|| Arc::new(crate::lab_pcm::LabPcmProbe::default()))
+        });
+        #[cfg(feature = "test-util")]
+        let runtime_probe = lab_pcm_probe.clone();
+
         let thread_handle = std::thread::Builder::new()
             .name("playback".to_string())
             .spawn(move || {
@@ -146,6 +159,8 @@ impl PlaybackThread {
                         sink_type,
                         shared_output_peak_bits,
                         shared_clipped_sample_count,
+                        #[cfg(feature = "test-util")]
+                        runtime_probe,
                         startup_tx,
                     )
                 }));
@@ -179,6 +194,8 @@ impl PlaybackThread {
                 pending_stop_acks: PendingStopAcks::default(),
                 exit_status,
                 retained_output_peak_bits,
+                #[cfg(feature = "test-util")]
+                lab_pcm_probe,
             }),
             Ok(Err(err)) => {
                 let _ = thread_handle.join();
@@ -200,8 +217,19 @@ impl PlaybackThread {
         }
     }
 
+    #[cfg(feature = "test-util")]
+    pub(in crate::engine) fn lab_pcm_probe(&self) -> Option<Arc<crate::lab_pcm::LabPcmProbe>> {
+        self.lab_pcm_probe.clone()
+    }
+
     /// Send a command to the playback thread
     pub fn send_command(&self, command: PlaybackCommand) -> Result<(), String> {
+        #[cfg(feature = "test-util")]
+        if matches!(command, PlaybackCommand::Mute(_))
+            && let Some(probe) = &self.lab_pcm_probe
+        {
+            probe.record_mute_request();
+        }
         self.command_tx
             .send(command)
             .map_err(|e| format!("Failed to send command: {}", e))
@@ -238,6 +266,7 @@ impl PlaybackThread {
         let ticket = HostUpdateTicket::new();
         self.send_command(PlaybackCommand::Reconfigure(PlaybackReconfigureRequest {
             requested: PlaybackConfiguration {
+                output_generation: 0,
                 sample_rate,
                 channels,
             },

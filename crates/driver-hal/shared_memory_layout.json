@@ -1,5 +1,5 @@
 {
-  "size": 144,
+  "size": 184,
   "alignment": 8,
   "fields": {
     "magic": 0,
@@ -30,6 +30,12 @@
     "configuring": 128,
     "configuring_ack": 132,
     "requested_channel_count": 136,
-    "volume_generation": 140
+    "volume_generation": 140,
+    "control_lock": 144,
+    "actual_channel_count": 148,
+    "config_request_id": 152,
+    "config_ack_id": 160,
+    "volume_state": 168,
+    "ring_generation": 176
   }
 }

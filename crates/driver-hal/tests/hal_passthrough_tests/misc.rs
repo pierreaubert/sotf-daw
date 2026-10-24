@@ -2,12 +2,6 @@ use sotf_plugins::{
     BiquadFilterConfig, EqPlugin, EqPluginParams, ParametricPluginAdapter, Plugin, ProcessContext,
 };
 
-/// Magic number for shared memory header validation: 'SOTF'
-pub(super) const SHARED_MEMORY_MAGIC: u32 = 0x534F5446;
-
-/// Version 7: Added output volume fields in former padding slots.
-pub(super) const SHARED_MEMORY_VERSION: u32 = 7;
-
 /// Generate test audio with a known pattern (sine waves)
 pub(super) fn generate_test_audio(
     num_frames: usize,

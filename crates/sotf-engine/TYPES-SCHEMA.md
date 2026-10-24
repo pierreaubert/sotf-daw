@@ -20,6 +20,7 @@ Current version: `2` (`default_engine_config_version`).
 | `input_channels` | stable | Decoder/source channel count. |
 | `output_channels` | stable | Target output channel count. |
 | `plugins` | stable | `Vec<PluginConfig>`; engine plugin chain. |
+| `initial_graph` | internal | `#[serde(skip)]`; initial runtime DAG replaces the rack and is installed before source admission. |
 | `volume` | stable | Linear volume, range `0.0..=1.0`. |
 | `muted` | stable | Mute toggle. |
 | `driver_mode` | stable | Alias `hal_mode` accepted for backward compatibility. |
@@ -102,6 +103,7 @@ as a primary config file, but clients may cache it.
 | `network_endpoint_status` | stable | Added with `#[serde(default)]`. |
 | `stream_metadata` | stable | Added with `#[serde(default)]`. |
 | `last_error` | stable | Last error message if any. |
+| `lab_pcm_probe` | internal | `test-util` only, `#[serde(skip)]`; explicitly armed simulated-output observation. |
 | `seeking` | stable | Seek-in-progress flag. |
 | `isolated_external_plugin_worker_statuses` | stable | Added with `#[serde(default)]`. |
 

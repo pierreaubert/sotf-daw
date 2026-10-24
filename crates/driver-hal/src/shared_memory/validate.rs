@@ -4,6 +4,7 @@ use std::fs::OpenOptions;
 use std::io;
 use std::path::Path;
 
+#[cfg(test)]
 pub(super) fn open_shared_memory_file(path: &Path) -> io::Result<std::fs::File> {
     let mut options = OpenOptions::new();
     options.read(true).write(true).create(true).truncate(false);

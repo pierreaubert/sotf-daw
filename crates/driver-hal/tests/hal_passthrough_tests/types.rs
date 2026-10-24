@@ -1,70 +1,46 @@
-use super::SharedAudioHeader;
-use super::misc::SHARED_MEMORY_MAGIC;
-use super::misc::SHARED_MEMORY_VERSION;
 use driver_hal::SharedAudioBuffer;
 use sotf_plugins::{GainPlugin, ParametricPluginAdapter, Plugin, ProcessContext};
-use std::io::Write;
-use std::sync::atomic::{AtomicU32, AtomicU64};
-use tempfile::NamedTempFile;
+use std::path::{Path, PathBuf};
 
-/// Create a mock shared memory file for testing
+/// Own the production broker until every test participant has finished.
+pub(super) struct TransportFixture {
+    _buffer: SharedAudioBuffer,
+    path: PathBuf,
+    _directory: tempfile::TempDir,
+}
+
+impl TransportFixture {
+    pub(super) fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+/// Create a private immutable mapping through the production constructor.
 pub(super) fn create_mock_shared_memory(
     sample_rate: u32,
     buffer_frames: u32,
     channel_count: u32,
-) -> NamedTempFile {
-    let header_size = std::mem::size_of::<SharedAudioHeader>();
-    let audio_offset = (header_size + 63) & !63;
-    let audio_capacity = (buffer_frames as usize) * (channel_count as usize) * 8;
-    let total_size = audio_offset + audio_capacity * std::mem::size_of::<f32>();
-
-    let mut file = NamedTempFile::new().expect("Failed to create temp file");
-
-    let header = SharedAudioHeader {
-        magic: AtomicU32::new(SHARED_MEMORY_MAGIC),
-        version: AtomicU32::new(SHARED_MEMORY_VERSION),
-        sample_rate: AtomicU32::new(sample_rate),
-        buffer_frames: AtomicU32::new(buffer_frames),
-        channel_count: AtomicU32::new(channel_count),
-        write_position: AtomicU64::new(0),
-        read_position: AtomicU64::new(0),
-        active: AtomicU32::new(1),
-        config_changed: AtomicU32::new(0),
-        driver_ready: AtomicU32::new(1),
-        engine_ready: AtomicU32::new(0),
-        // Encryption fields (version 2+)
-        encrypted: AtomicU32::new(0),
-        volume_scalar_bits: AtomicU32::new(1.0f32.to_bits()),
-        key_fingerprint: AtomicU64::new(0),
-        frame_counter: AtomicU64::new(0),
-        // Config negotiation fields (version 3+)
-        requested_sample_rate: AtomicU32::new(0),
-        requested_buffer_frames: AtomicU32::new(0),
-        actual_sample_rate: AtomicU32::new(sample_rate),
-        actual_buffer_frames: AtomicU32::new(buffer_frames),
-        config_status: AtomicU32::new(0),
-        config_source: AtomicU32::new(0),
-        config_error_code: AtomicU32::new(0),
-        output_muted: AtomicU32::new(0),
-        // Statistics
-        encryption_overflow_count: AtomicU64::new(0),
-        daemon_heartbeat_ms: AtomicU64::new(0),
-        configuring: AtomicU32::new(0),
-        configuring_ack: AtomicU32::new(0),
-        requested_channel_count: AtomicU32::new(channel_count),
-        volume_generation: AtomicU32::new(1),
-    };
-
-    let header_bytes: &[u8] =
-        unsafe { std::slice::from_raw_parts(&header as *const _ as *const u8, header_size) };
-
-    let mut buffer = vec![0u8; total_size];
-    buffer[..header_size].copy_from_slice(header_bytes);
-
-    file.write_all(&buffer).expect("Failed to write to file");
-    file.flush().expect("Failed to flush file");
-
-    file
+) -> TransportFixture {
+    // A short base keeps the Unix socket below Darwin's sockaddr_un limit.
+    let directory = tempfile::Builder::new()
+        .prefix("hal-")
+        .tempdir_in("/tmp")
+        .expect("create private transport directory");
+    let path = directory.path().join("audio.shm");
+    let buffer = SharedAudioBuffer::create_replacement_with_max_geometry(
+        &path,
+        sample_rate,
+        buffer_frames,
+        channel_count,
+        buffer_frames,
+        channel_count,
+    )
+    .expect("create immutable transport");
+    TransportFixture {
+        _buffer: buffer,
+        path,
+        _directory: directory,
+    }
 }
 
 #[test]

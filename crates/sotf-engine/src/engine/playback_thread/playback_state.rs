@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 
 /// Shared state between thread and cpal callback (all fields are lock-free atomics)
 pub(in crate::engine) struct PlaybackState {
+    pub(super) output_generation: u64,
     pub(super) capacity: usize,
     pub(super) volume: Arc<AtomicU32>, // Atomic f32 stored as u32 bits
     pub(super) muted: Arc<AtomicBool>,
@@ -49,6 +50,7 @@ pub(in crate::engine) struct PlaybackState {
 impl PlaybackState {
     pub(in crate::engine) fn new(capacity: usize) -> Self {
         Self {
+            output_generation: crate::engine::types::next_playback_identity(),
             capacity,
             volume: Arc::new(AtomicU32::new(1.0f32.to_bits())),
             muted: Arc::new(AtomicBool::new(false)),

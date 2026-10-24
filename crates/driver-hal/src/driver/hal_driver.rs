@@ -6,7 +6,9 @@ use super::misc::spawn_engine_heartbeat;
 use crate::shared_memory::{
     DEFAULT_HAL_CHANNEL_COUNT, HalInputReader, MAX_HAL_CHANNEL_COUNT, SharedAudioBuffer,
 };
-use driver_common::{AudioDriver, ConfigResult, DriverConfig, DriverError, DriverStatus};
+use driver_common::{
+    AudioDriver, ConfigResult, DriverConfig, DriverConfigRequest, DriverError, DriverStatus,
+};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -58,6 +60,9 @@ pub struct HalDriver {
     /// We open this lazily and separately from the reader because the reader
     /// owns its own `SharedAudioBuffer` internally.
     pub(super) config_buffer: Option<SharedAudioBuffer>,
+    pub(super) last_polled_request_id: u64,
+    // Retained until publication succeeds or the request is superseded.
+    pending_config_ack: Option<(u64, DriverConfig, u32, u32)>,
     pub(super) driver_installed: bool,
     pub(super) heartbeat_stop: Option<Arc<AtomicBool>>,
     pub(super) heartbeat_thread: Option<JoinHandle<()>>,
@@ -68,6 +73,8 @@ impl HalDriver {
         Self {
             reader: None,
             config_buffer: None,
+            last_polled_request_id: 0,
+            pending_config_ack: None,
             driver_installed: false,
             heartbeat_stop: None,
             heartbeat_thread: None,
@@ -83,6 +90,8 @@ impl HalDriver {
         {
             self.stop_engine_heartbeat();
             self.config_buffer = None;
+            self.last_polled_request_id = 0;
+            self.pending_config_ack = None;
         }
         if self.config_buffer.is_none()
             && let Ok(buf) = SharedAudioBuffer::open_default()
@@ -91,34 +100,62 @@ impl HalDriver {
         }
     }
 
-    pub(super) fn wait_for_daemon_config_ack(buf: &SharedAudioBuffer) -> ConfigResult {
+    fn flush_pending_config_ack(&mut self) {
+        let Some((id, actual, status, error)) = self.pending_config_ack else {
+            return;
+        };
+        let Some(buffer) = self.config_buffer.as_ref() else {
+            return;
+        };
+        if buffer.acknowledge_config_request(id, actual, status, error)
+            || buffer
+                .configuration_snapshot()
+                .is_some_and(|snapshot| snapshot.request.request_id != id)
+        {
+            self.pending_config_ack = None;
+        }
+    }
+
+    pub(super) fn wait_for_daemon_config_ack(
+        buf: &SharedAudioBuffer,
+        request_id: u64,
+    ) -> ConfigResult {
         let deadline = Instant::now() + DAEMON_CONFIG_ACK_TIMEOUT;
         loop {
-            match buf.config_status() {
-                1 => return ConfigResult::Accepted,
-                2 => {
-                    return ConfigResult::negotiated(
-                        buf.actual_sample_rate(),
-                        buf.actual_buffer_frames(),
-                        buf.channel_count(),
-                    );
-                }
-                3 => {
+            if let Some(snapshot) = buf.configuration_snapshot() {
+                if snapshot.request.request_id != request_id {
                     return ConfigResult::error(DriverError::invalid_config(
                         "hal_config",
-                        format!(
-                            "HAL rejected config request (error code {})",
-                            buf.config_error_code()
-                        ),
+                        "Configuration request superseded",
                     ));
                 }
-                _ if Instant::now() >= deadline => {
-                    return ConfigResult::error(DriverError::timeout(
-                        "Timed out waiting for HAL to apply config request",
-                    ));
+                match snapshot.status {
+                    1 => return ConfigResult::Accepted,
+                    2 => {
+                        return ConfigResult::negotiated(
+                            snapshot.actual.sample_rate,
+                            snapshot.actual.buffer_frames,
+                            snapshot.actual.channel_count,
+                        );
+                    }
+                    3 => {
+                        return ConfigResult::error(DriverError::invalid_config(
+                            "hal_config",
+                            format!(
+                                "HAL rejected config request (error code {})",
+                                snapshot.error_code
+                            ),
+                        ));
+                    }
+                    _ => {}
                 }
-                _ => std::thread::sleep(DAEMON_CONFIG_ACK_POLL_INTERVAL),
             }
+            if Instant::now() >= deadline {
+                return ConfigResult::error(DriverError::timeout(
+                    "Timed out waiting for HAL to apply config request",
+                ));
+            }
+            std::thread::sleep(DAEMON_CONFIG_ACK_POLL_INTERVAL);
         }
     }
 
@@ -186,11 +223,14 @@ impl AudioDriver for HalDriver {
         // its realtime paths. Adopt any live header geometry instead of
         // resetting the transport to creation defaults on every daemon start.
         let (sample_rate, buffer_frames, channel_count) = initial_shared_memory_geometry();
-        let mut buffer =
-            SharedAudioBuffer::create_or_open_default(sample_rate, buffer_frames, channel_count)
-                .map_err(|error| {
-                    DriverError::io(format!("failed to initialize HAL shared memory: {error}"))
-                })?;
+        let mut buffer = SharedAudioBuffer::create_replacement_default(
+            sample_rate,
+            buffer_frames,
+            channel_count,
+        )
+        .map_err(|error| {
+            DriverError::io(format!("failed to initialize HAL shared memory: {error}"))
+        })?;
         reset_new_daemon_mapping(&mut buffer)?;
         log::info!(
             "[HalDriver] Prepared shared memory: {}Hz, {}ch, {} frames",
@@ -328,7 +368,13 @@ impl AudioDriver for HalDriver {
                 ));
             }
 
-            buf.request_config_change(requested_rate, requested_frames, requested_channels, 2); // Daemon initiated
+            let Some(request_id) =
+                buf.request_config_change(requested_rate, requested_frames, requested_channels, 2)
+            else {
+                return ConfigResult::error(DriverError::not_available(
+                    "Configuration mailbox is busy",
+                ));
+            };
 
             log::info!(
                 "[HalDriver] Config request: {}Hz, {} frames, {} channels",
@@ -336,55 +382,86 @@ impl AudioDriver for HalDriver {
                 requested_frames,
                 requested_channels
             );
-            Self::wait_for_daemon_config_ack(buf)
+            Self::wait_for_daemon_config_ack(buf, request_id)
         } else {
             ConfigResult::error(DriverError::not_available("Shared memory not available"))
         }
     }
 
     fn poll_config_change(&mut self) -> Option<DriverConfig> {
+        self.poll_config_request().map(|request| request.config)
+    }
+
+    fn poll_config_request(&mut self) -> Option<DriverConfigRequest> {
         self.ensure_config_buffer();
-        let buf = self.config_buffer.as_ref()?;
-
-        if buf.config_changed() && buf.config_source() == 1 {
-            // Clear the flag immediately to prevent re-triggering on next poll.
-            // acknowledge_config_change() also clears it, but if the daemon fails
-            // to acknowledge (error/panic), we'd loop forever without this.
-            buf.clear_config_changed();
-
-            // HAL-initiated change
-            let config = DriverConfig::new(
-                buf.requested_sample_rate(),
-                buf.requested_buffer_frames(),
-                buf.requested_channel_count(),
-            );
-            log::info!(
-                "[HalDriver] HAL config change detected: {}Hz, {} frames, {} channels",
-                config.sample_rate,
-                config.buffer_frames,
-                config.channel_count
-            );
-            Some(config)
-        } else {
-            None
+        self.flush_pending_config_ack();
+        let snapshot = self.config_buffer.as_ref()?.configuration_snapshot()?;
+        if snapshot.source != 1
+            || !snapshot.pending
+            || snapshot.request.request_id == self.last_polled_request_id
+        {
+            return None;
         }
+        self.last_polled_request_id = snapshot.request.request_id;
+        Some(snapshot.request)
+    }
+
+    fn config_request_is_current(&mut self, request_id: u64) -> bool {
+        if request_id == 0 {
+            return true;
+        }
+        self.ensure_config_buffer();
+        // Advisory identity recheck only; the eventual ACK is protected by the
+        // control gate. Contention cannot discard an already-polled intent.
+        self.config_buffer.as_ref().is_some_and(|buffer| {
+            buffer.header().config_request_id.load(Ordering::Acquire) == request_id
+        })
     }
 
     fn acknowledge_config_change(&mut self, actual: DriverConfig, result: ConfigResult) {
-        if let Some(ref mut buf) = self.config_buffer {
-            let (status, error_code) = match result {
-                ConfigResult::Accepted => (1, 0),
-                ConfigResult::Negotiated { .. } => (2, 0),
-                ConfigResult::Error(_) => (3, 1),
-                _ => (3, 1),
-            };
-            buf.acknowledge_config_change(
-                actual.sample_rate,
-                actual.buffer_frames,
-                status,
-                error_code,
-            );
+        self.acknowledge_config_request(self.last_polled_request_id, actual, result);
+    }
+
+    fn acknowledge_config_request(
+        &mut self,
+        request_id: u64,
+        actual: DriverConfig,
+        result: ConfigResult,
+    ) -> bool {
+        if request_id == 0 {
+            return true;
         }
+        let Some(buf) = self.config_buffer.as_ref() else {
+            return false;
+        };
+        let (status, error_code) = match result {
+            ConfigResult::Accepted => (1, 0),
+            ConfigResult::Negotiated { .. } => (2, 0),
+            _ => (3, 1),
+        };
+        let published = buf.acknowledge_config_request(request_id, actual, status, error_code);
+        if published {
+            self.pending_config_ack = None;
+        } else if buf
+            .configuration_snapshot()
+            .is_none_or(|snapshot| snapshot.request.request_id == request_id)
+        {
+            self.pending_config_ack = Some((request_id, actual, status, error_code));
+        }
+        published
+    }
+
+    fn patch_output_volume(
+        &mut self,
+        volume: Option<f32>,
+        muted: Option<bool>,
+    ) -> Option<(f32, bool, u32)> {
+        self.ensure_config_buffer();
+        Some(
+            self.config_buffer
+                .as_ref()?
+                .patch_output_volume(volume, muted),
+        )
     }
 
     fn output_volume(&mut self) -> Option<(f32, bool, u32)> {
@@ -414,6 +491,15 @@ impl AudioDriver for HalDriver {
         let buffer = self.config_buffer.as_ref().ok_or_else(|| {
             DriverError::not_available("HAL mapping unavailable for readiness publication")
         })?;
+        if ready
+            && buffer
+                .configuration_snapshot()
+                .is_none_or(|snapshot| snapshot.pending)
+        {
+            return Err(DriverError::not_available(
+                "Configuration acknowledgement is pending",
+            ));
+        }
         buffer.set_engine_ready(ready);
         if ready {
             self.start_engine_heartbeat();

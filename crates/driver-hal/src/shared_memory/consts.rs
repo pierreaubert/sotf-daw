@@ -16,7 +16,9 @@ pub(super) const SHARED_MEMORY_MAGIC: u32 = 0x534F5446;
 ///            `output_muted`, `volume_generation`) in former padding slots
 ///            so the HAL volume control (OS media keys) and the daemon
 ///            share one volume state.
-pub(super) const SHARED_MEMORY_VERSION: u32 = 7;
+/// Version 8: Identified coherent config requests/ACKs with actual channels,
+///            and one atomic multiwriter volume/mute/generation tuple.
+pub(super) const SHARED_MEMORY_VERSION: u32 = 8;
 
 pub const DEFAULT_HAL_CHANNEL_COUNT: u32 = 2;
 
@@ -142,7 +144,7 @@ pub(super) fn parse_encrypted_record_header(
     })
 }
 
-const _: () = assert!(std::mem::size_of::<SharedAudioHeader>() == 144);
+const _: () = assert!(std::mem::size_of::<SharedAudioHeader>() == 184);
 
 const _: () = assert!(std::mem::align_of::<SharedAudioHeader>() == 8);
 

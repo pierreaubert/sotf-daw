@@ -2,7 +2,7 @@
 
 use super::super::{
     DsdOutputMode, EngineOversamplingPolicy, LatencyCompensationMode, NetworkEndpointConfig,
-    OutputAccessMode, PluginConfig, SinkType,
+    OutputAccessMode, PluginConfig, PluginGraphConfig, SinkType,
 };
 use super::misc::default_engine_config_version;
 use serde::{Deserialize, Serialize};
@@ -36,6 +36,10 @@ pub struct EngineConfig {
 
     /// Initial plugin chain
     pub plugins: Vec<PluginConfig>,
+
+    /// Runtime graph installed before any source starts, replacing the flat chain.
+    #[serde(skip)]
+    pub initial_graph: Option<PluginGraphConfig>,
 
     /// Initial volume (linear, 0.0-1.0)
     pub volume: f32,
@@ -116,6 +120,7 @@ impl Default for EngineConfig {
             network_endpoint: NetworkEndpointConfig::default(),
             output_device: None,
             plugins: Vec::new(),
+            initial_graph: None,
             volume: 1.0,
             muted: false,
             config_path: None,
@@ -198,6 +203,10 @@ impl EngineConfig {
                     return Err("LabNull output requires driver mode".to_string());
                 }
                 #[cfg(feature = "test-util")]
+                SinkType::TestOutput(_) if !self.driver_mode => {
+                    return Err("TestOutput requires driver mode".to_string());
+                }
+                #[cfg(feature = "test-util")]
                 SinkType::TestFile if self.driver_mode => {
                     return Err("TestFile output requires file playback mode".to_string());
                 }
@@ -215,11 +224,11 @@ impl EngineConfig {
                 };
                 return Err(message.to_string());
             }
-            if self.sink_type == SinkType::LabNull {
+            if !self.sink_type.is_test_file_output() {
                 if self
                     .output_device
                     .as_deref()
-                    .is_some_and(|device| device != "Systemwide Lab Output")
+                    .is_some_and(|device| Some(device) != self.sink_type.lab_output_name())
                 {
                     return Err("LabNull cannot open a physical output device".to_string());
                 }
@@ -233,6 +242,11 @@ impl EngineConfig {
             );
         }
 
+        if let Some(graph) = &self.initial_graph {
+            graph
+                .validate()
+                .map_err(|message| format!("EngineConfig initial_graph: {message}"))?;
+        }
         for (index, plugin) in self.plugins.iter().enumerate() {
             plugin
                 .validate()

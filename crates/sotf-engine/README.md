@@ -215,3 +215,26 @@ On iOS, `cpal`, `notify`, `ctrlc`, and `signal-hook` are not available. The engi
 ## License
 
 See the root workspace `LICENSE` file.
+
+### Driver graph startup and sample observation
+
+`AudioEngineManager::start_driver_playback_with_graph_and_source` installs the
+complete initial graph before creating playback or starting capture. The legacy
+source-only entry point delegates with no graph. The runtime-only
+`EngineConfig::initial_graph` replaces its flat plugin list; graph validation,
+host construction, callback-capacity preparation and installation must succeed
+before source admission. This avoids a monitor-only startup chain being audible
+during a subsequent graph crossfade.
+
+With `test-util`, `SinkType::TestOutput` accepts a named `lab_pcm::TestOutput`.
+Its observer can be armed before engine construction, retaining startup silence,
+per-channel nonzero minima/counts and any silent frames after signal begins.
+It uses the simulated output worker and the production volume/clamp kernel;
+it never opens the named hardware device or qualifies physical deadlines.
+
+Explicit capture sources use availability and downstream backpressure as their
+clock; successful reads do not incur synthetic/disconnected-HAL frame sleeps.
+Idle reads retain a bounded sleep. Simulated output preserves sample-clock
+phase through late feeder wakeups with bounded catch-up work and actual arrival
+timestamps. With `test-util`, an immutable `LabPcmObserver` can inspect complete
+post-clamp blocks before aggregate-window locking, even without an armed window.

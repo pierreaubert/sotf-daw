@@ -1,3 +1,30 @@
+# Protocol v8 follow-up (unreleased)
+
+- Protect audio pages from truncation with allocated Darwin shared memory and
+  authenticated descriptor handoff. Production peers refuse regular-file mappings;
+  explicit unsafe Rust fixtures and Swift test builds retain legacy coverage.
+- Fence cached plaintext with a ring identity across resets, flushes and
+  encryption A→B→A transitions. Publish mode/key/flush as one checked transaction.
+- Add release transport read-allocation and Rust/Swift timing measurements with
+  controlled mailbox error/volume churn, separate from hardware qualification.
+
+- Extend the shared header to 184 bytes with a bounded control gate, actual
+  acknowledged channels, full request/ACK identities, and one atomic volume
+  tuple. The audio region remains aligned at offset 192. Rust and Swift must
+  deploy together; incompatible peer readiness is rejected.
+- Preserve request identity through daemon debounce, asynchronous CoreAudio
+  actions, rejection and rollback. Retain contended ACKs for retry and withhold
+  readiness until publication. Geometry commits never rewrite mailbox records.
+- Publish a fresh shared-memory inode at daemon startup without resizing or
+  resetting the previous mapping. Preserve user volume and require fresh HAL
+  readiness; crashed peer gates remain confined to the retired inode.
+- Publish scalar/mute/generation with one CAS. Partial control writes preserve
+  concurrent edits to the other field; old v7 volume words are reserved.
+- Add deterministic stale-ACK, restart, actual-channel and held-gate tests,
+  cross-process Rust/Swift volume races, and shipping-direction sequence stress.
+- Own both cross-process workers under the test-only `swift-stress-worker`
+  feature so transport tests do not require linking the audio engine.
+
 # 0.1.12 (unreleased)
 
 ## Shared-memory protocol version 7 (output volume)

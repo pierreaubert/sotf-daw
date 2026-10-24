@@ -3,6 +3,7 @@
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct ReaderIdentity {
+    pub(crate) ring_generation: u64,
     pub(crate) sample_rate: u32,
     pub(crate) channel_count: u32,
     pub(crate) buffer_frames: u32,
@@ -12,7 +13,10 @@ pub(crate) struct ReaderIdentity {
 
 impl ReaderIdentity {
     pub(crate) fn valid(self) -> bool {
-        self.sample_rate != 0 && self.channel_count != 0 && self.buffer_frames != 0
+        self.ring_generation != 0
+            && self.sample_rate != 0
+            && self.channel_count != 0
+            && self.buffer_frames != 0
     }
 }
 
@@ -92,6 +96,7 @@ mod tests {
 
     fn stereo() -> ReaderIdentity {
         ReaderIdentity {
+            ring_generation: 1,
             sample_rate: 48_000,
             channel_count: 2,
             buffer_frames: 512,
@@ -143,6 +148,10 @@ mod tests {
     fn every_identity_field_invalidates_leftovers() {
         let identity = stereo();
         for next in [
+            ReaderIdentity {
+                ring_generation: 2,
+                ..identity
+            },
             ReaderIdentity {
                 sample_rate: 96_000,
                 ..identity

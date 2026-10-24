@@ -306,9 +306,62 @@ fn default_playback_channels() -> usize {
 /// Legacy prefix retained for compatibility with older serialized/UI clients.
 pub const PLUGIN_BUILD_DIAGNOSTIC_PREFIX: &str = "[plugin-build] ";
 
+/// Machine-readable cause of an output interruption; message text is diagnostic only.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PlaybackIncidentKind {
+    /// The backend reported an output-stream error.
+    StreamError,
+    /// Hardware callbacks stopped advancing while input frames arrived.
+    CallbacksStalled,
+    /// The backend device identity changed while output was not advancing.
+    DeviceIdentityChanged,
+    /// Recovery could not prepare a replacement output stream.
+    RebuildFailed,
+    /// A requested change failed and the previous stream was retained.
+    ConfigurationFallback,
+}
+
+/// Explicit receipt proving hardware callbacks advanced after an interruption.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlaybackIncidentResolution {
+    /// Stream whose hardware callbacks proved recovery.
+    pub output_generation: u64,
+    /// Nonzero callback count observed after the interruption baseline.
+    pub callback_count: u64,
+}
+
+/// One identified output incident and its optional resolution receipt.
+/// The identity survives an output-stream rebuild; resolution never clears
+/// an unrelated decoder/processing error or a newer output incident.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlaybackIncident {
+    /// Process-wide incident identity, never reused within the process.
+    pub id: u64,
+    /// Stream on which the incident began; it may differ from the recovered stream.
+    pub stream_generation: u64,
+    /// Cause used for control decisions independently of diagnostic text.
+    pub kind: PlaybackIncidentKind,
+    /// Human-readable context; not an error classifier.
+    pub message: String,
+    /// Absent while active; retained after callback-proven recovery.
+    pub resolution: Option<PlaybackIncidentResolution>,
+}
+
+impl PlaybackIncident {
+    /// Whether no explicit callback-proven resolution has been published.
+    pub fn is_active(&self) -> bool {
+        self.resolution.is_none()
+    }
+}
+
 /// Complete audio engine state
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AudioEngineState {
+    /// Explicitly armed simulated-output observation; absent on native backends.
+    #[cfg(feature = "test-util")]
+    #[serde(skip)]
+    pub lab_pcm_probe: Option<std::sync::Arc<crate::lab_pcm::LabPcmProbe>>,
     /// Current playback state
     pub playback_state: PlaybackState,
     /// Currently playing source
@@ -388,6 +441,13 @@ pub struct AudioEngineState {
     /// gapless, and decoder recovery never change it.
     #[serde(default)]
     pub playback_epoch: u64,
+    /// Identity of the current hardware output stream, independent of play/seek epochs.
+    /// Output snapshots from retired streams cannot replace current route/geometry.
+    #[serde(default)]
+    pub playback_output_generation: u64,
+    /// Latest typed output incident, retained after explicit resolution.
+    #[serde(default)]
+    pub playback_incident: Option<PlaybackIncident>,
     /// Stream Flushes sent, counted at every decoder SEND-OK.
     ///
     /// Global monotonic generation (never reset): bumped once per
@@ -499,6 +559,8 @@ pub struct AudioEngineState {
 impl Default for AudioEngineState {
     fn default() -> Self {
         Self {
+            #[cfg(feature = "test-util")]
+            lab_pcm_probe: None,
             playback_state: PlaybackState::Stopped,
             current_source: None,
             current_file: None,
@@ -523,6 +585,8 @@ impl Default for AudioEngineState {
             output_clipping_detected: false,
             playback_peak_max_linear: 0.0,
             playback_epoch: 0,
+            playback_output_generation: 0,
+            playback_incident: None,
             flushes_sent: 0,
             gen_ahead_events: 0,
             decoder_attempt: 0,

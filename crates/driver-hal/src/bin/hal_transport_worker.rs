@@ -32,7 +32,9 @@ fn parse_arguments() -> Result<(PathBuf, usize), String> {
 #[cfg(target_os = "macos")]
 fn run() -> Result<(), String> {
     let (path, iterations) = parse_arguments()?;
-    let mut transport = SharedAudioBuffer::open(&path)
+    // SAFETY: the Swift harness owns this explicit fixture and keeps its extent
+    // fixed until this worker exits; geometry changes use transport leases.
+    let mut transport = unsafe { SharedAudioBuffer::open_fixture(&path) }
         .map_err(|error| format!("failed to open {}: {error}", path.display()))?;
 
     for iteration in 0..iterations {

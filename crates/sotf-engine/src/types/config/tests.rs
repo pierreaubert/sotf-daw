@@ -541,6 +541,8 @@ fn audio_engine_state_missing_optional_fields_use_defaults() {
 #[test]
 fn audio_engine_state_serde_roundtrip() {
     let state = AudioEngineState {
+        #[cfg(feature = "test-util")]
+        lab_pcm_probe: Some(std::sync::Arc::new(crate::lab_pcm::LabPcmProbe::default())),
         playback_state: PlaybackState::Paused,
         current_source: Some(crate::AudioSource::File(PathBuf::from("/tmp/test.flac"))),
         current_file: Some(PathBuf::from("/tmp/test.flac")),
@@ -565,6 +567,17 @@ fn audio_engine_state_serde_roundtrip() {
         output_clipping_detected: true,
         playback_peak_max_linear: 0.5,
         playback_epoch: 3,
+        playback_output_generation: 17,
+        playback_incident: Some(crate::PlaybackIncident {
+            id: 100,
+            stream_generation: 16,
+            kind: crate::PlaybackIncidentKind::StreamError,
+            message: "output interrupted".into(),
+            resolution: Some(crate::PlaybackIncidentResolution {
+                output_generation: 17,
+                callback_count: 100,
+            }),
+        }),
         flushes_sent: 9,
         gen_ahead_events: 1,
         decoder_attempt: 2,
@@ -603,6 +616,13 @@ fn audio_engine_state_serde_roundtrip() {
 
     let json = serde_json::to_string(&state).unwrap();
     let decoded: AudioEngineState = serde_json::from_str(&json).unwrap();
+    #[cfg(feature = "test-util")]
+    {
+        assert!(!json.contains("lab_pcm_probe"));
+        assert!(decoded.lab_pcm_probe.is_none());
+    }
+    assert_eq!(decoded.playback_output_generation, 17);
+    assert_eq!(decoded.playback_incident, state.playback_incident);
     assert_eq!(decoded.flushes_sent, state.flushes_sent);
     assert_eq!(decoded.gen_ahead_events, state.gen_ahead_events);
     assert_eq!(decoded.decoder_attempt, state.decoder_attempt);
@@ -675,4 +695,21 @@ fn plugin_graph_config_serde_roundtrip() {
     assert_eq!(decoded.edges.len(), graph.edges.len());
     assert_eq!(decoded.nodes[0].plugin_type, "eq");
     assert_eq!(decoded.nodes[1].plugin_type, "gain");
+}
+
+#[cfg(feature = "test-util")]
+#[test]
+fn named_test_output_accepts_only_its_configured_identity_and_driver_mode() {
+    let mut config = EngineConfig {
+        driver_mode: true,
+        sink_type: crate::SinkType::TestOutput(crate::lab_pcm::TestOutput::new("Output A")),
+        output_device: Some("Output A".to_owned()),
+        ..Default::default()
+    };
+    assert!(config.validate().is_ok());
+    config.output_device = Some("Output B".to_owned());
+    assert!(config.validate().is_err());
+    config.output_device = Some("Output A".to_owned());
+    config.driver_mode = false;
+    assert!(config.validate().is_err());
 }

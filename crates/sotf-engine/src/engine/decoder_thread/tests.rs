@@ -931,3 +931,84 @@ fn async_decode_error_reports_adopted_tag_and_replay_recovers() {
         .recv_timeout(SHUTDOWN_DEADLINE)
         .expect("decoder thread should exit after Shutdown");
 }
+
+#[test]
+fn buffered_explicit_capture_is_drained_without_synthetic_frame_pacing() {
+    use driver_common::{CaptureInput, CaptureSource, DriverConfig};
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Instant;
+
+    // A ready transport owns its clock. With an immediate downstream consumer,
+    // draining this finite burst must not add 5 ms (HAL) or 10 ms (non-HAL) per
+    // block. The two-second margin is deliberately far above the data-copy cost
+    // and below those 5.1/10.2-second artificial delays, not an audio deadline.
+    const BLOCKS: usize = 1024;
+    const FRAMES: usize = 512;
+    #[derive(Debug)]
+    struct BufferedCapture(AtomicUsize);
+    impl CaptureInput for BufferedCapture {
+        fn configuration(&self) -> DriverConfig {
+            DriverConfig::new(48_000, FRAMES as u32, 2)
+        }
+        fn available_frames(&self) -> usize {
+            BLOCKS.saturating_sub(self.0.load(Ordering::Acquire)) * FRAMES
+        }
+        fn read_frames(&self, output: &mut [f32], expected: DriverConfig) -> usize {
+            if expected != self.configuration()
+                || output.len() < FRAMES * 2
+                || self.available_frames() == 0
+            {
+                return 0;
+            }
+            let block = self.0.fetch_add(1, Ordering::AcqRel);
+            output[..FRAMES * 2].fill((block + 1) as f32 / 2048.0);
+            FRAMES
+        }
+    }
+    let (message_tx, message_rx) = std::sync::mpsc::sync_channel(8);
+    let (event_tx, _event_rx) = crossbeam::channel::bounded(64);
+    let (recycle_tx, recycle_rx) = std::sync::mpsc::channel();
+    let mut decoder = super::DecoderThread::new(
+        message_tx,
+        event_tx,
+        48_000,
+        FRAMES,
+        recycle_rx,
+        DsdOutputMode::Disabled,
+    )
+    .unwrap();
+    decoder
+        .send_command(DecoderCommand::StartCaptureSource(
+            CaptureSource::new(BufferedCapture(AtomicUsize::new(0))),
+            2,
+        ))
+        .unwrap();
+    decoder.send_command(DecoderCommand::Resume).unwrap();
+    let mut started = None;
+    for index in 0..BLOCKS {
+        let frame = loop {
+            if let DecoderMessage::Frame(frame) = message_rx.recv_timeout(BARRIER_DEADLINE).unwrap()
+            {
+                break frame;
+            }
+        };
+        if started.is_none() {
+            started = Some(Instant::now());
+        }
+        assert_eq!(frame.num_frames, FRAMES);
+        assert_eq!(frame.num_channels, 2);
+        assert!(
+            frame
+                .data
+                .iter()
+                .all(|&sample| sample == (index + 1) as f32 / 2048.0)
+        );
+        recycle_tx.send(frame.data).unwrap();
+    }
+    let elapsed = started.unwrap().elapsed();
+    decoder.shutdown();
+    assert!(
+        elapsed < Duration::from_secs(2),
+        "ready capture was artificially paced: {elapsed:?}"
+    );
+}

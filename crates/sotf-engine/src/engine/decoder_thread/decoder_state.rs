@@ -34,6 +34,12 @@ pub(super) struct DriverSourceState {
     source: Option<driver_common::CaptureSource>,
 }
 
+impl DriverSourceState {
+    pub(super) fn has_explicit_source(&self) -> bool {
+        self.source.is_some()
+    }
+}
+
 impl Default for DriverSourceState {
     fn default() -> Self {
         Self {
@@ -1128,21 +1134,16 @@ impl DecoderState {
             }
         }
 
-        let reader = if let Some(source) = self.driver_source.source.as_ref() {
-            Some(DriverInputReader::External {
+        let reader = self
+            .driver_source
+            .source
+            .as_ref()
+            .map(|source| DriverInputReader::External {
                 source,
                 geometry: source.configuration(),
-            })
-        } else {
-            #[cfg(all(target_os = "macos", feature = "hal"))]
-            {
-                self.hal_reader.as_mut().map(DriverInputReader::Hal)
-            }
-            #[cfg(not(all(target_os = "macos", feature = "hal")))]
-            {
-                None
-            }
-        };
+            });
+        #[cfg(all(target_os = "macos", feature = "hal"))]
+        let reader = reader.or_else(|| self.hal_reader.as_mut().map(DriverInputReader::Hal));
         if let Some(mut reader) = reader {
             // Check if we have enough frames available
             if reader.available_read_frames() < frame_size {
@@ -1221,6 +1222,7 @@ impl DecoderState {
                     self.last_hal_channels = Some(hal_channels);
                     // Clear any previous resampler buffer to avoid glitches
                     self.resample_output_buffer.clear();
+                    self.resample_staging.clear();
                 }
 
                 let resampler = self.resampler.as_mut().ok_or(
@@ -1242,49 +1244,33 @@ impl DecoderState {
                     )
                     .map_err(|e| format!("HAL resampling failed: {}", e))?;
 
-                // Copy to frame_send_buffer
+                // Live capture must obey the same output block contract as
+                // file decoding. Upsampling can produce more than frame_size
+                // frames; downsampling needs several input blocks to fill one
+                // DSP block. Keep the remainder in preallocated staging.
                 let frame_len = actual_output_frames * hal_channels;
-                Self::ensure_buffer_len(&mut self.frame_send_buffer, frame_len)?;
-                self.frame_send_buffer[..frame_len]
-                    .copy_from_slice(&self.resample_output_buffer[..frame_len]);
-
-                let frame_data = take_frame_buffer(
-                    &mut self.frame_send_buffer,
-                    &self.recycle_rx,
-                    &mut self.frame_buffer_pool,
-                    frame_len,
-                );
-
-                // Send frame with TARGET sample rate
-                let frame = AudioFrame::try_new(
-                    frame_data,
-                    actual_output_frames,
-                    hal_channels,
-                    target_sample_rate,
-                )
-                .map_err(|error| format!("HAL resampler produced an invalid frame: {error}"))?;
-
-                // Use send_or_interrupt so we can still receive commands
-                // (Stop/Shutdown/Seek) while the downstream pipeline is full,
-                // preventing a deadlock if processing or playback stalls.
-                match self.send_decoder_message(
+                if self.resample_staging.len() + frame_len > MAX_RESAMPLE_STAGING_SAMPLES {
+                    return Err("Capture resample staging capacity exceeded".into());
+                }
+                self.resample_staging
+                    .extend_from_slice(&self.resample_output_buffer[..frame_len]);
+                if let Some(cmd) = self.emit_resample_staging(
                     message_tx,
                     command_rx,
                     response_tx,
-                    DecoderMessage::Frame(frame),
-                ) {
-                    Ok(Some(cmd)) => {
-                        log::debug!("[Decoder Thread] HAL send interrupted by command");
-                        return Ok((false, Some(cmd)));
-                    }
-                    Ok(None) => {} // sent successfully
-                    Err(e) => return Err(format!("Failed to send resampled HAL frame: {}", e)),
+                    frame_size,
+                    hal_channels,
+                    target_sample_rate,
+                    false,
+                )? {
+                    return Ok((false, Some(cmd)));
                 }
             } else {
                 // No resampling needed
                 if self.resampler.is_some() {
                     log::info!("[Decoder Thread] Removing HAL resampler (rates match)");
                     self.resampler = None;
+                    self.resample_staging.clear();
                     self.last_hal_sample_rate = Some(hal_sample_rate);
                 }
 

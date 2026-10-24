@@ -53,13 +53,28 @@ mod tests {
         assert_eq!(state.load().position, 0.0);
 
         // PlaybackChannelsChanged
-        handle_thread_event(ThreadEvent::PlaybackChannelsChanged(6), &state);
+        handle_thread_event(
+            ThreadEvent::PlaybackOutputChanged {
+                incident: None,
+                generation: 1,
+                channels: 6,
+                device: None,
+                access: crate::OutputAccessStatus::Shared,
+            },
+            &state,
+        );
         assert_eq!(state.load().playback_channels, 6);
         assert_eq!(state.load().num_channels, 2);
 
         // PlaybackOutputDeviceChanged
         handle_thread_event(
-            ThreadEvent::PlaybackOutputDeviceChanged("Test Device".to_string()),
+            ThreadEvent::PlaybackOutputChanged {
+                incident: None,
+                generation: 1,
+                channels: 2,
+                device: Some("Test Device".to_string()),
+                access: crate::OutputAccessStatus::Shared,
+            },
             &state,
         );
         assert_eq!(
@@ -69,7 +84,13 @@ mod tests {
 
         // PlaybackOutputAccessChanged
         handle_thread_event(
-            ThreadEvent::PlaybackOutputAccessChanged(crate::OutputAccessStatus::ExclusiveActive),
+            ThreadEvent::PlaybackOutputChanged {
+                incident: None,
+                generation: 1,
+                channels: 2,
+                device: None,
+                access: crate::OutputAccessStatus::ExclusiveActive,
+            },
             &state,
         );
         assert_eq!(
@@ -80,6 +101,7 @@ mod tests {
         // PlaybackStats
         handle_thread_event(
             ThreadEvent::PlaybackStats {
+                output_generation: state.load().playback_output_generation,
                 callback_count: 1,
                 buffer_fill_percent: 50,
                 stream_error_count: 2,

@@ -4,6 +4,9 @@
 pub use sotf_capture::devices;
 pub use sotf_capture::devices::SharedAudioState;
 
+#[cfg(feature = "test-util")]
+pub mod lab_pcm;
+
 pub mod decoder;
 pub use decoder::{
     AudioDecoder, AudioDecoderError, AudioDecoderResult, AudioFormat, AudioStream, DecodedAudio,
@@ -59,7 +62,8 @@ pub use types::{
     IsolatedExternalPluginSandboxStatus, IsolatedExternalPluginWorkerEvent,
     IsolatedExternalPluginWorkerStatus, LatencyCompensationMode, NetworkEndpointConfig,
     NetworkEndpointMode, NetworkEndpointStatus, OutputAccessMode, OutputAccessStatus,
-    PLUGIN_BUILD_DIAGNOSTIC_PREFIX, PlaybackState, PluginBuildDiagnostic, PluginBuildTarget,
+    PLUGIN_BUILD_DIAGNOSTIC_PREFIX, PlaybackIncident, PlaybackIncidentKind,
+    PlaybackIncidentResolution, PlaybackState, PluginBuildDiagnostic, PluginBuildTarget,
     PluginConfig, PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphEdgeKind,
     PluginGraphNodeConfig, ServiceId, SinkConfig, SinkOpenResult, SinkType, StreamMetadata,
 };

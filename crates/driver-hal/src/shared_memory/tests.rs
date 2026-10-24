@@ -19,7 +19,7 @@ mod startup_matrix;
 
 #[test]
 fn test_header_size() {
-    assert_eq!(std::mem::size_of::<SharedAudioHeader>(), 144);
+    assert_eq!(std::mem::size_of::<SharedAudioHeader>(), 184);
     assert_eq!(std::mem::align_of::<SharedAudioHeader>(), 8);
 }
 
@@ -40,7 +40,7 @@ fn test_header_offsets_match_swift_layout_contract() {
         .expect("shared-memory layout manifest fields must be an object");
     assert_eq!(
         fields.len(),
-        29,
+        35,
         "manifest must contain exactly every SharedAudioHeader field"
     );
 
@@ -84,6 +84,12 @@ fn test_header_offsets_match_swift_layout_contract() {
     assert_manifest_offset!("configuring_ack", configuring_ack);
     assert_manifest_offset!("requested_channel_count", requested_channel_count);
     assert_manifest_offset!("volume_generation", volume_generation);
+    assert_manifest_offset!("control_lock", control_lock);
+    assert_manifest_offset!("actual_channel_count", actual_channel_count);
+    assert_manifest_offset!("config_request_id", config_request_id);
+    assert_manifest_offset!("config_ack_id", config_ack_id);
+    assert_manifest_offset!("volume_state", volume_state);
+    assert_manifest_offset!("ring_generation", ring_generation);
 }
 
 #[test]
@@ -449,6 +455,10 @@ fn test_reconfigure_quiesced_sets_and_clears_configuring_flag() {
 
     assert_eq!(buffer.header().configuring.load(Ordering::Acquire), 0);
 
+    let request = buffer
+        .publish_config_request(driver_common::DriverConfig::new(44_100, 256, 4), 1)
+        .unwrap();
+    let before = buffer.configuration_snapshot().unwrap();
     buffer.reconfigure_quiesced(Some(96_000), Some(1024), Some(8));
 
     assert_eq!(
@@ -460,8 +470,14 @@ fn test_reconfigure_quiesced_sets_and_clears_configuring_flag() {
     assert_eq!(buffer.sample_rate(), 96_000);
     assert_eq!(buffer.buffer_frames(), 1024);
     assert_eq!(buffer.channel_count(), 8);
-    assert_eq!(buffer.actual_sample_rate(), 96_000);
-    assert_eq!(buffer.actual_buffer_frames(), 1024);
+    assert_eq!(buffer.actual_sample_rate(), 48_000);
+    assert_eq!(buffer.actual_buffer_frames(), 512);
+    let after = buffer.configuration_snapshot().unwrap();
+    assert_eq!(after.request.request_id, request);
+    assert_eq!(after.request, before.request);
+    assert_eq!(after.actual, before.actual);
+    assert_eq!(after.status, 0);
+    assert!(after.pending);
     assert_eq!(buffer.header().write_position.load(Ordering::Acquire), 0);
     assert_eq!(buffer.header().read_position.load(Ordering::Acquire), 0);
 }

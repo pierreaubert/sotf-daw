@@ -23,7 +23,9 @@ use super::thread_event_visitor::expire_seeking_display;
 use super::types::ConfigUpdatePriority;
 use super::types::PendingConfigUpdate;
 use super::{ManagerReply, ManagerRequest};
-use crate::engine::processing_thread::build_plugin_host_with_policy;
+use crate::engine::processing_thread::{
+    build_plugin_graph_host_with_policy, build_plugin_host_with_policy,
+};
 use crate::engine::worker_death::{record_worker_death, worker_death_disposition};
 use crate::{DsdOutputStatus, OutputAccessStatus};
 use arc_swap::ArcSwap;
@@ -269,19 +271,29 @@ pub(super) fn run_manager_thread(
 
     // Determine actual output channel count by loading plugin chain first
     let mut actual_output_sample_rate = config.output_sample_rate;
-    let mut actual_output_channels = if !config.plugins.is_empty() {
+    let mut actual_output_channels = if config.initial_graph.is_some() || !config.plugins.is_empty()
+    {
         log::info!(
             "[Manager Thread] Loading initial plugin chain ({} plugins)...",
             config.plugins.len()
         );
 
         // Build host locally to avoid blocking audio thread later
-        let host_result = build_plugin_host_with_policy(
-            &config.plugins,
-            config.output_sample_rate,
-            config.input_channels,
-            config.oversampling_policy,
-        );
+        let host_result = if let Some(graph) = &config.initial_graph {
+            build_plugin_graph_host_with_policy(
+                graph,
+                config.output_sample_rate,
+                config.input_channels,
+                config.oversampling_policy,
+            )
+        } else {
+            build_plugin_host_with_policy(
+                &config.plugins,
+                config.output_sample_rate,
+                config.input_channels,
+                config.oversampling_policy,
+            )
+        };
 
         let host_result = host_result.and_then(|result| {
             super::apply::prepare_host_callback_capacity(result, Some(config.frame_size))
@@ -392,6 +404,13 @@ pub(super) fn run_manager_thread(
         config.output_access,
         config.sink_type.clone(),
     )?;
+
+    #[cfg(feature = "test-util")]
+    {
+        let mut observed = (**state.load()).clone();
+        observed.lab_pcm_probe = playback_thread.lab_pcm_probe();
+        state.store(Arc::new(observed));
+    }
 
     // Set initial volume and mute
     super::commands::sync_playback_volume(&processing_thread, config.volume)?;

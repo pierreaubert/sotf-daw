@@ -37,6 +37,9 @@ pub enum SinkType {
     /// Other source sample rates are rejected by `EngineConfig` validation.
     #[cfg(feature = "test-util")]
     TestFile,
+    /// Named device-free output with a test-owned observer.
+    #[cfg(feature = "test-util")]
+    TestOutput(crate::lab_pcm::TestOutput),
 }
 
 impl SinkType {
@@ -45,7 +48,28 @@ impl SinkType {
             Self::LabNull => true,
             #[cfg(feature = "test-util")]
             Self::TestFile => true,
+            #[cfg(feature = "test-util")]
+            Self::TestOutput(_) => true,
             Self::Cpal => false,
+        }
+    }
+
+    pub(crate) fn lab_output_name(&self) -> Option<&str> {
+        match self {
+            Self::LabNull => Some("Systemwide Lab Output"),
+            #[cfg(feature = "test-util")]
+            Self::TestFile => Some("Test File Output"),
+            #[cfg(feature = "test-util")]
+            Self::TestOutput(output) => Some(output.name()),
+            Self::Cpal => None,
+        }
+    }
+
+    #[cfg(feature = "test-util")]
+    pub(crate) fn test_output_probe(&self) -> Option<std::sync::Arc<crate::lab_pcm::LabPcmProbe>> {
+        match self {
+            Self::TestOutput(output) => Some(output.probe()),
+            _ => None,
         }
     }
 

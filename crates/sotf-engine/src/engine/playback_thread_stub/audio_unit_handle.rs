@@ -206,10 +206,6 @@ pub(super) fn run_playback_ios(
     // Create CoreAudio AudioUnit
     let _audio_unit = AudioUnitHandle::new(sample_rate, channels, consumer, Arc::clone(&state))?;
 
-    event_tx
-        .try_send(ThreadEvent::PlaybackChannelsChanged(channels))
-        .ok();
-
     log::info!(
         "[Playback Thread iOS] Started - {}Hz, {}ch, buffer={}ms ({}samples)",
         sample_rate,

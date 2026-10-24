@@ -490,19 +490,23 @@ pub(super) fn run_decoder_thread(
                 }
             }
 
-            // Handle sleep for non-HAL mode or disconnected HAL
-            #[cfg(all(target_os = "macos", feature = "hal"))]
-            {
-                if state.hal_reader.as_ref().is_none_or(|r| !r.is_connected()) {
-                    std::thread::sleep(std::time::Duration::from_millis(5));
+            // Explicit capture transports already supply a clock through
+            // availability and downstream backpressure. Do not pace their
+            // successful reads a second time (or treat them as disconnected HAL).
+            if !state.driver_source.has_explicit_source() {
+                #[cfg(all(target_os = "macos", feature = "hal"))]
+                {
+                    if state.hal_reader.as_ref().is_none_or(|r| !r.is_connected()) {
+                        std::thread::sleep(std::time::Duration::from_millis(5));
+                    }
                 }
-            }
-            #[cfg(not(all(target_os = "macos", feature = "hal")))]
-            {
-                // Non-HAL silent source mode: sleep to maintain frame rate
-                let frame_duration_ms =
-                    (frame_size as f64 / target_sample_rate as f64 * 1000.0) as u64;
-                std::thread::sleep(std::time::Duration::from_millis(frame_duration_ms));
+                #[cfg(not(all(target_os = "macos", feature = "hal")))]
+                {
+                    // Non-HAL silent source mode: sleep to maintain frame rate
+                    let frame_duration_ms =
+                        (frame_size as f64 / target_sample_rate as f64 * 1000.0) as u64;
+                    std::thread::sleep(std::time::Duration::from_millis(frame_duration_ms));
+                }
             }
         } else if state.decoder.is_some() && !state.paused {
             // File playback mode: decode from file

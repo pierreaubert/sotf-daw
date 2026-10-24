@@ -13,6 +13,7 @@ use std::sync::Arc;
 /// Snapshot of playback-thread statistics delivered by [`ThreadEvent::PlaybackStats`].
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PlaybackStatsSnapshot {
+    pub output_generation: u64,
     pub callback_count: u64,
     pub buffer_fill_percent: u64,
     pub stream_error_count: u64,
@@ -40,6 +41,7 @@ pub trait ThreadEventVisitor {
     }
     fn playback_channels_changed(&mut self, _state: &mut AudioEngineState, _channels: usize) {}
     fn playback_output_device_changed(&mut self, _state: &mut AudioEngineState, _device: String) {}
+    fn playback_output_device_cleared(&mut self, _state: &mut AudioEngineState) {}
     fn playback_output_access_changed(
         &mut self,
         _state: &mut AudioEngineState,
@@ -99,16 +101,27 @@ pub fn visit<V: ThreadEventVisitor>(
         ThreadEvent::StreamMetadataChanged(metadata) => {
             visitor.stream_metadata_changed(state, metadata)
         }
-        ThreadEvent::PlaybackChannelsChanged(channels) => {
-            visitor.playback_channels_changed(state, channels)
-        }
-        ThreadEvent::PlaybackOutputDeviceChanged(device) => {
-            visitor.playback_output_device_changed(state, device)
-        }
-        ThreadEvent::PlaybackOutputAccessChanged(status) => {
-            visitor.playback_output_access_changed(state, status)
+        ThreadEvent::PlaybackOutputChanged {
+            incident,
+            generation,
+            channels,
+            device,
+            access,
+        } => {
+            if adopt_output_generation(state, generation) {
+                adopt_output_incident(state, incident, generation);
+                visitor.playback_channels_changed(state, channels);
+                // A complete snapshot also clears an obsolete device name when absent.
+                if let Some(device) = device {
+                    visitor.playback_output_device_changed(state, device);
+                } else {
+                    visitor.playback_output_device_cleared(state);
+                }
+                visitor.playback_output_access_changed(state, access);
+            }
         }
         ThreadEvent::PlaybackStats {
+            output_generation,
             callback_count,
             buffer_fill_percent,
             stream_error_count,
@@ -120,6 +133,7 @@ pub fn visit<V: ThreadEventVisitor>(
         } => visitor.playback_stats(
             state,
             &PlaybackStatsSnapshot {
+                output_generation,
                 callback_count,
                 buffer_fill_percent,
                 stream_error_count,
@@ -154,6 +168,66 @@ pub fn visit<V: ThreadEventVisitor>(
             visitor.isolated_external_plugin_worker_statuses(state, statuses)
         }
     }
+}
+
+/// Merge the authoritative incident record carried by an output snapshot.
+/// Missing records are not resolution; older receipts cannot clear newer faults.
+fn adopt_output_incident(
+    state: &mut AudioEngineState,
+    incident: Option<crate::PlaybackIncident>,
+    generation: u64,
+) {
+    let Some(incident) = incident else { return };
+    if incident.id == 0
+        || incident.stream_generation == 0
+        || incident.stream_generation > generation
+    {
+        return;
+    }
+    if let Some(resolution) = incident.resolution
+        && (resolution.output_generation > generation
+            || resolution.output_generation < incident.stream_generation
+            || resolution.callback_count == 0)
+    {
+        return;
+    }
+    if let Some(current) = state.playback_incident.as_ref() {
+        if current.id > incident.id {
+            return;
+        }
+        if current.id == incident.id
+            && (current.stream_generation != incident.stream_generation
+                || (current.resolution.is_some() && incident.resolution.is_none()))
+        {
+            return;
+        }
+    }
+    // Resolution carries immediate callback proof, avoiding a wait for the
+    // periodic statistics cadence. A receipt from a previous stream remains
+    // useful incident history but never seeds activity for a replacement.
+    if let Some(resolution) = incident.resolution
+        && resolution.output_generation == generation
+    {
+        state.playback_callback_count =
+            state.playback_callback_count.max(resolution.callback_count);
+    }
+    state.playback_incident = Some(incident);
+}
+
+/// Fence queued events as soon as a synchronous output commit is acknowledged.
+/// Historical callback activity is not evidence of flow from the replacement.
+pub(super) fn adopt_output_generation(state: &mut AudioEngineState, generation: u64) -> bool {
+    if generation == 0 || generation < state.playback_output_generation {
+        return false;
+    }
+    if generation != state.playback_output_generation {
+        state.playback_callback_count = 0;
+        state.playback_buffer_fill_percent = 0;
+        state.playback_stream_error_count = 0;
+        state.playback_effective_sample_rate = 0;
+        state.playback_output_generation = generation;
+    }
+    true
 }
 
 /// Visitor that applies event mutations to the shared [`AudioEngineState`].
@@ -291,6 +365,10 @@ impl ThreadEventVisitor for AudioEngineStateUpdater {
         state.playback_output_device = Some(device);
     }
 
+    fn playback_output_device_cleared(&mut self, state: &mut AudioEngineState) {
+        state.playback_output_device = None;
+    }
+
     fn playback_output_access_changed(
         &mut self,
         state: &mut AudioEngineState,
@@ -300,11 +378,15 @@ impl ThreadEventVisitor for AudioEngineStateUpdater {
     }
 
     fn playback_stats(&mut self, state: &mut AudioEngineState, stats: &PlaybackStatsSnapshot) {
-        if stats.epoch != state.playback_epoch {
+        if stats.epoch != state.playback_epoch
+            || stats.output_generation != state.playback_output_generation
+        {
             log::debug!(
-                "[Manager Thread] Dropping stale stats for epoch {} (current {})",
+                "[Manager Thread] Dropping stale stats for epoch {} / output {} (current {} / {})",
                 stats.epoch,
-                state.playback_epoch
+                stats.output_generation,
+                state.playback_epoch,
+                state.playback_output_generation
             );
             return;
         }
@@ -593,5 +675,161 @@ mod batch_tests {
         let before = batch.load_full();
         assert_eq!(update_state_with_events([], &batch), 0);
         assert!(Arc::ptr_eq(&before, &batch.load_full()));
+    }
+}
+
+#[cfg(test)]
+mod output_generation_tests {
+    use super::*;
+
+    fn output(
+        generation: u64,
+        channels: usize,
+        device: Option<&str>,
+        access: crate::OutputAccessStatus,
+    ) -> ThreadEvent {
+        ThreadEvent::PlaybackOutputChanged {
+            incident: None,
+            generation,
+            channels,
+            device: device.map(str::to_owned),
+            access,
+        }
+    }
+
+    #[test]
+    fn committed_stream_fence_rejects_queued_retired_output_snapshots() {
+        // The synchronous reconfiguration receipt has already committed stream 42,
+        // but old notifications are still waiting in the asynchronous event queue.
+        let shared = Arc::new(ArcSwap::from_pointee(AudioEngineState {
+            playback_output_generation: 42,
+            playback_channels: 8,
+            playback_output_device: Some("Current interface".into()),
+            output_access_status: crate::OutputAccessStatus::ExclusiveActive,
+            ..AudioEngineState::default()
+        }));
+        update_state_with_events(
+            [
+                output(
+                    41,
+                    2,
+                    Some("Retired speakers"),
+                    crate::OutputAccessStatus::Shared,
+                ),
+                output(0, 1, None, crate::OutputAccessStatus::Shared),
+            ],
+            &shared,
+        );
+        let current = shared.load();
+        assert_eq!(current.playback_output_generation, 42);
+        assert_eq!(current.playback_channels, 8);
+        assert_eq!(
+            current.playback_output_device.as_deref(),
+            Some("Current interface")
+        );
+        assert_eq!(
+            current.output_access_status,
+            crate::OutputAccessStatus::ExclusiveActive
+        );
+    }
+
+    #[test]
+    fn newer_output_snapshot_replaces_the_complete_tuple_once() {
+        let shared = Arc::new(ArcSwap::from_pointee(AudioEngineState::default()));
+        update_state_with_events(
+            [
+                output(
+                    10,
+                    8,
+                    Some("Previous interface"),
+                    crate::OutputAccessStatus::ExclusiveActive,
+                ),
+                output(11, 2, None, crate::OutputAccessStatus::Shared),
+                output(
+                    10,
+                    8,
+                    Some("Previous interface"),
+                    crate::OutputAccessStatus::ExclusiveActive,
+                ),
+            ],
+            &shared,
+        );
+        let current = shared.load();
+        assert_eq!(current.playback_output_generation, 11);
+        assert_eq!(current.playback_channels, 2);
+        assert!(current.playback_output_device.is_none());
+        assert_eq!(
+            current.output_access_status,
+            crate::OutputAccessStatus::Shared
+        );
+    }
+}
+
+#[cfg(test)]
+mod incident_tests {
+    use super::*;
+    use crate::{PlaybackIncident, PlaybackIncidentKind, PlaybackIncidentResolution};
+
+    fn incident(id: u64, resolved: bool) -> Option<PlaybackIncident> {
+        Some(PlaybackIncident {
+            id,
+            stream_generation: 41,
+            kind: PlaybackIncidentKind::StreamError,
+            message: "text is not an error classifier".into(),
+            resolution: resolved.then_some(PlaybackIncidentResolution {
+                output_generation: 42,
+                callback_count: 9,
+            }),
+        })
+    }
+
+    #[test]
+    fn stale_resolution_cannot_clear_newer_incident_or_unrelated_fatal_error() {
+        let mut state = AudioEngineState {
+            playback_output_generation: 42,
+            last_error: Some("decoder failure".into()),
+            ..AudioEngineState::default()
+        };
+        adopt_output_incident(&mut state, incident(100, false), 42);
+        adopt_output_incident(&mut state, incident(101, false), 42);
+        adopt_output_incident(&mut state, incident(100, true), 42);
+        assert_eq!(state.playback_incident.as_ref().unwrap().id, 101);
+        assert!(state.playback_incident.as_ref().unwrap().is_active());
+        adopt_output_incident(&mut state, None, 42);
+        assert!(state.playback_incident.as_ref().unwrap().is_active());
+        adopt_output_incident(&mut state, incident(101, true), 42);
+        assert!(!state.playback_incident.as_ref().unwrap().is_active());
+        adopt_output_incident(&mut state, incident(101, false), 42);
+        assert!(!state.playback_incident.as_ref().unwrap().is_active());
+        assert_eq!(state.last_error.as_deref(), Some("decoder failure"));
+    }
+
+    #[test]
+    fn invalid_resolution_receipts_and_retired_stats_do_not_prove_health() {
+        let mut state = AudioEngineState {
+            playback_output_generation: 42,
+            playback_callback_count: 5,
+            ..AudioEngineState::default()
+        };
+        adopt_output_incident(&mut state, incident(100, false), 42);
+        let mut invalid = incident(100, true).unwrap();
+        invalid.resolution.as_mut().unwrap().output_generation = 40;
+        adopt_output_incident(&mut state, Some(invalid), 42);
+        assert!(state.playback_incident.as_ref().unwrap().is_active());
+        let mut updater = AudioEngineStateUpdater;
+        updater.playback_stats(
+            &mut state,
+            &PlaybackStatsSnapshot {
+                output_generation: 41,
+                callback_count: 1000,
+                ..Default::default()
+            },
+        );
+        assert_eq!(state.playback_callback_count, 5);
+        assert!(adopt_output_generation(&mut state, 43));
+        assert_eq!(state.playback_callback_count, 0);
+        adopt_output_incident(&mut state, incident(100, true), 43);
+        assert!(!state.playback_incident.as_ref().unwrap().is_active());
+        assert_eq!(state.playback_callback_count, 0);
     }
 }

@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 /// Shared state between the playback thread and cpal callback.
 /// All fields are lock-free atomics for real-time safety.
 pub(crate) struct CpalPlaybackState {
+    pub output_generation: u64,
     pub capacity: usize,
     pub volume: Arc<AtomicU32>,
     pub muted: Arc<AtomicBool>,
@@ -26,6 +27,7 @@ impl CpalPlaybackState {
     pub(super) fn new_with_controls(capacity: usize, volume: f32, muted: bool) -> Self {
         let effective_gain = if muted { 0.0 } else { volume };
         Self {
+            output_generation: crate::engine::types::next_playback_identity(),
             capacity,
             volume: Arc::new(AtomicU32::new(volume.to_bits())),
             muted: Arc::new(AtomicBool::new(muted)),
