@@ -1,0 +1,223 @@
+//! Independent ear-target solves, closest-distance geometry and explicit skips.
+
+// Rust guideline compliant 2026-02-21
+use super::*;
+
+fn pack(h: [[Complex<f64>; 2]; 2]) -> Matrix {
+    h.map(|row| row.map(|v| Complex::new(v.re as f32, v.im as f32)))
+}
+fn wide(h: Matrix) -> [[Complex<f64>; 2]; 2] {
+    h.map(|row| row.map(|v| Complex::new(f64::from(v.re), f64::from(v.im))))
+}
+fn scaled_identity(gain: f32) -> Matrix {
+    [
+        [Complex::new(gain, 0.0), Complex::new(0.0, 0.0)],
+        [Complex::new(0.0, 0.0), Complex::new(gain, 0.0)],
+    ]
+}
+fn assert_bits(a: Matrix, b: Matrix) {
+    for (a, b) in a.iter().flatten().zip(b.iter().flatten()) {
+        assert_eq!(a.re.to_bits(), b.re.to_bits());
+        assert_eq!(a.im.to_bits(), b.im.to_bits());
+    }
+}
+
+fn gaussian(mut h: [[Complex<f64>; 2]; 2], mut y: Vector) -> Vector {
+    if amplitude(h[0][0]) < amplitude(h[1][0]) {
+        h.swap(0, 1);
+        y.swap(0, 1);
+    }
+    let factor = h[1][0] / h[0][0];
+    let right = (y[1] - factor * y[0]) / (h[1][1] - factor * h[0][1]);
+    [(y[0] - h[0][1] * right) / h[0][0], right]
+}
+
+#[test]
+fn fixed_complex_gain_projection_matches_pivoted_ear_target_and_nearest_geometry() {
+    let plants = [
+        [
+            [Complex::new(1.0, 0.0), Complex::new(0.3, 0.2)],
+            [Complex::new(0.2, -0.1), Complex::new(0.9, 0.0)],
+        ],
+        [
+            [Complex::new(0.8, 0.1), Complex::new(-0.2, 0.3)],
+            [Complex::new(0.4, 0.2), Complex::new(0.9, -0.1)],
+        ],
+        [
+            [Complex::new(0.15, 0.1), Complex::new(0.6, -0.2)],
+            [Complex::new(0.7, 0.1), Complex::new(0.2, 0.1)],
+        ],
+    ];
+    let mut maximum_gain_error = 0.0_f64;
+    let mut maximum_excess_distance = 0.0_f64;
+    let mut cases = 0;
+    for h in plants {
+        let h = wide(pack(h));
+        let legacy = scaled_identity(0.8);
+        let result = project_nominal_bin(pack(h), legacy, 4.0, false);
+        assert_eq!(result.status, ProjectionStatus::Corrected);
+        let before = wide(legacy);
+        let after = wide(result.filters);
+        for cue in 0..2 {
+            let original = [before[0][cue], before[1][cue]];
+            let actual = [after[0][cue], after[1][cue]];
+            let g = response(h[cue], original);
+            let l = response(h[1 - cue], original);
+            let radius = amplitude(h[1 - cue][cue]) * 10.0_f64.powf(-5.0 / 20.0);
+            let mut ear_target = [Complex::new(0.0, 0.0); 2];
+            ear_target[cue] = g;
+            ear_target[1 - cue] = l * (radius / amplitude(l));
+            let oracle = gaussian(h, ear_target);
+            maximum_gain_error = maximum_gain_error.max(amplitude(response(h[cue], actual) - g));
+            assert!(amplitude(response(h[cue], actual) - g) < 1e-6);
+            assert!(amplitude(response(h[cue], actual)) <= 1.0);
+            assert!(amplitude(response(h[1 - cue], actual)) <= radius);
+            let actual_distance = length(std::array::from_fn(|i| actual[i] - original[i]));
+            let exact_distance = length(std::array::from_fn(|i| oracle[i] - original[i]));
+            // The only excess distance is the independently bounded f32
+            // representability allowance, not a deeper acoustic target.
+            let null = [h[cue][1], -h[cue][0]];
+            let unit_null = null.map(|v| v / length(null));
+            let allowance =
+                8.0 * f64::from(f32::EPSILON) * length(h[1 - cue]) * std::f64::consts::SQRT_2 * 4.0
+                    / amplitude(response(h[1 - cue], unit_null));
+            assert!(actual_distance >= exact_distance - 1e-6);
+            assert!(actual_distance - exact_distance <= allowance + 1e-6);
+            maximum_excess_distance = maximum_excess_distance.max(actual_distance - exact_distance);
+            cases += 1;
+        }
+    }
+    println!(
+        "NOMINAL_PROJECTION_REFERENCE cases={cases} maximum_complex_gain_error={maximum_gain_error:e} maximum_excess_distance={maximum_excess_distance:e}"
+    );
+}
+
+#[test]
+fn passing_bins_and_passing_mixed_columns_are_bit_identical() {
+    let h = pack([
+        [Complex::new(1.0, 0.0), Complex::new(0.3, 0.2)],
+        [Complex::new(0.2, -0.1), Complex::new(0.9, 0.0)],
+    ]);
+    let passing = scaled_identity(0.4);
+    let result = project_nominal_bin(h, passing, 4.0, false);
+    assert_eq!(result.status, ProjectionStatus::Unchanged);
+    assert_bits(result.filters, passing);
+    let mut mixed = scaled_identity(0.8);
+    mixed[0][0] = Complex::new(0.4, 0.0);
+    let result = project_nominal_bin(h, mixed, 4.0, false);
+    assert_eq!(result.status, ProjectionStatus::Corrected);
+    assert_eq!(result.changed_columns, [false, true]);
+    for row in 0..2 {
+        assert_eq!(
+            result.filters[row][0].re.to_bits(),
+            mixed[row][0].re.to_bits()
+        );
+        assert_eq!(
+            result.filters[row][0].im.to_bits(),
+            mixed[row][0].im.to_bits()
+        );
+    }
+}
+
+#[test]
+fn original_lf_default_is_nominally_feasible_without_loudness_boost() {
+    let h = pack([
+        [
+            Complex::new(1.0, 0.0),
+            Complex::new(0.9458370804786682, -0.14664089679718018),
+        ],
+        [
+            Complex::new(0.9458370804786682, -0.14664089679718018),
+            Complex::new(1.0, 0.0),
+        ],
+    ]);
+    let legacy = pack([
+        [
+            Complex::new(1.1398584842681885, -1.2595717906951904),
+            Complex::new(-0.34930071234703064, 1.277545690536499),
+        ],
+        [
+            Complex::new(-0.34930071234703064, 1.277545690536499),
+            Complex::new(1.1398584842681885, -1.2595717906951904),
+        ],
+    ]);
+    let ceiling = 3.981071949005127_f32;
+    let result = project_nominal_bin(h, legacy, ceiling, false);
+    assert_eq!(result.status, ProjectionStatus::Corrected);
+    let h = wide(h);
+    let original = wide(legacy);
+    let actual = wide(result.filters);
+    let mut depths = [0.0; 2];
+    let mut gains = [0.0; 2];
+    for cue in 0..2 {
+        let before = [original[0][cue], original[1][cue]];
+        let after = [actual[0][cue], actual[1][cue]];
+        let g0 = response(h[cue], before);
+        let g1 = response(h[cue], after);
+        assert!(amplitude(g1 - g0) < 1e-6);
+        assert!(amplitude(g1) <= 1.0);
+        depths[cue] =
+            20.0 * (amplitude(h[1 - cue][cue]) / amplitude(response(h[1 - cue], after))).log10();
+        gains[cue] = amplitude(g1);
+        assert!(depths[cue] >= 5.0);
+    }
+    let powers = actual.map(|row| length(row).powi(2));
+    assert!(powers.iter().all(|v| *v <= f64::from(ceiling).powi(2)));
+    println!(
+        "NOMINAL_PROJECTION_LF raw_depth={depths:?} intended_amplitude={gains:?} row_power={powers:?}"
+    );
+}
+
+#[test]
+fn endpoint_singular_power_and_unit_gain_skips_preserve_all_bits() {
+    let legacy = scaled_identity(0.8);
+    let complex = pack([
+        [Complex::new(1.0, 0.0), Complex::new(0.3, 0.2)],
+        [Complex::new(0.2, -0.1), Complex::new(0.9, 0.0)],
+    ]);
+    let endpoint = project_nominal_bin(complex, legacy, 4.0, true);
+    assert_eq!(endpoint.status, ProjectionStatus::Endpoint);
+    assert_bits(endpoint.filters, legacy);
+    let singular = [[Complex::new(1.0, 0.0); 2]; 2];
+    let skipped = project_nominal_bin(singular, legacy, 4.0, false);
+    assert_eq!(skipped.status, ProjectionStatus::Singular);
+    assert_bits(skipped.filters, legacy);
+    let costly = pack([
+        [Complex::new(1.0, 0.0), Complex::new(0.99, 0.001)],
+        [Complex::new(0.99, 0.001), Complex::new(1.0, 0.0)],
+    ]);
+    let skipped = project_nominal_bin(costly, legacy, 1.0, false);
+    assert_eq!(skipped.status, ProjectionStatus::PowerLimited);
+    assert_bits(skipped.filters, legacy);
+    let loud = complex.map(|row| row.map(|v| v * 2.0));
+    let skipped = project_nominal_bin(loud, legacy, 4.0, false);
+    assert_eq!(skipped.status, ProjectionStatus::GainLimited);
+    assert_bits(skipped.filters, legacy);
+}
+
+#[test]
+fn row_column_mirroring_and_binary_transfer_scaling_preserve_projection() {
+    let h = pack([
+        [Complex::new(0.1, 0.0), Complex::new(0.03, 0.02)],
+        [Complex::new(0.02, -0.01), Complex::new(0.09, 0.0)],
+    ]);
+    let legacy = scaled_identity(0.8);
+    let base = project_nominal_bin(h, legacy, 4.0, false);
+    assert_eq!(base.status, ProjectionStatus::Corrected);
+    for scale in [0.25_f32, 0.5, 1.0, 4.0] {
+        let scaled = h.map(|row| row.map(|v| v * scale));
+        let actual = project_nominal_bin(scaled, legacy, 4.0, false);
+        assert_eq!(actual.status, ProjectionStatus::Corrected);
+        assert_bits(actual.filters, base.filters);
+    }
+    let mirrored = [[h[1][1], h[1][0]], [h[0][1], h[0][0]]];
+    let actual = project_nominal_bin(mirrored, legacy, 4.0, false);
+    assert_eq!(actual.status, ProjectionStatus::Corrected);
+    assert_bits(
+        actual.filters,
+        [
+            [base.filters[1][1], base.filters[1][0]],
+            [base.filters[0][1], base.filters[0][0]],
+        ],
+    );
+}

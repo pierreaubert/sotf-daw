@@ -1,0 +1,34 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters.rs": {
+    "sha256": "b9ca168366e19a89ace06c2cd9139b1dc5748feb0e350c53a2825806a011a952",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/filters.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": {
+    "sha256": "6631ee12175a9fa395565a837d20d6b3d99f869e8d5cd8e4dedc7562a1b9a09e",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/filters__compute.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection.rs": {
+    "sha256": "63911deee4ad558923ddb2548611254751b75a2ace9556a4ae36d4bee9956c4c",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/filters__nominal_projection.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection_tests.rs": {
+    "sha256": "4b09dd484c7d263ef7bcdd6c98386fe0cb758ae3f1182f737882b29718292a7d",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/filters__nominal_projection_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection_audit_tests.rs": {
+    "sha256": "44f07970061283656d6135ad2eaabf204213e650021712e5a8c8b927a62e0aa9",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/filters__nominal_projection_audit_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs": {
+    "sha256": "b2a8cd15718e3a9ba24ed809f53959d26cd33ecf99228ea18565e6a2487e6193",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/lib__xtc_plugin.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/config.rs": {
+    "sha256": "c92796188e1ee1d725d2208e8ccdad429a7c3ad6e3b6ea6f6f2cb458aea2156e",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/config.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/params.rs": {
+    "sha256": "0c95f4480b65f86e23da62f107077979deb794949c394d1609ecd4e76dbac36b",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/rejected-source/params.rs.txt"
+  }
+}

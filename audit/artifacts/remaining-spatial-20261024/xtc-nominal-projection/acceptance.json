@@ -1,0 +1,27 @@
+{
+  "candidate_acceptance_established": false,
+  "failures": [
+    "fade-control: test command failed"
+  ],
+  "mismatch": {
+    "False": {
+      "cues": 600,
+      "degraded": 146,
+      "worst_improvement_db": -5.382083312123385,
+      "baseline_worst_db": -5.382083283837915
+    },
+    "True": {
+      "cues": 600,
+      "degraded": 146,
+      "worst_improvement_db": -5.382084113901623,
+      "baseline_worst_db": -5.382084138159015
+    }
+  },
+  "measured": {
+    "cues": 140,
+    "degraded": 4,
+    "worst_improvement_db": -1.5163770395694693,
+    "baseline_worst_db": -1.516376941042497,
+    "minimum_desired_gain_delta_db": -3.3288145573351358e-09
+  }
+}

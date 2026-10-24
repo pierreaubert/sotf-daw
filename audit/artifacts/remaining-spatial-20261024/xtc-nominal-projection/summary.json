@@ -1,0 +1,32 @@
+{
+  "current_source_verified": true,
+  "XTC_worktree_and_index_restored": true,
+  "candidate_rejected": true,
+  "rejected_candidate_nominal_checks": "17/17",
+  "restored_source_has_no_nominal_fix": true,
+  "mismatch": {
+    "False": {
+      "cues": 600,
+      "degraded": 146,
+      "worst_improvement_db": -5.382083312123385,
+      "baseline_worst_db": -5.382083283837915
+    },
+    "True": {
+      "cues": 600,
+      "degraded": 146,
+      "worst_improvement_db": -5.382084113901623,
+      "baseline_worst_db": -5.382084138159015
+    }
+  },
+  "measured": {
+    "cues": 140,
+    "degraded": 4,
+    "worst_improvement_db": -1.5163770395694693,
+    "baseline_worst_db": -1.516376941042497,
+    "minimum_desired_gain_delta_db": -3.3288145573351358e-09
+  },
+  "failed_fade_cases": 8,
+  "increased_tail_energy_cases": 8,
+  "shipping_no_qa_lib_and_strict_clippy_passed": true,
+  "all_three_plugin_scopes_remain_partial": true
+}

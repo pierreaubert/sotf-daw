@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "aligned_bypass",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.566007137298584,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\nerror[E0433]: cannot find module or crate `log` in this scope\n   --> crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs:393:5\n    |\n393 |     log::debug!(\n    |     ^^^ use of unresolved module or unlinked crate `log`\n\nFor more information about this error, try `rustc --explain E0433`.\nerror: could not compile `sotf-plugin-xtc` (lib) due to 1 previous error\n"
+}

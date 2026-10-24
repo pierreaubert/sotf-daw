@@ -1,0 +1,100 @@
+//! Actual prepared-matrix gain, endpoint/fade boundary and time-support audit.
+
+// Rust guideline compliant 2026-02-21
+use super::*;
+use realfft::RealFftPlanner;
+
+fn tail_energy(left: &[Complex<f32>], right: &[Complex<f32>], n: usize) -> f64 {
+    let mut planner = RealFftPlanner::<f32>::new();
+    let inverse = planner.plan_fft_inverse(n);
+    let mut total = 0.0_f64;
+    let mut outside = 0.0_f64;
+    for source in [left, right] {
+        let mut spectrum = source.to_vec();
+        spectrum[0].im = 0.0;
+        spectrum[n / 2].im = 0.0;
+        let mut time = vec![0.0; n];
+        inverse.process(&mut spectrum, &mut time).unwrap();
+        for (sample, &value) in time.iter().enumerate() {
+            let energy = f64::from(value).powi(2);
+            total += energy;
+            if sample > n / 8 && sample < n - n / 8 {
+                outside += energy;
+            }
+        }
+    }
+    outside / total
+}
+
+#[test]
+fn actual_nominal_projection_preserves_zero_fades_and_complex_boundary_continuity() {
+    let mut failures = 0;
+    let mut cases = 0;
+    for rate in [48_000_u32, 96_000] {
+        for model in [0, 1] {
+            for mode in ["phase_only", "explicit_delay"] {
+                let n = 2048;
+                let bins = n / 2 + 1;
+                let params = XtcPluginParams {
+                    fft_size: n,
+                    head_model: model,
+                    itd_modeling: mode.into(),
+                    ..Default::default()
+                };
+                let cache = compute_geometry_cache(&params, rate, bins);
+                let (legacy_ll, legacy_lr) =
+                    compute_xtc_filters_symmetric_with_cache(&params, bins, &cache, None);
+                let actual = compute_xtc_filters_full(&params, rate, bins);
+                let alpha = |bin: usize| {
+                    let f = bin as f32 * cache.freq_per_bin;
+                    (1.0 - sigmoid_smooth(100.0 - f, 30.0))
+                        * (1.0 - sigmoid_smooth(f - 12000.0, 1500.0))
+                };
+                let mut boundaries = vec![1, bins - 1];
+                for bin in 1..bins {
+                    if (alpha(bin) == 0.0) != (alpha(bin - 1) == 0.0) {
+                        boundaries.push(bin);
+                    }
+                    if alpha(bin) == 0.0 || bin + 1 == bins {
+                        assert_eq!(actual.filter_ll[bin], legacy_ll[bin]);
+                        assert_eq!(actual.filter_lr[bin], legacy_lr[bin]);
+                    }
+                }
+                assert_eq!(actual.filter_ll[0], legacy_ll[0]);
+                assert_eq!(actual.filter_lr[0], legacy_lr[0]);
+                for bin in boundaries {
+                    let legacy_jump = (legacy_ll[bin] - legacy_ll[bin - 1])
+                        .norm()
+                        .max((legacy_lr[bin] - legacy_lr[bin - 1]).norm());
+                    let candidate_jump = (actual.filter_ll[bin] - actual.filter_ll[bin - 1])
+                        .norm()
+                        .max((actual.filter_lr[bin] - actual.filter_lr[bin - 1]).norm());
+                    let scale = actual.filter_ll[bin]
+                        .norm()
+                        .max(actual.filter_ll[bin - 1].norm())
+                        .max(actual.filter_lr[bin].norm())
+                        .max(actual.filter_lr[bin - 1].norm())
+                        .max(1.0);
+                    let allowance = 64.0 * f32::EPSILON * scale;
+                    let passed = candidate_jump <= legacy_jump + allowance;
+                    failures += usize::from(!passed);
+                    println!(
+                        "NOMINAL_PROJECTION_BOUNDARY rate={rate} model={model} mode={mode} bin={bin} frequency_hz={} legacy_jump={legacy_jump} candidate_jump={candidate_jump} numerical_allowance={allowance} passed={passed}",
+                        bin as f32 * cache.freq_per_bin
+                    );
+                }
+                println!(
+                    "NOMINAL_PROJECTION_TIME rate={rate} model={model} mode={mode} legacy_outside_central_support_energy_fraction={} candidate_outside_central_support_energy_fraction={}",
+                    tail_energy(&legacy_ll, &legacy_lr, n),
+                    tail_energy(&actual.filter_ll, &actual.filter_lr, n)
+                );
+                cases += 1;
+            }
+        }
+    }
+    println!("NOMINAL_PROJECTION_BOUNDARY_SUMMARY cases={cases} failures={failures}");
+    assert_eq!(
+        failures, 0,
+        "nominal projection must not introduce an internal fade/endpoint cliff"
+    );
+}

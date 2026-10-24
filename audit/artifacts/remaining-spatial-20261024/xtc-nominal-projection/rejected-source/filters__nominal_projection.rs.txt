@@ -1,0 +1,190 @@
+//! Nearest nominal raw-residual correction at fixed intended complex response.
+
+// Rust guideline compliant 2026-02-21
+use rustfft::num_complex::Complex;
+
+pub(super) type Matrix = [[Complex<f32>; 2]; 2];
+
+// This is the minimum existing nominal raw-depth requirement, not an acoustic
+// robustness guarantee or a frequency-specific fitted target.
+pub(super) const MINIMUM_NOMINAL_RAW_DB: f64 = 5.0;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ProjectionStatus {
+    Unchanged,
+    Corrected,
+    Endpoint,
+    Invalid,
+    UndefinedReference,
+    Singular,
+    GainLimited,
+    PowerLimited,
+    QuantizationLimited,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ProjectionResult {
+    pub(super) filters: Matrix,
+    pub(super) status: ProjectionStatus,
+    pub(super) changed_columns: [bool; 2],
+}
+
+type Vector = [Complex<f64>; 2];
+
+fn amplitude(value: Complex<f64>) -> f64 {
+    value.re.hypot(value.im)
+}
+fn length(v: Vector) -> f64 {
+    amplitude(v[0]).hypot(amplitude(v[1]))
+}
+fn response(row: Vector, column: Vector) -> Complex<f64> {
+    row[0] * column[0] + row[1] * column[1]
+}
+
+/// Project failing raw leakage while retaining the legacy intended response.
+///
+/// The desired-row nullspace has one complex dimension. Radial projection of
+/// the leakage onto its permitted disk therefore minimizes coefficient distance.
+/// Passing columns are unchanged. A rejected joint matrix returns the complete
+/// original matrix; there is no subsequent gain normalization or effort scaling.
+pub(super) fn project_nominal_bin(
+    plant: Matrix,
+    legacy: Matrix,
+    max_gain_linear: f32,
+    real_endpoint: bool,
+) -> ProjectionResult {
+    let unchanged = |status| ProjectionResult {
+        filters: legacy,
+        status,
+        changed_columns: [false; 2],
+    };
+    if real_endpoint {
+        return unchanged(ProjectionStatus::Endpoint);
+    }
+    if !max_gain_linear.is_finite()
+        || max_gain_linear <= 0.0
+        || plant
+            .iter()
+            .chain(&legacy)
+            .flatten()
+            .any(|v| !v.re.is_finite() || !v.im.is_finite())
+    {
+        return unchanged(ProjectionStatus::Invalid);
+    }
+    let wide = |m: Matrix| m.map(|row| row.map(|v| Complex::new(f64::from(v.re), f64::from(v.im))));
+    let h = wide(plant);
+    let original = wide(legacy);
+    let mut proposal = original;
+    let mut changed_columns = [false; 2];
+    let ceiling = f64::from(max_gain_linear);
+    // Each stored column has norm <=sqrt(2)*ceiling once both speaker rows
+    // satisfy the existing effort budget. This bounds f32 rounding of a row
+    // response without choosing a measured-score-dependent safety margin.
+    let column_ceiling = std::f64::consts::SQRT_2 * ceiling;
+    let quantization_bound = |row: Vector| {
+        4.0 * f64::from(f32::EPSILON) * length(row) * column_ceiling
+            + 2.0 * f64::from(f32::from_bits(1)) * length(row)
+    };
+    for cue in 0..2 {
+        let a = h[cue];
+        let b = h[1 - cue];
+        let column = [original[0][cue], original[1][cue]];
+        let reference = amplitude(b[cue]);
+        if reference == 0.0 {
+            return unchanged(ProjectionStatus::UndefinedReference);
+        }
+        let leakage = response(b, column);
+        let maximum_leakage = reference * 10.0_f64.powf(-MINIMUM_NOMINAL_RAW_DB / 20.0);
+        if amplitude(leakage) <= maximum_leakage {
+            continue;
+        }
+        let desired = response(a, column);
+        if amplitude(desired) == 0.0 || amplitude(desired) > 1.0 {
+            return unchanged(ProjectionStatus::GainLimited);
+        }
+        let p = a[0] * b[1];
+        let q = a[1] * b[0];
+        let determinant = p - q;
+        // Relative arithmetic conditioning only: no singular value is treated
+        // as a transfer-error estimate or as measured control authority.
+        if amplitude(determinant) <= 64.0 * f64::EPSILON * (amplitude(p) + amplitude(q)) {
+            return unchanged(ProjectionStatus::Singular);
+        }
+        let radius = maximum_leakage - quantization_bound(b);
+        if radius <= 0.0 {
+            return unchanged(ProjectionStatus::QuantizationLimited);
+        }
+        let target = leakage * (radius / amplitude(leakage));
+        let multiplier = (target - leakage) / determinant;
+        let correction = [-a[1] * multiplier, a[0] * multiplier];
+        for speaker in 0..2 {
+            proposal[speaker][cue] += correction[speaker];
+            if !proposal[speaker][cue].re.is_finite() || !proposal[speaker][cue].im.is_finite() {
+                return unchanged(ProjectionStatus::Invalid);
+            }
+        }
+        changed_columns[cue] = true;
+    }
+    if !changed_columns.into_iter().any(|v| v) {
+        return unchanged(ProjectionStatus::Unchanged);
+    }
+    if proposal
+        .iter()
+        .any(|row| length(*row).powi(2) > ceiling * ceiling)
+    {
+        return unchanged(ProjectionStatus::PowerLimited);
+    }
+    let mut filters = legacy;
+    for cue in 0..2 {
+        if !changed_columns[cue] {
+            continue;
+        }
+        for speaker in 0..2 {
+            filters[speaker][cue] = Complex::new(
+                proposal[speaker][cue].re as f32,
+                proposal[speaker][cue].im as f32,
+            );
+        }
+    }
+    let stored = wide(filters);
+    if stored
+        .iter()
+        .flatten()
+        .any(|v| !v.re.is_finite() || !v.im.is_finite())
+    {
+        return unchanged(ProjectionStatus::Invalid);
+    }
+    if stored
+        .iter()
+        .any(|row| length(*row).powi(2) > ceiling * ceiling)
+    {
+        return unchanged(ProjectionStatus::PowerLimited);
+    }
+    for cue in 0..2 {
+        if !changed_columns[cue] {
+            continue;
+        }
+        let before = [original[0][cue], original[1][cue]];
+        let after = [stored[0][cue], stored[1][cue]];
+        let desired_before = response(h[cue], before);
+        let desired_after = response(h[cue], after);
+        if amplitude(desired_after) > 1.0
+            || amplitude(desired_after - desired_before) > quantization_bound(h[cue])
+        {
+            return unchanged(ProjectionStatus::GainLimited);
+        }
+        let limit = amplitude(h[1 - cue][cue]) * 10.0_f64.powf(-MINIMUM_NOMINAL_RAW_DB / 20.0);
+        if amplitude(response(h[1 - cue], after)) > limit {
+            return unchanged(ProjectionStatus::QuantizationLimited);
+        }
+    }
+    ProjectionResult {
+        filters,
+        status: ProjectionStatus::Corrected,
+        changed_columns,
+    }
+}
+
+#[cfg(test)]
+#[path = "nominal_projection_tests.rs"]
+mod tests;

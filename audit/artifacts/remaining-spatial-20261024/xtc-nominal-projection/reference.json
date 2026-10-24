@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-xtc",
+    "--lib",
+    "filters::nominal_projection::tests",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 17.680925846099854,
+  "stdout": "\nrunning 5 tests\nNOMINAL_PROJECTION_LF raw_depth=[5.000059775966248, 5.000059775966248] intended_amplitude=[0.996817387913837, 0.996817387913837] row_power=[4.849762100276422, 4.849762100276422]\ntest filters::nominal_projection::tests::endpoint_singular_power_and_unit_gain_skips_preserve_all_bits ... ok\nNOMINAL_PROJECTION_REFERENCE cases=6 maximum_complex_gain_error=2.6439691547711086e-8 maximum_excess_distance=3.248614168435693e-6\ntest filters::nominal_projection::tests::passing_bins_and_passing_mixed_columns_are_bit_identical ... ok\ntest filters::nominal_projection::tests::row_column_mirroring_and_binary_transfer_scaling_preserve_projection ... ok\ntest filters::nominal_projection::tests::original_lf_default_is_nominally_feasible_without_loudness_boost ... ok\ntest filters::nominal_projection::tests::fixed_complex_gain_projection_matches_pivoted_ear_target_and_nearest_geometry ... ok\n\ntest result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 201 filtered out; finished in 0.00s\n\n",
+  "stderr": "   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 17.63s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_xtc-4c038924d1b565e5)\n"
+}

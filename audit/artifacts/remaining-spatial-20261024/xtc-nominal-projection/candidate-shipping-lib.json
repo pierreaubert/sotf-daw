@@ -1,0 +1,20 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "build",
+    "-p",
+    "sotf-plugin-xtc",
+    "--lib",
+    "--offline",
+    "--locked",
+    "--release",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 4.812288999557495,
+  "stdout": "",
+  "stderr": "   Compiling symphonia-metadata v0.6.1\n   Compiling symphonia v0.6.1\n   Compiling symphonia-format-riff v0.6.1\n   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)\n    Finished `release` profile [optimized] target(s) in 4.73s\n"
+}

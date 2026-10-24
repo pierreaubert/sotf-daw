@@ -1,0 +1,10 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters.rs": "b9ca168366e19a89ace06c2cd9139b1dc5748feb0e350c53a2825806a011a952",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/compute.rs": "a821097778c871a448fd26296781c3c5a8acd5bd4929640e7f77af892470c405",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection.rs": "63911deee4ad558923ddb2548611254751b75a2ace9556a4ae36d4bee9956c4c",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection_tests.rs": "4b09dd484c7d263ef7bcdd6c98386fe0cb758ae3f1182f737882b29718292a7d",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection_audit_tests.rs": "44f07970061283656d6135ad2eaabf204213e650021712e5a8c8b927a62e0aa9",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs": "b2a8cd15718e3a9ba24ed809f53959d26cd33ecf99228ea18565e6a2487e6193",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/config.rs": "c92796188e1ee1d725d2208e8ccdad429a7c3ad6e3b6ea6f6f2cb458aea2156e",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/params.rs": "0c95f4480b65f86e23da62f107077979deb794949c394d1609ecd4e76dbac36b"
+}

@@ -1,0 +1,5 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters.rs": "0ca39ec0ed9385d0ed00a4a1ee66371de15f82db689d81d0778c400f6b768d8c",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection.rs": "63911deee4ad558923ddb2548611254751b75a2ace9556a4ae36d4bee9956c4c",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/filters/nominal_projection_tests.rs": "4b09dd484c7d263ef7bcdd6c98386fe0cb758ae3f1182f737882b29718292a7d"
+}

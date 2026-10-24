@@ -1,0 +1,8 @@
+{
+  "base_commit": "298d155596de3907e4c999121908b5102d1bc360",
+  "one_attempt": true,
+  "target": "minimum existing nominal raw attenuation5dB, preserving legacy intended complex response and nominal unit-amplitude ceiling; no uncertainty/new worst-case floor/1.25 ceiling",
+  "rule": "radial leakage projection in desired-row nullspace; passing bins/columns exact; numerical-only f32 allowance; jointrowbudget; explicit singular/DC/Nyquist/power/gain/unrepresentable skips",
+  "acceptance": "independent pivoted Gaussian and nearest-distance references before wiring; all17 unchanged nominal checks, unchanged600 rows per normalization <=146 degraded and worst>=baseline-1e-6dB, measured140 cues no new degraded/worst/gain regression; full functional/strictClippy; reject+restore on any failure without guard/tradeoff changes",
+  "fade_guard": "Nominal projection integration audit, before candidate measurements: verify the exact zero-fade/DC/Nyquist bins retain legacy coefficients. At each first zero/nonzero internal-fade boundary and DC/Nyquist adjacent boundary, require complex coefficient jump no larger than the legacy jump plus64*f32EPS*max(1,coefficient magnitude), a numerical allowance rather than an audibility threshold. Report full-real-IFFT energy outside central +/-N/8 support for both legacy/candidate without claiming an auditory ringing threshold. Run48/96kHz, N2048, both head models and LF delay modes; preserve raw failures. Test enabled/dry bypass and diagnostic identity branch with existing functional suites. No bypass/mix/source routing changes; RoomEQ recommended matrices remain outside the nominal-plant solver."
+}
