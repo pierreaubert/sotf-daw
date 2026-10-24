@@ -1,0 +1,16 @@
+{
+  "shadow": "/Volumes/home_tmp/tmp/plugin-lock-resolution-8zjflj2u",
+  "command": [
+    "cargo",
+    "metadata",
+    "--offline",
+    "--format-version",
+    "1"
+  ],
+  "exit_code": 101,
+  "stderr": "     Locking 6 packages to highest Rust 1.99.1 compatible versions\n    Updating autoeq-optim v0.5.63 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-optim) -> v0.5.64\n    Updating autoeq-report-wasm v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-report-wasm) -> v0.5.1\n    Updating roomeq-engine v0.5.83 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-engine) -> v0.5.84\n    Updating roomeq-model v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-model) -> v0.5.15\n    Updating roomeq-quality v0.5.61 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-quality) -> v0.5.62\n    Updating roomeq-workflow v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/roomeq-workflow) -> v0.5.36\nerror: failed to download `accesskit_atspi_common v0.21.0`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified\n",
+  "original_sha256": "1a4b2b66006cd1e86346ab76cef2bf6f4cbc39ad5ec8afce93310c27fa31cfcc",
+  "resolved_sha256": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "main_lock_unchanged": true,
+  "diff_lines": 56
+}

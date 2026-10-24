@@ -3627,6 +3627,23 @@
             "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/baseline-source.json",
             "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/nominal-correct-filter.json"
           ]
+        },
+        {
+          "requirement": "Reject the single nominal fixed-complex-gain projection when fade continuity and impulse support regress.",
+          "status": "rejected_candidate_restored",
+          "result": "Archive4339fb5 retainsoneoriginal-nominalprojection; no exploratorygainceiling/robustfloor. Fivehelperreferences pass; actualcandidate17/17nominal,unchanged146/600degradedpermode andmeasured4/140 withworst/gaindeltaswithin1e-6dB.13wet/alignedbypasstestsandshipping/noqa build+strictClippy pass. BUTall8predeclaredfadecasesintroducecliffs, e.g48k/model0Nyquist-adjacentjump4.922e-7 to.01548631;model1to.19303823. IFFToutside-central-supportenergyincreasesall8(e.g.000153198 to.00329555), notanaudibilityclaim. AcceptanceFAILS; no retuning/fixturechanges. Exactcandidateandprerequisite/loggingcompilefailuresretained. EntireXTCworkingtreeANDownedindexrestored; verifierpasses. No nominalfixships; LFdefault4.811dB remainsopen.",
+          "evidence": [
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/README.md",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/summary.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/check-acceptance.py",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/verify.py",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/wired-source.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-nominal.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-mismatch.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-measured.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-fade-control.json",
+            "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-shipping-clippy.json"
+          ]
         }
       ],
       "evidence": [
@@ -3687,7 +3704,17 @@
         "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/README.md",
         "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/verify.py",
         "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/baseline-source.json",
-        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/nominal-correct-filter.json"
+        "audit/artifacts/remaining-spatial-20261024/xtc-feasibility/nominal-correct-filter.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/README.md",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/summary.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/check-acceptance.py",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/verify.py",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/wired-source.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-nominal.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-mismatch.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-measured.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-fade-control.json",
+        "audit/artifacts/remaining-spatial-20261024/xtc-nominal-projection/candidate-shipping-clippy.json"
       ],
       "remaining": [
         "Extend controlled rendered/supplied-matrix evidence to measured HRTF/native ABI and robust design across displacement/room mismatch. Historical normalization-off six-frequency subset retains140/360degraded rows; expanded10frequency matrices have146/600degraded rows in each explicit normalization mode,worstabout-5.382084dB. Correcting normalization improves some rendered on-mode separation but does not establish measured robustness.",

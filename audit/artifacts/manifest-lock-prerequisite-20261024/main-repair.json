@@ -1,0 +1,41 @@
+{
+  "changes": [
+    [
+      "autoeq-optim",
+      "0.5.63",
+      "0.5.64"
+    ],
+    [
+      "autoeq-report-wasm",
+      "0.5.0",
+      "0.5.1"
+    ],
+    [
+      "roomeq-engine",
+      "0.5.83",
+      "0.5.84"
+    ],
+    [
+      "roomeq-model",
+      "0.5.14",
+      "0.5.15"
+    ],
+    [
+      "roomeq-quality",
+      "0.5.61",
+      "0.5.62"
+    ],
+    [
+      "roomeq-workflow",
+      "0.5.35",
+      "0.5.36"
+    ]
+  ],
+  "only_existing_local_package_versions_changed": true,
+  "registry_dependencies_unchanged": true,
+  "user_dirty_bytes_outside_six_version_values_preserved": true,
+  "lock_index_unchanged": true,
+  "before_sha256": "1a4b2b66006cd1e86346ab76cef2bf6f4cbc39ad5ec8afce93310c27fa31cfcc",
+  "after_sha256": "2be3734bb1a8f08da84d6b842eebb50c4e21daac56a3791340a8165932db6050",
+  "offline_full_metadata_remaining_issue": "Full unfiltered metadata requests uncached Linux accesskit_atspi_common0.21.0; not needed for targeted macOS DSP tests."
+}
