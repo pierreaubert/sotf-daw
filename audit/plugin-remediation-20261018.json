@@ -2258,7 +2258,8 @@
         "audit/artifacts/remaining-hal-encryption-20261024/native-validation.json",
         "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
         "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
-        "audit/artifacts/remaining-hal-encryption-20261024/verify.py"
+        "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
+        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md"
       ]
     },
     {
@@ -2368,7 +2369,8 @@
         "audit/artifacts/remaining-hal-encryption-20261024/native-validation.json",
         "audit/artifacts/remaining-hal-encryption-20261024/source-checkpoint.json",
         "audit/artifacts/remaining-hal-encryption-20261024/current-owner-only.patch",
-        "audit/artifacts/remaining-hal-encryption-20261024/verify.py"
+        "audit/artifacts/remaining-hal-encryption-20261024/verify.py",
+        "audit/artifacts/remaining-hal-encryption-20261024/independent-review.md"
       ],
       "remaining": [
         "Establish session-generation/ABA fencing and all-owner compliance for concurrent encryption publication. Clean isolated compatibility setters/flush now hold the same quiesced protocol as audio commits; current user generation work is preserved but is not clean Swift/device/ABA certification. Raw header stores bypass the protocol.",
@@ -2731,7 +2733,8 @@
         "audit/artifacts/remaining-fir-weighted-feasibility-20261024/manifest.sha256.json",
         "audit/artifacts/remaining-fir-anchors-20261024/compare_lengths.py",
         "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.json",
-        "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md"
+        "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md",
+        "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md"
       ]
     },
     {

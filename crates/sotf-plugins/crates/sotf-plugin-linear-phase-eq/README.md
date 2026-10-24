@@ -30,6 +30,7 @@ For the lowest CPU cost, prefer `sotf-plugin-eq` (minimum-phase IIR).
 src/
 ├── lib.rs, params.rs       # Public facade and canonical parameter schema
 └── lib/                    # FIR design, streaming convolution, and tests
+```
 
 The implementation preallocates steady-state partitioned-convolution state.
 Band count/settings, FIR length, phase and Auto Gain are structural: rebuild
@@ -286,3 +287,21 @@ requirement merely by tuning the tested fitter. This is floating-point numerical
 evidence, not interval-arithmetic certification, and does not establish that the
 four isolated FIR-M1 probes are infeasible. Both cumulative-fit candidates were
 rejected; the production design, tap count, latency and diagnostic remain intact.
+
+The independent [existing-length comparison](../../../../audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md)
+reconstructs this linear-phase target at 96 kHz: the 2048- and 4096-tap choices
+pass its qualified response probes, while 1024 taps fails. Their per-stage
+reported delays for 1024, 2048 and 4096 taps are 544, 1056 and 2080 samples,
+including the 32-sample convolution delay. This is a stated-target offline comparison, not
+an accuracy guarantee for arbitrary bands or minimum-phase filters. Choose
+length with the intended response and latency budget in mind; presets keep
+their explicit length and dynamic band updates do not change latency.
+
+A separate [weighted-RMS analysis](../../../../audit/artifacts/remaining-fir-weighted-feasibility-20261024/README.md)
+finds that, on the stated 4097-point grid and fixed centered 1024-tap support,
+even the configured 500 Hz center's 0.05 dB constraint requires at least 8.07%
+more RMS relative error than the current design. Independent scalar cosine
+verification agrees with the numerical dual bound. This concerns the added
+pilot RMS nonregression guard; it does not prove the four original probes alone
+are infeasible. No response tolerance, production coefficients or length
+selection behavior changes follow from this analysis.
