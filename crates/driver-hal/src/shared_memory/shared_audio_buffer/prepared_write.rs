@@ -195,8 +195,8 @@ mod tests {
                     observed_96k += 1;
                 } else {
                     assert_eq!(rate, 48_000);
-                    for frame in out[..frames * 2].chunks_exact(2) {
-                        assert_eq!(frame, [0.125, 0.25]);
+                    for frame in out[..frames * 2].as_chunks::<2>().0 {
+                        assert_eq!(*frame, [0.125, 0.25]);
                     }
                 }
             }

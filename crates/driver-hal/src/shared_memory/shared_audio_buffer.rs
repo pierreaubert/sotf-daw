@@ -1,3 +1,4 @@
+mod encryption_control;
 mod prepared_write;
 pub(super) use prepared_write::PreparedWriteRefusal;
 
@@ -898,11 +899,19 @@ impl SharedAudioBuffer {
         self.header().encrypted.load(Ordering::Acquire) != 0
     }
 
-    /// Enable or disable encryption
+    /// Publish encryption mode on the control thread after quiescing audio.
     pub fn set_encrypted(&self, enabled: bool) {
-        self.header()
-            .encrypted
-            .store(if enabled { 1 } else { 0 }, Ordering::Release);
+        if let Err(error) = self.with_encryption_update(|shared| {
+            if shared.is_encrypted() != enabled {
+                shared
+                    .header()
+                    .encrypted
+                    .store(u32::from(enabled), Ordering::Release);
+            }
+            Ok(())
+        }) {
+            log::warn!("Cannot change HAL encryption mode: {error}");
+        }
     }
 
     /// Get the key fingerprint
@@ -910,19 +919,32 @@ impl SharedAudioBuffer {
         u64_to_fingerprint(self.header().key_fingerprint.load(Ordering::Acquire))
     }
 
-    /// Set the key fingerprint
+    /// Publish the key fingerprint on the control thread after quiescing audio.
     pub fn set_key_fingerprint(&self, fingerprint: [u8; 8]) {
-        self.header()
-            .key_fingerprint
-            .store(fingerprint_to_u64(fingerprint), Ordering::Release);
+        if let Err(error) = self.with_encryption_update(|shared| {
+            if shared.key_fingerprint() != fingerprint {
+                shared
+                    .header()
+                    .key_fingerprint
+                    .store(fingerprint_to_u64(fingerprint), Ordering::Release);
+            }
+            Ok(())
+        }) {
+            log::warn!("Cannot change HAL encryption key: {error}");
+        }
     }
 
-    /// Drop all queued audio while preserving the current write position.
+    /// Drop queued audio on the control thread after quiescing audio IO.
     pub fn flush_audio(&self) {
-        let write_pos = self.header().write_position.load(Ordering::Acquire);
-        self.header()
-            .read_position
-            .store(write_pos, Ordering::Release);
+        if let Err(error) = self.with_encryption_update(|shared| {
+            shared.header().read_position.store(
+                shared.header().write_position.load(Ordering::Acquire),
+                Ordering::Release,
+            );
+            Ok(())
+        }) {
+            log::warn!("Cannot flush HAL ring: {error}");
+        }
     }
 
     /// Get the current frame counter (used as nonce base)
