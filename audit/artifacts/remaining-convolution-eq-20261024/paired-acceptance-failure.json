@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/remaining-convolution-eq-20261024/paired-acceptance-guard.py"
+  ],
+  "exit_code": 1,
+  "stdout": "{\n  \"nupc\": {\n    \"screen_passed\": false,\n    \"changed_aggregate_ratio\": 0.964305266900298,\n    \"largest_changed_ratio\": 0.9959062526000324,\n    \"control_ratio_min\": 0.9096110016187112,\n    \"control_ratio_max\": 1.2872829385636058\n  },\n  \"upc\": {\n    \"screen_passed\": false,\n    \"changed_aggregate_ratio\": 0.8561651350869859,\n    \"largest_changed_ratio\": 0.983514766124709,\n    \"control_ratio_min\": 0.9750716243608393,\n    \"control_ratio_max\": 1.113290433529891\n  }\n}\n",
+  "stderr": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/artifacts/remaining-convolution-eq-20261024/paired-acceptance-guard.py\", line 6, in <module>\n    assert all(x[\"screen_passed\"] for x in result[\"backends\"].values()), \"unchanged controls failed the declared paired screen; no performance acceptance\"\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: unchanged controls failed the declared paired screen; no performance acceptance\n"
+}

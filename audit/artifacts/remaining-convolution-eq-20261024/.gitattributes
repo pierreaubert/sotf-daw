@@ -1,0 +1,3 @@
+# Preserve harness stdout bytes, including its terminal blank line.
+paired-nupc.stdout whitespace=-blank-at-eof
+paired-upc.stdout whitespace=-blank-at-eof

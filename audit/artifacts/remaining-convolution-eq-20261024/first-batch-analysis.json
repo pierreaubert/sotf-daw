@@ -1,0 +1,23 @@
+{
+  "tests_passed": 273,
+  "tests_ignored": 8,
+  "clippy_format_passed": true,
+  "all_numerical_heap_replay_invariants_passed": true,
+  "fir_m1_passed": false,
+  "linear_eq": {
+    "rows": 108,
+    "callbacks": 32958,
+    "failed_rows": 23,
+    "physical_misses": 8214,
+    "full_gate_passed": false
+  },
+  "convolution": {
+    "cases": 63,
+    "callbacks": 562686,
+    "failed_cases": 43,
+    "physical_misses": 41067,
+    "head_misses": 731,
+    "full_gate_passed": false
+  },
+  "scope": "Production edits numerically verified; full capacity and FIR-M1 remain failing. Historical timing comparisons are observational; retention of overlap/UPC performance changes awaits controlled paired profiling."
+}

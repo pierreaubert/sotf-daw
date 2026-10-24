@@ -1,0 +1,10 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "65a074356477994d15ac4cf13615414bbc5a0e61cdced700f5fe062ed079881b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "3786cc3261be2456ce32a7f87db2c02fc9a66d11c527824f3f7e61fd9fa67abd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "73dca3ddde106a4c331013fca2626dc1abac50046e21355554606262c8bf42bf",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "a8c2c69e718c58eff908ee70c3d243cecc85c256ce2e3e0e30e30ad2b1bbbfd9",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "aaea0b0fc1f41915bbdf84050316f14604b323edc478632226dcf8f6bd755510",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "07f2da9872b4fd18a3427c8b1cb542319e6a68678e62fb5d149ef59f8ca0be5c"
+  }
+}

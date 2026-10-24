@@ -1,0 +1,54 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "plugins-spatial",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "--release",
+      "--offline",
+      "--locked",
+      "--features",
+      "qa",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--no-run"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 48.438660860061646,
+    "stdout": "",
+    "stderr": "    Blocking waiting for file lock on build directory\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 48.39s\n  Executable unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-4c4c810541bc74b8)\n  Executable unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9ed77c4cd73a9f6e)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "plugins-spatial",
+      "-p",
+      "sotf-plugin-convolution",
+      "--release",
+      "--offline",
+      "--locked",
+      "--features",
+      "qa",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 1.1094329357147217,
+    "stdout": "",
+    "stderr": "    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Checking sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 1.02s\n"
+  }
+]

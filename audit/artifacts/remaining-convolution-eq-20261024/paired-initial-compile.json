@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "-p",
+    "sotf-plugin-convolution",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--no-run"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 313.5512502193451,
+  "stdout": "",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\nerror[E0308]: mismatched types\n   --> crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/overlap_cost.rs:109:34\n    |\n109 |                     sample_rate: rate,\n    |                                  ^^^^ expected `f64`, found `u32`\n\nerror[E0063]: missing fields `midi_events`, `note_expression_events`, `parameter_events` and 1 other field in initializer of `sotf_host::ProcessContext<'_>`\n   --> crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/overlap_cost.rs:108:31\n    |\n108 |                 let context = ProcessContext {\n    |                               ^^^^^^^^^^^^^^ missing `midi_events`, `note_expression_events`, `parameter_events` and 1 other field\n\nSome errors have detailed explanations: E0063, E0308.\nFor more information about an error, try `rustc --explain E0063`.\nerror: could not compile `sotf-plugin-convolution` (lib test) due to 2 previous errors\nwarning: build failed, waiting for other jobs to finish...\n"
+}

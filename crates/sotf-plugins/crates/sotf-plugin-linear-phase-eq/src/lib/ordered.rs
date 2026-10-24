@@ -85,8 +85,8 @@ pub(super) fn identity_fir(fir_length: usize, phase_mode_index: usize) -> Vec<f3
 ///
 /// `stage_firs[i]` is band `i`'s design and `placements[i]` its resolved
 /// placement. Every channel of every stage gets an engine: processed domains
-/// share the stage kernel, bypassed domains share one identity kernel, so all
-/// domains stay delay-aligned without special bypass delay lines.
+/// share the stage kernel, while bypassed domains use exact unit-gain delay
+/// lines. Both paths retain the same FIR group delay and streaming latency.
 pub(super) fn build_route_banks(
     stage_firs: &[Vec<f32>],
     placements: &[LinearPhaseEqBandPlacement],
@@ -96,7 +96,20 @@ pub(super) fn build_route_banks(
     min_block: usize,
 ) -> RouteBanks {
     debug_assert_eq!(stage_firs.len(), placements.len());
-    let identity_kernel = NupcKernel::new(identity, min_block);
+    // Bypassed domains contain one unit impulse, so their complete transfer
+    // is an exact delay. Keep FIR group delay plus partition latency, without
+    // evaluating zero partitions or introducing FFT roundoff on the bypass.
+    let identity_tap = identity
+        .iter()
+        .position(|&tap| tap == 1.0)
+        .expect("prepared identity FIR contains a unit impulse");
+    debug_assert!(
+        identity
+            .iter()
+            .enumerate()
+            .all(|(i, &tap)| tap == if i == identity_tap { 1.0 } else { 0.0 })
+    );
+    let identity_delay = identity_tap + min_block;
     let mut left_of_pair = vec![false; channels];
     let mut right_of_pair = vec![false; channels];
     for [left, right] in pairs {
@@ -124,7 +137,7 @@ pub(super) fn build_route_banks(
                 engines.push(if processed {
                     kernel.instantiate()
                 } else {
-                    identity_kernel.instantiate()
+                    NupcEngine::new_unit_delay(identity_delay)
                 });
             }
             StageBanks {

@@ -146,3 +146,75 @@ fn large_partition_levels_preserve_sparse_absolute_taps_and_last_tail_sample() {
     println!("nupc_large_sparse_reference cases={cases} maximum_error={maximum_error:e}");
     assert_eq!(cases, 4);
 }
+
+#[test]
+fn prepared_unit_delay_preserves_samples_and_reset_through_arbitrary_callbacks() {
+    let source: Vec<f32> = (0..2053)
+        .map(|i| {
+            if i % 31 == 0 {
+                -0.0
+            } else {
+                (i as f32 * 0.13).sin() * 0.2
+            }
+        })
+        .collect();
+    for delay in [0, 1, 32, 544, 4128] {
+        let mut engine = NupcEngine::new_unit_delay(delay);
+        assert_eq!(engine.latency_samples(), delay);
+        assert_eq!(engine.head_taps(), 0);
+        assert_eq!(engine.largest_block_size(), 0);
+        assert!(
+            engine.levels.is_empty(),
+            "known identity needs no FFT histories"
+        );
+        let input: Vec<f32> = source
+            .iter()
+            .copied()
+            .chain(std::iter::repeat_n(0.0, delay + 37))
+            .collect();
+        let expected: Vec<f32> = (0..input.len())
+            .map(|i| {
+                i.checked_sub(delay)
+                    .and_then(|j| input.get(j))
+                    .copied()
+                    .unwrap_or(0.0)
+            })
+            .collect();
+        let mut actual: Vec<f32> = input.iter().map(|&x| engine.process_sample(x)).collect();
+        assert!(
+            actual
+                .iter()
+                .zip(&expected)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
+            "delay={delay}"
+        );
+        engine.reset();
+        actual.fill(f32::NAN);
+        let mut at = 0;
+        let mut call = 0;
+        while at < input.len() {
+            let count = [1, 0, 17, 128, 511][call % 5].min(input.len() - at);
+            engine.process_block(&input[at..at + count], &mut actual[at..at + count]);
+            at += count;
+            call += 1;
+        }
+        assert!(
+            actual
+                .iter()
+                .zip(&expected)
+                .all(|(a, b)| a.to_bits() == b.to_bits()),
+            "reset delay={delay}"
+        );
+        if delay >= 32 {
+            let mut ir = vec![0.0; 8192];
+            ir[delay - 32] = 1.0;
+            let mut legacy = NupcEngine::new(&ir, 32);
+            let max_error = input
+                .iter()
+                .zip(&expected)
+                .map(|(&x, &y)| (legacy.process_sample(x) - y).abs())
+                .fold(0.0_f32, f32::max);
+            assert!(max_error < 2e-5, "legacy delay={delay}: {max_error}");
+        }
+    }
+}

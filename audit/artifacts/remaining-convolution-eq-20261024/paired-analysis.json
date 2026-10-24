@@ -1,0 +1,353 @@
+{
+  "comparators_verified": true,
+  "callbacks": 147456,
+  "backends": {
+    "nupc": {
+      "screen_passed": false,
+      "changed_aggregate_ratio": 0.964305266900298,
+      "largest_changed_ratio": 0.9959062526000324,
+      "control_ratio_min": 0.9096110016187112,
+      "control_ratio_max": 1.2872829385636058
+    },
+    "upc": {
+      "screen_passed": false,
+      "changed_aggregate_ratio": 0.8561651350869859,
+      "largest_changed_ratio": 0.983514766124709,
+      "control_ratio_min": 0.9750716243608393,
+      "control_ratio_max": 1.113290433529891
+    }
+  },
+  "comparisons": [
+    {
+      "backend": "nupc",
+      "case": "ordinary2",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 96460872.5,
+      "candidate_median_total_ns": 95504410.5,
+      "ratio": 0.9900844562648964,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head12",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 488025333.5,
+      "candidate_median_total_ns": 460014641.0,
+      "ratio": 0.9426040195513744,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head32full",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 115876577.0,
+      "candidate_median_total_ns": 115307263.5,
+      "ratio": 0.9950868975012958,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "fir120",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 218955875.0,
+      "candidate_median_total_ns": 213055312.5,
+      "ratio": 0.9730513625176762,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control12",
+      "rate": 48000,
+      "control": true,
+      "legacy_median_total_ns": 23116392.0,
+      "candidate_median_total_ns": 23306892.5,
+      "ratio": 1.0082409270443242,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control32",
+      "rate": 48000,
+      "control": true,
+      "legacy_median_total_ns": 67857069.0,
+      "candidate_median_total_ns": 61723536.5,
+      "ratio": 0.9096110016187112,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "ordinary2",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 93872686.5,
+      "candidate_median_total_ns": 92395437.0,
+      "ratio": 0.9842632659714069,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head12",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 468961793.0,
+      "candidate_median_total_ns": 448279197.5,
+      "ratio": 0.9558970564154253,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head32full",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 113514209.5,
+      "candidate_median_total_ns": 113049511.0,
+      "ratio": 0.9959062526000324,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "fir120",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 214689486.0,
+      "candidate_median_total_ns": 207955688.0,
+      "ratio": 0.9686347099456933,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control12",
+      "rate": 96000,
+      "control": true,
+      "legacy_median_total_ns": 23083182.5,
+      "candidate_median_total_ns": 29714587.0,
+      "ratio": 1.2872829385636058,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control32",
+      "rate": 96000,
+      "control": true,
+      "legacy_median_total_ns": 61615739.0,
+      "candidate_median_total_ns": 61811795.0,
+      "ratio": 1.003181914283297,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "ordinary2",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 94598327.0,
+      "candidate_median_total_ns": 91641584.0,
+      "ratio": 0.9687442358256505,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head12",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 460524926.0,
+      "candidate_median_total_ns": 448932268.0,
+      "ratio": 0.9748272952330923,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "head32full",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 114300540.0,
+      "candidate_median_total_ns": 113417735.0,
+      "ratio": 0.9922764581864617,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "fir120",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 226318919.0,
+      "candidate_median_total_ns": 209952996.0,
+      "ratio": 0.9276864564733981,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control12",
+      "rate": 192000,
+      "control": true,
+      "legacy_median_total_ns": 23188357.5,
+      "candidate_median_total_ns": 23245791.0,
+      "ratio": 1.0024768248462617,
+      "maximum_error": 0
+    },
+    {
+      "backend": "nupc",
+      "case": "control32",
+      "rate": 192000,
+      "control": true,
+      "legacy_median_total_ns": 61612213.0,
+      "candidate_median_total_ns": 65566795.5,
+      "ratio": 1.0641850423389272,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono2",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 6187507.0,
+      "candidate_median_total_ns": 6085504.5,
+      "ratio": 0.983514766124709,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "full12",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 39762720.5,
+      "candidate_median_total_ns": 38257276.0,
+      "ratio": 0.9621392982907193,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono32",
+      "rate": 48000,
+      "control": false,
+      "legacy_median_total_ns": 130680100.5,
+      "candidate_median_total_ns": 109779409.5,
+      "ratio": 0.8400621753424501,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control12",
+      "rate": 48000,
+      "control": true,
+      "legacy_median_total_ns": 2081013.0,
+      "candidate_median_total_ns": 2134254.5,
+      "ratio": 1.0255844148979367,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control32",
+      "rate": 48000,
+      "control": true,
+      "legacy_median_total_ns": 6772059.0,
+      "candidate_median_total_ns": 7539268.5,
+      "ratio": 1.113290433529891,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono2",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 6231155.5,
+      "candidate_median_total_ns": 6105200.5,
+      "ratio": 0.9797862531275299,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "full12",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 41224173.5,
+      "candidate_median_total_ns": 36612238.0,
+      "ratio": 0.8881254587190208,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono32",
+      "rate": 96000,
+      "control": false,
+      "legacy_median_total_ns": 128208399.5,
+      "candidate_median_total_ns": 107721553.0,
+      "ratio": 0.8402066746024702,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control12",
+      "rate": 96000,
+      "control": true,
+      "legacy_median_total_ns": 2128047.0,
+      "candidate_median_total_ns": 2109654.0,
+      "ratio": 0.9913568638286654,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control32",
+      "rate": 96000,
+      "control": true,
+      "legacy_median_total_ns": 8048488.5,
+      "candidate_median_total_ns": 8439979.5,
+      "ratio": 1.0486415554920654,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono2",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 9922530.5,
+      "candidate_median_total_ns": 6104548.5,
+      "ratio": 0.6152209358288191,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "full12",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 41844460.5,
+      "candidate_median_total_ns": 36743830.5,
+      "ratio": 0.8781050122512633,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "mono32",
+      "rate": 192000,
+      "control": false,
+      "legacy_median_total_ns": 126353352.0,
+      "candidate_median_total_ns": 106712755.5,
+      "ratio": 0.8445581681125484,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control12",
+      "rate": 192000,
+      "control": true,
+      "legacy_median_total_ns": 2050695.5,
+      "candidate_median_total_ns": 2078559.0,
+      "ratio": 1.013587341465371,
+      "maximum_error": 0
+    },
+    {
+      "backend": "upc",
+      "case": "control32",
+      "rate": 192000,
+      "control": true,
+      "legacy_median_total_ns": 8811946.0,
+      "candidate_median_total_ns": 8592278.5,
+      "ratio": 0.9750716243608393,
+      "maximum_error": 0
+    }
+  ],
+  "scope": "Whole NUPC engine cost and UPC stream-body cost in one process per backend, not full plugin/native deadlines. NUPC has no sample clock; rate labels select actual admitted IR geometry. UPC fixtures are moderate65,537frames and do not replace full admission-boundary validation."
+}

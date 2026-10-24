@@ -1,0 +1,30 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-4c4c810541bc74b8",
+      "paired_overlap_callback_cost_abba",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "backend": "nupc",
+    "exit_code": 0,
+    "elapsed_seconds": 22.12941083405167
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9ed77c4cd73a9f6e",
+      "paired_overlap_callback_cost_abba",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "backend": "upc",
+    "exit_code": 0,
+    "elapsed_seconds": 3.35550754214637
+  }
+]

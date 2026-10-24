@@ -1,0 +1,38 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-dynamic-linear-phase-eq"
+    ],
+    "exit_code": 1,
+    "elapsed_seconds": 65.78732429095544
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-convolution-load"
+    ],
+    "exit_code": 1,
+    "elapsed_seconds": 260.8120343750343
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-convolution"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.08709779195487499
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-linear-phase-eq"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 2.6921492910478264
+  }
+]

@@ -1,0 +1,11 @@
+{
+  "identity_semantics_verified": true,
+  "tests_passed": 273,
+  "tests_ignored": 10,
+  "clippy_format_passed": true,
+  "rejected_performance_hunks_restored": true,
+  "old_oracles_preserved": true,
+  "host_latency_support_priming_unchanged": true,
+  "full_capacity_accepted": false,
+  "scope": "Known ordered bypass domains use an exact preallocated delay; no FFT levels/plans/history are prepared for these domains. Plugin FIR support/latency metadata remains unchanged. No full-capacity acceptance."
+}

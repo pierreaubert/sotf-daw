@@ -1,0 +1,47 @@
+=== QA: Convolution Plugin ===
+
+[Test 1] Passthrough without IR
+  Input: 0.50, Output: 0.5000
+
+[Test 2] Latency Reporting
+  Reported Latency: 1024 samples
+  Latency: PASS
+
+[Test 3] Real-time Safety (Zero Allocations)
+  Zero Allocations: PASS
+
+[Test 4] Performance Benchmark
+  Processed 5.0s of audio in 1.44ms
+  Estimated CPU Usage: 0.03%
+  Performance: PASS
+
+[Test 5] Active-backend callback matrix
+  1ch nupc=false head=false block=64: p50/p99/max 0.000/0.010/0.010 ms, deadline 1.333 ms
+  1ch nupc=false head=false block=257: p50/p99/max 0.001/0.010/0.010 ms, deadline 5.354 ms
+  1ch nupc=false head=false block=1024: p50/p99/max 0.014/0.016/0.016 ms, deadline 21.333 ms
+  1ch nupc=true head=false block=64: p50/p99/max 0.001/0.015/0.015 ms, deadline 1.333 ms
+  1ch nupc=true head=false block=257: p50/p99/max 0.002/0.017/0.017 ms, deadline 5.354 ms
+  1ch nupc=true head=false block=1024: p50/p99/max 0.022/0.023/0.023 ms, deadline 21.333 ms
+  1ch nupc=true head=true block=64: p50/p99/max 0.003/0.020/0.020 ms, deadline 1.333 ms
+  1ch nupc=true head=true block=257: p50/p99/max 0.013/0.032/0.032 ms, deadline 5.354 ms
+  1ch nupc=true head=true block=1024: p50/p99/max 0.059/0.067/0.067 ms, deadline 21.333 ms
+  2ch nupc=false head=false block=64: p50/p99/max 0.000/0.018/0.018 ms, deadline 1.333 ms
+  2ch nupc=false head=false block=257: p50/p99/max 0.002/0.019/0.019 ms, deadline 5.354 ms
+  2ch nupc=false head=false block=1024: p50/p99/max 0.023/0.023/0.023 ms, deadline 21.333 ms
+  2ch nupc=true head=false block=64: p50/p99/max 0.001/0.017/0.017 ms, deadline 1.333 ms
+  2ch nupc=true head=false block=257: p50/p99/max 0.009/0.018/0.018 ms, deadline 5.354 ms
+  2ch nupc=true head=false block=1024: p50/p99/max 0.034/0.057/0.057 ms, deadline 21.333 ms
+  2ch nupc=true head=true block=64: p50/p99/max 0.005/0.039/0.039 ms, deadline 1.333 ms
+  2ch nupc=true head=true block=257: p50/p99/max 0.024/0.052/0.052 ms, deadline 5.354 ms
+  2ch nupc=true head=true block=1024: p50/p99/max 0.121/0.142/0.142 ms, deadline 21.333 ms
+  8ch nupc=false head=false block=64: p50/p99/max 0.001/0.069/0.069 ms, deadline 1.333 ms
+  8ch nupc=false head=false block=257: p50/p99/max 0.003/0.143/0.143 ms, deadline 5.354 ms
+  8ch nupc=false head=false block=1024: p50/p99/max 0.079/0.090/0.090 ms, deadline 21.333 ms
+  8ch nupc=true head=false block=64: p50/p99/max 0.008/0.018/0.018 ms, deadline 1.333 ms
+  8ch nupc=true head=false block=257: p50/p99/max 0.032/0.032/0.032 ms, deadline 5.354 ms
+  8ch nupc=true head=false block=1024: p50/p99/max 0.127/0.140/0.140 ms, deadline 21.333 ms
+  8ch nupc=true head=true block=64: p50/p99/max 0.021/0.163/0.163 ms, deadline 1.333 ms
+  8ch nupc=true head=true block=257: p50/p99/max 0.107/0.228/0.228 ms, deadline 5.354 ms
+  8ch nupc=true head=true block=1024: p50/p99/max 0.508/0.594/0.594 ms, deadline 21.333 ms
+
+[FUNCTIONAL CHECKS PASS; TIMING IS DIAGNOSTIC] Convolution QA Complete. Physical callback misses: 0. Use qa-convolution-load for strict admission-boundary timing.

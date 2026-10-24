@@ -1,0 +1,48 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "65a074356477994d15ac4cf13615414bbc5a0e61cdced700f5fe062ed079881b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "3786cc3261be2456ce32a7f87db2c02fc9a66d11c527824f3f7e61fd9fa67abd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "73dca3ddde106a4c331013fca2626dc1abac50046e21355554606262c8bf42bf",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "a8c2c69e718c58eff908ee70c3d243cecc85c256ce2e3e0e30e30ad2b1bbbfd9",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "aaea0b0fc1f41915bbdf84050316f14604b323edc478632226dcf8f6bd755510",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "07f2da9872b4fd18a3427c8b1cb542319e6a68678e62fb5d149ef59f8ca0be5c",
+    "Cargo.lock": "8214e358c13655280a7eab0dc02de2e3df72d1efcae178e2a5ff15585289742c"
+  },
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "hardware": [
+    "Apple M4 Pro",
+    "14",
+    "68719476736"
+  ],
+  "scope": "Local complete Plugin callbacks; strict full gates retained; exclusive root-scheduled run, not device certification.",
+  "hashes_unchanged_after_load": true,
+  "snapshot_paths": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+    "Cargo.lock": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/Cargo.lock",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs": "audit/artifacts/remaining-convolution-eq-20261024/selected-source/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs"
+  },
+  "snapshot_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "65a074356477994d15ac4cf13615414bbc5a0e61cdced700f5fe062ed079881b",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "3786cc3261be2456ce32a7f87db2c02fc9a66d11c527824f3f7e61fd9fa67abd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "73dca3ddde106a4c331013fca2626dc1abac50046e21355554606262c8bf42bf",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "a8c2c69e718c58eff908ee70c3d243cecc85c256ce2e3e0e30e30ad2b1bbbfd9",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "aaea0b0fc1f41915bbdf84050316f14604b323edc478632226dcf8f6bd755510",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "07f2da9872b4fd18a3427c8b1cb542319e6a68678e62fb5d149ef59f8ca0be5c",
+    "Cargo.lock": "8214e358c13655280a7eab0dc02de2e3df72d1efcae178e2a5ff15585289742c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/types.rs": "28d181c4d9e982f951faad0109d79010624eb400a926606bdab35185b1069222",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/time_domain_head.rs": "b5fdb80bd89e250a09f02784ad16811e1d34d1ae21946f578b727f50f0dacec5",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_load.rs": "7699720301115bb5fe5bfae98bb9338b48f40a8b99ed90cb0f48404c0712efa3",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_dynamic_linear_phase_eq.rs": "40f6e532ad30a918bd979a96347039056a84bd779a89a7c50f5ebba11b9f9215",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/tests/analytic_response.rs": "9b641d775622ea0a544a4e86a90ffe6350064e51b8e3e3ab906ebba38f4e594f"
+  }
+}

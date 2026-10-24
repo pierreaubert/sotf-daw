@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "-p",
+    "sotf-plugin-convolution",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--no-run"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.7269189357757568,
+  "stdout": "",
+  "stderr": "   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\nerror[E0277]: the trait bound `sotf_host::ProcessContext<'_>: std::default::Default` is not satisfied\n   --> crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/overlap_cost.rs:111:23\n    |\n111 |                     ..Default::default()\n    |                       ^^^^^^^^^^^^^^^^^^ the trait `std::default::Default` is not implemented for `sotf_host::ProcessContext<'_>`\n\nFor more information about this error, try `rustc --explain E0277`.\nerror: could not compile `sotf-plugin-convolution` (lib test) due to 1 previous error\n"
+}

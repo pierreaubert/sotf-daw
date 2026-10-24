@@ -1241,6 +1241,15 @@
             "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_cost.rs",
             "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
           ]
+        },
+        {
+          "task": "Preserve controlled NUPC/UPC cost trials and reject unstable performance controls",
+          "status": "implemented_and_verified",
+          "result": "Both overlap and UPC fusion performance hunks are rejected/restored after predeclared control stability guards fail. Source/waveform evidence and all132ABBAtrials remain; no current Convolution DSP improvement or capacity acceptance is claimed. Known delayed-identity FIR bypass domains in ordered Linear-phase EQ now use an exact preallocated delay rather than FFT kernels/FDLs. Keep FIR group delay plus32-frame partition latency (or32 in minimum phase), ordered stage metadata, complete host support/EOF, replay/adoption priming and routing unchanged. Independent shift/signed-zero/zero-delay/odd-delay/arbitrary-block/dirty-reset oracle and old independent FFT/f64 references pass. Final identity-only affected release validation:273passed/10ignored, strict all-target QA Clippy and formatting. Two new ignores are explicitly executed frozen same-process cost diagnostics. Separate overlap/UPC stream fusion trials are rejected and restored: full candidate gates remain red (LinearEQ23/108failed,8214misses/32958callbacks; Convolution43/63,41067misses/562686callbacks,731head).132ABBAtrials across33geometries/3rates retain147456durations; waveform/source checks pass, changed aggregate ratios0.9643NUPC/0.8562UPC, but unchanged controls exceed predeclared stability intervals, so neither performance screen establishes acceptance. All failed guards/data and frozen source snapshots remain; production overlap/UPC bodies are restored exactly. Retained exact-delay specialization is semantic/storage scope, not full-capacity acceptance. FIR-M1 replay remains red at\u22120.246297dB versus0.05dB; fixed-support witness and actual probe constraints are recorded separately.",
+          "evidence": [
+            "audit/artifacts/remaining-convolution-eq-20261024/verify-first-batch.py",
+            "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py"
+          ]
         }
       ],
       "evidence": [
@@ -2464,6 +2473,17 @@
             "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
           ],
           "result": "Preparation coalesces only contiguous equal-block/equal-FFT NUPC groups. Their IR partitions concatenate into one kernel/FDL; older input spectra replace the later group output delay. The first offset/delay is retained. Public partition plans, admission arithmetic/limits, complete tap coverage, direct heads, latency, callback scheduling, parameters and dependencies are unchanged. A 120-case structural regression fails 60 cases before and zero after; runtime levels fall from 437 to 248 with the same total partition count. The explicit unmerged reference covers 45 reset/complete-tail cases and matches within 2.23518e-8. Existing independent f64 dense 54 cases and 262,147-tap sparse four cases retain errors below 2.43e-8 under unchanged 2e-5 gates, with exact reset/partition behavior. The complete shared/Convolution/linear-phase EQ release selection passes 263 tests with six existing ignores. Strict all-target QA Clippy, formatting and standard Convolution QA pass; the latter records zero physical misses. The unchanged 63-geometry strict load matrix retains 532,086 callbacks, zero boundary errors, finite output, zero callback allocations/frees and every retained backend within its conservative estimate. It still exits 1: 59 failed geometries / 45,578 misses, versus the immediately preceding real-FFT run at 62 / 48,377. Of 42 NUPC geometries, 40 record fewer misses and two the same count, with none higher; totals change from 7,976 to 5,206. Unchanged UPC totals change from 40,401 to 40,372. Retained NUPC requested bytes are 58.06\u201381.66% of preceding values, not RSS or aggregate bounds. Rerunning the unchanged 108-row maximum-load linear-phase EQ harness also exits 1: 28 failed rows and 9,237 physical/reported misses across 32,958 callbacks, versus historical 49 rows / 14,635 misses. All 108 rows are finite, settled, replay-bounded and allocation/free-free; configurations, taps, callback counts, generations and budgets match. There are 45 rows with fewer misses, 63 equal and none higher. Historical measurements are unmatched and the older EQ baseline precedes intervening changes, so no causal or native-device compliance claim. Both full red datasets, source hashes, baseline artifact hashes and independent verifiers remain. This reduces redundant work but does not distribute remaining large FFT bursts or resolve direct-head cost. Maximum capacity and native validation remain pending; FIR-M1 is separate. Convolution and linear-phase EQ remain partial; overall completion stays 35/45."
+        },
+        {
+          "task": "Specialize ordered identity FIR bypass domains as exact prepared delays",
+          "status": "implemented_and_verified",
+          "result": "Known delayed-identity FIR bypass domains in ordered Linear-phase EQ now use an exact preallocated delay rather than FFT kernels/FDLs. Keep FIR group delay plus32-frame partition latency (or32 in minimum phase), ordered stage metadata, complete host support/EOF, replay/adoption priming and routing unchanged. Independent shift/signed-zero/zero-delay/odd-delay/arbitrary-block/dirty-reset oracle and old independent FFT/f64 references pass. Final identity-only affected release validation:273passed/10ignored, strict all-target QA Clippy and formatting. Two new ignores are explicitly executed frozen same-process cost diagnostics. Separate overlap/UPC stream fusion trials are rejected and restored: full candidate gates remain red (LinearEQ23/108failed,8214misses/32958callbacks; Convolution43/63,41067misses/562686callbacks,731head).132ABBAtrials across33geometries/3rates retain147456durations; waveform/source checks pass, changed aggregate ratios0.9643NUPC/0.8562UPC, but unchanged controls exceed predeclared stability intervals, so neither performance screen establishes acceptance. All failed guards/data and frozen source snapshots remain; production overlap/UPC bodies are restored exactly. Retained exact-delay specialization is semantic/storage scope, not full-capacity acceptance. FIR-M1 replay remains red at\u22120.246297dB versus0.05dB; fixed-support witness and actual probe constraints are recorded separately.",
+          "evidence": [
+            "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source.json",
+            "audit/artifacts/remaining-convolution-eq-20261024/identity-only-analysis.json",
+            "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py",
+            "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json"
+          ]
         }
       ],
       "evidence": [
@@ -2490,7 +2510,11 @@
         "audit/artifacts/plugin-audit-20261018/verify-nupc-coalesced.py",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
-        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs"
+        "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+        "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source.json",
+        "audit/artifacts/remaining-convolution-eq-20261024/identity-only-analysis.json",
+        "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py",
+        "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json"
       ]
     },
     {
@@ -4533,11 +4557,28 @@
         "audit/artifacts/remaining-ambience-denoisers-20261024/verify-final.py"
       ],
       "limitations": "All3plugins remain partial. The AAEfullwall gate remains red; held-out/listening/device scope is not inferred. Optional ML remains separate. The blind bootstrap candidate is rejected and restored, not shipped."
+    },
+    {
+      "name": "Exact ordered identity delays and rejected overlap/UPC cost experiments",
+      "state": "implemented_and_verified_with_rejected_performance_trials",
+      "plugin_ids": [
+        14,
+        30
+      ],
+      "result": "Known delayed-identity FIR bypass domains in ordered Linear-phase EQ now use an exact preallocated delay rather than FFT kernels/FDLs. Keep FIR group delay plus32-frame partition latency (or32 in minimum phase), ordered stage metadata, complete host support/EOF, replay/adoption priming and routing unchanged. Independent shift/signed-zero/zero-delay/odd-delay/arbitrary-block/dirty-reset oracle and old independent FFT/f64 references pass. Final identity-only affected release validation:273passed/10ignored, strict all-target QA Clippy and formatting. Two new ignores are explicitly executed frozen same-process cost diagnostics. Separate overlap/UPC stream fusion trials are rejected and restored: full candidate gates remain red (LinearEQ23/108failed,8214misses/32958callbacks; Convolution43/63,41067misses/562686callbacks,731head).132ABBAtrials across33geometries/3rates retain147456durations; waveform/source checks pass, changed aggregate ratios0.9643NUPC/0.8562UPC, but unchanged controls exceed predeclared stability intervals, so neither performance screen establishes acceptance. All failed guards/data and frozen source snapshots remain; production overlap/UPC bodies are restored exactly. Retained exact-delay specialization is semantic/storage scope, not full-capacity acceptance. FIR-M1 replay remains red at\u22120.246297dB versus0.05dB; fixed-support witness and actual probe constraints are recorded separately.",
+      "evidence": [
+        "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source.json",
+        "audit/artifacts/remaining-convolution-eq-20261024/identity-only-analysis.json",
+        "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py",
+        "audit/artifacts/remaining-convolution-eq-20261024/paired-analysis.json"
+      ],
+      "limitations": "Identity semantic/storage optimization only. Both full capacity gates and FIR-M1 remain red; controlled performance trials fail unchanged-control stability guards. Convolution and LinearEQ stay partial."
     }
   ],
   "optional_ml_backlog": "audit/plugin-ml-backlog-20261018.json",
   "validation_limits": [
     "Gain and saturation validation temporarily required an offline lock resolution for a concurrent sotf-capture rustix dependency; the task-only lockfile adjustment was restored afterward.",
-    "The previous missing sibling benchmark blocker cleared. Final facade gates passed 88 tests and Upmixer Clippy passed with warnings denied. Offline dependency resolution still temporarily includes a concurrent sotf-capture rustix manifest change; only the AB Compare rand dependency is retained in this task lockfile diff."
+    "The previous missing sibling benchmark blocker cleared. Final facade gates passed 88 tests and Upmixer Clippy passed with warnings denied. Offline dependency resolution still temporarily includes a concurrent sotf-capture rustix manifest change; only the AB Compare rand dependency is retained in this task lockfile diff.",
+    "User confirmed2026-10-24:held-out multilingual/noise recordings and Linux/Windows DAW/CI hosts are not currently available; they will be added later. Keep those final validation requirements pending and continue code/local checks; do not infer them from synthetic or development recordings."
   ]
 }

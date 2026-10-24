@@ -1,0 +1,30 @@
+{
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "3786cc3261be2456ce32a7f87db2c02fc9a66d11c527824f3f7e61fd9fa67abd",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "73dca3ddde106a4c331013fca2626dc1abac50046e21355554606262c8bf42bf",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "a8c2c69e718c58eff908ee70c3d243cecc85c256ce2e3e0e30e30ad2b1bbbfd9",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "79321a0648a1dec724e23a6d6607770667b09432b7eb192d2df4e8d1acb4fdca",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "ff9f5b3d19d6c13a022c9767ab89d3bb23f2a4d45a7c2a66faccc68cee82adc3",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "9132f84532479512584a9cbe6935eb4fc125830e161dc7cc2e5b08f3f4cb6b40"
+  },
+  "snapshot_paths": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/coalesced_tests.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/real_fft_tests.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs": "audit/artifacts/remaining-convolution-eq-20261024/identity-only-source/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs"
+  },
+  "tests_passed": 273,
+  "tests_ignored": 10,
+  "overlap_and_upc_restored": true,
+  "identity_only_semantic_storage_scope": "Known ordered bypass domains use an exact preallocated delay; no FFT levels/plans/history are prepared for these domains. Plugin FIR support/latency metadata remains unchanged. No full-capacity acceptance.",
+  "documentation_only_after_validation": [
+    {
+      "path": "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/src/lib/ordered.rs",
+      "before_sha256": "aaea0b0fc1f41915bbdf84050316f14604b323edc478632226dcf8f6bd755510",
+      "old": "/// placement. Every channel of every stage gets an engine: processed domains\n/// share the stage kernel, bypassed domains share one identity kernel, so all\n/// domains stay delay-aligned without special bypass delay lines.",
+      "new": "/// placement. Every channel of every stage gets an engine: processed domains\n/// share the stage kernel, while bypassed domains use exact unit-gain delay\n/// lines. Both paths retain the same FIR group delay and streaming latency."
+    }
+  ]
+}

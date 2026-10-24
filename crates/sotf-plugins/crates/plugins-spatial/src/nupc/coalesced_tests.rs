@@ -40,6 +40,7 @@ fn unmerged(ir: &[f32], block: usize, head: usize) -> NupcEngine {
     NupcEngine {
         levels,
         min_block: block,
+        identity_delay: None,
         td_head: if head == 0 {
             None
         } else {

@@ -1,0 +1,2208 @@
+use super::misc::PARTITION_SIZE;
+use super::misc::{FFT_BINS, FFT_SIZE};
+use super::types::ConvolutionPluginParams;
+use super::types::ConvolutionState;
+use super::types::IrLoadResult;
+use super::types::{ConvolutionLoadStatus, IrLoadCompletion, RetiredIrState};
+use crate::params::PARAMS as CV;
+use audioadapter_buffers::direct::SequentialSliceOfVecs;
+use plugins_spatial::{nupc, validate_interleaved_in_place};
+use realfft::RealFftPlanner;
+use rubato::{
+    Async, Fft, FixedAsync, FixedSync, Resampler, SincInterpolationParameters, WindowFunction,
+};
+use rustfft::num_complex::Complex;
+use sotf_host::param_bridge;
+use sotf_host::parameters::{Parameter, ParameterId, ParameterValue};
+use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
+use sotf_host::parametric_plugin::{ParameterSchema, ParameterSet};
+use sotf_host::plugin::{
+    PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
+    ProcessContext, TailLength,
+};
+use sotf_host::simd::{complex_mul_add_simd, enable_ftz_daz};
+use sotf_host::smoothing::Smoother;
+use std::any::Any;
+use std::path::Path;
+use std::sync::OnceLock;
+use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::{Arc, Mutex, Weak, mpsc};
+use symphonia::core::codecs::CodecParameters;
+use symphonia::core::codecs::audio::AudioDecoderOptions;
+use symphonia::core::codecs::registry::CodecRegistry;
+use symphonia::core::formats::probe::{Hint, Probe};
+use symphonia::core::formats::{FormatOptions, TrackType};
+use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
+
+struct IrLoadRequest {
+    generation: u64,
+    path: String,
+    channels: usize,
+    sample_rate: f64,
+    use_nupc: bool,
+    zero_latency_head: bool,
+    head_taps: usize,
+    true_stereo: bool,
+    result_tx: std::sync::mpsc::Sender<IrLoadCompletion>,
+    lifetime: Weak<()>,
+}
+
+impl IrLoadRequest {
+    fn complete(self, build: impl FnOnce(&Self) -> Result<IrLoadResult, String>) {
+        // A superseded or destroyed plugin must not decode/plan queued work.
+        // Do not hold a strong token while building: cancellation can arrive
+        // during preparation, in which case the result is destroyed here.
+        if self.lifetime.strong_count() == 0 {
+            return;
+        }
+        let result = build(&self);
+        if self.lifetime.strong_count() != 0 {
+            let _ = self.result_tx.send(IrLoadCompletion {
+                generation: self.generation,
+                result,
+            });
+        }
+    }
+}
+
+static IR_LOADER: OnceLock<mpsc::SyncSender<IrLoadRequest>> = OnceLock::new();
+// Four pending slots per maximum worker; queued requests hold no prepared DSP.
+const IR_LOAD_QUEUE_CAPACITY: usize = 16;
+const MAX_IR_CHANNELS: usize = 32;
+const MAX_IR_SECONDS: usize = 30;
+pub(super) const MAX_IR_MEMORY_BYTES: usize = 512 * 1024 * 1024;
+// Separate control-thread cap for decoded f32 sample-vector capacities.
+const MAX_IR_DECODE_BYTES: usize = 512 * 1024 * 1024;
+#[path = "decode_buffer.rs"]
+mod decode_buffer;
+use decode_buffer::DecodedIr;
+const TRANSITION_SAMPLES: usize = 128;
+const FFT_PLAN_METADATA_BYTES: usize = 4 * 1024;
+
+#[derive(Clone, Copy)]
+pub(super) struct IrValidationOptions {
+    pub(super) target_sample_rate: f64,
+    pub(super) output_channels: usize,
+    pub(super) use_nupc: bool,
+    pub(super) true_stereo: bool,
+    pub(super) zero_latency_head: bool,
+    pub(super) head_taps: usize,
+}
+
+fn get_ir_loader() -> &'static mpsc::SyncSender<IrLoadRequest> {
+    IR_LOADER.get_or_init(|| {
+        // Bound the pool so rapid IR switches do not exhaust the OS thread budget.
+        let num_workers = rayon::current_num_threads().clamp(1, 4);
+        let (tx, _workers) = spawn_ir_loader(num_workers);
+        // Dropping the handles detaches the process-lifetime production workers.
+        tx
+    })
+}
+
+fn spawn_ir_loader(
+    num_workers: usize,
+) -> (
+    mpsc::SyncSender<IrLoadRequest>,
+    Vec<std::thread::JoinHandle<()>>,
+) {
+    let num_workers = num_workers.clamp(1, 4);
+    let (tx, rx) = mpsc::sync_channel::<IrLoadRequest>(IR_LOAD_QUEUE_CAPACITY);
+    let rx = Arc::new(Mutex::new(rx));
+    let mut workers = Vec::with_capacity(num_workers);
+    for i in 0..num_workers {
+        let rx = Arc::clone(&rx);
+        workers.push(
+            std::thread::Builder::new()
+                .name(format!("convolution-ir-load-{i}"))
+                .spawn(move || {
+                    loop {
+                        let req = match rx.lock().unwrap().recv() {
+                            Ok(req) => req,
+                            Err(_) => break,
+                        };
+                        req.complete(|req| {
+                            ConvolutionPlugin::build_ir_state_with_routing(
+                                &req.path,
+                                req.channels,
+                                req.sample_rate,
+                                req.use_nupc,
+                                req.zero_latency_head,
+                                req.head_taps,
+                                req.true_stereo,
+                            )
+                        });
+                    }
+                })
+                .expect("failed to spawn convolution IR loader thread"),
+        );
+    }
+    (tx, workers)
+}
+
+static IR_RECLAIMER: OnceLock<mpsc::SyncSender<RetiredIrState>> = OnceLock::new();
+static IR_RECLAIMER_FALLBACK: OnceLock<mpsc::SyncSender<RetiredIrState>> = OnceLock::new();
+static IR_ERROR_RECLAIMER: OnceLock<mpsc::SyncSender<String>> = OnceLock::new();
+static IR_ERROR_RECLAIMER_FALLBACK: OnceLock<mpsc::SyncSender<String>> = OnceLock::new();
+
+fn spawn_reclaimer(name: &str) -> mpsc::SyncSender<RetiredIrState> {
+    let (tx, rx) = mpsc::sync_channel::<RetiredIrState>(8);
+    std::thread::Builder::new()
+        .name(name.into())
+        .spawn(move || {
+            while let Ok(value) = rx.recv() {
+                // A panicking third-party destructor must not permanently
+                // disconnect a global retirement path.
+                let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    let RetiredIrState {
+                        state,
+                        nupc_engines,
+                        fdl_flat,
+                        fft_scratch,
+                        rayon_accum_pool,
+                        ir_file,
+                    } = value;
+                    drop((
+                        state,
+                        nupc_engines,
+                        fdl_flat,
+                        fft_scratch,
+                        rayon_accum_pool,
+                        ir_file,
+                    ));
+                }));
+            }
+        })
+        .expect("failed to spawn convolution reclaimer thread");
+    tx
+}
+
+fn spawn_error_reclaimer(name: &str) -> mpsc::SyncSender<String> {
+    let (tx, rx) = mpsc::sync_channel::<String>(8);
+    std::thread::Builder::new()
+        .name(name.into())
+        .spawn(move || {
+            while let Ok(error) = rx.recv() {
+                log::error!("[Convolution] IR load failed: {error}");
+            }
+        })
+        .expect("failed to spawn convolution error reclaimer thread");
+    tx
+}
+
+fn get_ir_reclaimer() -> &'static mpsc::SyncSender<RetiredIrState> {
+    IR_RECLAIMER.get_or_init(|| spawn_reclaimer("convolution-ir-reclaimer"))
+}
+
+fn get_ir_reclaimer_fallback() -> &'static mpsc::SyncSender<RetiredIrState> {
+    IR_RECLAIMER_FALLBACK.get_or_init(|| spawn_reclaimer("convolution-ir-reclaimer-fallback"))
+}
+
+fn get_ir_error_reclaimer() -> &'static mpsc::SyncSender<String> {
+    IR_ERROR_RECLAIMER.get_or_init(|| spawn_error_reclaimer("convolution-ir-error-reclaimer"))
+}
+
+fn get_ir_error_reclaimer_fallback() -> &'static mpsc::SyncSender<String> {
+    IR_ERROR_RECLAIMER_FALLBACK
+        .get_or_init(|| spawn_error_reclaimer("convolution-ir-error-reclaimer-fallback"))
+}
+
+/// Try two independently-owned bounded queues. The fallback makes a stopped
+/// primary worker recoverable without allocating or destroying `value` on the
+/// caller. If both queues are saturated, ownership is returned for one bounded
+/// per-instance retry slot and further ownership-producing work is fenced.
+pub(super) fn try_reclaim<T>(
+    primary: &mpsc::SyncSender<T>,
+    fallback: &mpsc::SyncSender<T>,
+    value: T,
+) -> Result<(), T> {
+    match primary.try_send(value) {
+        Ok(()) => Ok(()),
+        Err(mpsc::TrySendError::Full(value) | mpsc::TrySendError::Disconnected(value)) => {
+            fallback.try_send(value).map_err(|error| match error {
+                mpsc::TrySendError::Full(value) | mpsc::TrySendError::Disconnected(value) => value,
+            })
+        }
+    }
+}
+
+/// Active IR ownership and its asynchronous load/retirement lifecycle.
+/// Keeping these fields together makes state swaps auditable as one ownership
+/// transaction and prevents the plugin shell from growing with reclaimer
+/// implementation details.
+#[doc(hidden)]
+pub struct IrRuntimeState {
+    pub(super) ir_file: String,
+    // The worker sends owned completions; only this plugin reads/replaces the
+    // active root. A callback clone cannot be the final owner, and replacement
+    // moves the old root into the existing off-thread retirement payload.
+    pub(super) state: Arc<Option<ConvolutionState>>,
+    /// Flattened UPC FDL: [partition][input channel][nonnegative bin].
+    pub(super) fdl_flat: Vec<Complex<f32>>,
+    pub(super) fdl_head: usize,
+    pub(super) fft_scratch: Vec<Complex<f32>>,
+    pub(super) nupc_engines: Vec<nupc::NupcEngine>,
+    pub(super) rayon_accum_pool: Vec<Vec<Complex<f32>>>,
+    /// Retained after consumption: dropping the receiver can free its message
+    /// block even while a sender keeps the channel allocation alive.
+    pub(super) ir_load_result_rx: Option<std::sync::mpsc::Receiver<IrLoadCompletion>>,
+    pub(super) completion_pending: bool,
+    /// Both endpoints are replaced/dropped only by control-thread load/clear
+    /// operations or plugin destruction, never by process, drain, or reset.
+    pub(super) ir_load_result_keepalive: Option<std::sync::mpsc::Sender<IrLoadCompletion>>,
+    pub(super) desired_generation: u64,
+    ir_load_lifetime: Option<Arc<()>>,
+    pub(super) load_status: AtomicU8,
+    pub(super) retired_pending: Option<RetiredIrState>,
+    pub(super) failed_error_pending: Option<String>,
+    #[cfg(test)]
+    pub(super) test_ir_reclaimers: Option<(
+        mpsc::SyncSender<RetiredIrState>,
+        mpsc::SyncSender<RetiredIrState>,
+    )>,
+}
+
+pub struct ConvolutionPlugin {
+    pub(super) channels: usize,
+    pub(super) sample_rate: f64,
+    pub(super) ir_runtime: IrRuntimeState,
+    pub(super) mix: Smoother,
+    pub(super) mix_value: f32,
+    pub(super) gain_linear: Smoother,
+    pub(super) gain_db_value: f32,
+    pub(super) input_buffers: Vec<Vec<f32>>,
+    pub(super) input_fill: usize,
+    pub(super) output_accum: Vec<Vec<f32>>,
+    /// Per-channel output ring buffer: stores completed partition output so
+    /// partial-block boundaries are handled correctly (fix for issue #1).
+    /// Size: PARTITION_SIZE samples per channel (one completed partition).
+    pub(super) output_ring: Vec<Vec<f32>>,
+    /// Read pointer into `output_ring` (next sample to be drained).
+    pub(super) output_ring_read: usize,
+    /// Number of valid samples waiting to be consumed from `output_ring`.
+    pub(super) output_ring_available: usize,
+    pub(super) mix_envelope: Vec<f32>,
+    pub(super) gain_envelope: Vec<f32>,
+    // Pre-allocated scratch buffers (avoid heap allocs in audio callback)
+    pub(super) fft_time: Vec<f32>,
+    pub(super) fft_spectrum: Vec<Complex<f32>>,
+    pub(super) fft_sum: Vec<Complex<f32>>,
+    pub(super) cached_parameters: Vec<Parameter>,
+    /// When use_nupc is true, per-channel NUPC engines for low-latency convolution
+    pub(super) use_nupc: bool,
+    pub(super) zero_latency_head: bool,
+    pub(super) head_taps: usize,
+    pub(super) true_stereo: bool,
+    /// Per-channel dry delay used to align partial NUPC mixes when no
+    /// zero-latency time-domain head is active.
+    pub(super) nupc_dry_delay: Vec<Vec<f32>>,
+    pub(super) nupc_dry_delay_pos: usize,
+    /// Pre-allocated accumulator buffers for rayon fold/reduce (one per rayon thread).
+    /// Avoids heap allocation in the audio processing hot path.
+    pub(super) inactive_dry_delay: Vec<Vec<f32>>,
+    pub(super) inactive_dry_delay_pos: usize,
+    pub(super) last_output: Vec<f32>,
+    pub(super) transition_from: Vec<f32>,
+    pub(super) transition_remaining: usize,
+    /// Audio-owned metadata: the realtime tail getter only reads scalar fields.
+    pub(super) max_ir_frames: usize,
+    /// Conservative history bound across live replacements; reset clears it.
+    retained_tail_frames: u64,
+    has_input: bool,
+    drain_remaining: Option<usize>,
+}
+
+impl std::ops::Deref for ConvolutionPlugin {
+    type Target = IrRuntimeState;
+
+    fn deref(&self) -> &Self::Target {
+        &self.ir_runtime
+    }
+}
+
+impl std::ops::DerefMut for ConvolutionPlugin {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.ir_runtime
+    }
+}
+
+impl ConvolutionPlugin {
+    /// Validate a referenced IR without constructing its realtime backend.
+    ///
+    /// This performs control-thread file decoding and the same channel, duration,
+    /// sample-rate, and memory admission checks used by normal IR construction.
+    /// `target_sample_rate` may be omitted when the host has not selected a rate;
+    /// in that case admission is checked at the file's decoded sample rate.
+    ///
+    /// # Errors
+    /// Returns an error when the file cannot be decoded or its routing/resource
+    /// geometry is not supported.
+    #[doc(hidden)]
+    pub fn validate_ir_resource_for_routing(
+        path: &str,
+        target_sample_rate: Option<f64>,
+        output_channels: usize,
+        use_nupc: bool,
+        true_stereo: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Result<(), String> {
+        let (ir_samples, ir_sample_rate) = Self::load_audio_file(path)?;
+        Self::validate_ir_limits_for_routing(
+            &ir_samples,
+            ir_sample_rate,
+            IrValidationOptions {
+                target_sample_rate: target_sample_rate.unwrap_or(f64::from(ir_sample_rate)),
+                output_channels,
+                use_nupc,
+                true_stereo,
+                zero_latency_head,
+                head_taps,
+            },
+        )
+    }
+
+    #[cfg(test)]
+    pub(super) fn validate_ir_limits(
+        ir_samples: &[Vec<f32>],
+        ir_sample_rate: u32,
+        target_sample_rate: u32,
+        output_channels: usize,
+        use_nupc: bool,
+    ) -> Result<(), String> {
+        Self::validate_ir_limits_for_routing(
+            ir_samples,
+            ir_sample_rate,
+            IrValidationOptions {
+                target_sample_rate: f64::from(target_sample_rate),
+                output_channels,
+                use_nupc,
+                true_stereo: false,
+                zero_latency_head: false,
+                head_taps: 0,
+            },
+        )
+    }
+
+    pub(super) fn validate_ir_limits_for_routing(
+        ir_samples: &[Vec<f32>],
+        ir_sample_rate: u32,
+        options: IrValidationOptions,
+    ) -> Result<(), String> {
+        let IrValidationOptions {
+            target_sample_rate,
+            output_channels,
+            use_nupc,
+            true_stereo,
+            zero_latency_head,
+            head_taps,
+        } = options;
+        if ir_sample_rate == 0 || !target_sample_rate.is_finite() || target_sample_rate <= 0.0 {
+            return Err("IR file is missing a valid sample rate".into());
+        }
+        if ir_samples.is_empty() || ir_samples.iter().any(Vec::is_empty) {
+            return Err("IR file contains no audio data".into());
+        }
+        if ir_samples.len() > MAX_IR_CHANNELS {
+            return Err(format!(
+                "IR has {} channels; maximum supported is {MAX_IR_CHANNELS}",
+                ir_samples.len()
+            ));
+        }
+        if true_stereo && output_channels != 2 {
+            return Err(format!(
+                "True-stereo convolution requires exactly 2 plugin channels, got {output_channels}"
+            ));
+        }
+        if true_stereo && ir_samples.len() != 4 {
+            return Err(format!(
+                "True-stereo convolution requires exactly 4 IR channels, got {}",
+                ir_samples.len()
+            ));
+        }
+        let max_source_frames = ir_sample_rate as usize * MAX_IR_SECONDS;
+        if ir_samples
+            .iter()
+            .any(|channel| channel.len() > max_source_frames)
+        {
+            return Err(format!(
+                "IR exceeds the {MAX_IR_SECONDS}-second realtime limit"
+            ));
+        }
+        let target_lengths: Option<Vec<usize>> = ir_samples
+            .iter()
+            .map(|channel| {
+                Self::resampled_length(channel.len(), ir_sample_rate, target_sample_rate)
+            })
+            .collect();
+        let estimated_bytes = target_lengths.map_or(usize::MAX, |target_lengths| {
+            if true_stereo {
+                Self::estimated_true_stereo_backend_bytes(
+                    &target_lengths,
+                    use_nupc,
+                    zero_latency_head,
+                    head_taps,
+                )
+            } else {
+                Self::estimated_ordinary_backend_bytes(
+                    &target_lengths,
+                    use_nupc,
+                    output_channels,
+                    zero_latency_head,
+                    head_taps,
+                )
+            }
+        });
+        if estimated_bytes > MAX_IR_MEMORY_BYTES {
+            return Err(format!(
+                "IR backend estimate is {} MiB; realtime limit is {} MiB",
+                estimated_bytes / (1024 * 1024),
+                MAX_IR_MEMORY_BYTES / (1024 * 1024)
+            ));
+        }
+        Ok(())
+    }
+
+    fn resampled_length(source_len: usize, source_rate: u32, target_rate: f64) -> Option<usize> {
+        if source_rate == 0 || !target_rate.is_finite() || target_rate <= 0.0 {
+            return None;
+        }
+        if target_rate.fract() == 0.0 && target_rate <= f64::from(u32::MAX) {
+            return source_len
+                .checked_mul(target_rate as usize)
+                .map(|frames| frames.div_ceil(source_rate as usize));
+        }
+        let frames = (source_len as f64 * target_rate / f64::from(source_rate)).ceil();
+        if !frames.is_finite() || frames > isize::MAX as f64 {
+            return None;
+        }
+        Some(frames as usize)
+    }
+
+    /// Return the largest prepared partition period for load diagnostics.
+    #[cfg(feature = "qa")]
+    #[doc(hidden)]
+    pub fn qa_largest_partition_frames(&self) -> usize {
+        if self.nupc_engines.is_empty() {
+            PARTITION_SIZE
+        } else {
+            self.nupc_engines
+                .iter()
+                .map(nupc::NupcEngine::largest_block_size)
+                .max()
+                .unwrap_or(0)
+                .max(1)
+        }
+    }
+
+    /// Estimate backend payload for explicit QA geometry sweeps.
+    ///
+    /// This diagnostic does not check source duration or decoded sample storage.
+    /// Confirm admission using the file-based preflight before constructing DSP.
+    #[cfg(feature = "qa")]
+    #[doc(hidden)]
+    pub fn qa_backend_estimate(
+        lengths: &[usize],
+        output_channels: usize,
+        use_nupc: bool,
+        true_stereo: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> usize {
+        if true_stereo {
+            if output_channels != 2 {
+                return usize::MAX;
+            }
+            Self::estimated_true_stereo_backend_bytes(
+                lengths,
+                use_nupc,
+                zero_latency_head,
+                head_taps,
+            )
+        } else {
+            Self::estimated_ordinary_backend_bytes(
+                lengths,
+                use_nupc,
+                output_channels,
+                zero_latency_head,
+                head_taps,
+            )
+        }
+    }
+
+    /// Estimate retained ordinary-route storage before constructing FFT backends.
+    ///
+    /// Count shared kernels once and each mapped channel's working state.
+    /// Unsupported dimensions or checked-arithmetic overflow return `usize::MAX`.
+    pub(super) fn estimated_ordinary_backend_bytes(
+        path_lengths: &[usize],
+        use_nupc: bool,
+        output_channels: usize,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> usize {
+        if path_lengths.is_empty() || path_lengths.contains(&0) || output_channels == 0 {
+            return usize::MAX;
+        }
+        if !use_nupc {
+            return Self::estimated_upc_backend_bytes(path_lengths, output_channels)
+                .unwrap_or(usize::MAX);
+        }
+        let bytes =
+            path_lengths
+                .iter()
+                .enumerate()
+                .try_fold(0_usize, |total, (ir_channel, &length)| {
+                    if ir_channel >= output_channels {
+                        // Unused kernels are dropped after construction; they are
+                        // temporary preparation storage, not retained DSP payload.
+                        return Some(total);
+                    }
+                    let engines = (output_channels - 1 - ir_channel) / path_lengths.len() + 1;
+                    let (kernel, engine) =
+                        Self::estimated_nupc_storage_bytes(length, zero_latency_head, head_taps)?;
+                    total
+                        .checked_add(kernel)?
+                        .checked_add(engine.checked_mul(engines)?)
+                });
+        bytes
+            .and_then(|bytes| {
+                bytes.checked_add(Self::estimated_plugin_fixed_bytes(output_channels)?)
+            })
+            .and_then(Self::with_backend_estimate_margin)
+            .unwrap_or(usize::MAX)
+    }
+
+    /// Estimate the persistent backend and fixed-plugin payload for a matrix.
+    /// The four IR spectra and four per-path engines are counted from the same
+    /// partition plan used by `NupcKernel`; all per-level FDL, overlap, queue,
+    /// delay, input, scratch, and FFT working arrays are included. The plan
+    /// allowance is 26 complex values per transform point plus 4 KiB of
+    /// metadata per forward/inverse pair; scratch reserves 8 complex values
+    /// per point. RustFFT 6.4.1 can select butterflies, RadixN/Radix4,
+    /// mixed-radix/Good-Thomas, Rader, or Bluestein plans. Bluestein's selected
+    /// inner transform is less than four times the requested size. The focused
+    /// test derives every NUPC transform size at the estimator's admission
+    /// boundary for each supported integer head setting (32 through 512),
+    /// then measures the actual default-planner allocations and scratch. This
+    /// validates the reserve for the locked RustFFT version and current target;
+    /// revalidate when either planner implementation or target changes. A
+    /// 12.5% margin covers vector/level metadata and allocator rounding.
+    /// Temporary decoded or resampled IR copies remain control-thread
+    /// allocations outside this persistent backend payload bound.
+    pub(super) fn estimated_true_stereo_backend_bytes(
+        path_lengths: &[usize],
+        use_nupc: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> usize {
+        if path_lengths.len() != 4 {
+            return usize::MAX;
+        }
+        if use_nupc {
+            let path_bytes = path_lengths.iter().try_fold(0_usize, |total, &length| {
+                total.checked_add(Self::estimated_nupc_path_bytes(
+                    length,
+                    zero_latency_head,
+                    head_taps,
+                )?)
+            });
+            path_bytes
+                .and_then(|bytes| bytes.checked_add(Self::estimated_plugin_fixed_bytes(2)?))
+                .and_then(Self::with_backend_estimate_margin)
+                .unwrap_or(usize::MAX)
+        } else {
+            Self::estimated_upc_backend_bytes(path_lengths, 2).unwrap_or(usize::MAX)
+        }
+    }
+
+    fn estimated_nupc_path_bytes(
+        ir_length: usize,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Option<usize> {
+        let (kernel, engine) =
+            Self::estimated_nupc_storage_bytes(ir_length, zero_latency_head, head_taps)?;
+        kernel.checked_add(engine)
+    }
+
+    fn estimated_nupc_storage_bytes(
+        ir_length: usize,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Option<(usize, usize)> {
+        let max_resampled_length = MAX_IR_SECONDS.checked_mul(u32::MAX as usize)?;
+        if ir_length > max_resampled_length {
+            return None;
+        }
+        let head_len = if zero_latency_head {
+            head_taps.min(ir_length)
+        } else {
+            0
+        };
+        let tail_len = ir_length.checked_sub(head_len)?;
+        let min_block = if head_len > 0 {
+            PARTITION_SIZE.min(head_len)
+        } else {
+            PARTITION_SIZE
+        };
+        let specs = nupc::plan_partitions(tail_len, min_block);
+        let mut kernel_bytes = head_len.checked_mul(std::mem::size_of::<f32>())?;
+        let mut engine_bytes = kernel_bytes; // immutable taps and per-engine history
+
+        for spec in specs {
+            // Retain the conservative full-complex model so real-FFT adoption
+            // does not expand admitted workloads. Savings in the complex
+            // buffers also cover the added real transform workspace below.
+            // Estimate without constructing a plan before accepting the
+            // candidate against the IR memory limit. The 26N complex plan
+            // allowance includes transform arrays and the nested plan state
+            // observed across the locked RustFFT plan families. For Bluestein,
+            // its selected inner transform has M < 4N; 8N complex scratch
+            // covers the nested execution workspace validated by the tests.
+            let fft_plan_bytes = spec
+                .fft_size
+                .checked_mul(26)?
+                .checked_mul(std::mem::size_of::<Complex<f32>>())?
+                .checked_add(FFT_PLAN_METADATA_BYTES)?;
+            let scratch_complex = spec.fft_size.checked_mul(8)?;
+
+            // One immutable IR spectrum per IR partition and one FDL spectrum
+            // per matching single-path engine.
+            let spectra = spec
+                .count
+                .checked_mul(spec.fft_size)?
+                .checked_mul(std::mem::size_of::<Complex<f32>>())?;
+            kernel_bytes = kernel_bytes
+                .checked_add(spectra)?
+                .checked_add(fft_plan_bytes)?;
+            engine_bytes = engine_bytes.checked_add(spectra)?;
+
+            let output_delay = if head_len > 0 {
+                head_len
+                    .checked_add(spec.offset)?
+                    .checked_sub(spec.block_size)?
+            } else {
+                min_block
+                    .checked_add(spec.offset)?
+                    .checked_sub(spec.block_size)?
+            };
+            let real_buffers = spec
+                .fft_size
+                .checked_mul(1)? // overlap accumulator
+                .checked_add(spec.block_size.checked_mul(2)?)? // output and input blocks
+                .checked_add(output_delay)?
+                .checked_mul(std::mem::size_of::<f32>())?;
+            let complex_buffers = spec
+                .fft_size
+                .checked_mul(2)? // FFT spectrum and convolution sum
+                .checked_add(scratch_complex)?
+                .checked_mul(std::mem::size_of::<Complex<f32>>())?;
+            engine_bytes = engine_bytes
+                .checked_add(real_buffers)?
+                .checked_add(complex_buffers)?;
+        }
+        Some((kernel_bytes, engine_bytes))
+    }
+
+    fn estimated_upc_backend_bytes(
+        path_lengths: &[usize],
+        output_channels: usize,
+    ) -> Option<usize> {
+        // Retain the conservative full-complex model to keep admitted workloads
+        // unchanged. Half-spectrum savings also cover the real time workspace.
+        // The actual UPC caches and FDL store only FFT_BINS values per spectrum.
+        let max_parts = path_lengths.iter().copied().max()?.div_ceil(PARTITION_SIZE);
+        let mut bytes = 0_usize;
+        for &length in path_lengths {
+            let partitions = length.div_ceil(PARTITION_SIZE);
+            bytes = bytes.checked_add(
+                partitions
+                    .checked_mul(FFT_SIZE)?
+                    .checked_mul(std::mem::size_of::<Complex<f32>>())?,
+            )?;
+        }
+        bytes = bytes.checked_add(
+            max_parts
+                .checked_mul(output_channels)?
+                .checked_mul(FFT_SIZE)?
+                .checked_mul(std::mem::size_of::<Complex<f32>>())?,
+        )?;
+
+        let fft_plan_bytes = FFT_SIZE
+            .checked_mul(26)?
+            .checked_mul(std::mem::size_of::<Complex<f32>>())?
+            .checked_add(FFT_PLAN_METADATA_BYTES)?;
+        let fixed_complex_samples = FFT_SIZE
+            .checked_mul(8)? // conservative rustfft scratch
+            .checked_add(
+                rayon::current_num_threads()
+                    .min(max_parts)
+                    .checked_mul(FFT_SIZE)?,
+            )?;
+        bytes = bytes
+            .checked_add(Self::estimated_plugin_fixed_bytes(output_channels)?)?
+            .checked_add(fixed_complex_samples.checked_mul(std::mem::size_of::<Complex<f32>>())?)?
+            .checked_add(fft_plan_bytes)?;
+        Self::with_backend_estimate_margin(bytes)
+    }
+
+    fn estimated_plugin_fixed_bytes(output_channels: usize) -> Option<usize> {
+        // Per channel: input/ring, two dry delays, overlap accumulator and
+        // last/transition samples. Envelopes and FFT spectrum/sum are shared.
+        let per_channel = PARTITION_SIZE
+            .checked_mul(4)?
+            .checked_add(FFT_SIZE)?
+            .checked_add(2)?;
+        let real_samples = output_channels
+            .checked_mul(per_channel)?
+            .checked_add(PARTITION_SIZE.checked_mul(2)?)?;
+        real_samples
+            .checked_mul(std::mem::size_of::<f32>())?
+            .checked_add(
+                FFT_SIZE
+                    .checked_mul(2)?
+                    .checked_mul(std::mem::size_of::<Complex<f32>>())?,
+            )
+    }
+
+    fn with_backend_estimate_margin(bytes: usize) -> Option<usize> {
+        bytes.checked_add(bytes.div_ceil(8))
+    }
+
+    pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        let sample_rate = sample_rate.into();
+        // Prepare background retirement before the instance can reach an audio
+        // callback; successful installs and failures then only perform bounded
+        // non-allocating channel operations.
+        let _ = get_ir_reclaimer();
+        let _ = get_ir_reclaimer_fallback();
+        let _ = get_ir_error_reclaimer();
+        let _ = get_ir_error_reclaimer_fallback();
+        let mut p = Self {
+            channels,
+            sample_rate,
+            ir_runtime: IrRuntimeState {
+                ir_file: String::new(),
+                state: Arc::new(None),
+                fdl_flat: Vec::new(),
+                fdl_head: 0,
+                fft_scratch: Vec::new(),
+                nupc_engines: Vec::new(),
+                rayon_accum_pool: Vec::new(),
+                ir_load_result_rx: None,
+                completion_pending: false,
+                ir_load_result_keepalive: None,
+                desired_generation: 0,
+                ir_load_lifetime: None,
+                load_status: AtomicU8::new(ConvolutionLoadStatus::Idle as u8),
+                retired_pending: None,
+                failed_error_pending: None,
+                #[cfg(test)]
+                test_ir_reclaimers: None,
+            },
+            mix: Smoother::new(1.0, 20.0, sample_rate),
+            mix_value: 1.0,
+            gain_linear: Smoother::new(1.0, 20.0, sample_rate),
+            gain_db_value: 0.0,
+            input_buffers: vec![vec![0.0; PARTITION_SIZE]; channels],
+            input_fill: 0,
+            output_accum: vec![vec![0.0; FFT_SIZE]; channels],
+            output_ring: vec![vec![0.0; PARTITION_SIZE]; channels],
+            output_ring_read: 0,
+            output_ring_available: 0,
+            mix_envelope: vec![1.0; PARTITION_SIZE],
+            gain_envelope: vec![1.0; PARTITION_SIZE],
+            fft_time: vec![0.0; FFT_SIZE],
+            fft_spectrum: vec![Complex::new(0.0, 0.0); FFT_BINS],
+            fft_sum: vec![Complex::new(0.0, 0.0); FFT_BINS],
+            cached_parameters: Vec::new(),
+            use_nupc: CV[3].default_bool(),
+            zero_latency_head: false,
+            head_taps: 128,
+            true_stereo: false,
+            nupc_dry_delay: vec![vec![0.0; PARTITION_SIZE]; channels],
+            nupc_dry_delay_pos: 0,
+            inactive_dry_delay: vec![vec![0.0; PARTITION_SIZE]; channels],
+            inactive_dry_delay_pos: 0,
+            last_output: vec![0.0; channels],
+            transition_from: vec![0.0; channels],
+            transition_remaining: 0,
+            max_ir_frames: 0,
+            retained_tail_frames: 0,
+            has_input: false,
+            drain_remaining: None,
+        };
+        p.rebuild_cached_parameters();
+        p
+    }
+
+    /// Get the f64 value of parameter at PARAMS index.
+    /// Order must match params::PARAMS exactly.
+    pub(super) fn param_value(&self, index: usize) -> Option<f64> {
+        match index {
+            0 => None, // ir_file (FilePath -- handled separately)
+            1 => Some(self.mix_value as f64),
+            2 => Some(self.gain_db_value as f64),
+            3 => Some(if self.use_nupc { 1.0 } else { 0.0 }),
+            4 => Some(if self.zero_latency_head { 1.0 } else { 0.0 }),
+            5 => Some(self.head_taps as f64),
+            6 => Some(if self.true_stereo { 1.0 } else { 0.0 }),
+            _ => None,
+        }
+    }
+
+    /// Set the f64 value of parameter at PARAMS index.
+    /// Order must match params::PARAMS exactly.
+    pub(super) fn set_param_value(&mut self, index: usize, value: f64) {
+        match index {
+            0 => {} // ir_file (FilePath -- handled separately)
+            1 => {
+                let value = value.clamp(CV[1].min_f64(), CV[1].max_f64()) as f32;
+                self.mix_value = value;
+                self.mix.set_target(value);
+            }
+            2 => {
+                let value = value.clamp(CV[2].min_f64(), CV[2].max_f64()) as f32;
+                self.gain_db_value = value;
+                self.gain_linear.set_target(10.0f32.powf(value / 20.0));
+            }
+            3 => self.use_nupc = CV[3].clamp_f64(value) > 0.5,
+            4 => self.zero_latency_head = CV[4].clamp_f64(value) > 0.5,
+            5 => self.head_taps = CV[5].clamp_f64(value) as usize,
+            6 => self.true_stereo = CV[6].clamp_f64(value) > 0.5,
+            _ => {}
+        }
+    }
+
+    pub(super) fn rebuild_cached_parameters(&mut self) {
+        self.cached_parameters = param_bridge::build_parameters(CV, |i| self.param_value(i));
+        let ir_file = self.ir_runtime.ir_file.clone();
+        if let Some(ir_param) = self
+            .cached_parameters
+            .iter_mut()
+            .find(|param| param.id.as_str() == "ir_file")
+        {
+            ir_param.default_value = ParameterValue::String(ir_file);
+        }
+    }
+
+    fn current_parameter_schema(&self) -> Vec<Parameter> {
+        let mut parameters = self.cached_parameters.clone();
+        if let Some(ir_param) = parameters
+            .iter_mut()
+            .find(|param| param.id.as_str() == "ir_file")
+        {
+            ir_param.default_value = ParameterValue::String(self.ir_file.clone());
+        }
+        parameters
+    }
+
+    pub fn load_status(&self) -> ConvolutionLoadStatus {
+        match self.load_status.load(Ordering::Acquire) {
+            1 => ConvolutionLoadStatus::Loading,
+            2 => ConvolutionLoadStatus::Ready,
+            3 => ConvolutionLoadStatus::Failed,
+            _ => ConvolutionLoadStatus::Idle,
+        }
+    }
+
+    fn begin_async_load(&mut self, path: String) -> PluginResult<()> {
+        self.enqueue_ir_load(path, get_ir_loader())
+    }
+
+    fn enqueue_ir_load(
+        &mut self,
+        path: String,
+        loader: &mpsc::SyncSender<IrLoadRequest>,
+    ) -> PluginResult<()> {
+        let generation = self.desired_generation.wrapping_add(1);
+        let (result_tx, result_rx) = std::sync::mpsc::channel();
+        let lifetime = Arc::new(());
+        // Submission is control-thread work. On refusal, drop only the new
+        // request and leave the prior mailbox, generation and status intact.
+        loader
+            .try_send(IrLoadRequest {
+                generation,
+                path,
+                channels: self.channels,
+                sample_rate: self.sample_rate,
+                use_nupc: self.use_nupc,
+                zero_latency_head: self.zero_latency_head,
+                head_taps: self.head_taps,
+                true_stereo: self.true_stereo,
+                result_tx: result_tx.clone(),
+                lifetime: Arc::downgrade(&lifetime),
+            })
+            .map_err(|error| match error {
+                mpsc::TrySendError::Full(_) => {
+                    "Convolution IR load queue is full; retry later".to_string()
+                }
+                mpsc::TrySendError::Disconnected(_) => {
+                    "Convolution IR loader is unavailable".to_string()
+                }
+            })?;
+        self.desired_generation = generation;
+        self.ir_load_lifetime = Some(lifetime);
+        self.ir_load_result_rx = Some(result_rx);
+        self.ir_load_result_keepalive = Some(result_tx);
+        self.completion_pending = true;
+        self.load_status
+            .store(ConvolutionLoadStatus::Loading as u8, Ordering::Release);
+        Ok(())
+    }
+
+    fn cancel_ir_load(&mut self) {
+        self.desired_generation = self.desired_generation.wrapping_add(1);
+        self.ir_load_lifetime = None;
+        self.ir_load_result_rx = None;
+        self.ir_load_result_keepalive = None;
+        self.completion_pending = false;
+    }
+
+    fn queue_retired(&mut self, retired: RetiredIrState) {
+        debug_assert!(self.retired_pending.is_none());
+        #[cfg(test)]
+        if let Some((primary, fallback)) = &self.test_ir_reclaimers {
+            if let Err(retired) = try_reclaim(primary, fallback, retired) {
+                self.retired_pending = Some(retired);
+            }
+            return;
+        }
+        if let Err(retired) = try_reclaim(get_ir_reclaimer(), get_ir_reclaimer_fallback(), retired)
+        {
+            self.retired_pending = Some(retired);
+        }
+    }
+
+    fn flush_retired(&mut self) {
+        if let Some(retired) = self.retired_pending.take() {
+            self.queue_retired(retired);
+        }
+        if let Some(error) = self.failed_error_pending.take()
+            && let Err(error) = try_reclaim(
+                get_ir_error_reclaimer(),
+                get_ir_error_reclaimer_fallback(),
+                error,
+            )
+        {
+            self.failed_error_pending = Some(error);
+        }
+    }
+
+    fn retire_uninstalled(&mut self, result: IrLoadResult) {
+        self.queue_retired(RetiredIrState {
+            state: result.state,
+            nupc_engines: result.nupc_engines,
+            fdl_flat: result.fdl_flat,
+            fft_scratch: result.fft_scratch,
+            rayon_accum_pool: result.rayon_accum_pool,
+            ir_file: result.ir_file,
+        });
+    }
+
+    fn clear_ir_state(&mut self) -> PluginResult<()> {
+        self.flush_retired();
+        if self.retired_pending.is_some() {
+            return Err("Convolution IR retirement is backpressured; retry later".into());
+        }
+        self.retain_tail_for_replacement();
+        self.transition_from.copy_from_slice(&self.last_output);
+        self.transition_remaining = TRANSITION_SAMPLES;
+        self.cancel_ir_load();
+        let retired = RetiredIrState {
+            state: std::mem::replace(&mut self.ir_runtime.state, Arc::new(None)),
+            nupc_engines: std::mem::take(&mut self.nupc_engines),
+            fdl_flat: std::mem::take(&mut self.fdl_flat),
+            fft_scratch: std::mem::take(&mut self.fft_scratch),
+            rayon_accum_pool: std::mem::take(&mut self.rayon_accum_pool),
+            ir_file: String::new(),
+        };
+        self.ir_file.clear();
+        self.max_ir_frames = 0;
+        // The IR-sized state has been moved to the reclaimer; only fixed-size
+        // stream-boundary buffers remain locally.
+        self.reset_fixed_streaming_state();
+        self.load_status
+            .store(ConvolutionLoadStatus::Idle as u8, Ordering::Release);
+        self.queue_retired(retired);
+        Ok(())
+    }
+
+    pub fn from_params<S: Into<f64>>(
+        channels: usize,
+        sample_rate: S,
+        params: ConvolutionPluginParams,
+    ) -> Result<Self, String> {
+        Self::from_params_with_routing(channels, sample_rate, params, false)
+    }
+
+    /// Construct a convolution processor with an explicit stereo IR routing mode.
+    ///
+    /// The legacy constructor remains diagonal/cyclic. In true-stereo mode the
+    /// plugin accepts exactly two input channels and the loaded IR must contain
+    /// four LL/LR/RL/RR paths.
+    pub fn from_params_with_routing<S: Into<f64>>(
+        channels: usize,
+        sample_rate: S,
+        params: ConvolutionPluginParams,
+        true_stereo: bool,
+    ) -> Result<Self, String> {
+        if channels == 0 {
+            return Err("Convolution requires at least one channel".into());
+        }
+        if true_stereo && channels != 2 {
+            return Err(format!(
+                "True-stereo convolution requires exactly 2 plugin channels, got {channels}"
+            ));
+        }
+        let sample_rate = sample_rate.into();
+        if !sample_rate.is_finite() || sample_rate <= 0.0 {
+            return Err("Convolution requires a finite positive sample rate".into());
+        }
+        if !params.mix.is_finite()
+            || params.mix < CV[1].min_f64() as f32
+            || params.mix > CV[1].max_f64() as f32
+        {
+            return Err(format!("Invalid convolution mix: {}", params.mix));
+        }
+        if !params.gain_db.is_finite()
+            || params.gain_db < CV[2].min_f64() as f32
+            || params.gain_db > CV[2].max_f64() as f32
+        {
+            return Err(format!("Invalid convolution gain_db: {}", params.gain_db));
+        }
+        if params.head_taps < CV[5].min_f64() as usize
+            || params.head_taps > CV[5].max_f64() as usize
+        {
+            return Err(format!(
+                "Invalid convolution head_taps: {}",
+                params.head_taps
+            ));
+        }
+        let mut plugin = Self::new(channels, sample_rate);
+        plugin.use_nupc = params.use_nupc;
+        plugin.zero_latency_head = params.zero_latency_head;
+        plugin.head_taps = params.head_taps;
+        plugin.true_stereo = true_stereo;
+        if !params.ir_file.is_empty() {
+            plugin.load_ir(&params.ir_file)?;
+        }
+        plugin.set_param_value(1, params.mix as f64);
+        plugin.mix.reset(plugin.mix_value);
+        plugin.set_param_value(2, params.gain_db as f64);
+        plugin
+            .gain_linear
+            .reset(10.0f32.powf(plugin.gain_db_value / 20.0));
+        plugin.rebuild_cached_parameters();
+        Ok(plugin)
+    }
+
+    /// Build IR state on any thread (file I/O, FFT planning, allocations).
+    #[cfg(test)]
+    pub(super) fn build_ir_state(
+        path: &str,
+        channels: usize,
+        sample_rate: u32,
+        use_nupc: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+    ) -> Result<IrLoadResult, String> {
+        Self::build_ir_state_with_routing(
+            path,
+            channels,
+            f64::from(sample_rate),
+            use_nupc,
+            zero_latency_head,
+            head_taps,
+            false,
+        )
+    }
+
+    pub(super) fn build_ir_state_with_routing<S: Into<f64>>(
+        path: &str,
+        channels: usize,
+        sample_rate: S,
+        use_nupc: bool,
+        zero_latency_head: bool,
+        head_taps: usize,
+        true_stereo: bool,
+    ) -> Result<IrLoadResult, String> {
+        let sample_rate = sample_rate.into();
+        let (ir_samples, ir_sample_rate) = Self::load_audio_file(path)?;
+
+        Self::validate_ir_limits_for_routing(
+            &ir_samples,
+            ir_sample_rate,
+            IrValidationOptions {
+                target_sample_rate: sample_rate,
+                output_channels: channels,
+                use_nupc,
+                true_stereo,
+                zero_latency_head,
+                head_taps,
+            },
+        )?;
+
+        let ir_samples = if ir_sample_rate != 0 && f64::from(ir_sample_rate) != sample_rate {
+            log::info!(
+                "Resampling IR from {} Hz to {} Hz",
+                ir_sample_rate,
+                sample_rate
+            );
+            Self::resample_ir(&ir_samples, ir_sample_rate, sample_rate)?
+        } else {
+            ir_samples
+        };
+
+        let ir_channels = ir_samples.len();
+        let (partitions, num_partitions, fft_forward, fft_inverse, fft_scratch_len) = if use_nupc {
+            (Vec::new(), 0, None, None, 0)
+        } else {
+            let mut planner = RealFftPlanner::<f32>::new();
+            let fft_forward = planner.plan_fft_forward(FFT_SIZE);
+            let fft_inverse = planner.plan_fft_inverse(FFT_SIZE);
+            let fft_scratch_len = fft_forward
+                .get_scratch_len()
+                .max(fft_inverse.get_scratch_len());
+            let mut preparation_scratch = vec![Complex::new(0.0, 0.0); fft_scratch_len];
+            let mut partitions = Vec::with_capacity(ir_channels);
+            for ch_samples in &ir_samples {
+                let num_parts = ch_samples.len().div_ceil(PARTITION_SIZE);
+                let mut ch_parts = Vec::with_capacity(num_parts);
+                for p in 0..num_parts {
+                    let mut block = vec![0.0; FFT_SIZE];
+                    let mut spectrum = vec![Complex::new(0.0, 0.0); FFT_BINS];
+                    let start = p * PARTITION_SIZE;
+                    let end = (start + PARTITION_SIZE).min(ch_samples.len());
+                    block[..end - start].copy_from_slice(&ch_samples[start..end]);
+                    fft_forward
+                        .process_with_scratch(&mut block, &mut spectrum, &mut preparation_scratch)
+                        .expect("prepared UPC forward transform dimensions");
+                    ch_parts.push(spectrum);
+                }
+                partitions.push(ch_parts);
+            }
+            let num_partitions = partitions[0].len();
+            (
+                partitions,
+                num_partitions,
+                Some(fft_forward),
+                Some(fft_inverse),
+                fft_scratch_len,
+            )
+        };
+
+        let state = ConvolutionState {
+            partitions,
+            num_partitions,
+            ir_channels,
+            fft_forward,
+            fft_inverse,
+        };
+
+        // Build NUPC engines from original time-domain IR.
+        let mut nupc_engines = Vec::new();
+        if use_nupc {
+            let kernels = ir_samples
+                .iter()
+                .map(|ir| {
+                    if zero_latency_head && head_taps > 0 {
+                        nupc::NupcKernel::new_with_head(ir, PARTITION_SIZE, head_taps)
+                    } else {
+                        nupc::NupcKernel::new(ir, PARTITION_SIZE)
+                    }
+                })
+                .collect::<Vec<_>>();
+            let engine_count = if true_stereo { 4 } else { channels };
+            for ch in 0..engine_count {
+                let ir_ch = if true_stereo { ch } else { ch % ir_channels };
+                // Stagger ordinary NUPC boundaries without changing latency.
+                // Direct-head levels can exceed a callback budget individually;
+                // retain their original phase until that throughput is resolved.
+                nupc_engines.push(if zero_latency_head {
+                    kernels[ir_ch].instantiate()
+                } else {
+                    kernels[ir_ch].instantiate_with_phase(ch, engine_count)
+                });
+            }
+            log::info!(
+                "[Convolution] NUPC engines built: {} channels, latency={} samples",
+                nupc_engines.len(),
+                nupc_engines.first().map_or(0, |e| e.latency_samples())
+            );
+        }
+
+        Ok(IrLoadResult {
+            max_ir_frames: ir_samples.iter().map(Vec::len).max().unwrap_or(0),
+            state: Arc::new(Some(state)),
+            nupc_engines,
+            fdl_flat: vec![Complex::new(0.0, 0.0); num_partitions * channels * FFT_BINS],
+            fdl_head: 0,
+            fft_scratch: vec![Complex::new(0.0, 0.0); fft_scratch_len],
+            rayon_accum_pool: (0..rayon::current_num_threads().min(num_partitions))
+                .map(|_| vec![Complex::new(0.0, 0.0); FFT_BINS])
+                .collect(),
+            ir_file: path.to_string(),
+        })
+    }
+
+    pub(super) fn apply_ir_state(&mut self, result: IrLoadResult) {
+        debug_assert!(self.retired_pending.is_none());
+        self.retain_tail_for_replacement();
+        self.max_ir_frames = result.max_ir_frames;
+        self.transition_from.copy_from_slice(&self.last_output);
+        self.transition_remaining = TRANSITION_SAMPLES;
+        let retired = RetiredIrState {
+            state: std::mem::replace(&mut self.ir_runtime.state, result.state),
+            nupc_engines: std::mem::replace(&mut self.nupc_engines, result.nupc_engines),
+            fdl_flat: std::mem::replace(&mut self.fdl_flat, result.fdl_flat),
+            fft_scratch: std::mem::replace(&mut self.fft_scratch, result.fft_scratch),
+            rayon_accum_pool: std::mem::replace(
+                &mut self.rayon_accum_pool,
+                result.rayon_accum_pool,
+            ),
+            ir_file: std::mem::replace(&mut self.ir_file, result.ir_file),
+        };
+        self.fdl_head = result.fdl_head;
+        // Loader-built convolution state is already zero-initialized. Avoid
+        // scanning an IR-sized FDL or every NUPC partition on the callback;
+        // only fixed-size stream-boundary buffers can contain old audio.
+        self.reset_fixed_streaming_state();
+        self.load_status
+            .store(ConvolutionLoadStatus::Ready as u8, Ordering::Release);
+        self.queue_retired(retired);
+    }
+
+    fn current_ir_tail_frames(&self) -> u64 {
+        (self.latency_samples() as u64).saturating_add(self.max_ir_frames.saturating_sub(1) as u64)
+    }
+
+    fn retain_tail_for_replacement(&mut self) {
+        // A late replacement can hold the old final nonzero output for another
+        // fade. Keep the prior bound and extend it, including repeated swaps:
+        // native hosts may count silence from the original last input sample.
+        self.retained_tail_frames = self
+            .retained_tail_frames
+            .max(self.current_ir_tail_frames())
+            .saturating_add(TRANSITION_SAMPLES as u64);
+    }
+
+    pub(super) fn reset_fixed_streaming_state(&mut self) {
+        self.fdl_head = 0;
+        self.input_fill = 0;
+        for buffer in &mut self.input_buffers {
+            buffer.fill(0.0);
+        }
+        for buffer in &mut self.output_accum {
+            buffer.fill(0.0);
+        }
+        for buffer in &mut self.output_ring {
+            buffer.fill(0.0);
+        }
+        self.output_ring_read = 0;
+        self.output_ring_available = 0;
+        for buffer in &mut self.nupc_dry_delay {
+            buffer.fill(0.0);
+        }
+        self.nupc_dry_delay_pos = 0;
+        for buffer in &mut self.inactive_dry_delay {
+            buffer.fill(0.0);
+        }
+        self.inactive_dry_delay_pos = 0;
+    }
+
+    fn finish_output_block(&mut self, buffer: &mut [f32], frames: usize) {
+        for frame in 0..frames {
+            let base = frame * self.channels;
+            let fade = if self.transition_remaining > 0 {
+                let progressed = TRANSITION_SAMPLES - self.transition_remaining + 1;
+                self.transition_remaining -= 1;
+                progressed as f32 / TRANSITION_SAMPLES as f32
+            } else {
+                1.0
+            };
+            for ch in 0..self.channels {
+                let output = if fade < 1.0 {
+                    self.transition_from[ch] * (1.0 - fade) + buffer[base + ch] * fade
+                } else {
+                    buffer[base + ch]
+                };
+                buffer[base + ch] = output;
+                self.last_output[ch] = output;
+            }
+        }
+    }
+
+    pub fn load_ir(&mut self, path: &str) -> Result<(), String> {
+        if self.drain_remaining.is_some() {
+            return Err("Convolution requires reset before loading an IR after drain".into());
+        }
+        self.flush_retired();
+        if self.retired_pending.is_some() {
+            return Err("Convolution IR retirement is backpressured; retry later".into());
+        }
+        let result = Self::build_ir_state_with_routing(
+            path,
+            self.channels,
+            self.sample_rate,
+            self.use_nupc,
+            self.zero_latency_head,
+            self.head_taps,
+            self.true_stereo,
+        )?;
+        self.cancel_ir_load();
+        self.apply_ir_state(result);
+        self.rebuild_cached_parameters();
+        Ok(())
+    }
+
+    /// Load an audio file using Symphonia's format probing.
+    /// Supports WAV, FLAC, and AIFF formats.
+    /// Returns (channel_samples, sample_rate).
+    pub(super) fn load_audio_file(path: &str) -> Result<(Vec<Vec<f32>>, u32), String> {
+        use std::fs::File;
+        use std::sync::LazyLock;
+
+        // Shared probe and codec registry for IR loading
+        static IR_PROBE: LazyLock<Probe> = LazyLock::new(|| {
+            let mut probe = Probe::default();
+            probe.register_format::<symphonia_format_riff::WavReader>();
+            probe.register_format::<symphonia_format_riff::AiffReader>();
+            probe.register_format::<symphonia_bundle_flac::FlacReader>();
+            probe
+        });
+
+        static IR_CODEC_REGISTRY: LazyLock<CodecRegistry> = LazyLock::new(|| {
+            let mut registry = CodecRegistry::new();
+            registry.register_audio_decoder::<symphonia_codec_pcm::PcmDecoder>();
+            registry.register_audio_decoder::<symphonia_bundle_flac::FlacDecoder>();
+            registry
+        });
+
+        let file = File::open(Path::new(path)).map_err(|e| format!("IO: {e}"))?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        let mut hint = Hint::new();
+        if let Some(ext) = Path::new(path).extension().and_then(|e| e.to_str()) {
+            hint.with_extension(ext);
+        }
+
+        let probe_result = IR_PROBE
+            .probe(
+                &hint,
+                mss,
+                FormatOptions::default(),
+                MetadataOptions::default(),
+            )
+            .map_err(|e| format!("Probe: {e}"))?;
+
+        let mut reader = probe_result;
+        let track = reader
+            .default_track(TrackType::Audio)
+            .ok_or("No track found in IR file")?;
+        let codec_params = match track.codec_params.clone() {
+            Some(CodecParameters::Audio(params)) => params,
+            _ => return Err("IR file does not contain an audio track".into()),
+        };
+
+        let sample_rate = codec_params.sample_rate.unwrap_or(0);
+        let num_channels = codec_params
+            .channels
+            .as_ref()
+            .map(|c| c.count())
+            .unwrap_or(0);
+        let mut samples = DecodedIr::new(sample_rate, num_channels, track.num_frames)?;
+
+        let mut decoder = IR_CODEC_REGISTRY
+            .make_audio_decoder(&codec_params, &AudioDecoderOptions::default())
+            .map_err(|e| format!("Decoder: {e}"))?;
+
+        loop {
+            let packet = match reader.next_packet() {
+                Ok(Some(p)) => p,
+                Ok(None) => break,
+                Err(symphonia::core::errors::Error::IoError(ref e))
+                    if e.kind() == std::io::ErrorKind::UnexpectedEof =>
+                {
+                    break;
+                }
+                Err(e) => return Err(format!("Read: {e}")),
+            };
+            let decoded = decoder
+                .decode(&packet)
+                .map_err(|e| format!("Decode: {e}"))?;
+            samples.append(&decoded)?;
+        }
+        samples.finish()
+    }
+
+    /// Resample IR data from one sample rate to another using rubato.
+    pub(super) fn resample_ir<S: Into<f64>>(
+        ir_samples: &[Vec<f32>],
+        source_rate: u32,
+        target_rate: S,
+    ) -> Result<Vec<Vec<f32>>, String> {
+        let target_rate = target_rate.into();
+        if source_rate == 0 || !target_rate.is_finite() || target_rate <= 0.0 {
+            return Err("IR resampling requires finite positive rates".into());
+        }
+        if ir_samples.is_empty() {
+            return Err("Cannot resample an IR with no channels".into());
+        }
+        let source_len = ir_samples[0].len();
+        if ir_samples.iter().any(|channel| channel.len() != source_len) {
+            return Err("Cannot resample an IR with channels of different lengths".into());
+        }
+        if source_len == 0 {
+            return Ok(vec![Vec::new(); ir_samples.len()]);
+        }
+
+        let num_channels = ir_samples.len();
+        let chunk_size = 1024;
+        let ratio = target_rate / f64::from(source_rate);
+        let nominal_frames = Self::resampled_length(source_len, source_rate, target_rate)
+            .ok_or("IR resampling output length is unsupported")?;
+        let bytes_per_frame = std::mem::size_of::<f32>()
+            .checked_mul(num_channels)
+            .ok_or("IR resampling channel count is unsupported")?;
+        let frame_limit = MAX_IR_MEMORY_BYTES / bytes_per_frame;
+        // Rubato's whole-clip capacity includes the nominal output, one
+        // maximum-size output chunk and filter startup delay. Reject an
+        // unbounded ratio before constructing either resampler, whose own
+        // capacity arithmetic uses usize. The actual capacity is checked
+        // again after construction, before allocating its output buffers.
+        let chunk_frames = ((chunk_size as f64 + 1.0 / ratio) * ratio).ceil() + 1.0;
+        let startup_frames = (256.0 * ratio / 2.0).ceil();
+        if !ratio.is_finite()
+            || ratio <= 0.0
+            || !chunk_frames.is_finite()
+            || !startup_frames.is_finite()
+            || nominal_frames as f64 + chunk_frames + startup_frames > frame_limit as f64
+        {
+            return Err("IR resampling exceeds the temporary output memory limit".into());
+        }
+
+        let checked_output_capacity = |output_capacity: usize| -> Result<usize, String> {
+            let bytes = output_capacity
+                .checked_mul(num_channels)
+                .and_then(|samples| samples.checked_mul(std::mem::size_of::<f32>()))
+                .ok_or("IR resampling output capacity overflows")?;
+            if bytes > MAX_IR_MEMORY_BYTES {
+                return Err("IR resampling exceeds the temporary output memory limit".into());
+            }
+            Ok(output_capacity)
+        };
+
+        if target_rate.fract() != 0.0 || target_rate > f64::from(u32::MAX) {
+            let mut resampler = Async::<f32>::new_sinc(
+                ratio,
+                1.0,
+                &SincInterpolationParameters::new(256, WindowFunction::BlackmanHarris2),
+                chunk_size,
+                num_channels,
+                FixedAsync::Input,
+            )
+            .map_err(|e| format!("Failed to create exact-rate IR resampler: {e}"))?;
+            let output_capacity =
+                checked_output_capacity(resampler.process_all_needed_output_len(source_len))?;
+            let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
+            let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
+                .map_err(|e| format!("Input adapter error: {e}"))?;
+            let mut output_adapter =
+                SequentialSliceOfVecs::new_mut(&mut output_channels, num_channels, output_capacity)
+                    .map_err(|e| format!("Output adapter error: {e}"))?;
+            let (_, written) = resampler
+                .process_all_into_buffer(&input_adapter, &mut output_adapter, source_len, None)
+                .map_err(|e| format!("Exact-rate IR resampling error: {e}"))?;
+            for channel in &mut output_channels {
+                channel.truncate(written);
+            }
+            return Ok(output_channels);
+        }
+
+        // new_custom preserves the historical two-sub-chunk geometry and
+        // BlackmanHarris2 window; Fft::new would auto-select sub-chunks and
+        // change delay and block sizes.
+        let mut resampler = Fft::<f32>::new_custom(
+            source_rate as usize,
+            target_rate as usize,
+            chunk_size,
+            2,
+            num_channels,
+            WindowFunction::BlackmanHarris2,
+            FixedSync::Input,
+        )
+        .map_err(|e| format!("Failed to create resampler: {e}"))?;
+
+        // Rubato's incremental API exposes the filter's startup delay and requires
+        // callers to flush zero input themselves.  The whole-clip API performs both
+        // operations: it pumps enough zero input to flush the filter tail, removes
+        // exactly `output_delay()` leading frames, and returns the rounded nominal
+        // output length.  Allocate its documented temporary capacity once, then
+        // retain only the returned clip frames.
+        let output_capacity =
+            checked_output_capacity(resampler.process_all_needed_output_len(source_len))?;
+        let mut output_channels = vec![vec![0.0_f32; output_capacity]; num_channels];
+        let input_adapter = SequentialSliceOfVecs::new(ir_samples, num_channels, source_len)
+            .map_err(|e| format!("Input adapter error: {e}"))?;
+        let mut output_adapter =
+            SequentialSliceOfVecs::new_mut(&mut output_channels, num_channels, output_capacity)
+                .map_err(|e| format!("Output adapter error: {e}"))?;
+        let (_, written) = resampler
+            .process_all_into_buffer(&input_adapter, &mut output_adapter, source_len, None)
+            .map_err(|e| format!("Resampling error: {e}"))?;
+
+        for channel in &mut output_channels {
+            channel.truncate(written);
+        }
+
+        Ok(output_channels)
+    }
+}
+
+impl ParametricInPlacePlugin for ConvolutionPlugin {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("Convolution", "2.1.0", "Sotf")
+    }
+
+    fn cost_class(&self) -> PluginCostClass {
+        PluginCostClass::Convolution
+    }
+
+    fn compile_metadata(&self) -> PluginCompileMetadata {
+        PluginCompileMetadata::boundary(PluginCostClass::Convolution, self.latency_samples())
+    }
+
+    fn channels(&self) -> usize {
+        self.channels
+    }
+    fn parameter_schema(&self) -> ParameterSchema {
+        self.current_parameter_schema()
+    }
+    fn current_values(&self) -> ParameterSet {
+        self.current_parameter_schema()
+            .iter()
+            .map(|p| (p.id.clone(), p.default_value.clone()))
+            .collect()
+    }
+    fn apply_values(&mut self, values: ParameterSet) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if values
+                .iter()
+                .all(|(id, value)| self.parametric_get_parameter(id).as_ref() == Some(value))
+            {
+                Ok(())
+            } else {
+                Err("Convolution requires reset before changing parameters after drain".into())
+            };
+        }
+        for (id, value) in values {
+            if id.as_str() == "ir_file" {
+                let path = match value {
+                    ParameterValue::String(path) => path,
+                    other => {
+                        return Err(format!(
+                            "ir_file: type mismatch (expected String, got {other:?})"
+                        ));
+                    }
+                };
+                if path.is_empty() {
+                    self.clear_ir_state()?;
+                } else {
+                    // Quick synchronous validation so tests get immediate feedback.
+                    if !std::path::Path::new(&path).exists() {
+                        return Err(format!("IO: {path}: No such file or directory"));
+                    }
+                    self.begin_async_load(path)?;
+                }
+            } else if matches!(
+                id.as_str(),
+                "use_nupc" | "zero_latency_head" | "head_taps" | "true_stereo"
+            ) {
+                return Err(format!(
+                    "{} is a structural convolution parameter; rebuild the plugin host to change it",
+                    id.as_str()
+                ));
+            } else {
+                param_bridge::set_parameter(CV, &id, &value, |i, v| {
+                    self.set_param_value(i, v);
+                })?;
+            }
+        }
+        self.rebuild_cached_parameters();
+        Ok(())
+    }
+    fn parametric_set_parameter(
+        &mut self,
+        id: ParameterId,
+        value: ParameterValue,
+    ) -> PluginResult<()> {
+        if self.drain_remaining.is_some() {
+            return if self.parametric_get_parameter(&id).as_ref() == Some(&value) {
+                Ok(())
+            } else {
+                Err("Convolution requires reset before changing parameters after drain".into())
+            };
+        }
+        if matches!(id.as_str(), "mix" | "gain_db") {
+            let index = param_bridge::set_parameter(CV, &id, &value, |index, value| {
+                self.set_param_value(index, value);
+            })?;
+            // Keep control-thread schema snapshots current without rebuilding
+            // strings, vectors and maps for a scalar automation event.
+            let current = param_bridge::get_parameter(CV, &id, |index| self.param_value(index))
+                .expect("known scalar convolution parameter");
+            self.cached_parameters[index].default_value = current;
+            return Ok(());
+        }
+        let mut values = ParameterSet::new();
+        values.insert(id, value);
+        self.apply_values(values)
+    }
+
+    fn parametric_get_parameter(&self, id: &ParameterId) -> Option<ParameterValue> {
+        if id.as_str() == "ir_file" {
+            // File paths are setup state; the owned String API requires a copy.
+            return Some(ParameterValue::String(self.ir_file.clone()));
+        }
+        param_bridge::get_parameter(CV, id, |index| self.param_value(index))
+    }
+
+    fn parametric_validate_parameter(
+        &self,
+        id: &ParameterId,
+        value: &ParameterValue,
+    ) -> PluginResult<()> {
+        self.cached_parameters
+            .iter()
+            .find(|parameter| &parameter.id == id)
+            .ok_or_else(|| format!("Unknown parameter: {id}"))?
+            .validate(value)
+            .map_err(|error| format!("{id}: {error}"))
+    }
+    fn initialize(&mut self, sr: f64) -> PluginResult<()> {
+        if !sr.is_finite() || sr <= 0.0 || self.channels == 0 {
+            return Err("Convolution requires a finite positive rate and nonzero channels".into());
+        }
+        let old_sr = self.sample_rate;
+        self.sample_rate = sr;
+        if old_sr != sr
+            && !self.ir_file.is_empty()
+            && let Err(error) = self.begin_async_load(self.ir_file.clone())
+        {
+            self.sample_rate = old_sr;
+            return Err(error);
+        }
+        self.mix.set_time(20.0, sr);
+        self.gain_linear.set_time(20.0, sr);
+        // Preserve ordinary initialization's existing history behavior. When
+        // rearming EOS, clear signal history and counters together.
+        if self.drain_remaining.is_some() {
+            self.reset();
+        }
+        Ok(())
+    }
+    fn reset(&mut self) {
+        self.has_input = false;
+        self.drain_remaining = None;
+        // UPC state
+        self.fdl_flat.fill(Complex::new(0.0, 0.0));
+        self.fdl_head = 0;
+        self.input_fill = 0;
+        for buf in &mut self.input_buffers {
+            buf.fill(0.0);
+        }
+        for buf in &mut self.output_accum {
+            buf.fill(0.0);
+        }
+        // Output ring buffer
+        for buf in &mut self.output_ring {
+            buf.fill(0.0);
+        }
+        self.output_ring_read = 0;
+        self.output_ring_available = 0;
+        // NUPC state
+        for engine in &mut self.nupc_engines {
+            engine.reset();
+        }
+        for buffer in &mut self.nupc_dry_delay {
+            buffer.fill(0.0);
+        }
+        self.nupc_dry_delay_pos = 0;
+        for buffer in &mut self.inactive_dry_delay {
+            buffer.fill(0.0);
+        }
+        self.inactive_dry_delay_pos = 0;
+        // Reset parameter smoothers to their instantaneous values so the
+        // next playback starts without interpolating from a stale position.
+        self.mix.reset(self.mix_value);
+        self.gain_linear
+            .reset(10.0f32.powf(self.gain_db_value / 20.0));
+        self.mix_envelope.fill(self.mix_value);
+        self.gain_envelope
+            .fill(10.0f32.powf(self.gain_db_value / 20.0));
+        self.last_output.fill(0.0);
+        self.transition_from.fill(0.0);
+        self.transition_remaining = 0;
+        self.retained_tail_frames = 0;
+    }
+
+    fn tail_length(&self) -> TailLength {
+        if self.completion_pending {
+            // Completion timing is external to this callback. Do not promise
+            // a finite deadline while a replacement is already scheduled.
+            return TailLength::Unknown;
+        }
+        TailLength::Finite(self.current_ir_tail_frames().max(self.retained_tail_frames))
+    }
+
+    fn latency_samples(&self) -> usize {
+        if self.use_nupc {
+            if self.zero_latency_head && self.head_taps > 0 {
+                return 0;
+            }
+            self.nupc_engines.first().map_or(PARTITION_SIZE, |engine| {
+                if engine.head_taps() > 0 {
+                    0
+                } else {
+                    engine.latency_samples()
+                }
+            })
+        } else {
+            PARTITION_SIZE
+        }
+    }
+
+    fn process_in_place(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        self.validate_stream_rate(context)?;
+        validate_interleaved_in_place(
+            "Convolution",
+            context.num_frames,
+            self.channels,
+            buffer.len(),
+        )?;
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Convolution requires reset before processing input after drain".into());
+        }
+        if self.drain_remaining.is_none() {
+            self.accept_ir_completion();
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
+
+    fn drain_output_frames_max(&self) -> usize {
+        // A stable bound also prepares hosts for IRs loaded after initialization.
+        // One UPC partition bounds the work; any smaller capacity is accepted.
+        PARTITION_SIZE
+    }
+
+    fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
+        let remaining = if self.has_input {
+            match self.drain_remaining {
+                Some(remaining) => remaining,
+                None => self
+                    .latency_samples()
+                    .checked_add(self.max_ir_frames.saturating_sub(1))?
+                    .max(self.transition_remaining),
+            }
+        } else {
+            0
+        };
+        // EOS freezes the active backend: pending prepared IRs are not adopted.
+        // Every full-capacity call consumes one partition, including the last.
+        std::num::NonZeroU64::new(remaining.div_ceil(PARTITION_SIZE).max(1) as u64)
+    }
+
+    fn drain(
+        &mut self,
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<PluginDrainResult> {
+        self.validate_stream_rate(context)?;
+        if !output.len().is_multiple_of(self.channels) {
+            return Err("Convolution drain output must contain whole channel frames".into());
+        }
+        if !self.has_input || self.drain_remaining == Some(0) {
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let remaining = match self.drain_remaining {
+            Some(remaining) => remaining,
+            None => self
+                .latency_samples()
+                .checked_add(self.max_ir_frames.saturating_sub(1))
+                .ok_or_else(|| "Convolution tail length overflow".to_string())?
+                .max(self.transition_remaining),
+        };
+        if remaining == 0 {
+            self.drain_remaining = Some(0);
+            return Ok(PluginDrainResult::COMPLETE);
+        }
+        let frames = (output.len() / self.channels)
+            .min(remaining)
+            .min(PARTITION_SIZE);
+        if frames == 0 {
+            return Err("Convolution drain needs at least one output frame".into());
+        }
+        // Freeze the current backend, even if an unconsumed completion is
+        // already ready. The worker only owns a mailbox sender. Keeping both
+        // receiver and sender alive defers publication/destruction until reset
+        // permits ordinary processing to accept the completion again.
+        let samples = frames * self.channels;
+        output[..samples].fill(0.0);
+        let mut drain_context = *context;
+        drain_context.num_frames = frames;
+        self.process_stream(&mut output[..samples], &drain_context)?;
+        self.drain_remaining = Some(remaining - frames);
+        Ok(PluginDrainResult {
+            frames,
+            complete: remaining == frames,
+        })
+    }
+
+    fn get_data(&self) -> Option<Arc<dyn Any + Send + Sync>> {
+        None
+    }
+}
+
+impl ConvolutionPlugin {
+    fn validate_stream_rate(&self, context: &ProcessContext) -> PluginResult<()> {
+        if self.channels == 0 || self.sample_rate == 0.0 || context.sample_rate != self.sample_rate
+        {
+            return Err(
+                "Convolution requires the prepared sample rate and nonzero channels".into(),
+            );
+        }
+        Ok(())
+    }
+
+    fn accept_ir_completion(&mut self) {
+        // Check for asynchronously-loaded IR results and swap them in.
+        self.flush_retired();
+        if self.completion_pending
+            && self.retired_pending.is_none()
+            && self.failed_error_pending.is_none()
+            && let Some(ref rx) = self.ir_load_result_rx
+            && let Ok(completion) = rx.try_recv()
+        {
+            // Each request has its own one-result mailbox. Consume once, but
+            // retain the receiver storage until a control-thread replacement.
+            self.completion_pending = false;
+            if completion.generation != self.desired_generation {
+                match completion.result {
+                    Ok(loaded) => self.retire_uninstalled(loaded),
+                    Err(error) => {
+                        if let Err(error) = try_reclaim(
+                            get_ir_error_reclaimer(),
+                            get_ir_error_reclaimer_fallback(),
+                            error,
+                        ) {
+                            debug_assert!(self.failed_error_pending.is_none());
+                            self.failed_error_pending = Some(error);
+                        }
+                    }
+                }
+            } else {
+                match completion.result {
+                    Ok(loaded) => self.apply_ir_state(loaded),
+                    Err(e) => {
+                        self.load_status
+                            .store(ConvolutionLoadStatus::Failed as u8, Ordering::Release);
+                        if let Err(error) = try_reclaim(
+                            get_ir_error_reclaimer(),
+                            get_ir_error_reclaimer_fallback(),
+                            e,
+                        ) {
+                            debug_assert!(self.failed_error_pending.is_none());
+                            self.failed_error_pending = Some(error);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    fn process_stream(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        // Issue #6: enable flush-to-zero / denormals-are-zero at the top of
+        // the callback so FFT multiply-adds cannot generate costly denormals.
+        enable_ftz_daz();
+
+        let nf = context.num_frames;
+        validate_interleaved_in_place("Convolution", nf, self.channels, buffer.len())?;
+
+        let state_guard = Arc::clone(&self.ir_runtime.state);
+        let state = match state_guard.as_ref() {
+            Some(s) => s,
+            None => {
+                let latency = self.latency_samples();
+                for frame in 0..nf {
+                    let base = frame * self.channels;
+                    self.mix.advance();
+                    self.gain_linear.advance();
+                    for ch in 0..self.channels {
+                        let dry = buffer[base + ch];
+                        let output = if latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.inactive_dry_delay[ch][self.inactive_dry_delay_pos];
+                            self.inactive_dry_delay[ch][self.inactive_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[base + ch] = output;
+                        self.last_output[ch] = output;
+                    }
+                    if latency > 0 {
+                        self.inactive_dry_delay_pos += 1;
+                        if self.inactive_dry_delay_pos == latency {
+                            self.inactive_dry_delay_pos = 0;
+                        }
+                    }
+                }
+                drop(state_guard);
+                self.finish_output_block(buffer, nf);
+                return Ok(nf);
+            }
+        };
+
+        // NUPC path: per-channel block processing with non-uniform partitions.
+        // Avoids the UPC's fixed PARTITION_SIZE constraint for lower latency.
+        //
+        // Issue #3 fix (NUPC): advance smoothers one sample at a time so that
+        // mix/gain transitions are sample-accurate rather than block-quantized.
+        let matrix_nupc = self.true_stereo && self.nupc_engines.len() == 4;
+        let channel_nupc = !self.true_stereo
+            && !self.nupc_engines.is_empty()
+            && self.nupc_engines.len() == self.channels;
+        if matrix_nupc || channel_nupc {
+            let wet_latency = if self.nupc_engines[0].head_taps() > 0 {
+                0
+            } else {
+                self.nupc_engines[0].latency_samples()
+            };
+            debug_assert!(wet_latency <= PARTITION_SIZE);
+            for frame in 0..nf {
+                // Advance smoothers by one sample to get the value for this frame.
+                let mix = self.mix.advance();
+                let gain = self.gain_linear.advance();
+                let off = frame * self.channels;
+                if matrix_nupc {
+                    let dry_left = buffer[off];
+                    let dry_right = buffer[off + 1];
+                    let wet_left = self.nupc_engines[0].process_sample(dry_left)
+                        + self.nupc_engines[2].process_sample(dry_right);
+                    let wet_right = self.nupc_engines[1].process_sample(dry_left)
+                        + self.nupc_engines[3].process_sample(dry_right);
+                    for (ch, (dry, wet)) in [(dry_left, wet_left), (dry_right, wet_right)]
+                        .into_iter()
+                        .enumerate()
+                    {
+                        let aligned_dry = if wet_latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.nupc_dry_delay[ch][self.nupc_dry_delay_pos];
+                            self.nupc_dry_delay[ch][self.nupc_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[off + ch] = aligned_dry * (1.0 - mix) + wet * mix * gain;
+                    }
+                } else {
+                    for ch in 0..self.channels {
+                        let dry = buffer[off + ch];
+                        let wet = self.nupc_engines[ch].process_sample(dry);
+                        let aligned_dry = if wet_latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.nupc_dry_delay[ch][self.nupc_dry_delay_pos];
+                            self.nupc_dry_delay[ch][self.nupc_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[off + ch] = aligned_dry * (1.0 - mix) + wet * mix * gain;
+                    }
+                }
+                if wet_latency > 0 {
+                    self.nupc_dry_delay_pos += 1;
+                    if self.nupc_dry_delay_pos == wet_latency {
+                        self.nupc_dry_delay_pos = 0;
+                    }
+                }
+            }
+            drop(state_guard);
+            self.finish_output_block(buffer, nf);
+            return Ok(nf);
+        }
+
+        // UPC path: uniform partitioned convolution.
+        //
+        // Issue #1 fix: Use a dedicated `output_ring` buffer to hold completed
+        // partition output.  When a partition finishes its IFFT+overlap-add,
+        // its PARTITION_SIZE output samples (with mix/gain applied) are stored
+        // in `output_ring`.  In the same per-frame loop that feeds new input
+        // into `input_buffers`, we simultaneously drain the ring into the
+        // output positions of the in-place buffer.  Because the input copy and
+        // ring drain both advance by exactly one frame per iteration, every
+        // output sample is delivered exactly once regardless of host buffer
+        // size alignment with PARTITION_SIZE.
+        let num_partitions = state.num_partitions;
+
+        let mut in_pos = 0;
+        while in_pos < nf {
+            // Per-frame step: copy one frame of input AND (if available) drain
+            // one frame from the output ring into the buffer.
+            //
+            // We must read the dry input for `input_buffers` BEFORE overwriting
+            // `buffer[in_pos]` with the ring output, because it is in-place.
+            let buf_base = in_pos * self.channels;
+
+            // Save incoming dry samples into input_buffers.
+            let fill_idx = self.input_fill;
+            self.mix_envelope[fill_idx] = self.mix.advance();
+            self.gain_envelope[fill_idx] = self.gain_linear.advance();
+            for ch in 0..self.channels {
+                self.input_buffers[ch][fill_idx] = buffer[buf_base + ch];
+            }
+
+            // Write output ring sample (or zero if ring is not yet ready).
+            if self.output_ring_available > 0 {
+                let out_idx = self.output_ring_read;
+                for ch in 0..self.channels {
+                    buffer[buf_base + ch] = self.output_ring[ch][out_idx];
+                }
+                self.output_ring_read += 1;
+                self.output_ring_available -= 1;
+            } else {
+                // Ring is empty (startup or immediately after a partition
+                // completed in the same frame).  Output silence for this frame
+                // — the UPC path has inherent PARTITION_SIZE latency.
+                for ch in 0..self.channels {
+                    buffer[buf_base + ch] = 0.0;
+                }
+            }
+
+            self.input_fill += 1;
+            in_pos += 1;
+
+            if self.input_fill == PARTITION_SIZE {
+                let inv_n = 1.0 / FFT_SIZE as f32;
+
+                self.fdl_head = if self.fdl_head == 0 {
+                    num_partitions - 1
+                } else {
+                    self.fdl_head - 1
+                };
+
+                for ch in 0..self.channels {
+                    self.fft_time[..PARTITION_SIZE].copy_from_slice(&self.input_buffers[ch]);
+                    self.fft_time[PARTITION_SIZE..].fill(0.0);
+                    state
+                        .fft_forward
+                        .as_ref()
+                        .expect("UPC state must have a forward FFT plan")
+                        .process_with_scratch(
+                            &mut self.fft_time,
+                            &mut self.fft_spectrum,
+                            &mut self.ir_runtime.fft_scratch,
+                        )
+                        .expect("prepared UPC forward transform dimensions");
+
+                    let off_base = (self.fdl_head * self.channels + ch) * FFT_BINS;
+                    self.ir_runtime.fdl_flat[off_base..off_base + FFT_BINS]
+                        .copy_from_slice(&self.fft_spectrum);
+                }
+
+                for output_ch in 0..self.channels {
+                    self.fft_sum.fill(Complex::new(0.0, 0.0));
+                    // Keep the audio callback on its current thread. Dispatching
+                    // short FFT work to Rayon’s global pool introduces
+                    // unbounded scheduling and wake-up latency.
+                    for p in 0..num_partitions {
+                        let fdl_p = (self.fdl_head + p) % num_partitions;
+                        if self.true_stereo {
+                            for input_ch in 0..2 {
+                                let ir_ch = input_ch * 2 + output_ch;
+                                let fdl_off = (fdl_p * self.channels + input_ch) * FFT_BINS;
+                                complex_mul_add_simd(
+                                    &mut self.fft_sum,
+                                    &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+                                    &state.partitions[ir_ch][p],
+                                );
+                            }
+                        } else {
+                            let fdl_off = (fdl_p * self.channels + output_ch) * FFT_BINS;
+                            let ir_ch = if state.ir_channels == 1 {
+                                0
+                            } else {
+                                output_ch % state.ir_channels
+                            };
+                            complex_mul_add_simd(
+                                &mut self.fft_sum,
+                                &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+                                &state.partitions[ir_ch][p],
+                            );
+                        }
+                    }
+                    // DC and Nyquist are real in the implicit Hermitian spectrum.
+                    self.fft_sum[0].im = 0.0;
+                    self.fft_sum[FFT_BINS - 1].im = 0.0;
+                    state
+                        .fft_inverse
+                        .as_ref()
+                        .expect("UPC state must have an inverse FFT plan")
+                        .process_with_scratch(
+                            &mut self.fft_sum,
+                            &mut self.fft_time,
+                            &mut self.ir_runtime.fft_scratch,
+                        )
+                        .expect("prepared UPC inverse dimensions and real endpoints");
+
+                    // Finish this channel while its inverse output is hot.
+                    // Emit the same captured-envelope mix and retain the next
+                    // overlap directly, avoiding accumulator shifts and a
+                    // frame-major pass across every channel's large buffers.
+                    for i in 0..PARTITION_SIZE {
+                        let wet = self.output_accum[output_ch][i] + self.fft_time[i] * inv_n;
+                        let mix = self.mix_envelope[i];
+                        let wet_gain = mix * self.gain_envelope[i];
+                        let dry_gain = 1.0 - mix;
+                        self.output_ring[output_ch][i] =
+                            self.input_buffers[output_ch][i] * dry_gain + wet * wet_gain;
+                        self.output_accum[output_ch][i] =
+                            0.0 + self.fft_time[PARTITION_SIZE + i] * inv_n;
+                    }
+                }
+                self.output_ring_read = 0;
+                self.output_ring_available = PARTITION_SIZE;
+
+                self.input_fill = 0;
+            }
+        }
+        drop(state_guard);
+        self.finish_output_block(buffer, nf);
+        Ok(nf)
+    }
+}
+
+#[cfg(test)]
+#[path = "loader_tests.rs"]
+mod loader_tests;
+
+#[cfg(test)]
+#[path = "resource_tests.rs"]
+mod resource_tests;
+
+#[cfg(test)]
+#[path = "storm_tests.rs"]
+mod storm_tests;
+
+#[cfg(test)]
+#[path = "upc_real_tests.rs"]
+mod upc_real_tests;

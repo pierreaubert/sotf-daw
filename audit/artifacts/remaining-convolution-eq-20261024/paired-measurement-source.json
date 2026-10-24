@@ -1,0 +1,17 @@
+{
+  "binary_sha256": {
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-4c4c810541bc74b8": "980cf543b95e5a47a23f6794d646f61241c61508f324d06228ee30d902bf82fe",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-9ed77c4cd73a9f6e": "a500be534dd14ce2d7e2621c7659c33138dd43f46a12131667d74c0112762d5c"
+  },
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/overlap_cost.rs": "6007e16ac6d4c4aec84e6528825143abf36f4fc62633664768f7f0ab6abb69b5",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/overlap_cost.rs": "2e1b08fae0a9646d0167df85cb2ec67095586f76404b92d116300f4f38076b5f",
+    "audit/artifacts/remaining-convolution-eq-20261024/legacy-nupc-engine-cost.rs.txt": "1b9103dd59d87f485b702c004d74fbd232ad9174212f78d8e72868f6b3229011",
+    "audit/artifacts/remaining-convolution-eq-20261024/candidate-nupc-engine-cost.rs.txt": "ec5c46aa4b2ec0c3ecfbcc98a8bbcd3193bd97028a5751df8057f62658b53c2b",
+    "audit/artifacts/remaining-convolution-eq-20261024/candidate-upc-stream-cost.rs.txt": "ce7c5224a2496ea2127d6926911de10eb10c92a44ed85a0bd02914b9c5f9f5c1",
+    "audit/artifacts/remaining-convolution-eq-20261024/legacy-upc-stream-cost.rs.txt": "67e3863b4b86d91e8b9045ac14cdd0d336f672aa797094dcdc65bc5264945ff0",
+    "audit/artifacts/remaining-convolution-eq-20261024/partition-level-baseline.rs.txt": "79321a0648a1dec724e23a6d6607770667b09432b7eb192d2df4e8d1acb4fdca"
+  },
+  "scope": "Whole NUPC engine cost and UPC stream-body cost in one process per backend, not full plugin/native deadlines. NUPC has no sample clock; rate labels select actual admitted IR geometry. UPC fixtures are moderate65,537frames and do not replace full admission-boundary validation.",
+  "hashes_unchanged_after_measurement": true
+}

@@ -153,6 +153,7 @@ impl NupcKernel {
                 })
                 .collect(),
             min_block: self.min_block,
+            identity_delay: None,
             td_head: self
                 .head_taps
                 .as_ref()
@@ -171,6 +172,8 @@ impl NupcKernel {
 pub struct NupcEngine {
     pub(super) levels: Vec<PartitionLevel>,
     pub(super) min_block: usize,
+    /// Exact prepared unit delay for known identity FIR bypass domains.
+    pub(super) identity_delay: Option<(Vec<f32>, usize)>,
     /// Optional time-domain head for zero-latency first taps
     pub(super) td_head: Option<TimeDomainHead>,
     /// Number of IR samples handled by the time-domain head
@@ -178,6 +181,34 @@ pub struct NupcEngine {
 }
 
 impl NupcEngine {
+    /// Prepare an exact unit-gain delay without FFT processing.
+    ///
+    /// This specializes a known delayed identity FIR. The delay includes any
+    /// FIR group delay and streaming latency required by the caller. All
+    /// history is allocated here; processing and reset allocate nothing.
+    /// No FFT levels or direct-head taps are prepared. A zero delay passes
+    /// samples through unchanged.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcEngine;
+    /// let mut delay = NupcEngine::new_unit_delay(2);
+    /// assert_eq!(delay.latency_samples(), 2);
+    /// assert_eq!(delay.process_sample(1.0), 0.0);
+    /// assert_eq!(delay.process_sample(0.0), 0.0);
+    /// assert_eq!(delay.process_sample(0.0), 1.0);
+    /// ```
+    pub fn new_unit_delay(delay_samples: usize) -> Self {
+        Self {
+            levels: Vec::new(),
+            min_block: delay_samples,
+            identity_delay: Some((vec![0.0; delay_samples], 0)),
+            td_head: None,
+            td_head_len: 0,
+        }
+    }
+
     /// Create a new NUPC engine from an impulse response.
     ///
     /// # Arguments
@@ -201,6 +232,18 @@ impl NupcEngine {
     /// Each level accumulates samples independently at its own block size.
     /// The output is the sum of contributions from all levels.
     pub fn process_sample(&mut self, sample: f32) -> f32 {
+        if let Some((history, position)) = &mut self.identity_delay {
+            if history.is_empty() {
+                return sample;
+            }
+            let output = history[*position];
+            history[*position] = sample;
+            *position += 1;
+            if *position == history.len() {
+                *position = 0;
+            }
+            return output;
+        }
         let mut output = 0.0;
         // Time-domain head: zero-latency direct convolution of first taps
         if let Some(ref mut head) = self.td_head {
@@ -238,6 +281,10 @@ impl NupcEngine {
 
     /// Reset all internal state.
     pub fn reset(&mut self) {
+        if let Some((history, position)) = &mut self.identity_delay {
+            history.fill(0.0);
+            *position = 0;
+        }
         if let Some(ref mut head) = self.td_head {
             head.reset();
         }
@@ -256,6 +303,9 @@ impl NupcEngine {
     }
 
     pub fn shares_ir_kernel_with(&self, other: &Self) -> bool {
+        if self.identity_delay.is_some() || other.identity_delay.is_some() {
+            return false;
+        }
         self.levels.len() == other.levels.len()
             && self
                 .levels
