@@ -1,0 +1,105 @@
+{
+  "baseline": {
+    "development": {
+      "0": {
+        "max_band_ild_error_db": 1.2642868940204028,
+        "rms_band_ild_error_db": 0.5112061161330859,
+        "max_wrapped_ipd_error_rad": 2.947626039425671,
+        "rms_wrapped_ipd_error_rad": 0.4293330531993508
+      },
+      "1": {
+        "max_band_ild_error_db": 1.5801768539843568,
+        "rms_band_ild_error_db": 0.5831841157165987,
+        "max_wrapped_ipd_error_rad": 2.9478853950050214,
+        "rms_wrapped_ipd_error_rad": 0.48157895173868137
+      }
+    },
+    "evaluation": {
+      "0": {
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5186213252491713,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.42110929586751994
+      },
+      "1": {
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6127354902440739,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.4708517083932867
+      }
+    },
+    "complete": {
+      "0": {
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5181752538129605,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.4216119176956543
+      },
+      "1": {
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6109864208416331,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.47150832935990994
+      }
+    }
+  },
+  "candidate": {
+    "development": {
+      "0": {
+        "max_band_ild_error_db": 0.5270072271632849,
+        "rms_band_ild_error_db": 0.2089358087005999,
+        "max_wrapped_ipd_error_rad": 3.012227888134646,
+        "rms_wrapped_ipd_error_rad": 0.2727530766750451
+      },
+      "1": {
+        "max_band_ild_error_db": 0.5268116323103484,
+        "rms_band_ild_error_db": 0.20719817450635303,
+        "max_wrapped_ipd_error_rad": 3.020181546776319,
+        "rms_wrapped_ipd_error_rad": 0.27288426878004485
+      }
+    },
+    "evaluation": {
+      "0": {
+        "max_band_ild_error_db": 0.9780157244208976,
+        "rms_band_ild_error_db": 0.23134449003951407,
+        "max_wrapped_ipd_error_rad": 3.1090750327442764,
+        "rms_wrapped_ipd_error_rad": 0.24359821904428303
+      },
+      "1": {
+        "max_band_ild_error_db": 0.9780532526951173,
+        "rms_band_ild_error_db": 0.2301158950609904,
+        "max_wrapped_ipd_error_rad": 3.110700097610416,
+        "rms_wrapped_ipd_error_rad": 0.24356363278991078
+      }
+    },
+    "complete": {
+      "0": {
+        "max_band_ild_error_db": 0.9780157244208976,
+        "rms_band_ild_error_db": 0.23004944827161491,
+        "max_wrapped_ipd_error_rad": 3.1090750327442764,
+        "rms_wrapped_ipd_error_rad": 0.2454624664644809
+      },
+      "1": {
+        "max_band_ild_error_db": 0.9780532526951173,
+        "rms_band_ild_error_db": 0.22879323488238146,
+        "max_wrapped_ipd_error_rad": 3.110700097610416,
+        "rms_wrapped_ipd_error_rad": 0.24543905374882033
+      }
+    }
+  },
+  "failures": [
+    {
+      "partition": "development",
+      "metric": "max_wrapped_ipd_error_rad",
+      "before": 2.9478853950050214,
+      "after": 3.020181546776319
+    },
+    {
+      "partition": "evaluation",
+      "metric": "max_wrapped_ipd_error_rad",
+      "before": 2.9740722390235916,
+      "after": 3.110700097610416
+    }
+  ],
+  "quality_pass": false
+}

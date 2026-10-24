@@ -1,0 +1,106 @@
+{
+  "production_baseline": "1b9e6e1fbbc6c812cce2f2f69f37089880f17988",
+  "baseline_artifact_sha256": "6b7a3e6455ab5bc8178fb82660a9a25451c4914aa8adc3b3a916ddeca23f7b6b",
+  "development_indices": [
+    0,
+    17,
+    34,
+    51,
+    68,
+    85,
+    102,
+    119,
+    136,
+    153,
+    170,
+    187,
+    204,
+    221,
+    238,
+    255,
+    272,
+    289,
+    306,
+    323,
+    340,
+    357,
+    374,
+    391,
+    408,
+    425,
+    442,
+    459,
+    476,
+    493,
+    510,
+    527,
+    544,
+    561,
+    578,
+    595,
+    612,
+    629,
+    646,
+    663,
+    680,
+    697,
+    709
+  ],
+  "evaluation_directions": 667,
+  "quality_guards": "candidate max/RMS ILD and max/RMS wrapped IPD <= frozen policy1 in both partitions, apart from 1e-6 absolute numerical comparison tolerance; no frequency/null masking",
+  "node_max_complex_dft_error": 2e-05,
+  "cone_max_weight_error": 2e-06,
+  "continuity_guard": "two-sided edge/diagonal interpolated field limit agrees within 2e-5 at an angular offset <=1e-7 radians",
+  "coverage": "single radius only; outside measured elevation range uses explicit nearest fallback; multi-radius unchanged",
+  "candidate": "bounded positive cone candidates, global supporting-plane certification, canonical global-ID coplanar fan",
+  "baseline_summary": {
+    "development": {
+      "0": {
+        "directions": 43,
+        "max_band_ild_error_db": 1.2642868940204028,
+        "rms_band_ild_error_db": 0.5112061161330859,
+        "max_wrapped_ipd_error_rad": 2.947626039425671,
+        "rms_wrapped_ipd_error_rad": 0.4293330531993508
+      },
+      "1": {
+        "directions": 43,
+        "max_band_ild_error_db": 1.5801768539843568,
+        "rms_band_ild_error_db": 0.5831841157165987,
+        "max_wrapped_ipd_error_rad": 2.9478853950050214,
+        "rms_wrapped_ipd_error_rad": 0.48157895173868137
+      }
+    },
+    "evaluation": {
+      "0": {
+        "directions": 667,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5186213252491713,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.42110929586751994
+      },
+      "1": {
+        "directions": 667,
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6127354902440739,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.4708517083932867
+      }
+    },
+    "complete": {
+      "0": {
+        "directions": 710,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5181752538129605,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.4216119176956543
+      },
+      "1": {
+        "directions": 710,
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6109864208416331,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.47150832935990994
+      }
+    }
+  }
+}

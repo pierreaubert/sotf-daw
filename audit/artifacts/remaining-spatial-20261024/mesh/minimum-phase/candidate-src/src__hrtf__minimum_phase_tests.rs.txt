@@ -1,0 +1,190 @@
+//! Analytic factoring, delayed mixtures and continuous reconstruction checks.
+
+// Rust guideline compliant 2026-02-21
+use super::*;
+use crate::hrtf::prepare_hrtf_spectra;
+use sotf_host::sofa::SofaFile;
+
+fn fixture(positions: Vec<SourcePosition>, impulses: &[Vec<f32>]) -> SofaFile {
+    let count = positions.len();
+    assert_eq!(count, impulses.len());
+    let mut impulse_responses = Vec::new();
+    for ir in impulses {
+        for _ in 0..2 {
+            let mut samples = vec![0.0; 64];
+            samples[..ir.len()].copy_from_slice(ir);
+            impulse_responses.extend(samples);
+        }
+    }
+    SofaFile {
+        sample_rate: 48_000.0,
+        num_measurements: count,
+        ir_length: 64,
+        positions,
+        impulse_responses,
+        convention: "SimpleFreeFieldHRIR".into(),
+        data_sample_rate: Some(48_000.0),
+    }
+}
+
+fn prepare(sofa: &SofaFile) -> (PreparedHrtfSpectra, PreparedMinimumPhase) {
+    let mut planner = RealFftPlanner::<f32>::new();
+    let fft = planner.plan_fft_forward(1024);
+    let prepared = prepare_hrtf_spectra(sofa, 1024, sofa.sample_rate, &fft);
+    let minimum = prepare_minimum_phase(&prepared, 1024);
+    (prepared, minimum)
+}
+
+#[test]
+fn cepstral_factor_matches_analytic_two_tap_factors_and_retains_residual() {
+    let mut maximum = 0.0_f64;
+    for a in [0.0_f32, 0.25, 0.5, 0.8] {
+        for nonminimum in [false, true] {
+            let ir = if nonminimum {
+                vec![a, 1.0]
+            } else {
+                vec![1.0, a]
+            };
+            let target = SourcePosition::new(0.0, 0.0, 1.0);
+            let sofa = fixture(vec![target], &[ir]);
+            let (prepared, minimum) = prepare(&sofa);
+            let selection = HrtfInterpolation::select(&sofa, &target);
+            let (actual, _) = interpolate_hrtf_prepared_minimum_phase(
+                &selection,
+                &prepared,
+                &minimum,
+                sofa.sample_rate,
+                0.0,
+                &target,
+            );
+            for (bin, value) in actual.iter().enumerate() {
+                let z = Complex::from_polar(1.0, -std::f64::consts::TAU * bin as f64 / 1024.0);
+                let factor = Complex::new(1.0, 0.0) + z * f64::from(a);
+                let expected = if nonminimum {
+                    Complex::new(f64::from(a), 0.0) + z
+                } else {
+                    factor
+                };
+                let factor_error = (minimum.phases[0][0][bin] - factor.arg()).abs();
+                maximum = maximum.max(factor_error);
+                maximum = maximum.max(
+                    (Complex::new(f64::from(value.re), f64::from(value.im)) - expected).norm(),
+                );
+            }
+        }
+    }
+    println!("MINIMUM_PHASE_ANALYTIC maximum_error={maximum:e}");
+    assert!(maximum <= 2e-5);
+}
+
+#[test]
+fn delayed_minimum_phase_mixture_matches_independent_analytic_response() {
+    let mut impulses = Vec::new();
+    for (delay, a) in [(8, 0.25), (20, 0.5)] {
+        let mut impulse = vec![0.0; delay + 2];
+        impulse[delay] = 1.0;
+        impulse[delay + 1] = a;
+        impulses.push(impulse);
+    }
+    let sofa = fixture(
+        vec![
+            SourcePosition::new(-30.0, 0.0, 1.0),
+            SourcePosition::new(30.0, 0.0, 1.0),
+        ],
+        &impulses,
+    );
+    let (prepared, minimum) = prepare(&sofa);
+    let mut maximum = 0.0_f64;
+    for weight in [0.2_f64, 0.4, 0.6, 0.8] {
+        let target = SourcePosition::new((30.0 - 60.0 * weight) as f32, 0.0, 1.0);
+        let selection = HrtfInterpolation::select(&sofa, &target);
+        let (actual, _) = interpolate_hrtf_prepared_minimum_phase(
+            &selection,
+            &prepared,
+            &minimum,
+            sofa.sample_rate,
+            0.0,
+            &target,
+        );
+        for (bin, value) in actual.iter().enumerate() {
+            let omega = std::f64::consts::TAU * bin as f64 / 1024.0;
+            let z = Complex::from_polar(1.0, -omega);
+            let h0 = Complex::new(1.0, 0.0) + z * 0.25;
+            let h1 = Complex::new(1.0, 0.0) + z * 0.5;
+            let magnitude = (weight * h0.norm().ln() + (1.0 - weight) * h1.norm().ln()).exp();
+            let phase = weight * h0.arg() + (1.0 - weight) * h1.arg()
+                - omega * (weight * 8.0 + (1.0 - weight) * 20.0);
+            let expected = Complex::from_polar(magnitude, phase);
+            maximum = maximum
+                .max((Complex::new(f64::from(value.re), f64::from(value.im)) - expected).norm());
+        }
+    }
+    println!("MINIMUM_PHASE_DELAYED_MIXTURE maximum_error={maximum:e}");
+    assert!(maximum <= 2e-5);
+}
+
+fn position(v: [f64; 3]) -> SourcePosition {
+    SourcePosition::new(
+        v[1].atan2(v[0]).to_degrees() as f32,
+        v[2].atan2(v[0].hypot(v[1])).to_degrees() as f32,
+        1.0,
+    )
+}
+
+#[test]
+fn reconstructed_complex_response_is_continuous_across_mesh_edges_and_diagonals() {
+    let mut positions = Vec::new();
+    for x in [-1.0, 1.0] {
+        for y in [-1.0, 1.0] {
+            for z in [-1.0, 1.0] {
+                positions.push(position([x, y, z]));
+            }
+        }
+    }
+    positions.extend([position([0.0, 0.0, 1.0]), position([0.0, 0.0, -1.0])]);
+    let impulses: Vec<_> = (0..positions.len())
+        .map(|id| {
+            let mut ir = vec![0.0; id * 2 + 2];
+            ir[id * 2] = 1.0;
+            ir[id * 2 + 1] = 0.02 * (id + 1) as f32;
+            ir
+        })
+        .collect();
+    let sofa = fixture(positions, &impulses);
+    let (prepared, minimum) = prepare(&sofa);
+    let mut maximum = 0.0_f32;
+    for axis in 0..3 {
+        for sign in [-1.0, 1.0] {
+            for t in [-0.75, 0.0, 0.75] {
+                for boundary in [false, true] {
+                    let mut a = [0.0; 3];
+                    a[axis] = sign;
+                    a[(axis + 1) % 3] = if boundary { 1.0 - 1e-7 } else { t };
+                    a[(axis + 2) % 3] = if boundary { t } else { t - 1e-7 };
+                    let mut b = a;
+                    b[(axis + if boundary { 1 } else { 2 }) % 3] += 2e-7;
+                    let render = |v| {
+                        let target = position(v);
+                        let selection = HrtfInterpolation::select(&sofa, &target);
+                        interpolate_hrtf_prepared_minimum_phase(
+                            &selection,
+                            &prepared,
+                            &minimum,
+                            sofa.sample_rate,
+                            0.0,
+                            &target,
+                        )
+                        .0
+                    };
+                    let a = render(a);
+                    let b = render(b);
+                    for (a, b) in a.iter().zip(&b) {
+                        maximum = maximum.max((*a - *b).norm());
+                    }
+                }
+            }
+        }
+    }
+    println!("MINIMUM_PHASE_COMPLEX_BOUNDARY maximum_jump={maximum:e}");
+    assert!(maximum <= 2e-5);
+}

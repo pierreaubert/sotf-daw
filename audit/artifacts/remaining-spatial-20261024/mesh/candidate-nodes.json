@@ -1,0 +1,26 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--test",
+    "measured_kemar",
+    "measured_grid_nodes_match_independent_hrir_dft",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 132.42666721343994,
+  "stdout": "\nrunning 1 test\nMEASURED_KEMAR_GRID complex_values=688 maximum_dft_error=5.817692352698462e-6\ntest measured_grid_nodes_match_independent_hrir_dft ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.02s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n    Finished `release` profile [optimized] target(s) in 2m 12s\n     Running tests/measured_kemar.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/measured_kemar-320b99ecf0903cee)\n"
+}

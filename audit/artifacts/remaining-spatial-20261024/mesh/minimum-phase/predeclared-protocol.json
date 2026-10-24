@@ -1,0 +1,13 @@
+{
+  "method": "Finite real-cepstrum factorization: c=IDFT(ln|H|), keep c0/cN2, double positive quefrencies, zero negative quefrencies; DFT gives minimum-phase complex log. At each donor subtract its minimum-phase component and detected onset phase to obtain unit residual phase. Use the same canonical supporting-mesh weights for log magnitude, minimum-phase phase, onset delay, and circular residual phase, then reconstruct. Measured residual phase is retained; HRTFs are not assumed minimum phase.",
+  "numerical_convention": "1024-bin periodic cepstrum, full magnitude (not square-root), existing -200dB low-magnitude floor, full1024-real-sample design retained; undefined residual mean norm<=1e-9 rejects candidate rather than per-bin fallback",
+  "references": [
+    "https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.minimum_phase.html"
+  ],
+  "reference_limit": "Official numerical homomorphic factoring reference only; not a listener or HRTF acceptance claim. Formula and lifter independently checked against analytic minimum/nonminimum-phase two-tap FIRs, pure delays and analytic weighted minimum-phase mixtures. No PDFs read.",
+  "baseline_sha256": "31cdf1a1bedbf1967dc3db75304fb47a09aa50f87fc9c0be9960f94b49823704",
+  "baseline_artifact": "audit/artifacts/remaining-spatial-20261024/mesh/magnitude-phase/baseline.json",
+  "partitions": "original43 development / remaining667 evaluation",
+  "guards": "Unchanged baseline max/RMS band ILD and wrapped IPD, plus max/RMS pre-onset and beyond512-support energy fractions in both partitions, +1e-6 numerical tolerance; no bin/null exclusion. All710 node maxcomplexDFT<=2e-5; independent analytic factor/mixture maxcomplexerror<=2e-5; canonical edge/diagonal complex continuity<=2e-5 at angular offsets<=1e-7 rad; nonnegative unit-sum constant fields and explicit elevation/multi-radius fallback. No old-phase equality requirement: this candidate deliberately interpolates a separately factored residual.",
+  "production_policy": "Do not wire production call sites unless all fixed quality and structural guards pass; preserve source and restore on failure."
+}

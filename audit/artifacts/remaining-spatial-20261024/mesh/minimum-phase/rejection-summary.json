@@ -1,0 +1,12 @@
+{
+  "rejected": true,
+  "analytic_reference_tests_passed": 3,
+  "all710_node_max_dft_error": 9.186062568648539e-07,
+  "complete_quality_run_passed": false,
+  "full_leave_out_directions_completed_before_conditioning_rejection": 275,
+  "conditioning_failure": "undefined residual mean at ear0/bin512, no skipped bins or conditioning relaxation",
+  "development43_candidate_max_wrapped_ipd_rad": 3.0264981274498886,
+  "development43_baseline_max_wrapped_ipd_rad": 2.9478853950050214,
+  "additional_development_max_phase_guard_failed": true,
+  "production_restored": true
+}

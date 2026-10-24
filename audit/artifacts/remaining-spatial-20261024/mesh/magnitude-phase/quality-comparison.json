@@ -1,0 +1,190 @@
+{
+  "baseline": {
+    "development": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.010439175194883889,
+        "rms_pre_onset_energy_fraction": 0.0017604231911788509,
+        "max_beyond_support_energy_fraction": 0.0044032391036091766,
+        "rms_beyond_support_energy_fraction": 0.0006667972448396954,
+        "max_band_ild_error_db": 1.2642868940204028,
+        "rms_band_ild_error_db": 0.5112061161330859,
+        "max_wrapped_ipd_error_rad": 2.947626039425671,
+        "rms_wrapped_ipd_error_rad": 0.4293330531993508
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.016099794609928483,
+        "rms_pre_onset_energy_fraction": 0.0029095911610910992,
+        "max_beyond_support_energy_fraction": 0.0044032391036091766,
+        "rms_beyond_support_energy_fraction": 0.0006662647530765881,
+        "max_band_ild_error_db": 1.5801768539843568,
+        "rms_band_ild_error_db": 0.5831841157165987,
+        "max_wrapped_ipd_error_rad": 2.9478853950050214,
+        "rms_wrapped_ipd_error_rad": 0.48157895173868137
+      }
+    },
+    "evaluation": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.016634598841863472,
+        "rms_pre_onset_energy_fraction": 0.0019829157905373374,
+        "max_beyond_support_energy_fraction": 0.02014409415095843,
+        "rms_beyond_support_energy_fraction": 0.001018569815551311,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5186213252491713,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.42110929586751994
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.03846312637210696,
+        "rms_pre_onset_energy_fraction": 0.00311572637563909,
+        "max_beyond_support_energy_fraction": 0.020144096372228734,
+        "rms_beyond_support_energy_fraction": 0.0009181606305685638,
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6127354902440739,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.4708517083932867
+      }
+    },
+    "complete": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.016634598841863472,
+        "rms_pre_onset_energy_fraction": 0.0019701558058439336,
+        "max_beyond_support_energy_fraction": 0.02014409415095843,
+        "rms_beyond_support_energy_fraction": 0.0010007889417789195,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5181752538129605,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.4216119176956543
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.03846312637210696,
+        "rms_pre_onset_energy_fraction": 0.003103631631682992,
+        "max_beyond_support_energy_fraction": 0.020144096372228734,
+        "rms_beyond_support_energy_fraction": 0.000904901916981364,
+        "max_band_ild_error_db": 2.2095555638454236,
+        "rms_band_ild_error_db": 0.6109864208416331,
+        "max_wrapped_ipd_error_rad": 2.9740722390235916,
+        "rms_wrapped_ipd_error_rad": 0.47150832935990994
+      }
+    }
+  },
+  "candidate": {
+    "development": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.010439175194883889,
+        "rms_pre_onset_energy_fraction": 0.0017604231911788509,
+        "max_beyond_support_energy_fraction": 0.0044032391036091766,
+        "rms_beyond_support_energy_fraction": 0.0006667972448396954,
+        "max_band_ild_error_db": 1.2642868940204028,
+        "rms_band_ild_error_db": 0.5112061161330859,
+        "max_wrapped_ipd_error_rad": 2.947626039425671,
+        "rms_wrapped_ipd_error_rad": 0.4293330531993508
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.018088351129106017,
+        "rms_pre_onset_energy_fraction": 0.0034777893387238647,
+        "max_beyond_support_energy_fraction": 0.008711129381574657,
+        "rms_beyond_support_energy_fraction": 0.0012042773312656424,
+        "max_band_ild_error_db": 0.5268117565311918,
+        "rms_band_ild_error_db": 0.20719818814965416,
+        "max_wrapped_ipd_error_rad": 2.9478853884725544,
+        "rms_wrapped_ipd_error_rad": 0.481578950455854
+      }
+    },
+    "evaluation": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.016634598841863472,
+        "rms_pre_onset_energy_fraction": 0.0019829157905373374,
+        "max_beyond_support_energy_fraction": 0.02014409415095843,
+        "rms_beyond_support_energy_fraction": 0.001018569815551311,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5186213252491713,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.42110929586751994
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.056197164653346246,
+        "rms_pre_onset_energy_fraction": 0.004381429520955965,
+        "max_beyond_support_energy_fraction": 0.0320402806483986,
+        "rms_beyond_support_energy_fraction": 0.0017446570572425075,
+        "max_band_ild_error_db": 0.9780532652699261,
+        "rms_band_ild_error_db": 0.23011590211232916,
+        "max_wrapped_ipd_error_rad": 2.974072238978972,
+        "rms_wrapped_ipd_error_rad": 0.4708517087103357
+      }
+    },
+    "complete": {
+      "0": {
+        "max_pre_onset_energy_fraction": 0.016634598841863472,
+        "rms_pre_onset_energy_fraction": 0.0019701558058439336,
+        "max_beyond_support_energy_fraction": 0.02014409415095843,
+        "rms_beyond_support_energy_fraction": 0.0010007889417789195,
+        "max_band_ild_error_db": 1.6677331211793085,
+        "rms_band_ild_error_db": 0.5181752538129605,
+        "max_wrapped_ipd_error_rad": 3.0827557556404543,
+        "rms_wrapped_ipd_error_rad": 0.4216119176956543
+      },
+      "1": {
+        "max_pre_onset_energy_fraction": 0.056197164653346246,
+        "rms_pre_onset_energy_fraction": 0.004332067545130028,
+        "max_beyond_support_energy_fraction": 0.0320402806483986,
+        "rms_beyond_support_energy_fraction": 0.0017167754117852247,
+        "max_band_ild_error_db": 0.9780532652699261,
+        "rms_band_ild_error_db": 0.22879324229325654,
+        "max_wrapped_ipd_error_rad": 2.974072238978972,
+        "rms_wrapped_ipd_error_rad": 0.47150832957799077
+      }
+    }
+  },
+  "maximum_preserved_phase_difference_rad": 9.78672e-08,
+  "failures": [
+    {
+      "partition": "development",
+      "metric": "max_pre_onset_energy_fraction",
+      "before": 0.016099794609928483,
+      "after": 0.018088351129106017
+    },
+    {
+      "partition": "development",
+      "metric": "rms_pre_onset_energy_fraction",
+      "before": 0.0029095911610910992,
+      "after": 0.0034777893387238647
+    },
+    {
+      "partition": "development",
+      "metric": "max_beyond_support_energy_fraction",
+      "before": 0.0044032391036091766,
+      "after": 0.008711129381574657
+    },
+    {
+      "partition": "development",
+      "metric": "rms_beyond_support_energy_fraction",
+      "before": 0.0006662647530765881,
+      "after": 0.0012042773312656424
+    },
+    {
+      "partition": "evaluation",
+      "metric": "max_pre_onset_energy_fraction",
+      "before": 0.03846312637210696,
+      "after": 0.056197164653346246
+    },
+    {
+      "partition": "evaluation",
+      "metric": "rms_pre_onset_energy_fraction",
+      "before": 0.00311572637563909,
+      "after": 0.004381429520955965
+    },
+    {
+      "partition": "evaluation",
+      "metric": "max_beyond_support_energy_fraction",
+      "before": 0.020144096372228734,
+      "after": 0.0320402806483986
+    },
+    {
+      "partition": "evaluation",
+      "metric": "rms_beyond_support_energy_fraction",
+      "before": 0.0009181606305685638,
+      "after": 0.0017446570572425075
+    }
+  ],
+  "quality_pass": false
+}

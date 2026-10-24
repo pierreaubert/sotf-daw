@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "hrtf::interpolate::minimum_phase::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 43.27534794807434,
+  "stdout": "\nrunning 3 tests\nMINIMUM_PHASE_DELAYED_MIXTURE maximum_error=1.0215166591732052e-6\nMINIMUM_PHASE_ANALYTIC maximum_error=2.636301879854752e-7\ntest hrtf::interpolate::minimum_phase::tests::delayed_minimum_phase_mixture_matches_independent_analytic_response ... ok\ntest hrtf::interpolate::minimum_phase::tests::cepstral_factor_matches_analytic_two_tap_factors_and_retains_residual ... ok\nMINIMUM_PHASE_COMPLEX_BOUNDARY maximum_jump=4.9318464e-6\ntest hrtf::interpolate::minimum_phase::tests::reconstructed_complex_response_is_continuous_across_mesh_edges_and_diagonals ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 140 filtered out; finished in 0.01s\n\n",
+  "stderr": "   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 43.18s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-570c7d392c2da549)\n"
+}

@@ -1,0 +1,141 @@
+//! Offline candidate factoring log magnitude, residual phase and onset delay.
+
+// Rust guideline compliant 2026-02-21
+use super::super::mesh::HrtfInterpolation;
+use super::PreparedHrtfSpectra;
+use realfft::RealFftPlanner;
+use rustfft::num_complex::Complex;
+use sotf_host::sofa::SourcePosition;
+
+/// Holds finite-periodic minimum-phase factors for a matching prepared cache.
+pub struct PreparedMinimumPhase {
+    fft_size: usize,
+    phases: [Vec<Vec<f64>>; 2],
+}
+
+/// Factor each donor's log magnitude with a full-magnitude real cepstrum.
+///
+/// The finite periodic lifter preserves DC and the even-length midpoint,
+/// doubles positive quefrencies, and zeros negative quefrencies. The existing
+/// prepared dB floor is retained. This does not discard measured residual phase.
+///
+/// # Panics
+/// Panics if FFT dimensions do not match the prepared spectra.
+pub fn prepare_minimum_phase(
+    prepared: &PreparedHrtfSpectra,
+    fft_size: usize,
+) -> PreparedMinimumPhase {
+    let mut planner = RealFftPlanner::<f64>::new();
+    let inverse = planner.plan_fft_inverse(fft_size);
+    let forward = planner.plan_fft_forward(fft_size);
+    let phases = [&prepared.left_db, &prepared.right_db].map(|cache| {
+        cache
+            .iter()
+            .map(|db| {
+                assert_eq!(db.len(), fft_size / 2 + 1);
+                let mut spectrum: Vec<_> = db
+                    .iter()
+                    .map(|&value| {
+                        Complex::new(f64::from(value) * std::f64::consts::LN_10 / 20.0, 0.0)
+                    })
+                    .collect();
+                let mut cepstrum = vec![0.0; fft_size];
+                inverse
+                    .process(&mut spectrum, &mut cepstrum)
+                    .expect("cepstrum dimensions");
+                let scale = 1.0 / fft_size as f64;
+                cepstrum[0] *= scale;
+                for c in &mut cepstrum[1..fft_size / 2] {
+                    *c *= 2.0 * scale;
+                }
+                cepstrum[fft_size / 2] *= scale;
+                cepstrum[fft_size / 2 + 1..].fill(0.0);
+                forward
+                    .process(&mut cepstrum, &mut spectrum)
+                    .expect("factor dimensions");
+                spectrum.into_iter().map(|h| h.im).collect()
+            })
+            .collect()
+    });
+    PreparedMinimumPhase { fft_size, phases }
+}
+
+/// Reconstruct magnitude, minimum phase, residual phase and onset delay together.
+///
+/// Every component uses the same certified spatial mesh and the same policy at
+/// every frequency. Circular residual means with undefined direction reject this
+/// offline candidate instead of choosing a measured-case-specific fallback.
+///
+/// # Panics
+/// Panics for mismatched cache dimensions/indices or an undefined residual mean.
+pub fn interpolate_hrtf_prepared_minimum_phase<S: Into<f64>>(
+    selection: &HrtfInterpolation,
+    prepared: &PreparedHrtfSpectra,
+    minimum: &PreparedMinimumPhase,
+    sample_rate: S,
+    near_field_strength: f32,
+    target: &SourcePosition,
+) -> (Vec<Complex<f32>>, Vec<Complex<f32>>) {
+    let rate = sample_rate.into();
+    let bins = minimum.fft_size / 2 + 1;
+    let (near, weights) = &selection.magnitude;
+    let mut outputs: [Vec<Complex<f32>>; 2] =
+        std::array::from_fn(|_| vec![Complex::new(0.0, 0.0); bins]);
+    for (ear, (spectra, db, onsets)) in [
+        (&prepared.left, &prepared.left_db, &prepared.left_itds),
+        (&prepared.right, &prepared.right_db, &prepared.right_itds),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for bin in 0..bins {
+            let omega = std::f64::consts::TAU * bin as f64 * rate / minimum.fft_size as f64;
+            let mut residual = Complex::new(0.0_f64, 0.0);
+            let mut magnitude_db = 0.0_f64;
+            let mut minimum_phase = 0.0_f64;
+            let mut delay = 0.0_f64;
+            for ((index, _), &weight) in near.iter().zip(weights) {
+                if weight < 1e-6 {
+                    continue;
+                }
+                let weight = f64::from(weight);
+                let source = spectra[*index][bin];
+                let phase = f64::from(source.im).atan2(f64::from(source.re));
+                let minimum_source_phase = minimum.phases[ear][*index][bin];
+                let source_delay = f64::from(onsets[*index]);
+                let residual_phase = phase + omega * source_delay - minimum_source_phase;
+                residual += Complex::from_polar(weight, residual_phase);
+                magnitude_db += weight * f64::from(db[*index][bin]);
+                minimum_phase += weight * minimum_source_phase;
+                delay += weight * source_delay;
+            }
+            // A unit phasor mean below this fixed conditioning limit has no
+            // reliable direction; it is not an acoustic or fitted threshold.
+            assert!(
+                residual.norm() > 1e-9,
+                "undefined residual phase at ear {ear}, bin {bin}"
+            );
+            let phase = minimum_phase + residual.arg() - omega * delay;
+            let magnitude = 10.0_f64.powf(magnitude_db / 20.0);
+            let value = Complex::from_polar(magnitude, phase);
+            outputs[ear][bin] = Complex::new(value.re as f32, value.im as f32);
+        }
+    }
+    let [mut left, mut right] = outputs;
+    if near_field_strength > 0.001 {
+        super::apply_near_field_shadowing(
+            &mut left,
+            &mut right,
+            target.azimuth,
+            target.elevation,
+            minimum.fft_size,
+            rate,
+            near_field_strength,
+        );
+    }
+    (left, right)
+}
+
+#[cfg(test)]
+#[path = "minimum_phase_tests.rs"]
+mod tests;

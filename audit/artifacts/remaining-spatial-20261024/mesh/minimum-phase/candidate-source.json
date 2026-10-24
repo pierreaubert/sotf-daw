@@ -1,0 +1,30 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf.rs": {
+    "sha256": "dfb0c54b69a3ce13dc88e7c9e5b5759cb62221f7fdf6cf5bddcf08bf2e77745a",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/interpolate.rs": {
+    "sha256": "be4147e1ea8d3b5c6294c15c109ae7dc8a6e5eb80345e6e47a588613cfb1920b",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf__interpolate.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/mesh.rs": {
+    "sha256": "f1729acba0da9ba5c3df97c0d5327b9367c76c79338d6731b5bb3ef6a4e6a2c5",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf__mesh.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/mesh_tests.rs": {
+    "sha256": "47c6449f9e155a8092c4e8af04e284c3678541b758744f94b967da1d3682fb67",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf__mesh_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/minimum_phase.rs": {
+    "sha256": "3430503cdc6fb1db71acc041a9c9912a8372a3347d85cf9bb42d0b7a43c1f035",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf__minimum_phase.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/minimum_phase_tests.rs": {
+    "sha256": "4070fa40c9df00f68c3901f07188114d6c8672d78b1145269145dc4bfd499260",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/src__hrtf__minimum_phase_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/measured_kemar.rs": {
+    "sha256": "5199faa5dfcdc8d4706e60f84875b4af84b7df792fdf034d10e11989b22593fb",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/minimum-phase/candidate-src/tests__measured_kemar.rs.txt"
+  }
+}

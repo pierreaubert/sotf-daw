@@ -1,0 +1,8 @@
+{
+  "production_commit": "1b9e6e1fbbc6c812cce2f2f69f37089880f17988",
+  "diagnostic_source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/measured_kemar.rs": "6c634030ee9bbe0e8c4eb8601cc6c4ca45bf719a26f4fe23996e54eab5ed9bcf"
+  },
+  "all_candidates_rejected_and_removed_from_production": true,
+  "all_three_plugin_scopes_remain_partial": true
+}

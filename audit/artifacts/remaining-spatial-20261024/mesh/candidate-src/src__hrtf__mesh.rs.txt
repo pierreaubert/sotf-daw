@@ -1,0 +1,230 @@
+//! Bounded supporting-face search for single-radius measurement directions.
+
+// Rust guideline compliant 2026-02-21
+use sotf_host::sofa::{SofaFile, SourcePosition};
+
+type Vector = [f64; 3];
+type Neighbors = ([(usize, f32); 3], [f32; 3]);
+
+// Search growth is independent of dataset size; every accepted face is still
+// certified against the complete dataset. Larger/unsupported faces fall back.
+const CANDIDATES: usize = 32;
+// Cartesian inputs originate in f32 trigonometry. This encloses its rounding
+// while keeping visibly different sampling planes distinct on a unit sphere.
+const PLANE_TOLERANCE: f64 = 1e-6;
+const CONE_TOLERANCE: f64 = 1e-7;
+
+fn dot(a: Vector, b: Vector) -> f64 {
+    a.into_iter().zip(b).map(|(x, y)| x * y).sum()
+}
+
+fn subtract(a: Vector, b: Vector) -> Vector {
+    std::array::from_fn(|i| a[i] - b[i])
+}
+
+fn cross(a: Vector, b: Vector) -> Vector {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn unit(v: Vector) -> Option<Vector> {
+    let length = dot(v, v).sqrt();
+    (length.is_finite() && length > 64.0 * f64::EPSILON).then(|| v.map(|x| x / length))
+}
+
+fn cone(p: Vector, v: [Vector; 3]) -> Option<[f32; 3]> {
+    let determinant = dot(v[0], cross(v[1], v[2]));
+    if determinant.abs() <= 64.0 * f64::EPSILON {
+        return None;
+    }
+    let weights = [
+        dot(p, cross(v[1], v[2])) / determinant,
+        dot(v[0], cross(p, v[2])) / determinant,
+        dot(v[0], cross(v[1], p)) / determinant,
+    ];
+    if weights
+        .iter()
+        .any(|w| !w.is_finite() || *w < -CONE_TOLERANCE)
+    {
+        return None;
+    }
+    let weights = weights.map(|w| w.max(0.0));
+    let sum: f64 = weights.iter().sum();
+    (sum > f64::EPSILON).then(|| weights.map(|w| (w / sum) as f32))
+}
+
+fn plane(vertices: &[Vector], ids: [usize; 3]) -> Option<(Vector, f64)> {
+    let [a, b, c] = ids.map(|i| vertices[i]);
+    let mut normal = unit(cross(subtract(b, a), subtract(c, a)))?;
+    let mut offset = dot(normal, a);
+    if offset < 0.0 {
+        normal = normal.map(|v| -v);
+        offset = -offset;
+    }
+    (offset > PLANE_TOLERANCE).then_some((normal, offset))
+}
+
+// Canonicalize the complete facet before looking at the target. In particular,
+// four coplanar vertices always use the same diagonal on both sides of a pose.
+fn face_triangle(
+    vertices: &[Vector],
+    ids: [usize; 3],
+    p: Vector,
+) -> Option<([usize; 3], [f32; 3])> {
+    let (normal, offset) = plane(vertices, ids)?;
+    let mut face = [0; CANDIDATES];
+    let mut count = 0;
+    for (id, &vertex) in vertices.iter().enumerate() {
+        let distance = dot(normal, vertex) - offset;
+        if distance > PLANE_TOLERANCE {
+            return None;
+        }
+        if distance.abs() <= PLANE_TOLERANCE {
+            if count == face.len() {
+                return None;
+            }
+            face[count] = id;
+            count += 1;
+        }
+    }
+    if count < 3 {
+        return None;
+    }
+    let anchor = face[0]; // Ascending global measurement IDs.
+    let second = *face[..count].iter().max_by(|&&a, &&b| {
+        let delta_a = subtract(vertices[a], vertices[anchor]);
+        let delta_b = subtract(vertices[b], vertices[anchor]);
+        dot(delta_a, delta_a)
+            .total_cmp(&dot(delta_b, delta_b))
+            .then_with(|| b.cmp(&a))
+    })?;
+    let third = *face[..count].iter().max_by(|&&a, &&b| {
+        let edge = subtract(vertices[second], vertices[anchor]);
+        let ca = cross(edge, subtract(vertices[a], vertices[anchor]));
+        let cb = cross(edge, subtract(vertices[b], vertices[anchor]));
+        dot(ca, ca).total_cmp(&dot(cb, cb)).then_with(|| b.cmp(&a))
+    })?;
+    let (canonical_normal, canonical_offset) = plane(vertices, [anchor, second, third])?;
+    // Reject tolerance-dependent facet membership rather than selecting a
+    // pose-dependent fan. This also rechecks the canonical supporting plane.
+    for (id, &vertex) in vertices.iter().enumerate() {
+        let distance = dot(canonical_normal, vertex) - canonical_offset;
+        if distance > PLANE_TOLERANCE
+            || (distance.abs() <= PLANE_TOLERANCE) != face[..count].contains(&id)
+        {
+            return None;
+        }
+    }
+    let center = std::array::from_fn(|axis| {
+        face[..count]
+            .iter()
+            .map(|&id| vertices[id][axis])
+            .sum::<f64>()
+            / count as f64
+    });
+    let u = unit(subtract(vertices[anchor], center))?;
+    let v = cross(canonical_normal, u);
+    face[..count].sort_by(|&a, &b| {
+        let a_delta = subtract(vertices[a], center);
+        let b_delta = subtract(vertices[b], center);
+        dot(v, a_delta)
+            .atan2(dot(u, a_delta))
+            .total_cmp(&dot(v, b_delta).atan2(dot(u, b_delta)))
+            .then_with(|| a.cmp(&b))
+    });
+    let anchor_slot = face[..count].iter().position(|&id| id == anchor)?;
+    face[..count].rotate_left(anchor_slot);
+    for edge in 1..count - 1 {
+        let triangle = [face[0], face[edge], face[edge + 1]];
+        if let Some(weights) = cone(p, triangle.map(|id| vertices[id])) {
+            return Some((triangle, weights));
+        }
+    }
+    None
+}
+
+/// Select a globally supported directional triangle during filter preparation.
+///
+/// Multiple measured radii retain the existing selection policy. A bounded
+/// search miss or a direction outside measured elevations returns one explicit
+/// nearest donor; no elevation or radial measurement is manufactured.
+pub(super) fn spatial_neighbors(sofa: &SofaFile, target: &SourcePosition) -> Option<Neighbors> {
+    let first = sofa.positions.first()?;
+    if sofa.positions.iter().any(|position| {
+        !position.distance.is_finite()
+            || (position.distance - first.distance).abs()
+                > 16.0 * f32::EPSILON * first.distance.abs().max(1.0)
+    }) {
+        return None;
+    }
+    let p = unit(target.to_cartesian_unit_vector().map(f64::from))?;
+    let vertices: Vec<_> = sofa
+        .positions
+        .iter()
+        .map(|position| unit(position.to_cartesian_unit_vector().map(f64::from)))
+        .collect::<Option<_>>()?;
+    let mut nearest = [(usize::MAX, f64::INFINITY); CANDIDATES];
+    for (id, &vertex) in vertices.iter().enumerate() {
+        let delta = subtract(p, vertex);
+        let distance = dot(delta, delta);
+        if let Some(slot) = nearest.iter().position(|&(old_id, old_distance)| {
+            distance < old_distance || (distance == old_distance && id < old_id)
+        }) {
+            nearest[slot..].rotate_right(1);
+            nearest[slot] = (id, distance);
+        }
+    }
+    let fallback = (
+        [(nearest[0].0, nearest[0].1.sqrt() as f32); 3],
+        [1.0, 0.0, 0.0],
+    );
+    // Snap only within f32 directional rounding, preserving exact measured nodes.
+    if nearest[0].1 <= (8.0 * f64::from(f32::EPSILON)).powi(2) {
+        return Some(fallback);
+    }
+    let (low, high) = sofa
+        .positions
+        .iter()
+        .fold((f32::INFINITY, f32::NEG_INFINITY), |(low, high), point| {
+            (low.min(point.elevation), high.max(point.elevation))
+        });
+    if target.elevation < low || target.elevation > high {
+        return Some(fallback);
+    }
+    let count = vertices.len().min(CANDIDATES);
+    let mut previous = 0;
+    for size in [8, 16, CANDIDATES] {
+        let size = size.min(count);
+        for a in 0..size {
+            for b in a + 1..size {
+                for c in b + 1..size {
+                    if c < previous {
+                        continue;
+                    }
+                    let ids = [nearest[a].0, nearest[b].0, nearest[c].0];
+                    if cone(p, ids.map(|id| vertices[id])).is_none() {
+                        continue;
+                    }
+                    if let Some((triangle, weights)) = face_triangle(&vertices, ids, p) {
+                        return Some((
+                            triangle.map(|id| {
+                                let delta = subtract(p, vertices[id]);
+                                (id, dot(delta, delta).sqrt() as f32)
+                            }),
+                            weights,
+                        ));
+                    }
+                }
+            }
+        }
+        previous = size;
+    }
+    Some(fallback)
+}
+
+#[cfg(test)]
+#[path = "mesh_tests.rs"]
+mod tests;

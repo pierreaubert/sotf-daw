@@ -1,0 +1,12 @@
+{
+  "current_source_verified": true,
+  "production_source_matches_commit": "1b9e6e1fbbc6c812cce2f2f69f37089880f17988",
+  "expanded_measured_integration_tests_passed": 5,
+  "strict_all_target_clippy_passed": true,
+  "rejected_candidates": [
+    "mesh: maximum IPD worsened in both fixed partitions",
+    "magnitude-only mesh: all eight early/late energy guards failed",
+    "minimum-phase residual: undefined Nyquist residual; development max IPD also failed"
+  ],
+  "all_three_plugin_scopes_remain_partial": true
+}

@@ -1,0 +1,10 @@
+{
+  "physical_rationale": "The existing interpolator already separates weighted log magnitude from onset-aligned phase/delay. Use globally supported canonical mesh donors for log magnitude only, with the existing full phase and onset delay policy retained uniformly at every frequency; no per-bin/direction learned choice. This targets donor geometry while preserving baseline phase behavior, not a full phase-quality solution.",
+  "baseline_production_commit": "1b9e6e1",
+  "partitions": "original43 development, other667 evaluation",
+  "quality_guards": "max and RMS band ILD, max and RMS wrapped IPD <= frozen baseline in each partition +1e-6 numerical tolerance, no null/quiet-bin exclusions",
+  "phase_guard": "maximum wrapped phase difference per ear versus existing interpolator <=1e-6 rad at every retained FFT bin",
+  "time_guards": "per partition max and RMS of per-ear pre-measured-10%-peak-onset energy fractions and energy fractions beyond measured512-sample support <= baseline +1e-6; inverse uses production real DC/Nyquist convention, complete1024 samples retained",
+  "geometry_guards": "exact all710 nodes complexDFT<=2e-5; independent cone weight<=2e-6; nonnegative unit-sum constant fields; canonical fan magnitude continuity<=2e-5 for edge/diagonal angular step<=1e-7 radians; explicit coverage and multi-radius fallback",
+  "limitations": "Retained phase policy may retain pre-existing directional discontinuities and measured phase errors. No full-sphere below measured elevation, listener, audibility or performance acceptance claims."
+}

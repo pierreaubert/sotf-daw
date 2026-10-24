@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/measured_kemar-320b99ecf0903cee",
+    "complete_dataset_nodes_match_independent_hrir_dft",
+    "--ignored",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.08756899833679199,
+  "stdout": "\nrunning 1 test\nMEASURED_KEMAR_GRID complex_values=11360 maximum_dft_error=7.889836665014383e-6\ntest complete_dataset_nodes_match_independent_hrir_dft ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.07s\n\n",
+  "stderr": ""
+}

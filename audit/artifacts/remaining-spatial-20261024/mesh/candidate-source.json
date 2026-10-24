@@ -1,0 +1,22 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf.rs": {
+    "sha256": "3a2dd8f2fcd8abe151cbffcf475a149c2731a654db138f2e4f62778a5162b929",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/candidate-src/src__hrtf.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/misc.rs": {
+    "sha256": "d0e175fc5f950a50d6cfed931d09edcccd2a87e3a2ef9fd99c894bef20154ef7",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/candidate-src/src__hrtf__misc.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/mesh.rs": {
+    "sha256": "fee198164bf8cca2054b47a0aaf61dcf2af872dee20c964ecbf4720b18939841",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/candidate-src/src__hrtf__mesh.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/hrtf/mesh_tests.rs": {
+    "sha256": "47c6449f9e155a8092c4e8af04e284c3678541b758744f94b967da1d3682fb67",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/candidate-src/src__hrtf__mesh_tests.rs.txt"
+  },
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/measured_kemar.rs": {
+    "sha256": "56c5dedc1a6e331c11c7bf4ca682cee2684e98616ba0792d0fabdf63788393c7",
+    "snapshot": "audit/artifacts/remaining-spatial-20261024/mesh/candidate-src/tests__measured_kemar.rs.txt"
+  }
+}

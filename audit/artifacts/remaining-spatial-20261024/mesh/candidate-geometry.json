@@ -1,0 +1,25 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-binaural",
+    "--offline",
+    "--locked",
+    "--release",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--lib",
+    "hrtf::mesh::tests",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 304.0510199069977,
+  "stdout": "\nrunning 3 tests\ntest hrtf::mesh::tests::elevation_coverage_and_multiple_radii_have_explicit_fallbacks ... ok\ntest hrtf::mesh::tests::exact_nodes_and_constant_fields_survive_all_cube_faces ... ok\nMESH_BOUNDARY maximum_vertex_field_jump=1.2904819762127318e-5\ntest hrtf::mesh::tests::shared_edges_and_coplanar_diagonals_are_continuous ... ok\n\ntest result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 137 filtered out; finished in 0.00s\n\n",
+  "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-binaural v0.5.22 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural)\n    Finished `release` profile [optimized] target(s) in 5m 03s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_binaural-570c7d392c2da549)\n"
+}

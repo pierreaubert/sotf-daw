@@ -63,13 +63,23 @@ fn unmodified_measured_kemar_dataset_retains_documented_geometry_and_samples() {
 
 #[test]
 fn measured_grid_nodes_match_independent_hrir_dft() {
+    report_grid_nodes((0..710).step_by(17).chain(std::iter::once(709)));
+}
+
+#[test]
+#[ignore = "manual complete measured-dataset node diagnostic"]
+fn complete_dataset_nodes_match_independent_hrir_dft() {
+    report_grid_nodes(0..710);
+}
+
+fn report_grid_nodes(indices: impl Iterator<Item = usize>) {
     let sofa = measured_sofa();
     let mut planner = RealFftPlanner::new();
     let fft = planner.plan_fft_forward(1024);
     let prepared = prepare_hrtf_spectra(&sofa, 1024, sofa.sample_rate, &fft);
     let mut maximum = 0.0_f64;
     let mut values = 0;
-    for index in (0..710).step_by(17).chain(std::iter::once(709)) {
+    for index in indices {
         let target = &sofa.positions[index];
         let (near, weights) = find_hrtf_neighbors(&sofa, target);
         let (left, right) = interpolate_hrtf_prepared(
@@ -205,14 +215,29 @@ fn legacy_chord_weights(
 
 #[test]
 fn held_out_measured_directions_report_spectral_cue_errors_for_both_weight_policies() {
+    report_held_out_directions((0..710).step_by(17).chain(std::iter::once(709)), 43, false);
+}
+
+#[test]
+#[ignore = "manual complete measured-dataset diagnostic"]
+fn complete_dataset_leave_one_out_reports_raw_frequency_cues() {
+    report_held_out_directions(0..710, 710, true);
+}
+
+fn report_held_out_directions(
+    indices: impl Iterator<Item = usize>,
+    expected_cases: usize,
+    raw_frequency_cues: bool,
+) {
     let sofa = measured_sofa();
     let mut planner = RealFftPlanner::new();
     let fft = planner.plan_fft_forward(1024);
+    let inverse = planner.plan_fft_inverse(1024);
     let prepared = prepare_hrtf_spectra(&sofa, 1024, sofa.sample_rate, &fft);
     let mut maximum_ild = [0.0_f64; 2];
     let mut maximum_phase = [0.0_f64; 2];
     let mut cases = 0;
-    for index in (0..710).step_by(17).chain(std::iter::once(709)) {
+    for index in indices {
         let target = &sofa.positions[index];
         // Remove the reference measurement from neighbor selection. Mapping the
         // remaining indices back into the immutable cache never reads its HRIR.
@@ -226,6 +251,13 @@ fn held_out_measured_directions_report_spectral_cue_errors_for_both_weight_polic
         let original_neighbors = near.map(|(i, distance)| (i + usize::from(i >= index), distance));
         assert!(original_neighbors.iter().all(|(i, _)| *i != index));
         let (_, left, right) = sofa.get_hrtf_slices(index).unwrap();
+        let reference_onsets = [left, right].map(|samples| {
+            let threshold = samples.iter().map(|v| v.abs()).fold(0.0_f32, f32::max) * 0.1;
+            samples
+                .iter()
+                .position(|v| v.abs() >= threshold)
+                .unwrap_or(0)
+        });
         let reference: Vec<_> = (5..=185)
             .map(|bin| [dft(left, bin, 1024), dft(right, bin, 1024)])
             .collect();
@@ -251,13 +283,41 @@ fn held_out_measured_directions_report_spectral_cue_errors_for_both_weight_polic
             });
             let ild = 10.0 * (energy[0].log10() - energy[1].log10());
             let mut phase_error = 0.0_f64;
-            for bin in [5, 9, 17, 31, 63, 127, 185] {
+            let mut phase_errors = [0.0_f64; 7];
+            let mut reference_ear_magnitudes = [[0.0_f64; 2]; 7];
+            for (probe, bin) in [5, 9, 17, 31, 63, 127, 185].into_iter().enumerate() {
                 let actual = predicted.map(|spectrum| {
                     Complex::new(f64::from(spectrum[bin].re), f64::from(spectrum[bin].im))
                 });
                 let cross = actual[0] * actual[1].conj();
                 let reference_cross = reference[bin - 5][0] * reference[bin - 5][1].conj();
-                phase_error = phase_error.max((cross * reference_cross.conj()).arg().abs());
+                phase_errors[probe] = (cross * reference_cross.conj()).arg().abs();
+                reference_ear_magnitudes[probe] = reference[bin - 5].map(|value| value.norm());
+                phase_error = phase_error.max(phase_errors[probe]);
+            }
+            if raw_frequency_cues {
+                let mut pre_onset_fraction = [0.0_f64; 2];
+                let mut late_fraction = [0.0_f64; 2];
+                for ear in 0..2 {
+                    let mut spectrum = predicted[ear].to_vec();
+                    // Match the production complete-real-design convention.
+                    spectrum[0].im = 0.0;
+                    spectrum[512].im = 0.0;
+                    let mut impulse = vec![0.0_f32; 1024];
+                    inverse.process(&mut spectrum, &mut impulse).unwrap();
+                    let energy = |samples: &[f32]| {
+                        samples.iter().map(|&v| f64::from(v).powi(2)).sum::<f64>()
+                    };
+                    let total = energy(&impulse);
+                    pre_onset_fraction[ear] = energy(&impulse[..reference_onsets[ear]]) / total;
+                    late_fraction[ear] = energy(&impulse[512..]) / total;
+                }
+                println!(
+                    "MEASURED_KEMAR_TIME index={index} policy={policy} pre_onset_energy_fraction={pre_onset_fraction:?} beyond_measured_support_energy_fraction={late_fraction:?} reference_onsets={reference_onsets:?}"
+                );
+                println!(
+                    "MEASURED_KEMAR_FREQUENCY index={index} policy={policy} wrapped_ipd_errors_rad={phase_errors:?} reference_ear_magnitudes={reference_ear_magnitudes:?}"
+                );
             }
             assert!(ild.is_finite() && reference_ild.is_finite() && phase_error.is_finite());
             maximum_ild[policy] = maximum_ild[policy].max((ild - reference_ild).abs());
@@ -275,5 +335,5 @@ fn held_out_measured_directions_report_spectral_cue_errors_for_both_weight_polic
     println!(
         "MEASURED_KEMAR_HELD_OUT_SUMMARY directions={cases} maximum_band_ild_error_db={maximum_ild:?} maximum_wrapped_interaural_phase_error_rad={maximum_phase:?} band_bins=5..185 fft=1024 rate=44100"
     );
-    assert_eq!(cases, 43);
+    assert_eq!(cases, expected_cases);
 }
