@@ -1,0 +1,17 @@
+{
+  "crates/sotf-engine/Cargo.toml": "19e4c2d0cfd5944dac645e9d25c34c40eb4ddceff6480eea5ed6ba883b1a143e",
+  "crates/sotf-engine/src/plugins/plugin_config_converter/dynamics.rs": "c5af81ffb91ba1c9d7ae163b2580722ba3048ab12bf1d993ebd15d333e25ca65",
+  "crates/sotf-plugins/Cargo.toml": "15e76b550608ce8cd556e9995b827bf486c7783fd39df8b684014c96e16d194e",
+  "crates/sotf-plugins/src/lib.rs": "b17632d2fc88a9e337672046e3d644528bd79f14607dceb9fde61c93aab183e2",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/Cargo.toml": "916bdf1315363472ddae46dee37436b8aa502dde33eb4116f3c3e5cb6ebaa64a",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/USAGE.md": "48c2f868915a1ad95da38d7bc192fb20f136d40aab0072ef46740e2781d349a6",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_gate_silero.rs": "8e200bce1ff31afa328518ac20d148eec0ffe89c57e5b882c6232573d2a454a0",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib.rs": "1dc5c20abbe2385439d6635ada42552f9e1b8c624e82fea0dbb88ab1fc0f9769",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/gate_plugin.rs": "b8c79a9dcb76f3bfccbb48c7f4cb4a1e682bf7029bdf3e32c51b59df04e64c9a",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/neural_speech.rs": "f074e6de652bd4e1c53c93c36e2de36d0b97878d1154e75d8129f54b84c40e0b",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/speech_protection.rs": "a436165f27a82c4b8df209d25fd2f828859e3c80e754ce76fe418f7e34dd1bcb",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/silero.rs": "f12156c0e3cf31781b093970a175495765b586ee585e16e478ed59fb003b0ff6",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/silero_stream.rs": "024fc10550f24fae30bcde8f2e21bf230b0d853ee8069ffca4ad80b28a924cb1",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/tests/neural_speech.rs": "905cfcf9874f38fc2d45ef10a892befd6216504ad82586fae5ff2587c678b3b6",
+  "Cargo.lock": "d682e0cf3e0adf54c421c3e1c8d2262fa1443e4b6169d0cb49146f3907700e67"
+}

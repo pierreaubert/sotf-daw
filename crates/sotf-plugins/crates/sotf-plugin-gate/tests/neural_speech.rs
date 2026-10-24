@@ -92,7 +92,7 @@ fn data(gate: &GatePlugin) -> sotf_plugin_gate::SpeechProtectionData {
 #[cfg(feature = "neural-speech")]
 #[test]
 fn cold_callbacks_and_reset_are_heap_free_and_warmup_matches_classical() {
-    for rate in [8000, 44100, 48000, 96000, 192000] {
+    for rate in [8000_u32, 44100, 48000, 96000, 192000] {
         let settings = GatePluginParams {
             lookahead_ms: 5.0,
             ..params()
@@ -215,4 +215,230 @@ fn worker_observations_cannot_deepen_attenuation_or_modify_sidechain() {
     assert_eq!(reset.model_score, None);
     assert_eq!(reset.protection_mix, 0.0);
     assert_eq!(reset.submitted_windows, 0);
+}
+
+fn silero_params() -> GatePluginParams {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/silero-vad/silero_vad_16k_batch1.onnx");
+    let mut settings = params();
+    settings.speech_protection.as_mut().unwrap().model =
+        sotf_plugin_gate::SpeechProtectionModel::Silero {
+            model_path: path,
+            sha256: sotf_plugin_gate::SILERO_MODEL_SHA256.to_owned(),
+        };
+    settings
+}
+
+#[cfg(not(feature = "silero-speech"))]
+#[test]
+fn missing_silero_runtime_feature_rejects_the_explicit_model() {
+    let error = GatePlugin::try_from_params(2, silero_params())
+        .err()
+        .unwrap();
+    assert!(error.contains("silero-speech"));
+}
+
+#[cfg(feature = "silero-speech")]
+#[test]
+fn silero_cold_callbacks_and_reset_are_heap_free_with_unchanged_lookahead() {
+    for rate in [8000_u32, 44100, 48000, 96000, 192000] {
+        let mut settings = silero_params();
+        settings.lookahead_ms = 5.0;
+        let mut baseline_settings = settings.clone();
+        baseline_settings.speech_protection = None;
+        let mut gate = GatePlugin::try_from_params(2, settings).unwrap();
+        let mut baseline = GatePlugin::try_from_params(2, baseline_settings).unwrap();
+        gate.initialize(f64::from(rate)).unwrap();
+        baseline.initialize(f64::from(rate)).unwrap();
+        assert_eq!(gate.latency_samples(), baseline.latency_samples());
+        let frames = rate as usize / 20;
+        let mut actual = vec![0.025; frames * 2];
+        let mut expected = actual.clone();
+        let context = ProcessContext::new(rate, frames);
+        assert_no_allocs("Silero cold audio callback", || {
+            gate.process_in_place(&mut actual, &context).unwrap();
+        });
+        baseline.process_in_place(&mut expected, &context).unwrap();
+        assert_eq!(actual, expected);
+        assert!(!data(&gate).warmup_complete);
+        assert_no_allocs("Silero cold reset", || gate.reset());
+        assert_eq!(data(&gate).model_score, None);
+    }
+}
+
+#[cfg(feature = "silero-speech")]
+#[test]
+fn actual_silero_speech_protects_linked_program_without_heap_activity_or_key_mutation() {
+    let bytes =
+        include_bytes!("../../sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-0.pcm");
+    let speech: Vec<f32> = bytes
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|x| f32::from(i16::from_le_bytes(*x)) / 32768.0)
+        .collect();
+    let mut settings = silero_params();
+    settings.sidechain_external = true;
+    let mut baseline_settings = settings.clone();
+    baseline_settings.speech_protection = None;
+    let mut gate = GatePlugin::try_from_params(2, settings).unwrap();
+    let mut baseline = GatePlugin::try_from_params(2, baseline_settings).unwrap();
+    gate.initialize(48000.0).unwrap();
+    baseline.initialize(48000.0).unwrap();
+    let mut input = [0.0; 1920];
+    let mut actual = input;
+    let mut expected = input;
+    let context = ProcessContext::new(48000, 480);
+    let mut peak_mix = 0.0_f32;
+    let mut observed = 0;
+    let mut maximum_age = 0.0_f32;
+    for (block, audio) in speech.as_chunks::<480>().0.iter().enumerate() {
+        for (frame, &source) in input.as_chunks_mut::<4>().0.iter_mut().zip(audio) {
+            frame.copy_from_slice(&[source, -0.5 * source, 0.001, -0.002]);
+        }
+        actual.copy_from_slice(&input);
+        expected.copy_from_slice(&input);
+        assert_no_allocs("Silero active audio callback", || {
+            gate.process_in_place(&mut actual, &context).unwrap();
+        });
+        baseline.process_in_place(&mut expected, &context).unwrap();
+        for ((output, classical), source) in actual
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(expected.as_chunks::<4>().0.iter())
+            .zip(input.as_chunks::<4>().0.iter())
+        {
+            assert_eq!(&output[2..], &source[2..]);
+            assert!((output[1] + 0.5 * output[0]).abs() < 1e-7);
+            for channel in 0..2 {
+                assert!(output[channel].abs() + 1e-7 >= classical[channel].abs());
+                assert!(output[channel].abs() <= source[channel].abs() + 1e-7);
+            }
+        }
+        if block < 12 {
+            assert_eq!(actual, expected);
+        }
+        let status = data(&gate);
+        peak_mix = peak_mix.max(status.protection_mix);
+        observed = observed.max(status.observed_windows);
+        if status.observation_usable {
+            assert!(status.warmup_complete && status.model_frames >= 4);
+            maximum_age = maximum_age.max(status.source_age_ms.unwrap());
+            assert!(status.source_age_ms.unwrap() <= 150.0);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    eprintln!(
+        "Silero actual speech: observed={observed}, peak_mix={peak_mix}, usable_max_age_ms={maximum_age}"
+    );
+    assert!(observed > 0 && peak_mix > 0.1);
+    let before = data(&gate);
+    assert!(gate.initialize(384000.0).is_err());
+    let after = data(&gate);
+    assert_eq!(after.model_frames, before.model_frames);
+    assert_eq!(after.model_score, before.model_score);
+    assert_eq!(after.submitted_windows, before.submitted_windows);
+    assert_no_allocs("Silero active reset", || gate.reset());
+    baseline.reset();
+    assert_eq!(data(&gate).model_score, None);
+    let mut actual = [0.02; 1920];
+    let mut expected = actual;
+    gate.process_in_place(&mut actual, &context).unwrap();
+    baseline.process_in_place(&mut expected, &context).unwrap();
+    assert_eq!(actual, expected);
+    assert_eq!(data(&gate).protection_mix, 0.0);
+}
+
+#[cfg(feature = "silero-speech")]
+#[test]
+fn silero_backpressure_retires_observations_and_reset_stays_heap_free() {
+    let mut gate = GatePlugin::try_from_params(2, silero_params()).unwrap();
+    gate.initialize(48000.0).unwrap();
+    let context = ProcessContext::new(48000, 480);
+    let mut audio = [0.0; 960];
+    // Deliberately outrun wall-clock serving. This is a backpressure test,
+    // not a DAW deadline or model throughput benchmark.
+    for _ in 0..1000 {
+        assert_no_allocs("Silero backpressure callback", || {
+            gate.process_in_place(&mut audio, &context).unwrap();
+        });
+    }
+    let status = data(&gate);
+    assert!(
+        status.dropped_windows > 0,
+        "test did not exercise backpressure"
+    );
+    assert_eq!(status.protection_mix, 0.0);
+    eprintln!(
+        "Silero backpressure: submitted={}, dropped={}",
+        status.submitted_windows, status.dropped_windows
+    );
+    assert_no_allocs("Silero backpressure reset", || gate.reset());
+    let status = data(&gate);
+    assert_eq!(status.model_score, None);
+    assert_eq!(status.dropped_windows, 0);
+    assert!(!status.warmup_complete);
+}
+
+#[cfg(feature = "silero-speech")]
+#[test]
+fn causal_silero_worker_preserves_classical_output_on_recorded_instrument_controls() {
+    let fixtures: [(&str, &[u8]); 2] = [
+        (
+            "violin",
+            include_bytes!("../../sotf-plugin-de-esser/tests/fixtures/recorded/violin.pcm"),
+        ),
+        (
+            "cymbal",
+            include_bytes!("../../sotf-plugin-de-esser/tests/fixtures/recorded/cymbal.pcm"),
+        ),
+    ];
+    for (name, bytes) in fixtures {
+        let source: Vec<_> = bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|v| f32::from(i16::from_le_bytes(*v)) / 32768.0)
+            .collect();
+        let mut settings = silero_params();
+        settings.sidechain_external = true;
+        let mut baseline_settings = settings.clone();
+        baseline_settings.speech_protection = None;
+        let mut gate = GatePlugin::try_from_params(2, settings).unwrap();
+        let mut baseline = GatePlugin::try_from_params(2, baseline_settings).unwrap();
+        gate.initialize(48000.0).unwrap();
+        baseline.initialize(48000.0).unwrap();
+        let context = ProcessContext::new(48000, 480);
+        let mut input = [0.0; 1920];
+        let mut actual = input;
+        let mut expected = input;
+        let mut peak_score = 0.0_f32;
+        let mut ready = false;
+        let mut observed = 0;
+        for block in source.as_chunks::<480>().0 {
+            for (frame, &sample) in input.as_chunks_mut::<4>().0.iter_mut().zip(block) {
+                frame.copy_from_slice(&[sample, -0.5 * sample, 0.001, -0.002]);
+            }
+            actual.copy_from_slice(&input);
+            expected.copy_from_slice(&input);
+            assert_no_allocs("Silero instrument callback", || {
+                gate.process_in_place(&mut actual, &context).unwrap();
+            });
+            baseline.process_in_place(&mut expected, &context).unwrap();
+            assert_eq!(actual, expected, "unexpected speech protection on {name}");
+            let status = data(&gate);
+            peak_score = peak_score.max(status.model_score.unwrap_or(0.0));
+            ready |= status.warmup_complete;
+            observed = observed.max(status.observed_windows);
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        assert!(
+            ready && observed > 16,
+            "control did not exercise a serving model"
+        );
+        eprintln!(
+            "Silero causal control {name}: peak_observed_score={peak_score}, observed={observed}"
+        );
+    }
 }

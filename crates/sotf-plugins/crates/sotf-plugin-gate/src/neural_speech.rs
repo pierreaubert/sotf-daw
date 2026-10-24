@@ -19,9 +19,9 @@ struct SourceWindow {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Observation {
-    score: f32,
-    end_sample: u64,
+pub(super) struct Observation {
+    pub(super) score: f32,
+    pub(super) end_sample: u64,
 }
 
 struct Model {
@@ -96,7 +96,7 @@ fn resampling_weights(rate: f64) -> Vec<Vec<(usize, f64)>> {
         .collect()
 }
 
-pub(super) struct SpeechAssistant {
+pub(super) struct RnnoiseAssistant {
     worker: AsyncInference<Model>,
     config: SpeechProtectionConfig,
     ring: Vec<f32>,
@@ -112,7 +112,7 @@ pub(super) struct SpeechAssistant {
     observed: u64,
 }
 
-impl SpeechAssistant {
+impl RnnoiseAssistant {
     pub(super) fn new(config: SpeechProtectionConfig, rate: f64) -> Result<Self, String> {
         config.validate()?;
         if !rate.is_finite() || !(8000.0..=192000.0).contains(&rate) {
@@ -121,6 +121,7 @@ impl SpeechAssistant {
         let mut backend = RnnoiseBackend::new();
         backend.initialize(48_000, 1)?;
         let length = (rate * 0.1).ceil() as usize;
+        let max_age = (rate * f64::from(config.max_age_ms) * 0.001).ceil() as u64;
         Ok(Self {
             worker: AsyncInference::spawn(
                 Model {
@@ -136,7 +137,7 @@ impl SpeechAssistant {
             clock: 0,
             hop: (rate * 0.01).round().max(1.0) as usize,
             until_hop: length,
-            max_age: (rate * f64::from(config.max_age_ms) * 0.001).ceil() as u64,
+            max_age,
             rate,
             latest: None,
             submitted: 0,
@@ -198,6 +199,9 @@ impl SpeechAssistant {
             .and_then(|value| self.clock.checked_sub(value.end_sample))
             .and_then(|lag| lag.checked_add(self.ring.len() as u64));
         SpeechProtectionData {
+            warmup_complete: self.latest.is_some(),
+            model_frames: if self.latest.is_some() { 10 } else { 0 },
+            stream_restarts: 0,
             model_score: self.latest.map(|value| value.score),
             source_age_ms: age.map(|samples| (samples as f64 * 1000.0 / self.rate) as f32),
             observation_usable: self.usable(),
@@ -221,7 +225,13 @@ impl SpeechAssistant {
     }
 }
 
-fn accepted(value: Observation, clock: u64, window: u64, max_age: u64, minimum: f32) -> bool {
+pub(super) fn accepted(
+    value: Observation,
+    clock: u64,
+    window: u64,
+    max_age: u64,
+    minimum: f32,
+) -> bool {
     let Some(age) = clock
         .checked_sub(value.end_sample)
         .and_then(|lag| lag.checked_add(window))
@@ -229,6 +239,65 @@ fn accepted(value: Observation, clock: u64, window: u64, max_age: u64, minimum: 
         return false;
     };
     age <= max_age && value.score.is_finite() && (minimum..=1.0).contains(&value.score)
+}
+
+pub(super) enum SpeechAssistant {
+    Rnnoise(Box<RnnoiseAssistant>),
+    #[cfg(feature = "silero-speech")]
+    Silero(Box<crate::silero_stream::SileroAssistant>),
+}
+
+impl SpeechAssistant {
+    pub(super) fn new(config: SpeechProtectionConfig, rate: f64) -> Result<Self, String> {
+        match &config.model {
+            crate::SpeechProtectionModel::Rnnoise => {
+                RnnoiseAssistant::new(config, rate).map(|x| Self::Rnnoise(Box::new(x)))
+            }
+            crate::SpeechProtectionModel::Silero { .. } => {
+                #[cfg(feature = "silero-speech")]
+                {
+                    crate::silero_stream::SileroAssistant::new(config, rate)
+                        .map(|x| Self::Silero(Box::new(x)))
+                }
+                #[cfg(not(feature = "silero-speech"))]
+                {
+                    Err("Silero speech requires the silero-speech build feature".into())
+                }
+            }
+        }
+    }
+
+    pub(super) fn push(&mut self, sample: f32) {
+        match self {
+            Self::Rnnoise(x) => x.push(sample),
+            #[cfg(feature = "silero-speech")]
+            Self::Silero(x) => x.push(sample),
+        }
+    }
+
+    pub(super) fn usable(&self) -> bool {
+        match self {
+            Self::Rnnoise(x) => x.usable(),
+            #[cfg(feature = "silero-speech")]
+            Self::Silero(x) => x.usable(),
+        }
+    }
+
+    pub(super) fn data(&self, mix: f32) -> SpeechProtectionData {
+        match self {
+            Self::Rnnoise(x) => x.data(mix),
+            #[cfg(feature = "silero-speech")]
+            Self::Silero(x) => x.data(mix),
+        }
+    }
+
+    pub(super) fn reset(&mut self) {
+        match self {
+            Self::Rnnoise(x) => x.reset(),
+            #[cfg(feature = "silero-speech")]
+            Self::Silero(x) => x.reset(),
+        }
+    }
 }
 
 #[cfg(test)]

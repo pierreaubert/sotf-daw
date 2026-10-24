@@ -16,6 +16,7 @@ path = "src/lib.rs"
 qa = ["sotf-host/qa"]
 neural-speech = ["dep:plugins-denoiser", "dep:plugins-inference"]
 silero-vad-eval = ["dep:tract-onnx", "dep:sha2"]
+silero-speech = ["neural-speech", "dep:tract-onnx", "dep:sha2"]
 
 [[bin]]
 name = "qa-gate-silero"

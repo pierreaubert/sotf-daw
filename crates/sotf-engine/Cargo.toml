@@ -16,6 +16,7 @@ path = "src/lib.rs"
 default = ["streaming", "hls", "iamf"]
 neural-pitch = ["sotf-plugins/neural-pitch"]
 neural-speech = ["sotf-plugins/neural-speech"]
+silero-speech = ["sotf-plugins/silero-speech"]
 deep-filter = ["sotf-plugins/deep-filter"]
 hal = ["driver-hal", "sotf-plugins/hal"]
 asio = ["cpal/asio"]

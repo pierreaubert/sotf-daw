@@ -1,0 +1,24 @@
+{
+  "command": [
+    "cargo",
+    "run",
+    "-p",
+    "sotf-plugin-gate",
+    "--bin",
+    "qa-gate-silero",
+    "--features",
+    "qa,silero-vad-eval",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx",
+    "audit/artifacts/ml-gate-silero-20261025/fixed-batch/ort-golden.json"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 52.9639493341092
+}

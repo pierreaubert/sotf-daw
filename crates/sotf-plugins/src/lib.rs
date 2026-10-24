@@ -420,6 +420,7 @@ pub use plugin_analog_limiter::{AnalogLimiterPlugin, AnalogLimiterPluginParams};
 pub use plugin_gain::{GainPlugin, GainPluginParams};
 pub use plugin_gate::{
     GateData, GateMode, GatePlugin, GatePluginParams, SpeechProtectionConfig, SpeechProtectionData,
+    SpeechProtectionModel,
 };
 pub use plugin_hiss_reducer::{HissReducerPlugin, HissReducerPluginParams};
 pub use plugin_limiter::{LimiterData, LimiterPlugin, LimiterPluginParams};

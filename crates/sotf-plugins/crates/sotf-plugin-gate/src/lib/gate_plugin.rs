@@ -468,7 +468,7 @@ impl GatePlugin {
 
     fn params_snapshot(&self) -> GatePluginParams {
         GatePluginParams {
-            speech_protection: self.speech_config,
+            speech_protection: self.speech_config.clone(),
             threshold_db: self.threshold_db,
             ratio: self.ratio,
             attack_ms: self.attack_ms,
@@ -706,6 +706,7 @@ impl GatePlugin {
         if let Some(speech) = &mut self.speech {
             let channel = self
                 .speech_config
+                .as_ref()
                 .expect("prepared speech policy")
                 .source_channel;
             speech.push(frame[channel]);
@@ -1131,6 +1132,7 @@ impl ParametricInPlacePlugin for GatePlugin {
         #[cfg(feature = "neural-speech")]
         let speech = self
             .speech_config
+            .clone()
             .map(|config| crate::neural_speech::SpeechAssistant::new(config, sample_rate))
             .transpose()?;
         let drain_samples = MAX_DRAIN_FRAMES

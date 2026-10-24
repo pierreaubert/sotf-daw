@@ -483,4 +483,29 @@ mod gate_speech_tests {
             legacy.parameters["threshold_db"]
         );
     }
+
+    #[test]
+    fn explicit_silero_model_identity_and_path_survive_engine_preset_roundtrip() {
+        let mut settings = PluginSettings::default_for(&crate::plugins::PluginType::Gate).unwrap();
+        let policy = json!({
+            "model": { "type": "silero", "model_path": "models/silero_vad_16k_batch1.onnx",
+                "sha256": sotf_plugins::plugin_gate::SILERO_MODEL_SHA256 },
+            "min_probability": 0.8, "max_age_ms": 150.0, "source_channel": 1
+        });
+        let PluginSettings::Gate {
+            speech_protection, ..
+        } = &mut settings
+        else {
+            unreachable!()
+        };
+        *speech_protection = Some(serde_json::from_value(policy.clone()).unwrap());
+        let restored: PluginSettings =
+            serde_json::from_value(serde_json::to_value(&settings).unwrap()).unwrap();
+        let config = convert_gate(&restored, 48000.0).unwrap();
+        let actual: sotf_plugins::SpeechProtectionConfig =
+            serde_json::from_value(config.parameters["speech_protection"].clone()).unwrap();
+        let expected: sotf_plugins::SpeechProtectionConfig =
+            serde_json::from_value(policy).unwrap();
+        assert_eq!(actual, expected);
+    }
 }

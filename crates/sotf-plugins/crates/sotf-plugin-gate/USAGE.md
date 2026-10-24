@@ -92,7 +92,7 @@ through the structural preset configuration:
 }
 ```
 
-The existing RNNoise Full model analyzes the selected physical program channel
+By default, the RNNoise Full model analyzes the selected physical program channel
 on a bounded worker. The classical detector keeps running. Accepted speech
 evidence smoothly removes attenuation toward unity; the mode cannot add
 attenuation or boost. Every linked channel receives the same protection gain.
@@ -122,14 +122,49 @@ requires reconstructing the plugin; existing scalar parameter indices remain
 unchanged. `GateData.speech_protection` reports score, source age, usability,
 protection amount, and submitted/dropped/observed window counts.
 
-Silero VAD is a separate development candidate. The `silero-vad-eval` feature
-enables its native comparison binary; it does not select Silero in the Gate
-processing path. The pinned model, license, and source manifest are in
-`crates/sotf-plugins/models/silero-vad`. Its fixed-batch derivative changes only
-shape annotations; the preparation script verifies unchanged weights,
-operators, and connections. Reproduce the source/derived identities and ONNX
-Runtime golden cases with `scripts/ml/verify_gate_vad.py` using the pinned
-`scripts/ml/gate-vad-requirements.txt` environment, then run from the workspace:
+For recurrent Silero protection, build with `silero-speech` and select its
+verified local model explicitly:
+
+```json
+{
+  "mode": "Downward",
+  "link_channels": true,
+  "speech_protection": {
+    "model": {
+      "type": "silero",
+      "model_path": "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx",
+      "sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51"
+    },
+    "min_probability": 0.8,
+    "max_age_ms": 150.0,
+    "source_channel": 0
+  }
+}
+```
+
+The model is prepared on a control thread and runs on a bounded worker. It
+retains recurrent history across chronological packets. The worker resamples
+causally to 16 kHz and evaluates 32 ms hops. Four complete hops (128 ms), plus
+resampling, worker, and polling time, are needed after reset or a source gap.
+The source-age policy adds a conservative 100 ms allowance to the age of the
+latest frame endpoint; retained recurrent history may be older. Audio latency
+remains the configured Gate lookahead. Backpressure retires pending
+observations immediately and returns protection toward the classical result;
+processing resumes from fresh model history. Reset clears queued generations.
+Faster-than-realtime rendering can trigger this fallback and is not guaranteed
+to reproduce the learned decisions from realtime playback.
+`warmup_complete`, `model_frames`, and `stream_restarts` supplement speech
+telemetry. Omitting `model` preserves the previous RNNoise detector.
+
+Silero remains experimental: rejecting the existing violin/cymbal probes and
+matching independent inference states does not establish held-out speech
+recall, music rejection, or DAW deadline compliance. The pinned model, license,
+and source manifest are in `crates/sotf-plugins/models/silero-vad`. Its fixed-batch
+derivative changes only shape annotations, with unchanged weights/operators.
+Verify its source identities and ONNX Runtime reference cases with
+`scripts/ml/verify_gate_vad.py` in the pinned
+`scripts/ml/gate-vad-requirements.txt` environment. The native comparison uses
+the same model loader/inference implementation as the live worker:
 
 ```bash
 cargo run -p sotf-plugin-gate --bin qa-gate-silero \
@@ -137,13 +172,6 @@ cargo run -p sotf-plugin-gate --bin qa-gate-silero \
   crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx \
   audit/artifacts/ml-gate-silero-20261025/fixed-batch/ort-golden.json
 ```
-
-The candidate rejects the existing violin/cymbal clips at the fixed score
-threshold. Its speech scores depend strongly on retaining recurrent history;
-resetting every 100 ms loses detections. Existing recordings are development
-probes with unknown model-training overlap. A streaming worker with explicit
-generation/gap resets, source-clock timing, and runtime validation is still
-required before this candidate can drive speech protection.
 
 ### Timing
 

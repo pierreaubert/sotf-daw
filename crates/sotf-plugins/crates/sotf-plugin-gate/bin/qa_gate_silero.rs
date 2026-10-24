@@ -4,9 +4,8 @@
 //! or claim classifier accuracy, audio-callback safety, or deadline compliance.
 
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
+use sotf_plugin_gate::silero::SileroModel;
 use std::path::PathBuf;
-use tract_onnx::prelude::*;
 
 const MODEL_SHA: &str = "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51";
 
@@ -31,25 +30,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if arguments.next().is_some() {
         return Err("Expected model and golden paths only".into());
     }
-    let bytes = std::fs::read(model_path)?;
-    let actual: String = Sha256::digest(&bytes)
-        .iter()
-        .map(|v| format!("{v:02x}"))
-        .collect();
-    if actual != MODEL_SHA {
-        return Err("Pinned Silero model SHA-256 mismatch".into());
-    }
+    let mut model = SileroModel::load(&model_path, MODEL_SHA)?;
     let golden: Golden = serde_json::from_slice(&std::fs::read(golden_path)?)?;
-    if golden.model_sha256 != actual || golden.cases.is_empty() {
+    if golden.model_sha256 != MODEL_SHA || golden.cases.is_empty() {
         return Err("Golden model identity mismatch or empty cases".into());
     }
-    let model = tract_onnx::onnx()
-        .model_for_read(&mut bytes.as_slice())?
-        .with_input_fact(0, f32::fact([1, 576]).into())?
-        .with_input_fact(1, tensor0(16000_i64).into())?
-        .with_input_fact(2, f32::fact([2, 1, 128]).into())?
-        .into_optimized()?
-        .into_runnable()?;
     let mut score_error = 0.0_f32;
     let mut state_error = 0.0_f32;
     for case in &golden.cases {
@@ -65,34 +50,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         {
             return Err("Invalid golden shape or values".into());
         }
-        let mut state = vec![0.0_f32; 256];
+        let mut state = [0.0_f32; 256];
         for (step, &expected) in case.step_scores.iter().enumerate() {
             let offset = step * 512;
-            let inputs = tvec!(
-                Tensor::from_shape(&[1, 576], &case.audio_16k[offset..offset + 576])?.into(),
-                tensor0(16000_i64).into(),
-                Tensor::from_shape(&[2, 1, 128], &state)?.into(),
-            );
-            let output = model.run(inputs)?;
-            if output.len() != 2 {
-                return Err("Unexpected output count".into());
-            }
-            let score = output[0].to_array_view::<f32>()?;
-            let next_state = output[1].to_array_view::<f32>()?;
-            if score.shape() != [1, 1] || next_state.shape() != [2, 1, 128] {
-                return Err("Unexpected output shape".into());
-            }
-            let actual = score[[0, 0]];
-            if !actual.is_finite() || !(0.0..=1.0).contains(&actual) {
-                return Err("Invalid speech score".into());
-            }
+            let input: &[f32; 576] = case.audio_16k[offset..offset + 576].try_into()?;
+            let (actual, next_state) = model.step(input, &state)?;
             score_error = score_error.max((actual - expected).abs());
-            for (destination, &value) in state.iter_mut().zip(next_state.iter()) {
-                if !value.is_finite() {
-                    return Err("Nonfinite recurrent state".into());
-                }
-                *destination = value;
-            }
+            state = next_state;
         }
         for (actual, expected) in state.iter().zip(&case.final_state) {
             state_error = state_error.max((actual - expected).abs());
@@ -102,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!(
         "{}",
         serde_json::json!({
-            "model_sha256":actual,"cases":golden.cases.len(),
+            "model_sha256":MODEL_SHA,"cases":golden.cases.len(),
             "maximum_score_absolute_error":score_error,
             "maximum_state_absolute_error":state_error,
             "score_tolerance":1e-4,"state_tolerance":1e-3,

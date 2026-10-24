@@ -192,18 +192,20 @@
         "crates/sotf-plugins/crates/sotf-plugin-gate/tests/neural_speech.rs",
         "crates/sotf-engine/src/plugins/plugin_config_converter/dynamics.rs",
         "audit/artifacts/ml-gate-20261025",
-        "audit/artifacts/ml-gate-silero-20261025"
+        "audit/artifacts/ml-gate-silero-20261025",
+        "audit/artifacts/ml-gate-streaming-20261025"
       ],
       "implementation": {
         "mode": "Explicit speech_protection config with optional neural-speech build feature; linked Downward mode only; defaults remain classical.",
-        "model": "Existing pretrained bundled RNNoise Full; reset and replay each independent causal 100 ms window on a bounded worker.",
+        "model": "Explicit model choice: legacy independent RNNoise windows or pinned recurrent Silero v6.2.1; omitted model preserves RNNoise, omitted speech_protection preserves classical gating.",
         "policy": "Raw score and source age (including the entire window) gate attenuation removal; smoothed return to classical on uncertainty or stale observations. No learned attenuation increase or boost; independent classical latch/envelope continues.",
-        "latency": "No added audio buffering; existing gate lookahead is retained. First learned evidence requires 100 ms of source plus worker/poll delay.",
+        "latency": "No added audio buffering. Silero needs four contiguous 32 ms hops plus causal resampling, worker and polling time; Gate lookahead remains unchanged. Source-age includes a 100 ms allowance plus endpoint lag.",
         "remaining": [
-          "Held-out multilingual speech/noise/music false-cut and false-protection evaluation and listening.",
-          "CPU/memory/deadline measurements on real DAW hosts and block/rate sweeps under load.",
-          "User-facing structural configuration and review before runtime adoption."
-        ]
+          "Held-out multilingual speech/noise/music false-cut and false-protection evaluation, including noise/gain/rate shifts and listening.",
+          "Controlled full-host CPU/memory/deadline measurements and Linux/Windows DAW validation.",
+          "User-facing structural configuration, faster-than-realtime render policy, and review before production adoption."
+        ],
+        "streaming": "Bounded chronological 10 ms source packets; worker-only causal sinc resampling and recurrent state. Generation changes and source gaps restore pristine context. Backpressure immediately retires queued/in-flight observations and releases toward classical gain."
       },
       "development_observations": {
         "source": "audit/artifacts/ml-gate-20261025/development-recordings.json",
@@ -218,16 +220,19 @@
         "interpretation": "Strong false speech evidence on this violin clip. Speech clips lack window labels and include pauses; their passing fractions are not speech recall. Unknown training overlap. Experimental implementation only; no adoption or general quality claim."
       },
       "verification": {
-        "feature_enabled_tests_passed": 108,
-        "feature_disabled_tests_passed": 103,
-        "final_mode_tests_passed": 4,
-        "strict_clippy": "all targets, with and without neural-speech",
-        "engine": "Combined neural-speech/neural-pitch/deep-filter test compilation and typed preset roundtrip passed with QA feature.",
-        "sibling_cli": "Default player-cli release/offline/locked check passed; compatibility edits remain uncommitted in sibling checkout.",
-        "formatting": "Focused rustfmt --check and git diff --check passed."
+        "feature_enabled_tests_passed": 117,
+        "feature_disabled_tests_passed": 104,
+        "final_live_worker_tests_passed": 8,
+        "strict_clippy": "All targets with Silero, RNNoise, and QA evaluation enabled.",
+        "engine": "Combined Silero/CREPE/DeepFilter test compilation and both typed preset roundtrip tests passed.",
+        "shared_loader_native_parity": "Same loader and step implementation used by live worker and native golden comparison; all 16 reference probes passed.",
+        "source_timing": "Conservative filter-center timestamps and exact partition invariance verified, including noninteger source rates.",
+        "heap_activity": "No allocations/frees in asserted cold, active, backpressure, or reset callbacks.",
+        "formatting": "Focused rustfmt --check and git diff --check passed.",
+        "scope": "Local macOS functional evidence; no held-out quality, DAW deadline, or cross-platform adoption claim."
       },
       "silero_candidate": {
-        "status": "native_candidate_verified_not_runtime_integrated",
+        "status": "streaming_runtime_locally_validated_experimental",
         "evidence": "audit/artifacts/ml-gate-silero-20261025",
         "upstream_commit": "7e30209a3e901f9842f81b225f3e93d8199902b1",
         "native_model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
@@ -285,7 +290,30 @@
           "state_tolerance": 0.001
         },
         "interpretation": "Zero passing windows on the existing violin and cymbal clips; recurrent streaming scores exceed independent-window scores on three speech clips. Different grids/protocols and unlabeled speech pauses prevent a recall or general superiority claim. Unknown training overlap.",
-        "next": "Implement a chronological streaming worker with source-clock timestamps, generation and gap resets, causal resampling, confidence/staleness fallback, and zero-allocation callback tests before connecting the candidate to Gate."
+        "next": "Extend controlled false-cut/onset/noise/gain/rate evaluation, offline-render policy, user-facing model configuration, and real-host budgets before adoption. Full audit scope remains unchanged.",
+        "runtime_evidence": "audit/artifacts/ml-gate-streaming-20261025",
+        "local_runtime_results": {
+          "full_gate_tests_passed": 117,
+          "default_gate_tests_passed": 104,
+          "final_live_worker_tests_passed": 8,
+          "actual_speech_observations": 124,
+          "actual_speech_maximum_usable_source_age_ms": 144.04167,
+          "instrument_controls": {
+            "violin": {
+              "peak_observed_score": 0.5888816,
+              "observations": 74
+            },
+            "cymbal": {
+              "peak_observed_score": 0.052009434,
+              "observations": 124
+            },
+            "audio_result": "Bit-exact classical output on these two recordings; no speech protection triggered. Existing development recordings only."
+          },
+          "callback_and_reset_heap_activity": "None in asserted cold, active and backpressure paths.",
+          "packet_partition_invariance": "Exact recurrent state, partial frame, score and source-clock agreement at 22.05/44.12345/48/96 kHz.",
+          "memory_scope": "Whole standalone test process, baseline and live Silero Gate plus cold preparation and a rejected reinitialization; not incremental or steady-state per-plugin RAM.",
+          "maximum_resident_set_bytes": 31047680
+        }
       }
     },
     {

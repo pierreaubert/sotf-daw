@@ -30,4 +30,11 @@ pub use response::target_gain_db;
 mod neural_speech;
 mod speech_protection;
 #[doc(inline)]
-pub use speech_protection::{SpeechProtectionConfig, SpeechProtectionData};
+pub use speech_protection::{
+    SILERO_MODEL_SHA256, SpeechProtectionConfig, SpeechProtectionData, SpeechProtectionModel,
+};
+
+#[cfg(any(feature = "silero-speech", feature = "silero-vad-eval"))]
+pub mod silero;
+#[cfg(feature = "silero-speech")]
+mod silero_stream;
