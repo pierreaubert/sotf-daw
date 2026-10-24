@@ -1,0 +1,166 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index a09bad4fc..af779353e 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -133,15 +133,15 @@ realfft = "3.5"
+ metaheuristics-nature = { package = "sotf-metaheuristics-nature",  version = "10.1", git = "https://github.com/pierreaubert/sotf-3rdparties" }
+ 
+ # Shared numerical and acoustic crates from sibling workspaces.
+-math-test-functions = { version = "0.5", default-features = false, path = "../math-audio/crates/math-test-functions" }
+-math-delaunay = { version = "0.5", path = "../math-audio/crates/math-delaunay" }
+-math-iir-fir = { version = "0.5", path = "../math-audio/crates/math-iir-fir" }
+-math-optimisation = { version = "0.5", path = "../math-audio/crates/math-optimisation" }
+-math-dsp = { version = "0.5", path = "../math-audio/crates/math-dsp" }
+-math-rir = { version = "0.5", path = "../math-audio/crates/math-rir" }
++math-test-functions = { version = "0.5", default-features = false, path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-test-functions" }
++math-delaunay = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-delaunay" }
++math-iir-fir = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-iir-fir" }
++math-optimisation = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-optimisation" }
++math-dsp = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp" }
++math-rir = { version = "0.5", path = "/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-rir" }
+ sofa-reader = { version = "0.2", git = "https://github.com/pierreaubert/sofa-reader" }
+-autoeq = { version = ">=0.5.54", path = "../autoeq" }
+-autoeq-measurements = { version = "0.5.4", path = "../autoeq/crates/autoeq-measurements" }
++autoeq = { version = ">=0.5.54", path = "/Volumes/home_tmp/src/all_of_sotf/autoeq" }
++autoeq-measurements = { version = "0.5.4", path = "/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-measurements" }
+ 
+ # Symphonia add-ons from the sibling workspace.
+ symphonia-codec-dsd = { version = "0.2.0", git = "https://github.com/pierreaubert/symphonia-add-ons" }
+@@ -167,49 +167,49 @@ gpui-ios = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolk
+ gpui-au = { version = "0.10", git = "https://github.com/pierreaubert/gpui-toolkit" }
+ 
+ # SotF
+-sotf-host = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-host", default-features = false }
+-sotf-plugin-ab-compare = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
+-sotf-plugin-aae = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae" }
+-sotf-plugin-aec = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec" }
+-sotf-plugin-ambisonics = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics" }
+-sotf-plugin-band-merge = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-merge" }
+-sotf-plugin-band-split = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split" }
+-sotf-plugin-beamformer = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer" }
+-sotf-plugin-binaural = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural" }
+-sotf-plugin-channel-mute-solo = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo" }
+-sotf-plugin-convolution = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution" }
+-sotf-plugin-crossfeed = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed" }
+-sotf-plugin-crossover = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover" }
+-sotf-plugin-de-esser = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-de-esser" }
+-sotf-plugin-declick = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick" }
+-sotf-plugin-delay = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-delay" }
+-sotf-plugin-denoiser = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser" }
+-sotf-plugin-dither = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dither" }
+-sotf-plugin-downmix = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix" }
+-sotf-plugin-dynamic-eq = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq" }
+-sotf-plugin-eq = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq" }
+-sotf-plugin-gain = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain" }
+-sotf-plugin-gate = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate" }
+-sotf-plugin-hal-input = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input" }
+-sotf-plugin-hal-output = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output" }
+-sotf-plugin-hiss-reducer = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer" }
+-sotf-plugin-limiter = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter" }
+-sotf-plugin-linear-phase-eq = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq" }
+-sotf-plugin-loudness-compensation = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation" }
+-sotf-plugin-matrix = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix" }
+-sotf-plugin-mono-to-stereo = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo" }
+-sotf-plugin-multiband-compressor = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor" }
+-sotf-plugin-multiband-expander = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander" }
+-sotf-plugin-pnd = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd" }
+-sotf-plugin-resampler = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler" }
+-sotf-plugin-saturation = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation" }
+-sotf-plugin-spectral-compressor = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor" }
+-sotf-plugin-speech-denoiser = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser" }
+-sotf-plugin-stereo-imager = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager" }
+-sotf-plugin-transient-shaper = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper" }
+-sotf-plugin-upmixer = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer", default-features = false }
+-sotf-plugin-xtc = { path = "../sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc" }
+-sotf-iamf = { path = "../sotf-daw/crates/sotf-iamf" }
++sotf-host = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host", default-features = false }
++sotf-plugin-ab-compare = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ab-compare" }
++sotf-plugin-aae = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aae" }
++sotf-plugin-aec = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec" }
++sotf-plugin-ambisonics = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics" }
++sotf-plugin-band-merge = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-merge" }
++sotf-plugin-band-split = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-band-split" }
++sotf-plugin-beamformer = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer" }
++sotf-plugin-binaural = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-binaural" }
++sotf-plugin-channel-mute-solo = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo" }
++sotf-plugin-convolution = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution" }
++sotf-plugin-crossfeed = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed" }
++sotf-plugin-crossover = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossover" }
++sotf-plugin-de-esser = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-de-esser" }
++sotf-plugin-declick = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick" }
++sotf-plugin-delay = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-delay" }
++sotf-plugin-denoiser = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser" }
++sotf-plugin-dither = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dither" }
++sotf-plugin-downmix = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix" }
++sotf-plugin-dynamic-eq = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq" }
++sotf-plugin-eq = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq" }
++sotf-plugin-gain = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain" }
++sotf-plugin-gate = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate" }
++sotf-plugin-hal-input = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-input" }
++sotf-plugin-hal-output = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hal-output" }
++sotf-plugin-hiss-reducer = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer" }
++sotf-plugin-limiter = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter" }
++sotf-plugin-linear-phase-eq = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq" }
++sotf-plugin-loudness-compensation = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation" }
++sotf-plugin-matrix = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix" }
++sotf-plugin-mono-to-stereo = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-mono-to-stereo" }
++sotf-plugin-multiband-compressor = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor" }
++sotf-plugin-multiband-expander = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander" }
++sotf-plugin-pnd = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd" }
++sotf-plugin-resampler = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-resampler" }
++sotf-plugin-saturation = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation" }
++sotf-plugin-spectral-compressor = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor" }
++sotf-plugin-speech-denoiser = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser" }
++sotf-plugin-stereo-imager = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager" }
++sotf-plugin-transient-shaper = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper" }
++sotf-plugin-upmixer = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer", default-features = false }
++sotf-plugin-xtc = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc" }
++sotf-iamf = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-iamf" }
+ sotf-mpd = { path = "crates/sotf-server/crates/sotf-mpd" }
+ sotf-services = { path = "crates/sotf-server/crates/sotf-services", default-features = false }
+ sotf-service-tidal = { path = "crates/sotf-server/crates/sotf-service-tidal", default-features = false }
+@@ -218,19 +218,19 @@ sotf-dlna = { path = "crates/sotf-server/crates/sotf-dlna" }
+ sotf-cast = { path = "crates/sotf-server/crates/sotf-cast" }
+ sotf-federation = { path = "crates/sotf-server/crates/sotf-federation" }
+ sotf-tls = { path = "crates/sotf-server/crates/sotf-tls" }
+-sotf-testkit = { path = "../sotf-daw/crates/sotf-testkit" }
+-sotf-test = { path = "../sotf-daw/crates/sotf-test-macros" }
++sotf-testkit = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-testkit" }
++sotf-test = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-test-macros" }
+ sotf-player = { path = "crates/sotf-player" }
+-sotf-engine = { path = "../sotf-daw/crates/sotf-engine", default-features = false }
+-sotf-room-eq-graph = { path = "../sotf-daw/crates/sotf-room-eq-graph" }
+-sotf-capture = { path = "../sotf-capture" }
+-sotf-midi = { path = "../sotf-daw/crates/sotf-midi" }
+-sotf-plugins = { path = "../sotf-daw/crates/sotf-plugins", default-features = false }
+-plugins-gpui = { path = "../sotf-daw/crates/sotf-plugins/crates/plugins-gpui" }
+-plugins-denoiser = { path = "../sotf-daw/crates/sotf-plugins/crates/plugins-denoiser" }
+-plugins-spatial = { path = "../sotf-daw/crates/sotf-plugins/crates/plugins-spatial" }
+-driver-common = { path = "../sotf-daw/crates/driver-common" }
+-driver-hal = { path = "../sotf-daw/crates/driver-hal" }  # macOS only
++sotf-engine = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine", default-features = false }
++sotf-room-eq-graph = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-room-eq-graph" }
++sotf-capture = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-capture" }
++sotf-midi = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-midi" }
++sotf-plugins = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins", default-features = false }
++plugins-gpui = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-gpui" }
++plugins-denoiser = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser" }
++plugins-spatial = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial" }
++driver-common = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-common" }
++driver-hal = { path = "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/driver-hal" }  # macOS only
+ 
+ # audio
+ cpal = "0.17"
+diff --git a/crates/sotf-report-host/Cargo.toml b/crates/sotf-report-host/Cargo.toml
+index 8acfeef22..ae41c3731 100644
+--- a/crates/sotf-report-host/Cargo.toml
++++ b/crates/sotf-report-host/Cargo.toml
+@@ -17,7 +17,7 @@ sha2.workspace = true
+ tempfile.workspace = true
+ uuid.workspace = true
+ url.workspace = true
+-autoeq-report-wasm = { path = "../../../autoeq/crates/autoeq-report-wasm" }
++autoeq-report-wasm = { path = "/Volumes/home_tmp/src/all_of_sotf/autoeq/crates/autoeq-report-wasm" }
+ 
+ [dev-dependencies]
+ reqwest = { workspace = true, features = ["blocking"] }

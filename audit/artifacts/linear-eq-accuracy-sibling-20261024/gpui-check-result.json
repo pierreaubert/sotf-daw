@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/Users/pierre/.cargo/bin/cargo",
+    "check",
+    "--offline",
+    "--locked",
+    "-p",
+    "sotf-gpui",
+    "--lib",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0
+}

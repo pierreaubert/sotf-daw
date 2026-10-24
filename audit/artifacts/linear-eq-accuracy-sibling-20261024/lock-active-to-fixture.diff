@@ -1,0 +1,56 @@
+--- /Volumes/home_tmp/src/all_of_sotf/sotf/Cargo.lock	2026-10-24 14:14:51.589332530 +0200
++++ /Volumes/home_worktrees/sotf-lineareq-accuracy-20261024/Cargo.lock	2026-10-24 17:44:07.689690547 +0200
+@@ -902,7 +902,7 @@
+ 
+ [[package]]
+ name = "autoeq-optim"
+-version = "0.5.63"
++version = "0.5.64"
+ dependencies = [
+  "autoeq-core",
+  "autoeq-measurements",
+@@ -940,7 +940,7 @@
+ 
+ [[package]]
+ name = "autoeq-report-wasm"
+-version = "0.5.0"
++version = "0.5.1"
+ dependencies = [
+  "autoeq-core",
+  "base64 0.23.1",
+@@ -8695,7 +8695,7 @@
+ 
+ [[package]]
+ name = "roomeq-engine"
+-version = "0.5.83"
++version = "0.5.84"
+ dependencies = [
+  "autoeq-core",
+  "autoeq-fir",
+@@ -8740,7 +8740,7 @@
+ 
+ [[package]]
+ name = "roomeq-model"
+-version = "0.5.14"
++version = "0.5.15"
+ dependencies = [
+  "autoeq-core",
+  "clap",
+@@ -8755,7 +8755,7 @@
+ 
+ [[package]]
+ name = "roomeq-quality"
+-version = "0.5.61"
++version = "0.5.62"
+ dependencies = [
+  "autoeq-core",
+  "hound",
+@@ -8782,7 +8782,7 @@
+ 
+ [[package]]
+ name = "roomeq-workflow"
+-version = "0.5.35"
++version = "0.5.36"
+ dependencies = [
+  "anyhow",
+  "autoeq-artifacts",

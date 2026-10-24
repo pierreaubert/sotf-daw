@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/Users/pierre/.cargo/bin/cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "-p",
+    "sotf-player",
+    "--lib",
+    "--features",
+    "dev-api",
+    "controllers::plugin::",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--test-threads=2"
+  ],
+  "exit_code": 0
+}

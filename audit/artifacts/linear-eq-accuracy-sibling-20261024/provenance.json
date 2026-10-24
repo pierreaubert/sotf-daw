@@ -1,0 +1,43 @@
+{
+  "baseline": "7c4d6dd25ff5fd40dd6f952d0c7be4fac852f540",
+  "active_files": {
+    "Cargo.lock": "25c9b838bee45d3755ad31e9cafb28e2d4d5c9b049b9eae7b30cdd9eb33fca52",
+    "builds/systemwide/Dockerfile.test-linux-arm64": "2dfa1ba95d61097c76cb5009cbe488f788f9ac4c78e7204f7cc76ab8e8529997",
+    "crates/sotf-player/tests/capture_frontend.rs": "831a365c777e938050ef0d1b60dff58f07542ea9372cfca1af94234bbb6f7525",
+    "audit-20261018.md": "9a60399477c4d9b48f92f355952d7afab1a588b365decd5a6cd12afc698861a8"
+  },
+  "active_index": "9a2f70769341342e80e0588f2bd668834e9e70154ea8bce7ed528d8a61ed9c1d",
+  "issue": "http://192.168.1.32:3001/pierre/sotf/issues/192",
+  "missing_guidance": "GPUI.md absent in source checkout and worktree; app AGENTS + GPUI skill read",
+  "manifest_adaptations": [
+    "Cargo.toml: external relative paths made absolute to original dependencies",
+    "crates/sotf-report-host/Cargo.toml: same autoeq origin to avoid symlink source collision"
+  ],
+  "lock_fixture": "Copied active Cargo.lock to isolated worktree; offline incremental resolution changed exactly six local autoeq/RoomEQ versions; no registry change",
+  "prerequisite_failures": [
+    {
+      "step": "first isolated test --offline --locked",
+      "error": "package collision autoeq-core v0.5.12 via real origin and /Volumes/home_worktrees/autoeq symlink path",
+      "resolution": "adapt isolated sotf-report-host manifest path to same real origin"
+    },
+    {
+      "step": "isolated baseline lock --locked",
+      "error": "lockfile requires updates",
+      "resolution": "copy existing active app lock snapshot, then incremental offline resolution in isolated worktree only"
+    },
+    {
+      "step": "full generate-lockfile --offline",
+      "error": "libc =0.2.189 conflicts with parking_lot_core0.10 libc ^0.2.191 under newly selected toolkit483ea7/GPUI4cbf",
+      "resolution": "rejected full regeneration; retained coherent active app snapshot toolkitf556/GP UId476 and incremental six local-version changes"
+    }
+  ],
+  "source_checks": {
+    "edited_rust_files": 11,
+    "rustfmt": "passed",
+    "design_token_guard": "passed from isolated worktree root",
+    "initial_new_tests": "2 passed",
+    "initial_broader_controller_suite": "66 passed,1 stale five-global-count assertion failed; raw retained; updated test adds105 and preserves old IDs",
+    "default_gpui_library_compile": "passed --offline --locked",
+    "final_dev_api_suite": "85 passed,0 failed"
+  }
+}

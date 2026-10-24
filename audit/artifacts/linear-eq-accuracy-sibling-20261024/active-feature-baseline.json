@@ -1,0 +1,13 @@
+{
+  "crates/app-gpui/components/plugins/custom_view_registry/render.rs": "80c222e6b0d8be4caaa8d3951c94c5b7a012bd1f48ccd4d362c5dee7673c7af3",
+  "crates/app-gpui/components/plugins/ui_eq/linear_phase.rs": "46a0f9137b46fb91490a0e58ff9dd04464bde1d2fe95305d9133666d7d4817ab",
+  "crates/app-gpui/components/plugins/ui_eq/render.rs": "e6b0c203a11bc442bf038a08db5f19f3d55034b2855eb780e488abb7483f6ce8",
+  "crates/app-gpui/components/plugins/ui_eq/types.rs": "f1322fb2b91144b43f60f6202a73c363f3eb4f07f1c1d890b637baf95451b359",
+  "crates/app-gpui/components/plugins/ui_layout_renderer/render.rs": "135176408c2162e392f934b3ef81bb182428dbe2db37e9f45e20480ca687f8dd",
+  "crates/sotf-player/src/controllers/plugin/linear_phase.rs": "facadda5e5b830067292ead990b2d0ca76191929bbbc02410e657aafe70edc8e",
+  "crates/sotf-player/src/controllers/plugin/misc.rs": "4cd3df00b95a5d4dfe1e161da2465d38fb0c78ec80da580358fe3bddb9c75141",
+  "crates/sotf-player/src/controllers/plugin/parameter_metadata.rs": "6e3a6c91fef25722a49a8337017c1f654fea13ed632ad5cf99d5921d983d9ba7",
+  "crates/sotf-player/src/controllers/plugin/set.rs": "83c66de1239fdbd7705e8c3976acbdfc50b40e75a79dc7a227f12022ad796092",
+  "crates/sotf-player/src/ui_params/types.rs": "cdddf540796dce22d65b524e8bb48dadeb8a1b3dff68d7290542b80df6d27338",
+  "crates/sotf-player/src/controllers/plugin/tests.rs": "9faef113661a1bd0c8206784d6c4388511670eb0b0fe2ba14495a3a2bcdd42b0"
+}

@@ -1,0 +1,24 @@
+{
+  "commit": "ff4d38c000b5bc36f99e6affd1673ae4c8c10a2a",
+  "patch_sha256": "24b7f717595182d2045c4e3d4b0591194be00ca1f9233d7b3aaf341c8fcaa6d5",
+  "applied_paths": [
+    "crates/app-gpui/components/plugins/custom_view_registry/render.rs",
+    "crates/app-gpui/components/plugins/ui_eq/linear_phase.rs",
+    "crates/app-gpui/components/plugins/ui_eq/render.rs",
+    "crates/app-gpui/components/plugins/ui_eq/types.rs",
+    "crates/app-gpui/components/plugins/ui_layout_renderer/render.rs",
+    "crates/sotf-player/src/controllers/plugin/linear_phase.rs",
+    "crates/sotf-player/src/controllers/plugin/misc.rs",
+    "crates/sotf-player/src/controllers/plugin/parameter_metadata.rs",
+    "crates/sotf-player/src/controllers/plugin/set.rs",
+    "crates/sotf-player/src/controllers/plugin/tests.rs",
+    "crates/sotf-player/src/ui_params/types.rs"
+  ],
+  "all_targets_match_commit": true,
+  "all_four_preexisting_files_byte_exact": true,
+  "active_stage_blobs_unchanged": true,
+  "active_lockfile_unchanged": true,
+  "branch_switched": false,
+  "staging_performed": false,
+  "scoped_whitespace_exit": 0
+}

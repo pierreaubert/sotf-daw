@@ -1,0 +1,13 @@
+[
+  "crates/app-gpui/components/plugins/custom_view_registry/render.rs",
+  "crates/app-gpui/components/plugins/ui_eq/linear_phase.rs",
+  "crates/app-gpui/components/plugins/ui_eq/render.rs",
+  "crates/app-gpui/components/plugins/ui_eq/types.rs",
+  "crates/app-gpui/components/plugins/ui_layout_renderer/render.rs",
+  "crates/sotf-player/src/controllers/plugin/linear_phase.rs",
+  "crates/sotf-player/src/controllers/plugin/misc.rs",
+  "crates/sotf-player/src/controllers/plugin/parameter_metadata.rs",
+  "crates/sotf-player/src/controllers/plugin/set.rs",
+  "crates/sotf-player/src/ui_params/types.rs",
+  "crates/sotf-player/src/controllers/plugin/tests.rs"
+]

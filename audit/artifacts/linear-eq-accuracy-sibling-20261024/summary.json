@@ -1,0 +1,23 @@
+{
+  "commit": "ff4d38c000b5bc36f99e6affd1673ae4c8c10a2a",
+  "source_hashes": {
+    "crates/app-gpui/components/plugins/custom_view_registry/render.rs": "098ec45b311daffb0da548f551074d772280fd6c8c0c0b24274b86b61a572228",
+    "crates/app-gpui/components/plugins/ui_eq/linear_phase.rs": "1189a84c3b392f8ea7cd15c7b9cf1d863165e108fc68d907193ff2c5bd7d0e2b",
+    "crates/app-gpui/components/plugins/ui_eq/render.rs": "380c26cc4bcd37d41b2e2c5fe7390ca577ace562ac6ec2f01e1c269a0bc083b6",
+    "crates/app-gpui/components/plugins/ui_eq/types.rs": "b73320ad4afddacb5ce05205ead1e0745c43188451f86d3267e6bbf1b4cdfe58",
+    "crates/app-gpui/components/plugins/ui_layout_renderer/render.rs": "4a618d8417a706383fbaf0339f79cb133ed01f5b886cbd2b1991885d5d4db614",
+    "crates/sotf-player/src/controllers/plugin/linear_phase.rs": "0323eac02523b6e05e765ab0fc0c94aefe98b32af83fd5b62d7ea230135b5cb7",
+    "crates/sotf-player/src/controllers/plugin/misc.rs": "6c1ae39f7d6ee9454b3d25709c65afc3a8a92a178396ba6ab46365bbf82c3011",
+    "crates/sotf-player/src/controllers/plugin/parameter_metadata.rs": "73477f3a2a0119c5aeec02ac4bacb0a48f019cb8afc95eef38bc8475826b4ac6",
+    "crates/sotf-player/src/controllers/plugin/set.rs": "f1918d3dc56d12590ea2f907c951840a70e80ca1d96d0b808c019480c31acf16",
+    "crates/sotf-player/src/controllers/plugin/tests.rs": "cef4932d0583964a2b243b0e64808a18830fad763a78513d72150a6e58ab7129",
+    "crates/sotf-player/src/ui_params/types.rs": "64f30ae9a93b60fd32c15bf758d97bdc825f35c16e272c82116399838dba98de"
+  },
+  "active_source_matches_commit": true,
+  "controller_tests_passed": 85,
+  "gpui_default_check_exit": 0,
+  "live_numeric_ui_latency_available": false,
+  "ui_scope": "Automatic/pending summary; actual selected support/latency reported by DSP/host API",
+  "main_daw_feature_commit": "c5511b362f5ef6839fcb7c906bb12d290139a399",
+  "validation_scope": "Isolated fixture paths/local package version alignments; actual active source port verified, active user files/index/lock preserved by captured proof"
+}

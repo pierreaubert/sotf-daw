@@ -1,0 +1,444 @@
+diff --git a/crates/app-gpui/components/plugins/custom_view_registry/render.rs b/crates/app-gpui/components/plugins/custom_view_registry/render.rs
+index 27d192867..eedd725db 100644
+--- a/crates/app-gpui/components/plugins/custom_view_registry/render.rs
++++ b/crates/app-gpui/components/plugins/custom_view_registry/render.rs
+@@ -841,6 +841,7 @@ pub(super) fn render_linear_phase_eq(
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         mix,
+         filters,
+         ..
+@@ -909,6 +910,7 @@ pub(super) fn render_linear_phase_eq(
+                 selected_band_idx,
+                 midi_overlay: ctx.midi_overlay,
+                 mode: ui_eq::EqViewMode::LinearPhase {
++                    accuracy_mode: *accuracy_mode,
+                     latency_samples,
+                     latency_ms,
+                     fir_length: fir_len_samples,
+diff --git a/crates/app-gpui/components/plugins/ui_eq/linear_phase.rs b/crates/app-gpui/components/plugins/ui_eq/linear_phase.rs
+index 6d8869562..ce6a8b658 100644
+--- a/crates/app-gpui/components/plugins/ui_eq/linear_phase.rs
++++ b/crates/app-gpui/components/plugins/ui_eq/linear_phase.rs
+@@ -46,7 +46,6 @@ pub(crate) fn render_header(
+     let text =
+         crate::app::i18n::EqViewTranslations::for_language(entity.read(cx).app.ui_state.language);
+     let mut fir = specs::PARAMS[1];
+-    fir.name = text.fir_length;
+     let mut phase = specs::PARAMS[2];
+     phase.name = text.phase;
+     let mut auto = specs::PARAMS[3];
+@@ -56,11 +55,17 @@ pub(crate) fn render_header(
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         ..
+     } = settings
+     else {
+         return Empty.into_any_element();
+     };
++    fir.name = if *accuracy_mode {
++        "Saved Manual FIR Length"
++    } else {
++        text.fir_length
++    };
+     let change_entity = entity.clone();
+     let count = NumberInput::new(("fir-eq-count", plugin_idx))
+         .value(*num_filters)
+@@ -116,6 +121,15 @@ pub(crate) fn render_header(
+             if *auto_gain { 1.0 } else { 0.0 },
+             theme,
+         ))
++        .child(render_compact_choice_param(
++            d,
++            entity.clone(),
++            plugin_idx,
++            105,
++            &specs::PARAMS[5],
++            f64::from(*accuracy_mode),
++            theme,
++        ))
+         .into_any_element()
+ }
+ 
+@@ -385,6 +399,7 @@ pub(super) fn render(
+                 .color(theme.text_muted),
+         );
+     if let EqViewMode::LinearPhase {
++        accuracy_mode,
+         latency_samples,
+         latency_ms,
+         fir_length,
+@@ -392,7 +407,16 @@ pub(super) fn render(
+         ..
+     } = &state.mode
+     {
+-        root = root.child(Text::caption(format!("{phase_mode} phase · {fir_length} taps · Latency {latency_samples} samples ({latency_ms:.2} ms)")).color(theme.text_secondary));
++        let summary = if *accuracy_mode {
++            format!(
++                "{phase_mode} phase · Automatic FIR support · Resolved length and latency pending"
++            )
++        } else {
++            format!(
++                "{phase_mode} phase · {fir_length} taps · Latency {latency_samples} samples ({latency_ms:.2} ms)"
++            )
++        };
++        root = root.child(Text::caption(summary).color(theme.text_secondary));
+     }
+     if let Some(overlay) = state
+         .midi_overlay
+diff --git a/crates/app-gpui/components/plugins/ui_eq/render.rs b/crates/app-gpui/components/plugins/ui_eq/render.rs
+index 0dd388c08..6e77b9f07 100644
+--- a/crates/app-gpui/components/plugins/ui_eq/render.rs
++++ b/crates/app-gpui/components/plugins/ui_eq/render.rs
+@@ -2659,6 +2659,7 @@ pub fn render_eq_plugin(
+             phase_mode,
+             auto_gain,
+             mix,
++            accuracy_mode: false,
+         } => Some((
+             *latency_samples,
+             *latency_ms,
+@@ -2667,7 +2668,11 @@ pub fn render_eq_plugin(
+             *auto_gain,
+             *mix,
+         )),
+-        EqViewMode::Standard => None,
++        EqViewMode::Standard
++        | EqViewMode::LinearPhase {
++            accuracy_mode: true,
++            ..
++        } => None,
+     };
+     let lp_header = fir_summary.map(
+         |(latency_samples, latency_ms, fir_length, phase_mode, auto_gain, mix)| {
+diff --git a/crates/app-gpui/components/plugins/ui_eq/types.rs b/crates/app-gpui/components/plugins/ui_eq/types.rs
+index 3bffd992b..ee1ef9231 100644
+--- a/crates/app-gpui/components/plugins/ui_eq/types.rs
++++ b/crates/app-gpui/components/plugins/ui_eq/types.rs
+@@ -13,7 +13,9 @@ use sotf_audio_player_midi::mapping::MidiOverlay;
+ pub enum EqViewMode {
+     Standard,
+     LinearPhase {
+-        /// Actual DSP streaming latency, including convolver partitions and ordered stages.
++        /// Whether FIR support requires a resolved automatic accuracy report.
++        accuracy_mode: bool,
++        /// Manual streaming latency, shown only when automatic accuracy is disabled.
+         latency_samples: usize,
+         /// Latency in milliseconds at the current sample rate
+         latency_ms: f32,
+diff --git a/crates/app-gpui/components/plugins/ui_layout_renderer/render.rs b/crates/app-gpui/components/plugins/ui_layout_renderer/render.rs
+index 07d84d928..26c9885aa 100644
+--- a/crates/app-gpui/components/plugins/ui_layout_renderer/render.rs
++++ b/crates/app-gpui/components/plugins/ui_layout_renderer/render.rs
+@@ -658,7 +658,7 @@ pub(crate) fn shell_owned_param_indices(settings: &PluginSettings) -> Vec<usize>
+         PluginSettings::Compressor { .. } => &[7, 8, 14],
+         PluginSettings::Upmixer { .. } => &[0],
+         PluginSettings::DynamicEq { .. } => &[0, 6],
+-        PluginSettings::LinearPhaseEq { .. } => &[100, 101, 102, 103],
++        PluginSettings::LinearPhaseEq { .. } => &[100, 101, 102, 103, 105],
+         PluginSettings::MultibandCompressor { .. } => &[0, 1, 12, 14],
+         PluginSettings::MultibandExpander { .. } => &[0, 1, 15],
+         PluginSettings::SpectrumAnalyzer { .. } => &[4, 5],
+diff --git a/crates/sotf-player/src/controllers/plugin/linear_phase.rs b/crates/sotf-player/src/controllers/plugin/linear_phase.rs
+index e0bbe6f26..2fbcf9df4 100644
+--- a/crates/sotf-player/src/controllers/plugin/linear_phase.rs
++++ b/crates/sotf-player/src/controllers/plugin/linear_phase.rs
+@@ -1,5 +1,5 @@
+ //! Desktop FIR EQ parameter addresses preserve the original five-field bands.
+-//! Globals use 100..105 and placements use 200..210 to avoid aliasing bands.
++//! Globals use 100..106 and placements use 200..210 to avoid aliasing bands.
+ 
+ // Rust guideline compliant 2026-02-21
+ use crate::PluginSettings;
+@@ -9,7 +9,7 @@ use sotf_plugins::plugin_eq::EqBandPlacement;
+ pub(super) fn spec(index: usize) -> Option<&'static ParamSpec> {
+     match index {
+         0..50 => specs::BAND_TEMPLATE.get(index % 5),
+-        100..105 => specs::PARAMS.get(index - 100),
++        100..106 => specs::PARAMS.get(index - 100),
+         200..210 => specs::BAND_TEMPLATE.get(5),
+         _ => None,
+     }
+@@ -33,6 +33,7 @@ pub(super) fn value(settings: &PluginSettings, index: usize) -> Option<f64> {
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         mix,
+         ..
+     } = settings
+@@ -45,6 +46,7 @@ pub(super) fn value(settings: &PluginSettings, index: usize) -> Option<f64> {
+         102 => Some(*phase_mode),
+         103 => Some(if *auto_gain { 1.0 } else { 0.0 }),
+         104 => Some(*mix),
++        105 => Some(f64::from(*accuracy_mode)),
+         200..210 => Some(placement_value(filters.get(index - 200)?.placement)),
+         0..50 => {
+             let filter = filters.get(index / 5)?;
+@@ -78,6 +80,7 @@ pub(super) fn set_extra(settings: &mut PluginSettings, index: usize, value: f64)
+         fir_length,
+         phase_mode,
+         auto_gain,
++        accuracy_mode,
+         mix,
+         ..
+     } = settings
+@@ -95,6 +98,7 @@ pub(super) fn set_extra(settings: &mut PluginSettings, index: usize, value: f64)
+         102 => *phase_mode = value,
+         103 => *auto_gain = value > 0.5,
+         104 => *mix = value,
++        105 => *accuracy_mode = value > 0.5,
+         200..210 => {
+             let Some(filter) = filters.get_mut(index - 200) else {
+                 return false;
+@@ -127,3 +131,99 @@ pub(super) fn reset(settings: &mut PluginSettings, index: usize) -> Option<bool>
+         &mut false,
+     ))
+ }
++
++#[cfg(test)]
++mod accuracy_integration_tests {
++    use super::super::parameter_metadata::{desktop_param_indices, desktop_param_value};
++    use super::*;
++    use crate::ui_params::TuiEditablePlugin;
++    use crate::{PluginType, get_param_count};
++
++    #[test]
++    fn accuracy_mode_keeps_desktop_addresses_and_saved_manual_length() {
++        let mut settings = PluginSettings::default_for(&PluginType::LinearPhaseEq).unwrap();
++        let before = settings.clone();
++        let addresses = desktop_param_indices(&settings);
++        assert!(addresses.contains(&105));
++        for (index, key) in [
++            (100, "num_filters"),
++            (101, "fir_length_index"),
++            (102, "phase_mode_index"),
++            (103, "auto_gain"),
++            (104, "mix"),
++            (105, "accuracy_mode"),
++        ] {
++            assert_eq!(spec(index).unwrap().engine_key, key);
++        }
++        assert_eq!(desktop_param_value(&settings, 105), Some(0.0));
++        assert!(set_extra(&mut settings, 105, 1.0));
++        assert_eq!(desktop_param_value(&settings, 105), Some(1.0));
++        for index in addresses.into_iter().filter(|index| *index != 105) {
++            assert_eq!(
++                desktop_param_value(&settings, index),
++                desktop_param_value(&before, index)
++            );
++        }
++        let config = settings.to_plugin_config(96_000.0);
++        assert_eq!(config.parameters["accuracy_mode"], true);
++        assert_eq!(
++            config.parameters["fir_length_index"],
++            before.to_plugin_config(96_000.0).parameters["fir_length_index"]
++        );
++        let restored: PluginSettings =
++            serde_json::from_value(serde_json::to_value(&settings).unwrap()).unwrap();
++        assert_eq!(desktop_param_value(&restored, 105), Some(1.0));
++        assert_eq!(reset(&mut settings, 105), Some(true));
++        assert_eq!(
++            serde_json::to_value(settings).unwrap(),
++            serde_json::to_value(before).unwrap()
++        );
++    }
++
++    #[test]
++    fn accuracy_mode_tui_rows_follow_descriptors_without_aliasing_bands() {
++        let mut settings = PluginSettings::default_for(&PluginType::LinearPhaseEq).unwrap();
++        let before = settings.clone();
++        let globals = specs::PARAMS.len();
++        assert_eq!(get_param_count(&settings), settings.get_descriptors().len());
++        assert_eq!(
++            settings.get_value_as_string(5),
++            specs::PARAMS[5].format_value(0.0)
++        );
++        assert!(settings.set_param(5, 1.0));
++        assert_eq!(
++            settings.get_value_as_string(5),
++            specs::PARAMS[5].format_value(1.0)
++        );
++        assert_eq!(
++            settings.get_value_as_string(globals + 1),
++            before.get_value_as_string(globals + 1)
++        );
++        assert!(settings.adjust_param(globals + 1, 1.0));
++        let PluginSettings::LinearPhaseEq {
++            accuracy_mode,
++            filters,
++            fir_length,
++            ..
++        } = &settings
++        else {
++            panic!("FIR EQ")
++        };
++        let PluginSettings::LinearPhaseEq {
++            filters: old_filters,
++            fir_length: old_length,
++            ..
++        } = before
++        else {
++            panic!("FIR EQ")
++        };
++        assert!(*accuracy_mode);
++        assert!(filters[0].frequency > old_filters[0].frequency);
++        assert_eq!(fir_length, &old_length);
++        assert!(settings.set_param(5, 0.0));
++        assert_eq!(
++            settings.get_value_as_string(5),
++            specs::PARAMS[5].format_value(0.0)
++        );
++    }
++}
+diff --git a/crates/sotf-player/src/controllers/plugin/misc.rs b/crates/sotf-player/src/controllers/plugin/misc.rs
+index f69341a71..afc873c94 100644
+--- a/crates/sotf-player/src/controllers/plugin/misc.rs
++++ b/crates/sotf-player/src/controllers/plugin/misc.rs
+@@ -34,7 +34,11 @@ pub fn ambisonics_layout_transition_error(
+ pub fn get_param_count(settings: &PluginSettings) -> usize {
+     match settings {
+         PluginSettings::EQ { filters, .. } => filters.len() * 4,
+-        PluginSettings::LinearPhaseEq { filters, .. } => filters.len() * 6 + 5,
++        PluginSettings::LinearPhaseEq { filters, .. } => {
++            let specs = sotf_plugins::param_specs::linear_phase_eq::PARAMS;
++            let bands = sotf_plugins::param_specs::linear_phase_eq::BAND_TEMPLATE;
++            filters.len() * bands.len() + specs.len()
++        }
+         PluginSettings::DynamicEq { num_bands, .. } => 8 + (*num_bands as usize).clamp(1, 8) * 10,
+         _ => settings.param_specs().len(),
+     }
+diff --git a/crates/sotf-player/src/controllers/plugin/parameter_metadata.rs b/crates/sotf-player/src/controllers/plugin/parameter_metadata.rs
+index 5cdd3b3b8..7829ef72c 100644
+--- a/crates/sotf-player/src/controllers/plugin/parameter_metadata.rs
++++ b/crates/sotf-player/src/controllers/plugin/parameter_metadata.rs
+@@ -18,7 +18,7 @@ pub fn desktop_param_indices(settings: &crate::PluginSettings) -> Vec<usize> {
+         }
+         crate::PluginSettings::LinearPhaseEq { filters, .. } => {
+             let mut indices: Vec<usize> = (0..filters.len() * 5).collect();
+-            indices.extend(100..105);
++            indices.extend(100..100 + sotf_plugins::param_specs::linear_phase_eq::PARAMS.len());
+             indices.extend(200..200 + filters.len());
+             indices
+         }
+diff --git a/crates/sotf-player/src/controllers/plugin/set.rs b/crates/sotf-player/src/controllers/plugin/set.rs
+index 2a20a0113..5b1358340 100644
+--- a/crates/sotf-player/src/controllers/plugin/set.rs
++++ b/crates/sotf-player/src/controllers/plugin/set.rs
+@@ -696,6 +696,7 @@ mod tests {
+             fir_length: 1024.0,
+             phase_mode: 0.0,
+             auto_gain: true,
++            accuracy_mode: false,
+             mix: 1.0,
+             stereo_pairs: None,
+         };
+@@ -725,6 +726,7 @@ mod tests {
+             fir_length: 2048.0,
+             phase_mode: 0.0,
+             auto_gain: true,
++            accuracy_mode: false,
+             mix: 1.0,
+             stereo_pairs: None,
+         };
+diff --git a/crates/sotf-player/src/controllers/plugin/tests.rs b/crates/sotf-player/src/controllers/plugin/tests.rs
+index 8883ca6d3..9967e92fc 100644
+--- a/crates/sotf-player/src/controllers/plugin/tests.rs
++++ b/crates/sotf-player/src/controllers/plugin/tests.rs
+@@ -1691,6 +1691,7 @@ fn linear_phase_eq_dense_addresses_preserve_band_stride_and_globals() {
+             (102, 1.0),
+             (103, 1.0),
+             (104, 65.0),
++            (105, 1.0),
+             (46, 750.0),
+             (47, 2.35),
+             (48, -3.5),
+@@ -1714,6 +1715,7 @@ fn linear_phase_eq_dense_addresses_preserve_band_stride_and_globals() {
+         else {
+             unreachable!()
+         };
++        assert_eq!(super::linear_phase::value(settings, 105), Some(1.0));
+         assert_eq!(*num_filters, 10.0);
+         assert_eq!(filters.len(), 10);
+         assert!((*mix - 0.65).abs() < 1e-6);
+@@ -1750,7 +1752,7 @@ fn linear_phase_eq_dense_addresses_preserve_band_stride_and_globals() {
+                 .abs()
+                 < 1e-6
+         );
+-        for param in [46, 47, 48, 49, 209, 104] {
++        for param in [46, 47, 48, 49, 209, 104, 105] {
+             let effect = if by_node {
+                 controller.reset_plugin_param_by_node_id(node, param)
+             } else {
+@@ -1775,7 +1777,7 @@ fn linear_phase_eq_dense_addresses_preserve_band_stride_and_globals() {
+         controller.set_plugin_param(index, 100, 3.0);
+         assert_eq!(
+             crate::get_param_count(&controller.graph.get_plugin(index).unwrap().settings),
+-            23
++            24
+         );
+     }
+ }
+@@ -1794,12 +1796,12 @@ fn linear_phase_eq_dense_query_addresses_cover_globals_and_placements() {
+     let key = format!("plugins.plugin.{index}");
+     assert_eq!(
+         plugin_query(&controller.graph, &format!("{key}.param_count")).unwrap(),
+-        serde_json::json!(17)
++        serde_json::json!(18)
+     );
+     assert_eq!(
+         plugin_query(&controller.graph, &format!("{key}.param_indices")).unwrap(),
+         serde_json::json!([
+-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 101, 102, 103, 104, 200, 201
++            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 101, 102, 103, 104, 105, 200, 201
+         ])
+     );
+     for (param, name, input, expected) in [
+@@ -1807,6 +1809,7 @@ fn linear_phase_eq_dense_query_addresses_cover_globals_and_placements() {
+         (102, "Phase Mode", 1.0, 1.0),
+         (103, "Auto Gain", 1.0, 1.0),
+         (104, "Mix", 42.0, 0.42),
++        (105, "Automatic Accuracy", 1.0, 1.0),
+         (201, "Placement", 5.0, 5.0),
+     ] {
+         controller.set_plugin_param(index, param, input);
+diff --git a/crates/sotf-player/src/ui_params/types.rs b/crates/sotf-player/src/ui_params/types.rs
+index ab263ee6b..d0bf035be 100644
+--- a/crates/sotf-player/src/ui_params/types.rs
++++ b/crates/sotf-player/src/ui_params/types.rs
+@@ -170,6 +170,7 @@ impl TuiEditablePlugin for PluginSettings {
+                 fir_length,
+                 phase_mode,
+                 auto_gain,
++                accuracy_mode,
+                 mix,
+                 filters,
+                 ..
+@@ -193,6 +194,7 @@ impl TuiEditablePlugin for PluginSettings {
+                             });
+                         }
+                         4 => *mix,
++                        5 => f64::from(*accuracy_mode),
+                         _ => return String::new(),
+                     };
+                     global_specs[index].format_value(val)
+@@ -488,6 +490,7 @@ impl TuiEditablePlugin for PluginSettings {
+                 fir_length,
+                 phase_mode,
+                 auto_gain,
++                accuracy_mode,
+                 mix,
+                 filters,
+                 ..
+@@ -520,6 +523,7 @@ impl TuiEditablePlugin for PluginSettings {
+                         2 => *phase_mode = if *phase_mode >= 0.5 { 0.0 } else { 1.0 },
+                         3 => *auto_gain = !*auto_gain,
+                         4 => *mix = (*mix + delta * 0.01).clamp(0.0, 1.0),
++                        5 => *accuracy_mode = !*accuracy_mode,
+                         _ => return false,
+                     }
+                     return true;

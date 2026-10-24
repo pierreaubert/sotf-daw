@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/debug/deps/sotf_audio_player-8152db4be0dc2711",
+    "controllers::plugin::",
+    "--test-threads=2"
+  ],
+  "exit_code": 101
+}

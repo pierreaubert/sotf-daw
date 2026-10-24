@@ -2709,6 +2709,38 @@
             "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.json",
             "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md"
           ]
+        },
+        {
+          "requirement": "Implement the user-approved opt-in automatic sampled-accuracy mode with resolved support, truthful latency and compatible state/control propagation.",
+          "status": "implemented_and_verified",
+          "result": "Implemented in c5511b3, with sibling app propagation in ff4d38c. The default-off accuracy_mode selects the shortest qualifying 1024/2048/4096/8192-tap support while preserving manual choices, stored values and existing automation IDs. Qualification measures retained f32 kernels on the declared FFT/log/Q-aware samples: 0.05 dB above the -80 dB reference floor, with an explicit absolute residual limit below it. Ordered routes use the documented operator bound; this is not continuous-frequency certification. Unsupported targets fail explicitly. Actual-rate construction reports selected support, full route latency and additional latency before audio. Live updates keep support and latency fixed; unqualified targets and clock changes require structural rebuild.\n\nLegacy complete presets restore manual mode; incomplete overlays preserve the current mode. Known-clock native failures reject before parameter stores and preserve backend, latency and nonzero history. Core validation passes 152 tests with two historical ignores, plus focused debug and automatic-mode heap checks. The actual host PDC comparison covers 2,426 frames at 1056 samples versus manual 544, with 1.49e-8 error; the stale-manual reference differs by 0.25. Native lifecycle/PDC, engine and bridge checks pass. Fifteen FFI tests and normal strict Clippy pass on the recorded coherent dependency fixture; ordinary-main dependency, release-lint and low-rate NIH baseline failures remain excluded from success.\n\nThe sibling app passes 85 controller/dev-api tests and GPUI compilation/style checks. Its eleven files were ported while preserving existing user files, index and lock. Numeric live GPUI reports need a future bridge; the automatic summary does not invent manual-derived values. Historical manual FIR-M1 assertions, performance limitations and deferred external validation remain. Optional ML work stays separate.",
+          "evidence": [
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/README.md",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/summary.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/verify.py",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/source-manifest.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/owned-paths.txt",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-final-confirmed.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-debug-auto.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-debug-manual.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-true-mode-heap.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/bridge-added-latency.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/delegated-host-pdc.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/engine-converter-qa.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/nih-native-lifecycle-final.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/ffi-legacy-coherent.json",
+            "audit/artifacts/remaining-linear-eq-accuracy-20261024/ffi-legacy-clippy-debug-coherent.json",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/README.md",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/summary.json",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/active-port-result.json",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/controller-dev-tests-result.json",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/gpui-check-result.json",
+            "audit/artifacts/linear-eq-accuracy-sibling-20261024/manifest.sha256.json",
+            "audit/artifacts/ffi-gpui-validation-baseline-20261024/README.md",
+            "audit/artifacts/ffi-gpui-validation-baseline-20261024/fixture.json",
+            "audit/artifacts/ffi-gpui-validation-baseline-20261024/fixture-lock.patch",
+            "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md"
+          ]
         }
       ],
       "evidence": [
@@ -2764,7 +2796,42 @@
         "audit/artifacts/remaining-fir-anchors-20261024/compare_lengths.py",
         "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.json",
         "audit/artifacts/remaining-fir-anchors-20261024/length-comparison.md",
-        "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md"
+        "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/README.md",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/README.md",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/summary.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/verify.py",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/source-manifest.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/owned-paths.txt",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-final-confirmed.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-debug-auto.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-debug-manual.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/core-true-mode-heap.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/bridge-added-latency.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/delegated-host-pdc.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/engine-converter-qa.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/nih-native-lifecycle-final.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/ffi-legacy-coherent.json",
+        "audit/artifacts/remaining-linear-eq-accuracy-20261024/ffi-legacy-clippy-debug-coherent.json",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/README.md",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/summary.json",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/active-port-result.json",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/controller-dev-tests-result.json",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/gpui-check-result.json",
+        "audit/artifacts/linear-eq-accuracy-sibling-20261024/manifest.sha256.json",
+        "audit/artifacts/ffi-gpui-validation-baseline-20261024/README.md",
+        "audit/artifacts/ffi-gpui-validation-baseline-20261024/fixture.json",
+        "audit/artifacts/ffi-gpui-validation-baseline-20261024/fixture-lock.patch"
+      ],
+      "remaining": [
+        "Close full static/dynamic capacity and native/device/DAW/platform validation. Prior deadline failures and rejected shared-span experiments remain; the accuracy mode makes no performance acceptance claim.",
+        "Keep the fixed 1024-tap FIR-M1 diagnostic and unchanged 0.05 dB bound as a historical manual-mode limitation. User-approved automatic support provides the validated opt-in remedy and refuses targets that cannot qualify by 8192 taps.",
+        "Resolve the unrelated ordinary-main FFI duplicate-GPUI graph, preexisting release-profile FFI literal-unwrap lints, and low-rate NIH default-band activation conflict before claiming complete native/release QA."
+      ],
+      "validation_limits": [
+        "Accuracy is sampled qualification of retained f32 support, not a continuous-frequency or arbitrary out-of-grid guarantee; explicit deep-stopband residual policy applies.",
+        "Actual latency is reported by DSP/host APIs; GPUI numeric live-report bridge is absent and its automatic display remains honest pending/automatic.",
+        "FFI feature tests/normal strict Clippy use the recorded coherent app dependency fixture; ordinary-main graph remains independently failing.",
+        "Held-out/native Linux/Windows/DAW resources are deferred per user; optional ML remains excluded from production completion criteria."
       ]
     },
     {
