@@ -1,0 +1,15 @@
+{
+  "model": "RNNoise bundled full (existing pretrained weights)",
+  "source_repository": "https://github.com/pierreaubert/sotf-3rdparties",
+  "source_commit": "9b7c2134cb5831391c7863f584cd631c63719fd5",
+  "package": "sotf-nnnoiseless 0.1.1",
+  "license": "BSD-3-Clause",
+  "source_files": {
+    "src/model.rs": "f18ca8d6a01048d0626814b241fa3b5f8157409dfa130ba11ab96502a417571c",
+    "src/rnn.rs": "b8101db3bbe71f80b83718b90cab9f73cd32926eb65da842c8f8c38c857f246c",
+    "COPYING": "26e8aae6fb3622e281d8d99aa7ba0df8ef3a83465d8717f2e4cacbcbed8efc92",
+    "Cargo.toml": "dbe36f189fc5d2622f86ef8365b8013cbfad705bb72edeaa87e1bbf528d56d08"
+  },
+  "training": "No weights trained or downloaded in this change; upstream training population/accuracy is not established here.",
+  "deployment": "Optional neural-speech feature and explicit linked Downward-mode speech_protection config; classical gate remains independently active."
+}

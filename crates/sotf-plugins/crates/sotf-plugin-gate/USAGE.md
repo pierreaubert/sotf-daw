@@ -75,6 +75,53 @@ make the result depend on previous signal levels; the static curve describes
 the closed state after hold expires. Live knee changes and the smoothed
 threshold move both state thresholds together.
 
+### Experimental speech protection
+
+Build the Gate crate, plugin facade, or engine with `neural-speech`, then opt in
+through the structural preset configuration:
+
+```json
+{
+  "mode": "Downward",
+  "link_channels": true,
+  "speech_protection": {
+    "min_probability": 0.8,
+    "max_age_ms": 150.0,
+    "source_channel": 0
+  }
+}
+```
+
+The existing RNNoise Full model analyzes the selected physical program channel
+on a bounded worker. The classical detector keeps running. Accepted speech
+evidence smoothly removes attenuation toward unity; the mode cannot add
+attenuation or boost. Every linked channel receives the same protection gain.
+An external sidechain continues to drive the classical detector, while speech
+analysis uses the selected program channel before lookahead and gain.
+
+`min_probability` accepts 0.5–1.0 and thresholds a raw model score; the score is
+not a calibrated correctness probability. `max_age_ms` accepts 120–1000 ms and
+counts the entire 100 ms source window plus worker/poll delay. Source rates
+from 8 to 192 kHz are supported. Upward, Duck, unlinked operation, unavailable
+features, and invalid source channels are rejected during configuration.
+
+Audio latency remains the configured lookahead. Initial protection needs a
+complete 100 ms observation window and worker/poll time, so speech onsets can
+still receive classical gating. Missing, uncertain, stale, or late results
+return toward classical gain using Release; entering protection uses Attack.
+These protection smoothers operate in linear gain fraction. Worker backpressure
+drops windows rather than waiting in the audio callback. Reset invalidates
+queued results and starts a fresh observation window.
+
+The feature is experimental. Synthetic model, gain-bound, allocation, reset,
+and source-age checks do not establish false-cut rates on real speech or false
+protection rates on music/noise. Held-out recordings, listening, and real-host
+CPU/memory/deadline validation remain outstanding. Omitting
+`speech_protection` retains classical gating. Changing this structural option
+requires reconstructing the plugin; existing scalar parameter indices remain
+unchanged. `GateData.speech_protection` reports score, source age, usability,
+protection amount, and submitted/dropped/observed window counts.
+
 ### Timing
 
 Controls the gate's response speed. Fast attack reduces attenuation quickly to preserve transients. Hold keeps the unity-gain target for a set time after the signal drops below the closing threshold (prevents chattering). Release controls increasing attenuation. Attack and release are one-pole time constants in dB; after one time constant, approximately 63% of a step toward the new gain target is complete.

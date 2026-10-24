@@ -1,0 +1,45 @@
+{
+  "status": "experimental_implementation_in_progress",
+  "full_audit_scope": {
+    "plugin_proposals": 31,
+    "program_candidates": 5
+  },
+  "checks": {
+    "engine-settings-test": {
+      "exit_code": 0,
+      "elapsed_seconds": 232.31461337488145
+    },
+    "gate-default-clippy": {
+      "exit_code": 0,
+      "elapsed_seconds": 1.0408237499650568
+    },
+    "gate-default-tests": {
+      "exit_code": 0,
+      "elapsed_seconds": 75.46267095790245
+    },
+    "gate-development-recordings": {
+      "exit_code": 0,
+      "elapsed_seconds": 10.954562708036974
+    },
+    "gate-feature-clippy": {
+      "exit_code": 0,
+      "elapsed_seconds": 0.6511218750383705
+    },
+    "gate-feature-tests": {
+      "exit_code": 0,
+      "elapsed_seconds": 10.05412358394824
+    },
+    "gate-final-mode-tests": {
+      "exit_code": 0,
+      "elapsed_seconds": 15.779156417120248
+    }
+  },
+  "evidence_limits": [
+    "Existing development recordings have unknown training overlap and no window speech labels.",
+    "Violin passes raw speech threshold in 219 of 231 windows (94.8%); no general speech-identity quality claim.",
+    "No held-out multilingual/noise data or Linux/Windows/DAW validation available yet.",
+    "Offline model replay excludes async deadlines and gain smoothing.",
+    "Workspace-wide release/format/QA gates were not run; focused Rust formatting and diff checks used."
+  ],
+  "compatibility": "Sibling CLI explicitly preserves classical Gate behavior. Its existing PND compatibility edit is retained. Sibling lock refresh recorded separately; application compile is still in progress at this checkpoint."
+}

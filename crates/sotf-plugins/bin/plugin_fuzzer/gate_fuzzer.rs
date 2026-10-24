@@ -21,6 +21,7 @@ impl PluginFuzzer for GateFuzzer {
         let max_boost_db = rng.random_range(0.0..=24.0);
 
         let params = GatePluginParams {
+            speech_protection: None,
             threshold_db,
             ratio,
             attack_ms,

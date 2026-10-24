@@ -25,3 +25,9 @@ pub use types::*;
 mod response;
 #[doc(inline)]
 pub use response::target_gain_db;
+
+#[cfg(feature = "neural-speech")]
+mod neural_speech;
+mod speech_protection;
+#[doc(inline)]
+pub use speech_protection::{SpeechProtectionConfig, SpeechProtectionData};

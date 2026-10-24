@@ -185,8 +185,37 @@
       "requirements": [
         "ML/VAD gating is useful only as an explicit speech mode with false-cut and latency evaluation, not as a replacement for a general-purpose gate."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-gate/src/speech_protection.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-gate/src/neural_speech.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-gate/tests/neural_speech.rs",
+        "crates/sotf-engine/src/plugins/plugin_config_converter/dynamics.rs",
+        "audit/artifacts/ml-gate-20261025"
+      ],
+      "implementation": {
+        "mode": "Explicit speech_protection config with optional neural-speech build feature; linked Downward mode only; defaults remain classical.",
+        "model": "Existing pretrained bundled RNNoise Full; reset and replay each independent causal 100 ms window on a bounded worker.",
+        "policy": "Raw score and source age (including the entire window) gate attenuation removal; smoothed return to classical on uncertainty or stale observations. No learned attenuation increase or boost; independent classical latch/envelope continues.",
+        "latency": "No added audio buffering; existing gate lookahead is retained. First learned evidence requires 100 ms of source plus worker/poll delay.",
+        "remaining": [
+          "Held-out multilingual speech/noise/music false-cut and false-protection evaluation and listening.",
+          "CPU/memory/deadline measurements on real DAW hosts and block/rate sweeps under load.",
+          "User-facing structural configuration and review before runtime adoption."
+        ]
+      },
+      "development_observations": {
+        "source": "audit/artifacts/ml-gate-20261025/development-recordings.json",
+        "protocol": "Fixed raw score threshold 0.8; independent reset/replay of 100 ms windows every 10 ms; three existing 4-second speech clips, one violin and one cymbal clip. No model or threshold tuning from these observations.",
+        "speech_passing_fractions": [
+          0.5907928388746803,
+          0.7519181585677749,
+          0.4680306905370844
+        ],
+        "violin_passing_fraction": 0.948051948051948,
+        "cymbal_passing_fraction": 0.056265984654731455,
+        "interpretation": "Strong false speech evidence on this violin clip. Speech clips lack window labels and include pauses; their passing fractions are not speech recall. Unknown training overlap. Experimental implementation only; no adoption or general quality claim."
+      }
     },
     {
       "plugin_id": 28,

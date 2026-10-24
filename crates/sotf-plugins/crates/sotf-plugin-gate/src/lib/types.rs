@@ -15,6 +15,9 @@ define_choice_string_deserializer!(deserialize_detection_mode, DETECTION_MODES);
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GatePluginParams {
+    /// Optional learned protection for linked downward gating; omitted by default.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub speech_protection: Option<crate::SpeechProtectionConfig>,
     #[serde(default = "default_threshold_db")]
     pub threshold_db: f32,
     #[serde(default = "default_ratio")]
@@ -69,6 +72,7 @@ pub struct GatePluginParams {
 impl Default for GatePluginParams {
     fn default() -> Self {
         Self {
+            speech_protection: None,
             threshold_db: default_threshold_db(),
             ratio: default_ratio(),
             attack_ms: default_attack_ms(),

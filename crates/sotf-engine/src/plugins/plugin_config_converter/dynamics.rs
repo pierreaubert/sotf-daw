@@ -101,6 +101,7 @@ pub fn convert_limiter(settings: &PluginSettings, _sample_rate: f64) -> Option<P
 
 pub fn convert_gate(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
     let PluginSettings::Gate {
+        speech_protection,
         threshold_db,
         ratio,
         attack_ms,
@@ -122,28 +123,29 @@ pub fn convert_gate(settings: &PluginSettings, _sample_rate: f64) -> Option<Plug
     else {
         return None;
     };
-    Some(PluginConfig::new(
-        "gate",
-        json!({
-            "threshold_db": threshold_db,
-            "ratio": ratio,
-            "attack_ms": attack_ms,
-            "hold_ms": hold_ms,
-            "release_ms": release_ms,
-            "mix": mix,
-            "link_channels": link_channels,
-            "sidechain_hpf_hz": sidechain_hpf_hz,
-            "sidechain_hpf_order": sidechain_hpf_order,
-            "detection_mode": detection_mode,
-            "sidechain_external": sidechain_external,
-            "range_db": range_db,
-            "hysteresis_db": hysteresis_db,
-            "knee_db": knee_db,
-            "lookahead_ms": lookahead_ms,
-            "mode": mode,
-            "max_boost_db": max_boost_db,
-        }),
-    ))
+    let mut parameters = json!({
+        "threshold_db": threshold_db,
+        "ratio": ratio,
+        "attack_ms": attack_ms,
+        "hold_ms": hold_ms,
+        "release_ms": release_ms,
+        "mix": mix,
+        "link_channels": link_channels,
+        "sidechain_hpf_hz": sidechain_hpf_hz,
+        "sidechain_hpf_order": sidechain_hpf_order,
+        "detection_mode": detection_mode,
+        "sidechain_external": sidechain_external,
+        "range_db": range_db,
+        "hysteresis_db": hysteresis_db,
+        "knee_db": knee_db,
+        "lookahead_ms": lookahead_ms,
+        "mode": mode,
+        "max_boost_db": max_boost_db,
+    });
+    if let Some(config) = speech_protection {
+        parameters["speech_protection"] = serde_json::to_value(config).ok()?;
+    }
+    Some(PluginConfig::new("gate", parameters))
 }
 
 pub fn convert_expander(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
@@ -449,4 +451,36 @@ pub fn convert_spectral_compressor(
             "channel_link": channel_link,
         }),
     ))
+}
+
+#[cfg(test)]
+mod gate_speech_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_speech_policy_roundtrips_and_legacy_settings_omit_it() {
+        let mut settings = PluginSettings::default_for(&crate::plugins::PluginType::Gate).unwrap();
+        let legacy = convert_gate(&settings, 48000.0).unwrap();
+        assert!(legacy.parameters.get("speech_protection").is_none());
+        let policy = json!({"min_probability": 0.9, "max_age_ms": 180.0, "source_channel": 1});
+        let PluginSettings::Gate {
+            speech_protection, ..
+        } = &mut settings
+        else {
+            unreachable!()
+        };
+        *speech_protection = Some(serde_json::from_value(policy.clone()).unwrap());
+        let saved = serde_json::to_value(&settings).unwrap();
+        let restored: PluginSettings = serde_json::from_value(saved).unwrap();
+        let config = convert_gate(&restored, 48000.0).unwrap();
+        let actual: sotf_plugins::SpeechProtectionConfig =
+            serde_json::from_value(config.parameters["speech_protection"].clone()).unwrap();
+        let expected: sotf_plugins::SpeechProtectionConfig =
+            serde_json::from_value(policy).unwrap();
+        assert_eq!(actual, expected);
+        assert_eq!(
+            config.parameters["threshold_db"],
+            legacy.parameters["threshold_db"]
+        );
+    }
 }

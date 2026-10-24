@@ -3,6 +3,8 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct GateData {
+    /// Explicit speech-protection diagnostics; absent in the general gate.
+    pub speech_protection: Option<crate::SpeechProtectionData>,
     pub input_levels_db: Arc<Vec<f32>>,
     /// True if at least one channel has less than 0.1 dB wet attenuation.
     /// Upward mode therefore always reports true, including while boosting.
@@ -22,6 +24,7 @@ pub struct GateData {
 impl Default for GateData {
     fn default() -> Self {
         Self {
+            speech_protection: None,
             input_levels_db: Arc::new(Vec::new()),
             is_open: false,
             attenuation_db: Arc::new(Vec::new()),
@@ -36,6 +39,7 @@ impl Default for GateData {
 impl GateData {
     pub fn new(channels: usize) -> Self {
         Self {
+            speech_protection: None,
             input_levels_db: Arc::new(vec![-120.0; channels]),
             is_open: false,
             attenuation_db: Arc::new(vec![0.0; channels]),

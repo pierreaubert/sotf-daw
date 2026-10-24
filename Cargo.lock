@@ -9259,6 +9259,8 @@ version = "0.5.12"
 dependencies = [
  "math-dsp",
  "math-iir-fir",
+ "plugins-denoiser",
+ "plugins-inference",
  "proptest",
  "serde",
  "serde_json",

@@ -28,6 +28,10 @@ use std::sync::Arc;
 const MAX_DRAIN_FRAMES: usize = 256;
 
 pub struct GatePlugin {
+    speech_config: Option<crate::SpeechProtectionConfig>,
+    #[cfg(feature = "neural-speech")]
+    speech: Option<crate::neural_speech::SpeechAssistant>,
+    speech_mix: f32,
     pub(super) channels: usize,
     pub(super) sample_rate: f64,
     pub(super) threshold_db: f32,
@@ -134,6 +138,10 @@ impl GatePlugin {
     ) -> Self {
         let sr = 44_100.0;
         let mut p = Self {
+            speech_config: None,
+            #[cfg(feature = "neural-speech")]
+            speech: None,
+            speech_mix: 0.0,
             channels,
             sample_rate: sr,
             threshold_db,
@@ -249,6 +257,12 @@ impl GatePlugin {
         if channels == 0 {
             return Err("Gate requires at least one channel".into());
         }
+        crate::speech_protection::validate_mode(
+            params.speech_protection.as_ref(),
+            channels,
+            params.mode,
+            params.link_channels,
+        )?;
         if params.sidechain_external && channels.checked_mul(2).is_none() {
             return Err("Gate external-sidechain channel count overflows usize".into());
         }
@@ -306,6 +320,7 @@ impl GatePlugin {
             params.hold_ms,
             params.release_ms,
         );
+        p.speech_config = params.speech_protection;
         p.mix = params.mix;
         p.mix_smoother.reset(p.mix);
         p.link_channels = params.link_channels;
@@ -453,6 +468,7 @@ impl GatePlugin {
 
     fn params_snapshot(&self) -> GatePluginParams {
         GatePluginParams {
+            speech_protection: self.speech_config,
             threshold_db: self.threshold_db,
             ratio: self.ratio,
             attack_ms: self.attack_ms,
@@ -501,7 +517,8 @@ impl GatePlugin {
     }
 
     fn structural_differs(&self, params: &GatePluginParams) -> bool {
-        self.link_channels != params.link_channels
+        self.speech_config != params.speech_protection
+            || self.link_channels != params.link_channels
             || self.sidechain_hpf_hz != params.sidechain_hpf_hz
             || !HPF_ORDERS[self.sidechain_hpf_order_index]
                 .eq_ignore_ascii_case(&params.sidechain_hpf_order)
@@ -635,6 +652,16 @@ impl GatePlugin {
             ));
         }
 
+        if self.speech_config.is_some() && structural {
+            let mut staged = self.params_snapshot();
+            Self::stage_parameter(&mut staged, &id, &value)?;
+            crate::speech_protection::validate_mode(
+                staged.speech_protection.as_ref(),
+                self.channels,
+                staged.mode,
+                staged.link_channels,
+            )?;
+        }
         let was_linked = self.link_channels;
         let index = param_bridge::set_parameter(GT, &id, &value, |index, value| {
             self.set_param_value(index, value);
@@ -666,7 +693,51 @@ impl GatePlugin {
 }
 
 impl GatePlugin {
-    // Unchanged per-sample DSP shared by ordinary input and zero continuation.
+    fn protected_wet_gain(&self, classical: f32) -> f32 {
+        if self.speech_mix == 0.0 {
+            classical
+        } else {
+            crate::speech_protection::protected_gain(classical, self.speech_mix)
+        }
+    }
+
+    fn advance_speech(&mut self, frame: &[f32]) {
+        #[cfg(feature = "neural-speech")]
+        if let Some(speech) = &mut self.speech {
+            let channel = self
+                .speech_config
+                .expect("prepared speech policy")
+                .source_channel;
+            speech.push(frame[channel]);
+            let target = if speech.usable() { 1.0 } else { 0.0 };
+            let coefficient = if target > self.speech_mix {
+                self.attack_coeff
+            } else {
+                self.release_coeff
+            };
+            self.speech_mix = (target + coefficient * (self.speech_mix - target)).clamp(0.0, 1.0);
+            if self.speech_mix < 1e-7 {
+                self.speech_mix = 0.0;
+            }
+        }
+        #[cfg(not(feature = "neural-speech"))]
+        let _ = frame;
+    }
+
+    fn speech_status(&self) -> Option<crate::SpeechProtectionData> {
+        #[cfg(feature = "neural-speech")]
+        {
+            self.speech
+                .as_ref()
+                .map(|speech| speech.data(self.speech_mix))
+        }
+        #[cfg(not(feature = "neural-speech"))]
+        {
+            None
+        }
+    }
+
+    // Per-sample DSP shared by ordinary input and zero continuation.
     fn process_stream(
         &mut self,
         buffer: &mut [f32],
@@ -728,6 +799,7 @@ impl GatePlugin {
                 let mix = self.mix_smoother.advance();
                 let close_threshold_linear = threshold_linear * close_threshold_ratio;
                 let frame_start = frame * stride;
+                self.advance_speech(&buffer[frame_start..frame_start + self.channels]);
                 let sc_offset = if use_ext_sc { self.channels } else { 0 };
 
                 let mut det = 0.0f32;
@@ -778,7 +850,9 @@ impl GatePlugin {
                     self.attack_coeff // opening
                 };
                 self.envelope[0] = target + coeff * (self.envelope[0] - target);
-                let gain = (1.0 - mix) + mix * fast_pow10(-self.envelope[0] / DB_CONVERSION_FACTOR);
+                let wet =
+                    self.protected_wet_gain(fast_pow10(-self.envelope[0] / DB_CONVERSION_FACTOR));
+                let gain = (1.0 - mix) + mix * wet;
 
                 for ch in 0..self.channels {
                     let idx = frame_start + ch;
@@ -802,6 +876,7 @@ impl GatePlugin {
                 let mix = self.mix_smoother.advance();
                 let close_threshold_linear = threshold_linear * close_threshold_ratio;
                 let frame_start = frame * stride;
+                self.advance_speech(&buffer[frame_start..frame_start + self.channels]);
                 let sc_offset = if use_ext_sc { self.channels } else { 0 };
 
                 for ch in 0..self.channels {
@@ -851,8 +926,9 @@ impl GatePlugin {
                         self.attack_coeff // opening
                     };
                     self.envelope[ch] = target + coeff * (self.envelope[ch] - target);
-                    let gain =
-                        (1.0 - mix) + mix * fast_pow10(-self.envelope[ch] / DB_CONVERSION_FACTOR);
+                    let wet = self
+                        .protected_wet_gain(fast_pow10(-self.envelope[ch] / DB_CONVERSION_FACTOR));
+                    let gain = (1.0 - mix) + mix * wet;
                     let input = if buffer[idx].is_finite() {
                         buffer[idx]
                     } else {
@@ -875,13 +951,6 @@ impl GatePlugin {
             // In linked mode only envelope[0] is updated; envelope[1..] stay at 0.0
             // (their init value), so using any() would always return true even when
             // the gate is fully closed.  Use envelope[0] as the sole authority.
-            let is_open = if self.mode == GateMode::Upward {
-                true
-            } else if self.link_channels {
-                self.envelope[0] < 0.1
-            } else {
-                self.envelope.iter().any(|&a| a < 0.1)
-            };
             if self.link_channels {
                 // Linked processing applies the channel-0 envelope to every
                 // audio channel. Mirror that applied gain in diagnostics;
@@ -891,6 +960,19 @@ impl GatePlugin {
             } else {
                 self.attenuation_scratch.copy_from_slice(&self.envelope);
             }
+            if self.speech_mix > 0.0 {
+                for attenuation in &mut self.attenuation_scratch {
+                    let classical = fast_pow10(-*attenuation / DB_CONVERSION_FACTOR);
+                    let protected =
+                        crate::speech_protection::protected_gain(classical, self.speech_mix);
+                    *attenuation = -DB_CONVERSION_FACTOR * fast_log10(protected.max(EPSILON));
+                }
+            }
+            let is_open = self.mode == GateMode::Upward
+                || self
+                    .attenuation_scratch
+                    .iter()
+                    .any(|attenuation| *attenuation < 0.1);
             for (gain, attenuation) in self
                 .gain_scratch
                 .iter_mut()
@@ -908,7 +990,9 @@ impl GatePlugin {
             } else {
                 self.gate_open.iter().any(|open| *open)
             };
+            let speech_status = self.speech_status();
             self.cache.update(|d| {
+                d.speech_protection = speech_status;
                 d.update(is_open, &self.monitoring_levels, &self.attenuation_scratch);
                 d.update_effect(self.mode, gate_open, &self.gain_scratch);
             });
@@ -1007,6 +1091,12 @@ impl ParametricInPlacePlugin for GatePlugin {
         for (id, value) in &values {
             Self::stage_parameter(&mut staged, id, value)?;
         }
+        crate::speech_protection::validate_mode(
+            staged.speech_protection.as_ref(),
+            self.channels,
+            staged.mode,
+            staged.link_channels,
+        )?;
         if self.initialized && self.structural_differs(&staged) {
             return Err(
                 "Gate structural parameter batch change requires graph rebuild; live state and latency are unchanged"
@@ -1032,6 +1122,17 @@ impl ParametricInPlacePlugin for GatePlugin {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("Gate requires a finite, positive sample rate".into());
         }
+        crate::speech_protection::validate_mode(
+            self.speech_config.as_ref(),
+            self.channels,
+            self.mode,
+            self.link_channels,
+        )?;
+        #[cfg(feature = "neural-speech")]
+        let speech = self
+            .speech_config
+            .map(|config| crate::neural_speech::SpeechAssistant::new(config, sample_rate))
+            .transpose()?;
         let drain_samples = MAX_DRAIN_FRAMES
             .checked_mul(self.input_channels())
             .filter(|samples| *samples <= isize::MAX as usize / std::mem::size_of::<f32>())
@@ -1064,11 +1165,23 @@ impl ParametricInPlacePlugin for GatePlugin {
         }
         self.update_lookahead_delay();
         self.cache.update(|data| data.mode = self.mode);
+        #[cfg(feature = "neural-speech")]
+        {
+            self.speech = speech;
+        }
         self.initialized = true;
         self.reset();
         Ok(())
     }
     fn reset(&mut self) {
+        #[cfg(feature = "neural-speech")]
+        if let Some(speech) = &mut self.speech {
+            speech.reset();
+        }
+        self.speech_mix = 0.0;
+        let speech_status = self.speech_status();
+        self.cache
+            .update(|data| data.speech_protection = speech_status);
         self.has_input = false;
         self.drain_remaining = None;
         self.drain_scratch.fill(0.0);

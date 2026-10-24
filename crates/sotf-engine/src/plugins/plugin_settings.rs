@@ -869,6 +869,9 @@ pub enum PluginSettings {
         oversampling: usize,
     },
     Gate {
+        /// Optional learned speech protection; absent preserves classical gating.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        speech_protection: Option<sotf_plugins::SpeechProtectionConfig>,
         threshold_db: f64,
         ratio: f64,
         attack_ms: f64,
@@ -2186,6 +2189,7 @@ impl PluginSettings {
             PluginType::Gate => {
                 let g = gate_specs::PARAMS;
                 Self::Gate {
+                    speech_protection: None,
                     threshold_db: p(g, "threshold").default_f64(),
                     ratio: p(g, "ratio").default_f64(),
                     attack_ms: p(g, "attack").default_f64(),

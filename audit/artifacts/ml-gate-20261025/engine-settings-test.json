@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-engine",
+    "--lib",
+    "gate_speech_tests",
+    "--features",
+    "neural-speech,neural-pitch,deep-filter,sotf-plugins/qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 232.31461337488145
+}

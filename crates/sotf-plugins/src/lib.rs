@@ -418,7 +418,9 @@ pub use plugin_analog_compressor::{AnalogCompressorPlugin, AnalogCompressorPlugi
 pub use plugin_analog_eq::{AnalogEqPlugin, AnalogEqPluginParams};
 pub use plugin_analog_limiter::{AnalogLimiterPlugin, AnalogLimiterPluginParams};
 pub use plugin_gain::{GainPlugin, GainPluginParams};
-pub use plugin_gate::{GateData, GateMode, GatePlugin, GatePluginParams};
+pub use plugin_gate::{
+    GateData, GateMode, GatePlugin, GatePluginParams, SpeechProtectionConfig, SpeechProtectionData,
+};
 pub use plugin_hiss_reducer::{HissReducerPlugin, HissReducerPluginParams};
 pub use plugin_limiter::{LimiterData, LimiterPlugin, LimiterPluginParams};
 pub use plugin_loudness_compensation::{FletcherMunsonPlugin, FletcherMunsonPluginParams};
