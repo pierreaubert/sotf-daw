@@ -1,0 +1,26 @@
+{
+  "accepted": true,
+  "method": "neural",
+  "sampled_rms_db": 3.056838314032675e-13,
+  "sampled_max_db": 5.009326287108706e-13,
+  "poles_stable": true,
+  "evaluations": 5,
+  "qualification": "supplied frequency samples only; no continuous guarantee",
+  "parameters": {
+    "filters": [
+      {
+        "filter_type": "peak",
+        "freq": 512.299999999997,
+        "q": 2.299999999999976,
+        "db_gain": -7.1999999999999815,
+        "order": 2
+      }
+    ],
+    "auto_gain": {
+      "enabled": false
+    }
+  },
+  "elapsed_seconds": 0.04505416704341769,
+  "target_sha256": "a8eb895fc4d9a2ee79f37d1f713d46d85b3716f7c5f329814abb5db706e14656",
+  "weights_sha256": "6107145b74209cca0b8f9562a02efd1442ded47a7f6a3e059a045e103197358d"
+}

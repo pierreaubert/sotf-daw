@@ -634,6 +634,7 @@ pub fn convert_speech_denoiser(
 
 pub fn convert_pnd(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
     let PluginSettings::Pnd {
+        neural_pitch,
         correction_strength,
         analysis_window_ms,
         drift_smoothing,
@@ -647,19 +648,20 @@ pub fn convert_pnd(settings: &PluginSettings, _sample_rate: f64) -> Option<Plugi
     else {
         return None;
     };
-    Some(PluginConfig::new(
-        "pnd",
-        json!({
-            "correction_strength": correction_strength,
-            "analysis_window_ms": analysis_window_ms,
-            "drift_smoothing": drift_smoothing,
-            "multi_channel_analysis": multi_channel_analysis,
-            "confidence_threshold": confidence_threshold,
-            "reference_frequency_hz": reference_frequency_hz,
-            "formant_preservation": formant_preservation,
-            "formant_strength": formant_strength,
-        }),
-    ))
+    let mut parameters = json!({
+        "correction_strength": correction_strength,
+        "analysis_window_ms": analysis_window_ms,
+        "drift_smoothing": drift_smoothing,
+        "multi_channel_analysis": multi_channel_analysis,
+        "confidence_threshold": confidence_threshold,
+        "reference_frequency_hz": reference_frequency_hz,
+        "formant_preservation": formant_preservation,
+        "formant_strength": formant_strength,
+    });
+    if let Some(neural) = neural_pitch {
+        parameters["neural_pitch"] = serde_json::to_value(neural).ok()?;
+    }
+    Some(PluginConfig::new("pnd", parameters))
 }
 
 pub fn convert_ab_compare(settings: &PluginSettings, _sample_rate: f64) -> Option<PluginConfig> {
@@ -832,5 +834,26 @@ mod tests {
             converted.push(config.parameters);
         }
         assert_eq!(converted[0], converted[1]);
+    }
+
+    #[test]
+    fn pnd_neural_configuration_survives_typed_engine_conversion() {
+        let neural = serde_json::json!({
+            "model_path": "models/crepe-tiny.onnx", "sha256": "a".repeat(64),
+            "min_confidence": 0.8, "max_age_ms": 150.0,
+            "max_deviation_cents": 100.0, "source_channel": 1
+        });
+        let settings: PluginSettings = serde_json::from_value(serde_json::json!({
+            "Pnd": { "reference_frequency_hz": 440.0, "neural_pitch": neural }
+        }))
+        .unwrap();
+        let config = convert_pnd(&settings, 96_000.0).unwrap();
+        assert_eq!(config.parameters["neural_pitch"], neural);
+        let params: sotf_plugins::PndPluginParams =
+            serde_json::from_value(config.parameters).unwrap();
+        let adopted = params.neural_pitch.unwrap();
+        assert_eq!(adopted.source_channel, 1);
+        assert_eq!(adopted.sha256, "a".repeat(64));
+        assert_eq!(adopted.min_confidence, 0.8);
     }
 }

@@ -1397,6 +1397,9 @@ pub enum PluginSettings {
         model: String,
     },
     Pnd {
+        /// Explicit monophonic neural analysis; unavailable builds reject this mode.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        neural_pitch: Option<sotf_plugins::plugin_pnd::NeuralPitchConfig>,
         #[serde(default = "default_pnd_correction_strength")]
         correction_strength: f64,
         #[serde(default = "default_pnd_analysis_window_ms")]
@@ -2496,6 +2499,7 @@ impl PluginSettings {
             PluginType::Pnd => {
                 let pn = pnd_specs::PARAMS;
                 Self::Pnd {
+                    neural_pitch: None,
                     correction_strength: p(pn, "correction_strength").default_f64(),
                     analysis_window_ms: p(pn, "analysis_window_ms").default_f64(),
                     drift_smoothing: p(pn, "drift_smoothing").default_f64(),

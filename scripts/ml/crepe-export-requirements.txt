@@ -1,0 +1,4 @@
+torch==2.14.1
+torchcrepe==0.0.24
+onnx==1.23.2
+numpy==2.5.4

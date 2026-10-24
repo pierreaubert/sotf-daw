@@ -368,6 +368,7 @@ fn integration_get_data_returns_pnd_data() {
 fn integration_from_params_applies_initial_state() {
     let params = PndPluginParams {
         correction_strength: 0.5,
+        neural_pitch: None,
         analysis_window_ms: 200.0,
         drift_smoothing: 0.2,
         multi_channel_analysis: false,
@@ -403,4 +404,23 @@ fn integration_try_from_params_rejects_non_finite_and_invalid_values() {
     assert!(PndPlugin::try_from_params(1, params).is_err());
 
     assert!(PndPlugin::try_from_params(0, PndPluginParams::default()).is_err());
+}
+
+#[cfg(not(feature = "neural-pitch"))]
+#[test]
+fn explicit_neural_state_is_rejected_when_inference_is_not_built() {
+    let params: PndPluginParams = serde_json::from_value(serde_json::json!({
+        "reference_frequency_hz": 440.0,
+        "neural_pitch": {
+            "model_path": "not-opened.onnx", "sha256": "0".repeat(64),
+            "min_confidence": 0.8, "max_age_ms": 150.0,
+            "max_deviation_cents": 100.0, "source_channel": 0
+        }
+    }))
+    .unwrap();
+    let error = match PndPlugin::from_params(1, params) {
+        Ok(_) => panic!("unavailable inference must not silently become classical"),
+        Err(error) => error,
+    };
+    assert!(error.contains("build feature"));
 }

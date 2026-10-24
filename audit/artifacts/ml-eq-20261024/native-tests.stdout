@@ -1,0 +1,10 @@
+   Compiling sotf-plugin-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-eq)
+    Finished `release` profile [optimized] target(s) in 16.38s
+     Running tests/ml_offline_proposal.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/ml_offline_proposal-b1ab5219cf918f30)
+
+running 1 test
+learned proposal native impulse maximum response error: 0.0000004911018915976229 dB
+test exported_learned_proposal_matches_independent_bilinear_reference ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+

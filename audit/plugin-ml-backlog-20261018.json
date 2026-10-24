@@ -1,5 +1,5 @@
 {
-  "scope": "Optional ML research, explicitly separated from production DSP implementation by user choice. No training, model adoption or production dependency is authorized by these backlog entries.",
+  "scope": "Historical optional ML research backlog. The user authorized implementation on 2026-10-24; audit/plugin-ml-implementation.json and private issue10 track the active program. This file preserves original proposals and historical deferral text, not current authorization state.",
   "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/9",
   "items": [
     {
@@ -284,5 +284,6 @@
       ],
       "production_requirement": false
     }
-  ]
+  ],
+  "implementation_tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10"
 }

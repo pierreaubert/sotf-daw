@@ -1,0 +1,19 @@
+{
+  "model": "crepe-tiny.onnx",
+  "sha256": "57209bf565bce9de445b31a175294dd2f297432864599c6aa237a895353918d3",
+  "source_weights_sha256": "d4993eea36ed1a0ad9ac549c740dae5265b049ce72004f00c2f59e01c0be8432",
+  "source": "https://github.com/maxrmorrison/torchcrepe",
+  "original": "https://github.com/marl/crepe",
+  "license": "MIT",
+  "capacity": "tiny",
+  "training": "upstream pretrained",
+  "training_overlap": "unknown; parity fixtures do not establish held-out quality",
+  "packages": {
+    "torch": "2.14.1",
+    "torchcrepe": "0.0.24",
+    "onnx": "1.23.2",
+    "numpy": "2.5.4"
+  },
+  "parity_sha256": "b78f0baf597b2a818a83c7e81f436eb6bda476d099e687e32b05c4e8e77d58c5",
+  "export_script_sha256": "cb725121023a876d2eb4c77234f9afa5491508193f10d5e84d848fd70c3509ff"
+}

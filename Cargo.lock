@@ -9266,10 +9266,13 @@ name = "sotf-plugin-pnd"
 version = "0.5.12"
 dependencies = [
  "hound",
+ "plugins-inference",
  "rustfft",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
+ "sotf-tract-onnx",
 ]
 
 [[package]]

@@ -1,4 +1,7 @@
-pub use config::PndPluginParams;
+pub use config::{NeuralPitchConfig, PndPluginParams};
+
+#[cfg(feature = "neural-pitch")]
+pub mod neural_pitch;
 
 pub mod analysis;
 mod config;

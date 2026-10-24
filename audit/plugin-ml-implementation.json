@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "authorization": "User requested implementation of the ML audit on 2026-10-24; supersedes earlier ML deferral for this work.",
+  "requirements_source": [
+    "audit/plugin-remediation-20261018.json",
+    "audit/plugin-ml-backlog-20261018.json"
+  ],
+  "acceptance": "Model implementation, task-specific independent quality/shift validation, provenance/license/hashes, opt-in, fallback, latency/memory/runtime evidence; infrastructure alone does not complete a proposal.",
+  "items": [
+    {
+      "plugin_id": 1,
+      "plugin": "AAE \u2014 artificial ambience",
+      "requirements": [
+        "ML is most sensible as offline fitting of these parameters to a measured room; retain a bounded deterministic renderer."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 3,
+      "plugin": "AEC",
+      "requirements": [
+        "A small neural residual-echo suppressor/nonlinear front end is a credible hybrid candidate [hybrid AEC research][R3]; keep adaptive cancellation and safe bypass operational without inference."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 4,
+      "plugin": "Ambisonics decoder",
+      "requirements": [
+        "Classical regularized/layout-aware decoding is preferable to ML replacing the normative decoder.",
+        "Learned personalization may choose an HRTF/layout correction offline, with explicit normalization and energy constraints."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 5,
+      "plugin": "Analog common",
+      "requirements": [
+        "Learned models are appropriate only when trained and validated against identified hardware and operating levels, not as an automatic replacement for all coloration."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 7,
+      "plugin": "Analog EQ",
+      "requirements": [
+        "ML fitting is useful offline for matching measured hardware response/color; it is unnecessary for ordinary parametric EQ."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 8,
+      "plugin": "Analog limiter",
+      "requirements": [
+        "If neural coloration is added, keep the ceiling mechanism explicit and deterministic; learned release suggestions must never replace the safety bound."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 11,
+      "plugin": "Beamformer",
+      "requirements": [
+        "Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 12,
+      "plugin": "Binaural decoder",
+      "requirements": [
+        "ML HRTF selection from measurements/preferences is plausible offline; online inference must not delay head tracking unpredictably."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 14,
+      "plugin": "Convolution",
+      "requirements": [
+        "ML belongs in optional offline IR denoising/estimation, with measured response preserved and model output validated."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 15,
+      "plugin": "Crossfeed",
+      "requirements": [
+        "ML personalization may select settings offline; it is not needed in this low-cost deterministic path."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 17,
+      "plugin": "De-esser",
+      "requirements": "A small speech-conditioned sibilance classifier could gate the existing detector. Measure false positives on music and use confidence-based fallback. Classical relative band-energy detection and hysteresis are alternatives to benchmark before model adoption. Current recorded-sound baseline: audit/artifacts/plugin-audit-20261018/de-esser-recorded.json. This five-recording, single-phoneme-speaker set establishes conditional attenuation, not adequate training data or population accuracy. At the fixed high-gain setting, Wideband attenuates violin by 5.691 dB and cymbal by 5.038 dB; the production detector is based on absolute band level rather than speech identity.",
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 18,
+      "plugin": "Declick",
+      "requirements": [
+        "ML is sensible as a transient/click discriminator or constrained inpainting experiment, with false-positive damage measured explicitly."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 19,
+      "plugin": "Denoiser",
+      "requirements": [
+        "A learned music mask is plausible, but speech-trained models should not be assumed safe for arbitrary music; evaluate removal artifacts and latency against the existing path."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 21,
+      "plugin": "Downmix",
+      "requirements": [
+        "Learned source-aware remixing should be a separate optional product mode, not a hidden change to deterministic downmix."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 22,
+      "plugin": "Dynamic EQ",
+      "requirements": [
+        "ML can propose settings offline; the runtime gain envelope should remain transparent and bounded."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 23,
+      "plugin": "EQ",
+      "requirements": [
+        "ML can fit target responses or propose bands offline; it should not replace exact filter realization."
+      ],
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/eq_assistant.py",
+        "crates/sotf-plugins/models/eq-single-peak/training-report.json",
+        "audit/artifacts/ml-eq-20261024/native-proposal.json",
+        "crates/sotf-plugins/crates/sotf-plugin-eq/tests/ml_offline_proposal.rs",
+        "audit/artifacts/ml-eq-20261024/frozen-comparison.json",
+        "audit/artifacts/ml-eq-20261024/native-tests.json"
+      ],
+      "remaining": [
+        "General multiband/target support",
+        "Controlled cost/multistart comparison including Python and model cold-load",
+        "Out-of-family/noise/near-zero acceptance and measured responses"
+      ]
+    },
+    {
+      "plugin_id": 25,
+      "plugin": "Gate",
+      "requirements": [
+        "ML/VAD gating is useful only as an explicit speech mode with false-cut and latency evaluation, not as a replacement for a general-purpose gate."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 28,
+      "plugin": "Hiss reducer",
+      "requirements": [
+        "ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 29,
+      "plugin": "Limiter",
+      "requirements": [
+        "ML may recommend release characteristics, but a learned model should never be the only ceiling enforcement mechanism."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 30,
+      "plugin": "Linear-phase EQ",
+      "requirements": [
+        "ML filter fitting can run offline; runtime filtering should remain a validated FIR operation."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 31,
+      "plugin": "Loudness compensation / Fletcher\u2013Munson alias",
+      "requirements": [
+        "Classical calibrated equal-loudness compensation is preferable to a learned black box.",
+        "ML can fit a user's preference curve from controlled listening data, with uncertainty and gain bounds; it cannot infer acoustic calibration from PCM alone."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 32,
+      "plugin": "Matrix",
+      "requirements": [
+        "This is exact linear algebra; ML is unnecessary except an offline routing suggestion that remains reviewable."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 34,
+      "plugin": "Multiband compressor and single-band compressor alias",
+      "requirements": [
+        "ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 35,
+      "plugin": "Multiband expander and single-band expander alias",
+      "requirements": [
+        "A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 36,
+      "plugin": "PND \u2014 pitch-drift correction",
+      "requirements": [
+        "A monophonic learned pitch estimator such as CREPE [CREPE][R5] is a candidate only for supported material; test confidence gating and do not treat it as a general polyphonic reference-frequency oracle."
+      ],
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/src/neural_pitch.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/neural_pitch.rs",
+        "crates/sotf-plugins/models/crepe-tiny/manifest.json",
+        "scripts/ml/export_crepe.py",
+        "audit/artifacts/ml-pitch-20261024/release-tests.json",
+        "audit/artifacts/ml-pitch-20261024/engine-check.json",
+        "audit/artifacts/ml-pitch-20261024/default-integration.json"
+      ],
+      "remaining": [
+        "Matched classical versus learned drift/vibrato/noise/octave comparisons",
+        "Independent held-out material and real DAW contention/latency/memory acceptance",
+        "Native UI and application build coverage"
+      ]
+    },
+    {
+      "plugin_id": 38,
+      "plugin": "Saturation",
+      "requirements": [
+        "Neural emulation is useful for a measured nonlinear target, with alias and parameter-sweep tests rather than waveform similarity alone."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 39,
+      "plugin": "Spectral compressor",
+      "requirements": [
+        "A learned target mask is plausible for a separate restoration mode; compare latency and artifacts to the classical compressor first."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 41,
+      "plugin": "Stereo imager",
+      "requirements": [
+        "ML scene classification could suggest settings offline, but real-time width decisions should remain predictable."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 42,
+      "plugin": "Transient shaper",
+      "requirements": [
+        "Initialize updates coefficients but reset clears history; callers must not assume reinitialize resets learned envelope state.",
+        "ML onset classification can assist difficult material, but should only modulate bounded controls with an independent deterministic fallback."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 43,
+      "plugin": "Upmixer",
+      "requirements": [
+        "ML source masks are a meaningful optional improvement only with measured extra latency, leakage/artifact metrics and graceful fallback."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    },
+    {
+      "plugin_id": 44,
+      "plugin": "XTC",
+      "requirements": [
+        "ML can estimate position or personalize transfer functions off the critical path; constrain the inverse filter's gain and retain measured validation."
+      ],
+      "status": "implementation_pending",
+      "evidence": []
+    }
+  ],
+  "program_candidates": [
+    {
+      "candidate": "Hybrid AEC",
+      "status": "implementation_pending",
+      "acceptance_experiment": "Compare adaptive-only and neural-assisted paths under double-talk, nonlinear playback and delay changes; report near-end damage as well as echo reduction.",
+      "deployment_boundary": "Small bounded inference task with stale-result rejection; adaptive fallback stays active."
+    },
+    {
+      "candidate": "Hardware compressor emulation",
+      "status": "implementation_pending",
+      "acceptance_experiment": "Fit an identified target using held-out control settings and songs; evaluate envelope/gain trajectories, waveform/spectral errors and listening.",
+      "deployment_boundary": "Optional model, explicit operating level, deterministic ceiling; use the 2025 Solid State Bus-Comp work as a benchmark resource."
+    },
+    {
+      "candidate": "Pitch-estimation assistance",
+      "status": "implementation_in_progress",
+      "acceptance_experiment": "Compare classical estimator and learned monophonic estimator on wow/flutter, weak fundamentals and intentional vibrato; report octave errors and correction latency.",
+      "deployment_boundary": "Confidence-gated proposal to existing correction ratio; no unconditional polyphonic correction."
+    },
+    {
+      "candidate": "Speech enhancement alternative",
+      "status": "implementation_pending",
+      "acceptance_experiment": "Compare current model with DeepFilterNet2 using held-out speakers/noises, objective intelligibility/quality and controlled listening.",
+      "deployment_boundary": "Fixed-rate framed worker with bounded memory, model version/hash, recurrent reset and fallback."
+    },
+    {
+      "candidate": "Neural runtime choice",
+      "status": "implementation_pending",
+      "acceptance_experiment": "Benchmark candidate runtimes in the real DAW workload, including competing CPU/GPU activity and many model instances.",
+      "deployment_boundary": "Choose from measured deadline tails, not standalone throughput; do not presume a published runtime winner applies to every SOTF model."
+    }
+  ],
+  "local_audit_source": "audit-20261018.md (existing user-owned untracked file; not modified or staged)"
+}

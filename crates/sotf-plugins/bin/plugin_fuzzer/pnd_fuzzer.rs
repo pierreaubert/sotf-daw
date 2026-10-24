@@ -8,6 +8,7 @@ pub(super) struct PndFuzzer;
 impl PluginFuzzer for PndFuzzer {
     fn create_plugin(&self, channels: usize, rng: &mut StdRng) -> (Box<dyn Plugin>, String) {
         let params = PndPluginParams {
+            neural_pitch: None,
             correction_strength: rng.random_range(0.0..1.0),
             analysis_window_ms: rng.random_range(20.0..100.0),
             drift_smoothing: rng.random_range(0.001..0.1),

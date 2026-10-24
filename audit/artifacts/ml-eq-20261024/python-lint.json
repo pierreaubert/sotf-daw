@@ -1,0 +1,8 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml"
+  ],
+  "exit_code": 0
+}

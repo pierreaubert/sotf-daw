@@ -67,6 +67,10 @@ pub struct PndPlugin {
     pub(super) cache_update_counter: usize,
     pub(super) cached_parameters: Vec<Parameter>,
     pub(super) initialized: bool,
+    neural_pitch_config: Option<super::config::NeuralPitchConfig>,
+    neural_pitch_used: bool,
+    #[cfg(feature = "neural-pitch")]
+    neural_pitch: Option<crate::neural_pitch::NeuralPitchAssistant>,
     received_input: bool,
     input_phase: usize,
     drain_remaining: Option<usize>,
@@ -122,6 +126,10 @@ impl PndPlugin {
             cache_update_counter: 0,
             cached_parameters: Vec::new(),
             initialized: false,
+            neural_pitch_config: None,
+            neural_pitch_used: false,
+            #[cfg(feature = "neural-pitch")]
+            neural_pitch: None,
             received_input: false,
             input_phase: 0,
             drain_remaining: None,
@@ -234,6 +242,16 @@ impl PndPlugin {
         }
 
         let mut plugin = Self::new(channels);
+        if let Some(config) = &params.neural_pitch {
+            if config.source_channel >= channels || params.reference_frequency_hz <= 0.0 {
+                return Err(
+                    "Neural pitch requires an explicit reference and valid source channel".into(),
+                );
+            }
+            #[cfg(not(feature = "neural-pitch"))]
+            return Err("Neural pitch requires the neural-pitch build feature".into());
+        }
+        plugin.neural_pitch_config = params.neural_pitch;
         plugin.correction_strength = params.correction_strength;
         plugin.analysis_window_ms = params.analysis_window_ms;
         plugin.drift_smoothing = params.drift_smoothing;
@@ -311,6 +329,10 @@ impl PndPlugin {
         // derived from its final samples to samples at the callback's start.
         for i in 0..num_frames {
             if fixed_ratio.is_none() {
+                #[cfg(feature = "neural-pitch")]
+                if let Some(neural) = &mut self.neural_pitch {
+                    neural.push(input[i * self.channels + neural.source_channel()]);
+                }
                 let mut analysis_generation = self.last_analysis_generation;
                 for ch in 0..self.analyzers.len().min(self.channels) {
                     let analyzer = &mut self.analyzers[ch];
@@ -331,7 +353,7 @@ impl PndPlugin {
                     analysis_generation.saturating_sub(self.last_analysis_generation);
                 if elapsed_hops > 0 {
                     self.last_analysis_generation = analysis_generation;
-                    let (drift_ratio, new_confidence) = if self.analyzers.is_empty() {
+                    let observation = if self.analyzers.is_empty() {
                         (1.0, 0.0)
                     } else if self.multi_channel_analysis && self.analyzers.len() > 1 {
                         let n = self.analyzers.len().min(self.channels);
@@ -342,6 +364,15 @@ impl PndPlugin {
                     } else {
                         self.channel_consensus_scratch[0]
                     };
+                    #[cfg(feature = "neural-pitch")]
+                    let observation = {
+                        let neural = self.neural_pitch.as_ref().and_then(|n| {
+                            n.estimate_against_reference(self.reference_frequency_hz)
+                        });
+                        self.neural_pitch_used = neural.is_some();
+                        neural.unwrap_or(observation)
+                    };
+                    let (drift_ratio, new_confidence) = observation;
                     confidence = new_confidence;
                     self.last_drift_ratio = f64::from(drift_ratio);
 
@@ -427,6 +458,7 @@ impl PndPlugin {
                 d.confidence = confidence;
                 d.matched_partials = matched_partials;
                 d.total_peaks = total_peaks;
+                d.neural_pitch_used = self.neural_pitch_used;
             });
         }
 
@@ -652,6 +684,10 @@ impl Plugin for PndPlugin {
                 self.last_analysis_generation = 0;
                 self.last_drift_ratio = 1.0;
                 self.reference_transition_pending = true;
+                #[cfg(feature = "neural-pitch")]
+                if let Some(neural) = &mut self.neural_pitch {
+                    neural.reset();
+                }
             }
         } else if id == self.param_formant_preservation {
             if self.initialized {
@@ -721,7 +757,21 @@ impl Plugin for PndPlugin {
                 sample_rate as f32 * 0.5
             ));
         }
+        // Model loading and worker construction are transactional control work.
+        // A failed new model/rate leaves existing synthesis and inference intact.
+        #[cfg(feature = "neural-pitch")]
+        let neural_pitch = self
+            .neural_pitch_config
+            .as_ref()
+            .map(|config| {
+                crate::neural_pitch::NeuralPitchAssistant::new(config.clone(), sample_rate)
+            })
+            .transpose()?;
         self.sample_rate = sample_rate;
+        #[cfg(feature = "neural-pitch")]
+        {
+            self.neural_pitch = neural_pitch;
+        }
         self.last_analysis_generation = 0;
         self.reference_transition_pending = false;
         self.init_analyzers();
@@ -874,7 +924,12 @@ impl Plugin for PndPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "neural-pitch")]
+        if let Some(neural) = &mut self.neural_pitch {
+            neural.reset();
+        }
         self.received_input = false;
+        self.neural_pitch_used = false;
         self.input_phase = 0;
         self.drain_remaining = None;
         self.drain_pitch = 1.0;

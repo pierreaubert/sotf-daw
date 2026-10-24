@@ -11,6 +11,8 @@ pub struct PndData {
     pub matched_partials: usize,
     /// Total number of detected peaks in the last FFT frame.
     pub total_peaks: usize,
+    /// Whether the last analysis decision used a fresh neural observation.
+    pub neural_pitch_used: bool,
 }
 
 impl Default for PndData {
@@ -21,6 +23,7 @@ impl Default for PndData {
             confidence: 0.0,
             matched_partials: 0,
             total_peaks: 0,
+            neural_pitch_used: false,
         }
     }
 }
