@@ -191,7 +191,8 @@
         "crates/sotf-plugins/crates/sotf-plugin-gate/src/neural_speech.rs",
         "crates/sotf-plugins/crates/sotf-plugin-gate/tests/neural_speech.rs",
         "crates/sotf-engine/src/plugins/plugin_config_converter/dynamics.rs",
-        "audit/artifacts/ml-gate-20261025"
+        "audit/artifacts/ml-gate-20261025",
+        "audit/artifacts/ml-gate-silero-20261025"
       ],
       "implementation": {
         "mode": "Explicit speech_protection config with optional neural-speech build feature; linked Downward mode only; defaults remain classical.",
@@ -224,6 +225,67 @@
         "engine": "Combined neural-speech/neural-pitch/deep-filter test compilation and typed preset roundtrip passed with QA feature.",
         "sibling_cli": "Default player-cli release/offline/locked check passed; compatibility edits remain uncommitted in sibling checkout.",
         "formatting": "Focused rustfmt --check and git diff --check passed."
+      },
+      "silero_candidate": {
+        "status": "native_candidate_verified_not_runtime_integrated",
+        "evidence": "audit/artifacts/ml-gate-silero-20261025",
+        "upstream_commit": "7e30209a3e901f9842f81b225f3e93d8199902b1",
+        "native_model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+        "shape_specialization": "Batch annotations fixed to one and outer 16 kHz frame to 576 samples; weights/operators/edges unchanged, deterministic byte reproduction. Original exports rejected by Tract are preserved as diagnostics.",
+        "fixed_threshold": 0.8,
+        "development_pass_fractions": [
+          {
+            "fixture": "speech-0",
+            "replay_pass_fraction": 0.38618925831202044,
+            "streaming_pass_fraction": 0.808
+          },
+          {
+            "fixture": "speech-1",
+            "replay_pass_fraction": 0.3989769820971867,
+            "streaming_pass_fraction": 0.968
+          },
+          {
+            "fixture": "speech-2",
+            "replay_pass_fraction": 0.22762148337595908,
+            "streaming_pass_fraction": 0.688
+          },
+          {
+            "fixture": "violin",
+            "replay_pass_fraction": 0.0,
+            "streaming_pass_fraction": 0.0
+          },
+          {
+            "fixture": "cymbal",
+            "replay_pass_fraction": 0.0,
+            "streaming_pass_fraction": 0.0
+          },
+          {
+            "fixture": "s",
+            "replay_pass_fraction": 0.13654618473895583,
+            "streaming_pass_fraction": 0.44871794871794873
+          },
+          {
+            "fixture": "sh",
+            "replay_pass_fraction": 0.16017316017316016,
+            "streaming_pass_fraction": 0.52
+          },
+          {
+            "fixture": "p",
+            "replay_pass_fraction": 0.24113475177304963,
+            "streaming_pass_fraction": 0.717391304347826
+          }
+        ],
+        "native_parity": {
+          "cases": 16,
+          "maximum_score_absolute_error": 1.4901161193847656e-07,
+          "maximum_state_absolute_error": 9.5367431640625e-07,
+          "model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+          "scope": "Independent windows and eight-step streaming probes; native vs ONNX Runtime. No classifier quality or realtime deadline claim.",
+          "score_tolerance": 0.0001,
+          "state_tolerance": 0.001
+        },
+        "interpretation": "Zero passing windows on the existing violin and cymbal clips; recurrent streaming scores exceed independent-window scores on three speech clips. Different grids/protocols and unlabeled speech pauses prevent a recall or general superiority claim. Unknown training overlap.",
+        "next": "Implement a chronological streaming worker with source-clock timestamps, generation and gap resets, causal resampling, confidence/staleness fallback, and zero-allocation callback tests before connecting the candidate to Gate."
       }
     },
     {

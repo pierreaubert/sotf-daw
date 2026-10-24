@@ -1,0 +1,65 @@
+[
+  {
+    "name": "python-style",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/evaluate_gate_vad.py",
+      "scripts/ml/prepare_gate_vad.py",
+      "scripts/ml/verify_gate_vad.py"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.010001375107094646
+  },
+  {
+    "name": "provenance-replay",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/verify_gate_vad.py"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.19890154199674726
+  },
+  {
+    "name": "rust-format",
+    "command": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_gate_silero.rs"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.040512166917324066
+  },
+  {
+    "name": "combined-feature-clippy",
+    "command": [
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-gate",
+      "--features",
+      "neural-speech,qa,silero-vad-eval",
+      "--all-targets",
+      "--release",
+      "--offline",
+      "--locked",
+      "--jobs",
+      "2",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.43003345816396177
+  },
+  {
+    "name": "native-negative-contracts",
+    "corrupt_model_rejected": true,
+    "invalid_state_shape_rejected": true,
+    "exit_code": 0
+  }
+]

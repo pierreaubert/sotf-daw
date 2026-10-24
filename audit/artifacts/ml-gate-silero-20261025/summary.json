@@ -1,0 +1,59 @@
+{
+  "status": "native_candidate_verified_not_runtime_integrated",
+  "audit_scope": "31 plugin proposals plus 5 program candidates; unchanged",
+  "model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+  "native_parity": {
+    "cases": 16,
+    "maximum_score_absolute_error": 1.4901161193847656e-07,
+    "maximum_state_absolute_error": 9.5367431640625e-07,
+    "model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+    "scope": "Independent windows and eight-step streaming probes; native vs ONNX Runtime. No classifier quality or realtime deadline claim.",
+    "score_tolerance": 0.0001,
+    "state_tolerance": 0.001
+  },
+  "threshold": 0.8,
+  "development_recordings": [
+    {
+      "fixture": "speech-0",
+      "replay_pass_fraction": 0.38618925831202044,
+      "streaming_pass_fraction": 0.808
+    },
+    {
+      "fixture": "speech-1",
+      "replay_pass_fraction": 0.3989769820971867,
+      "streaming_pass_fraction": 0.968
+    },
+    {
+      "fixture": "speech-2",
+      "replay_pass_fraction": 0.22762148337595908,
+      "streaming_pass_fraction": 0.688
+    },
+    {
+      "fixture": "violin",
+      "replay_pass_fraction": 0.0,
+      "streaming_pass_fraction": 0.0
+    },
+    {
+      "fixture": "cymbal",
+      "replay_pass_fraction": 0.0,
+      "streaming_pass_fraction": 0.0
+    },
+    {
+      "fixture": "s",
+      "replay_pass_fraction": 0.13654618473895583,
+      "streaming_pass_fraction": 0.44871794871794873
+    },
+    {
+      "fixture": "sh",
+      "replay_pass_fraction": 0.16017316017316016,
+      "streaming_pass_fraction": 0.52
+    },
+    {
+      "fixture": "p",
+      "replay_pass_fraction": 0.24113475177304963,
+      "streaming_pass_fraction": 0.717391304347826
+    }
+  ],
+  "limits": "Existing development recordings, unknown training overlap. Speech pauses lack labels; clip pass fractions are not recall. Model-only replay excludes worker deadlines and gain smoothing.",
+  "remaining": "Implement a chronological streaming worker with source-clock timestamps, generation and gap resets, causal resampling, confidence/staleness fallback, and zero-allocation callback tests before connecting the candidate to Gate."
+}

@@ -122,6 +122,29 @@ requires reconstructing the plugin; existing scalar parameter indices remain
 unchanged. `GateData.speech_protection` reports score, source age, usability,
 protection amount, and submitted/dropped/observed window counts.
 
+Silero VAD is a separate development candidate. The `silero-vad-eval` feature
+enables its native comparison binary; it does not select Silero in the Gate
+processing path. The pinned model, license, and source manifest are in
+`crates/sotf-plugins/models/silero-vad`. Its fixed-batch derivative changes only
+shape annotations; the preparation script verifies unchanged weights,
+operators, and connections. Reproduce the source/derived identities and ONNX
+Runtime golden cases with `scripts/ml/verify_gate_vad.py` using the pinned
+`scripts/ml/gate-vad-requirements.txt` environment, then run from the workspace:
+
+```bash
+cargo run -p sotf-plugin-gate --bin qa-gate-silero \
+  --features qa,silero-vad-eval --release --locked -- \
+  crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx \
+  audit/artifacts/ml-gate-silero-20261025/fixed-batch/ort-golden.json
+```
+
+The candidate rejects the existing violin/cymbal clips at the fixed score
+threshold. Its speech scores depend strongly on retaining recurrent history;
+resetting every 100 ms loses detections. Existing recordings are development
+probes with unknown model-training overlap. A streaming worker with explicit
+generation/gap resets, source-clock timing, and runtime validation is still
+required before this candidate can drive speech protection.
+
 ### Timing
 
 Controls the gate's response speed. Fast attack reduces attenuation quickly to preserve transients. Hold keeps the unity-gain target for a set time after the signal drops below the closing threshold (prevents chattering). Release controls increasing attenuation. Attack and release are one-pole time constants in dB; after one time constant, approximately 63% of a step toward the new gain target is complete.

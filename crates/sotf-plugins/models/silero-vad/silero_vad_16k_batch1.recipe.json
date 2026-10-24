@@ -1,0 +1,8 @@
+{
+  "source_sha256": "7671cd04b004e9076da0d4a7b1a5aec36adf161c39230c1cb94a4fd5db6bbd28",
+  "output_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+  "batch_annotations_fixed": 96,
+  "source_samples": 576,
+  "operators_weights_edges_unchanged": true,
+  "onnx_version": "1.23.2"
+}

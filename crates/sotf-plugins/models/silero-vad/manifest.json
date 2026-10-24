@@ -1,0 +1,49 @@
+{
+  "repository": "https://github.com/snakers4/silero-vad",
+  "release": "v6.2.1",
+  "commit": "7e30209a3e901f9842f81b225f3e93d8199902b1",
+  "license": "MIT",
+  "files": {
+    "silero_vad_16k_op15.onnx": {
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/7e30209a3e901f9842f81b225f3e93d8199902b1/src/silero_vad/data/silero_vad_16k_op15.onnx",
+      "sha256": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
+      "bytes": 1289603
+    },
+    "upstream_utils_vad.py": {
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/7e30209a3e901f9842f81b225f3e93d8199902b1/src/silero_vad/utils_vad.py",
+      "sha256": "dbdcfc5cef2c14abf8cc29b44afb79038509a9bc34ae8ba2e7482b48813949ee",
+      "bytes": 25590
+    },
+    "LICENSE": {
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/7e30209a3e901f9842f81b225f3e93d8199902b1/LICENSE",
+      "sha256": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+      "bytes": 1075
+    },
+    "silero_vad_op18_ifless.onnx": {
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/7e30209a3e901f9842f81b225f3e93d8199902b1/src/silero_vad/data/silero_vad_op18_ifless.onnx",
+      "sha256": "7671cd04b004e9076da0d4a7b1a5aec36adf161c39230c1cb94a4fd5db6bbd28",
+      "bytes": 2845718
+    }
+  },
+  "status": "evaluation candidate; not adopted as runtime default",
+  "inspected_alternatives": {
+    "silero_vad_half.onnx": {
+      "url": "https://raw.githubusercontent.com/snakers4/silero-vad/7e30209a3e901f9842f81b225f3e93d8199902b1/src/silero_vad/data/silero_vad_half.onnx",
+      "sha256": "1e0b195ad4806595ef4466f419d16fca7e4afcfc6669b8c0b5f76ea87547c769",
+      "bytes": 1280395,
+      "result": "Not retained: the same three conditional decoder operations remain; no native parity claim."
+    }
+  },
+  "training_overlap": "Unknown for the existing repository development recordings; no held-out or population accuracy claim.",
+  "derived": {
+    "file": "silero_vad_16k_batch1.onnx",
+    "source_sha256": "7671cd04b004e9076da0d4a7b1a5aec36adf161c39230c1cb94a4fd5db6bbd28",
+    "output_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+    "batch_annotations_fixed": 96,
+    "source_samples": 576,
+    "operators_weights_edges_unchanged": true,
+    "onnx_version": "1.23.2",
+    "recipe_script": "scripts/ml/prepare_gate_vad.py",
+    "recipe_script_sha256": "d66bf9a64fe2825a5f0c15b4df18f3d77ea6f00c872b58a52c23119a24e8730b"
+  }
+}

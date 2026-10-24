@@ -1,0 +1,17 @@
+{
+  "Cargo.lock": "d682e0cf3e0adf54c421c3e1c8d2262fa1443e4b6169d0cb49146f3907700e67",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/Cargo.toml": "dfbb311e714e43f3289319016ef6f5615d73812be50623e25e4a02d53b4b23a6",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/USAGE.md": "ef455ade755023e994c25a5928933e94a70d9390aae326fe8a51b21a50c60301",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_gate_silero.rs": "b7d810054dc987d69c9816f355ec8f88af1b86d3d73e16b1371121f7b8a694a4",
+  "crates/sotf-plugins/models/silero-vad/LICENSE": "2e63e9a38b6e8fc0c7bc37ce174caca1862870856c6daf5697cfb785e925520b",
+  "crates/sotf-plugins/models/silero-vad/manifest.json": "ee9c94b98c9c519d9d27594e211e2788d35794e8818604ae662539035f43d14f",
+  "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+  "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.recipe.json": "89773078d865c246e37411f92f6cd167ccd013ac836061c6d21d5b57c3db2b09",
+  "crates/sotf-plugins/models/silero-vad/silero_vad_16k_op15.onnx": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
+  "crates/sotf-plugins/models/silero-vad/silero_vad_op18_ifless.onnx": "7671cd04b004e9076da0d4a7b1a5aec36adf161c39230c1cb94a4fd5db6bbd28",
+  "crates/sotf-plugins/models/silero-vad/upstream_utils_vad.py": "dbdcfc5cef2c14abf8cc29b44afb79038509a9bc34ae8ba2e7482b48813949ee",
+  "scripts/ml/evaluate_gate_vad.py": "d49a37df98b6154350f7caa61375fb62d2ae3f75d167b8599039b079473f41ab",
+  "scripts/ml/gate-vad-requirements.txt": "fc3217cfad477c46de7e040f6b26fd71c6e9f054c7e0e2303e059a90b091a7fe",
+  "scripts/ml/prepare_gate_vad.py": "d66bf9a64fe2825a5f0c15b4df18f3d77ea6f00c872b58a52c23119a24e8730b",
+  "scripts/ml/verify_gate_vad.py": "7dc4d458f91f48c696c4756c81bf2ec9f837d64682fde21c04f1ba6d1463ad6f"
+}
