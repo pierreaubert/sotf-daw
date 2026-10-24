@@ -1,0 +1,24 @@
+{
+  "base_commit": "24e72a4",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "e7581034682413ab7e5ed2bc4145fb21e7db8251431aaa42c60a6f21e101d486",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "c581aced649ff1880359cd9393e87f58f0f9e7003c705a666590b9d7f5464d2a",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "2b163167f0a9b6cd60e8ba86f8948b9b6540e0545d9f77049f702a93da400fce",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/span_tests.rs": "33abbd32c3af85f60eeff6d687375a9d951748c15724acf71928431ac3fbd57c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "873b81f397b8affc938a102922689c84ec171ca8d9fc088d888073045139e358"
+  },
+  "baseline_snapshots": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/baseline-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/baseline-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/baseline-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs"
+  },
+  "contracts": "Same transform grid/phases/offsets/normalization and scalar per-sample reference; no new buffering latency, heap work or admission arithmetic. Host chunks use bounded128-frame stack scratch; sample envelopes and dry alignment preserved. Rejected overlap/UPC fusion stays restored.",
+  "snapshot_paths": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/validated-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/validated-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/validated-source/crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/span_tests.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/validated-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc/span_tests.rs",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "audit/artifacts/remaining-convolution-eq-span-20261024/validated-source/crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs"
+  },
+  "hashes_unchanged_after_validation": true
+}

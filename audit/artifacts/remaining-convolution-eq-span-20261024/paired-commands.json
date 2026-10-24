@@ -1,0 +1,15 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-687e900abba5c3ae",
+      "paired_span_stream_cost_abba",
+      "--ignored",
+      "--nocapture",
+      "--test-threads=1"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 140.14391304086894
+  }
+]

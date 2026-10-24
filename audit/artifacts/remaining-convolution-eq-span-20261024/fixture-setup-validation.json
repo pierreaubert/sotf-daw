@@ -1,0 +1,16 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-687e900abba5c3ae",
+    "paired_span_all_fixtures_load",
+    "--ignored",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.5630412918981165,
+  "stdout": "\nrunning 1 test\ntest convolution_plugin::span_cost::paired_span_all_fixtures_load ... SPAN_SETUP 48000_2x1_cyclic_ordinary\nSPAN_SETUP 48000_2x1_cyclic_head\nSPAN_SETUP 48000_2x2_cyclic_ordinary\nSPAN_SETUP 48000_2x2_cyclic_head\nSPAN_SETUP 48000_12x1_cyclic_ordinary\nSPAN_SETUP 48000_12x1_cyclic_head\nSPAN_SETUP 48000_12x12_cyclic_ordinary\nSPAN_SETUP 48000_12x12_cyclic_head\nSPAN_SETUP 48000_32x1_cyclic_ordinary\nSPAN_SETUP 48000_32x1_cyclic_head\nSPAN_SETUP 48000_32x32_cyclic_ordinary\nSPAN_SETUP 48000_32x32_cyclic_head\nSPAN_SETUP 48000_2x4_matrix_ordinary\nSPAN_SETUP 48000_2x4_matrix_head\nSPAN_SETUP 48000_common_upc12\nSPAN_SETUP 48000_common_inactive32\nSPAN_SETUP 96000_2x1_cyclic_ordinary\nSPAN_SETUP 96000_2x1_cyclic_head\nSPAN_SETUP 96000_2x2_cyclic_ordinary\nSPAN_SETUP 96000_2x2_cyclic_head\nSPAN_SETUP 96000_12x1_cyclic_ordinary\nSPAN_SETUP 96000_12x1_cyclic_head\nSPAN_SETUP 96000_12x12_cyclic_ordinary\nSPAN_SETUP 96000_12x12_cyclic_head\nSPAN_SETUP 96000_32x1_cyclic_ordinary\nSPAN_SETUP 96000_32x1_cyclic_head\nSPAN_SETUP 96000_32x32_cyclic_ordinary\nSPAN_SETUP 96000_32x32_cyclic_head\nSPAN_SETUP 96000_2x4_matrix_ordinary\nSPAN_SETUP 96000_2x4_matrix_head\nSPAN_SETUP 96000_common_upc12\nSPAN_SETUP 96000_common_inactive32\nSPAN_SETUP 192000_2x1_cyclic_ordinary\nSPAN_SETUP 192000_2x1_cyclic_head\nSPAN_SETUP 192000_2x2_cyclic_ordinary\nSPAN_SETUP 192000_2x2_cyclic_head\nSPAN_SETUP 192000_12x1_cyclic_ordinary\nSPAN_SETUP 192000_12x1_cyclic_head\nSPAN_SETUP 192000_12x12_cyclic_ordinary\nSPAN_SETUP 192000_12x12_cyclic_head\nSPAN_SETUP 192000_32x1_cyclic_ordinary\nSPAN_SETUP 192000_32x1_cyclic_head\nSPAN_SETUP 192000_32x32_cyclic_ordinary\nSPAN_SETUP 192000_32x32_cyclic_head\nSPAN_SETUP 192000_2x4_matrix_ordinary\nSPAN_SETUP 192000_2x4_matrix_head\nSPAN_SETUP 192000_common_upc12\nSPAN_SETUP 192000_common_inactive32\nok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 78 filtered out; finished in 0.55s\n\n",
+  "stderr": "",
+  "binary_sha256": "b8e3089702b38630a29ace91031b15d2e8b230e3157f964f19e1229492b64466"
+}

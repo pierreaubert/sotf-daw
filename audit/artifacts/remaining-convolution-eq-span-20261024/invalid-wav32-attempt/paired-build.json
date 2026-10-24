@@ -1,0 +1,50 @@
+[
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "test",
+      "-p",
+      "sotf-plugin-convolution",
+      "--lib",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--no-run"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 289.16843605041504,
+    "stdout": "",
+    "stderr": "    Blocking waiting for file lock on build directory\n   Compiling sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 4m 49s\n  Executable unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-687e900abba5c3ae)\n"
+  },
+  {
+    "command": [
+      "rtk",
+      "proxy",
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-convolution",
+      "--release",
+      "--offline",
+      "--locked",
+      "--target-dir",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+      "--features",
+      "qa",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 611.542760848999,
+    "stdout": "",
+    "stderr": "    Blocking waiting for file lock on build directory\n    Checking sotf-plugin-convolution v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-convolution)\n    Finished `release` profile [optimized] target(s) in 10m 11s\n"
+  }
+]

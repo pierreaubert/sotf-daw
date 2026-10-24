@@ -1,0 +1,11 @@
+{
+  "commit": "24e72a4",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "79321a0648a1dec724e23a6d6607770667b09432b7eb192d2df4e8d1acb4fdca",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "3786cc3261be2456ce32a7f87db2c02fc9a66d11c527824f3f7e61fd9fa67abd",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "ff9f5b3d19d6c13a022c9767ab89d3bb23f2a4d45a7c2a66faccc68cee82adc3",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "769777daf7c709b682150021c0dfc09f3fc22888a89379f01e07dd4c2369f9d3"
+  },
+  "trial_modules_removed": true,
+  "exact_byte_equality": true
+}

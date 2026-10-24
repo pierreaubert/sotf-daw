@@ -1,0 +1,7 @@
+{
+  "same_48_cases": true,
+  "same_all_predeclared_guards": true,
+  "changed_source_purpose": "Match full QA AIFF format for 32-channel IR fixture and add setup-only load/process pass. PCM coefficient formula preserved; channels/routing/rates/horizons unchanged.",
+  "original_plan_sha256": "5fd6c856a9b58f7eedbe5c59d7439a74d721e07e926bd3e012f7970c154a0b04",
+  "final_plan_sha256": "0c5a35385f5a6d39e0d8026f22fdf55ec3ff553b984f1d788c47a595f4e022a7"
+}

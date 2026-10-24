@@ -1,0 +1,364 @@
+use super::partition_level::{PartitionKernel, PartitionLevel};
+use super::time_domain_head::TimeDomainHead;
+use super::types::{PartitionSpec, plan_partitions};
+use realfft::RealFftPlanner;
+use std::sync::Arc;
+
+// Equal-size adjacent groups consume the same source blocks. Concatenating
+// their IR partitions into one FDL expresses the later group's output delay as
+// older input spectra, avoiding duplicate forward/inverse transforms and OLA.
+// Keep the public/admission plan unchanged; this is preparation-only grouping.
+fn coalesce_partition_levels(specs: Vec<PartitionSpec>) -> Vec<PartitionSpec> {
+    let mut combined: Vec<PartitionSpec> = Vec::with_capacity(specs.len());
+    for spec in specs {
+        if let Some(previous) = combined.last_mut()
+            && previous.block_size == spec.block_size
+            && previous.fft_size == spec.fft_size
+            && previous
+                .count
+                .checked_mul(previous.block_size)
+                .and_then(|span| previous.offset.checked_add(span))
+                == Some(spec.offset)
+        {
+            previous.count = previous
+                .count
+                .checked_add(spec.count)
+                .expect("planned NUPC partition count fits its IR coverage");
+        } else {
+            combined.push(spec);
+        }
+    }
+    combined
+}
+
+pub struct NupcKernel {
+    levels: Vec<(Arc<PartitionKernel>, usize)>,
+    min_block: usize,
+    head_taps: Option<Arc<[f32]>>,
+}
+
+impl NupcKernel {
+    pub fn new(ir: &[f32], min_block: usize) -> Self {
+        let specs = coalesce_partition_levels(plan_partitions(ir.len(), min_block));
+        let mut planner = RealFftPlanner::new();
+        let levels = specs
+            .iter()
+            .map(|spec| {
+                let output_delay = min_block + spec.offset - spec.block_size;
+                (PartitionKernel::new(spec, ir, &mut planner), output_delay)
+            })
+            .collect();
+        Self {
+            levels,
+            min_block,
+            head_taps: None,
+        }
+    }
+
+    /// Prepare a direct head with power-of-two FFT tail blocks.
+    ///
+    /// Retain all requested direct taps up to the IR length. A nonempty tail
+    /// uses the largest power-of-two base no greater than `min_block` and the
+    /// actual head length; output delays preserve absolute tap placement.
+    /// With no head, ordinary construction keeps its requested block size.
+    /// Preparation allocates and must run off the audio thread.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcKernel;
+    /// let kernel = NupcKernel::new_with_head(&[1.0, 0.5, 0.25], 1024, 2);
+    /// let engine = kernel.instantiate();
+    /// assert_eq!(engine.head_taps(), 2);
+    /// assert_eq!(engine.latency_samples(), 0);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `min_block` is zero and the IR extends beyond the direct head.
+    pub fn new_with_head(ir: &[f32], min_block: usize, head_taps: usize) -> Self {
+        let head_len = head_taps.min(ir.len());
+        if head_len == 0 {
+            return Self::new(ir, min_block);
+        }
+        let tail = &ir[head_len..];
+        // Keep every direct tap, but avoid inheriting a prime/non-power head
+        // length as the FFT grid. The existing absolute-offset delay places
+        // the tail correctly even when the first FFT block is shorter.
+        let block_cap = min_block.min(head_len);
+        let fft_block = if tail.is_empty() {
+            block_cap // An empty tail needs no transform or positive block cap.
+        } else {
+            1_usize << block_cap.ilog2()
+        };
+        let specs = coalesce_partition_levels(plan_partitions(tail.len(), fft_block));
+        let mut planner = RealFftPlanner::new();
+        let levels = specs
+            .iter()
+            .map(|spec| {
+                let absolute_offset = head_len + spec.offset;
+                let output_delay = absolute_offset - spec.block_size;
+                (PartitionKernel::new(spec, tail, &mut planner), output_delay)
+            })
+            .collect();
+        Self {
+            levels,
+            min_block,
+            head_taps: Some(Arc::from(&ir[..head_len])),
+        }
+    }
+
+    pub fn instantiate(&self) -> NupcEngine {
+        self.instantiate_with_phase(0, 1)
+    }
+
+    /// Instantiate independent history with a fractional initial block phase.
+    ///
+    /// Each level starts with `floor(block_size * phase_index / phase_count)`
+    /// zero prehistory samples and the matching output-queue position. This
+    /// shifts transform boundaries without changing absolute tap timing,
+    /// latency, buffers or per-block work. A finite interval can contain one
+    /// more transform per level because its boundary occurs earlier. Reset
+    /// restores the same phase. Construction belongs off the audio thread.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcKernel;
+    /// let kernel = NupcKernel::new(&[1.0], 64);
+    /// let left = kernel.instantiate_with_phase(0, 2);
+    /// let right = kernel.instantiate_with_phase(1, 2);
+    /// assert_eq!(left.latency_samples(), right.latency_samples());
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Panics if `phase_count` is zero or `phase_index >= phase_count`.
+    pub fn instantiate_with_phase(&self, phase_index: usize, phase_count: usize) -> NupcEngine {
+        assert!(phase_count > 0 && phase_index < phase_count);
+        NupcEngine {
+            levels: self
+                .levels
+                .iter()
+                .map(|(kernel, delay)| {
+                    // Widen before multiplying: even valid usize::MAX fractions
+                    // must not overflow before the quotient bounds the phase.
+                    let phase = (kernel.block_size as u128 * phase_index as u128
+                        / phase_count as u128) as usize;
+                    let mut level = PartitionLevel::from_kernel(Arc::clone(kernel), *delay);
+                    level.initial_phase = phase;
+                    level.input_fill = phase;
+                    level.output_queue_pos = phase;
+                    level
+                })
+                .collect(),
+            min_block: self.min_block,
+            identity_delay: None,
+            td_head: self
+                .head_taps
+                .as_ref()
+                .map(|taps| TimeDomainHead::from_taps(Arc::clone(taps))),
+            td_head_len: self.head_taps.as_ref().map_or(0, |taps| taps.len()),
+        }
+    }
+}
+
+/// Non-Uniform Partitioned Convolution engine.
+///
+/// Uses progressively larger block sizes for efficient long-IR convolution
+/// while maintaining low latency from the smallest block size.
+/// Optionally includes a time-domain head for zero-latency processing
+/// of the first few taps.
+pub struct NupcEngine {
+    pub(super) levels: Vec<PartitionLevel>,
+    pub(super) min_block: usize,
+    /// Exact prepared unit delay for known identity FIR bypass domains.
+    pub(super) identity_delay: Option<(Vec<f32>, usize)>,
+    /// Optional time-domain head for zero-latency first taps
+    pub(super) td_head: Option<TimeDomainHead>,
+    /// Number of IR samples handled by the time-domain head
+    pub(super) td_head_len: usize,
+}
+
+impl NupcEngine {
+    /// Prepare an exact unit-gain delay without FFT processing.
+    ///
+    /// This specializes a known delayed identity FIR. The delay includes any
+    /// FIR group delay and streaming latency required by the caller. All
+    /// history is allocated here; processing and reset allocate nothing.
+    /// No FFT levels or direct-head taps are prepared. A zero delay passes
+    /// samples through unchanged.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use plugins_spatial::nupc::NupcEngine;
+    /// let mut delay = NupcEngine::new_unit_delay(2);
+    /// assert_eq!(delay.latency_samples(), 2);
+    /// assert_eq!(delay.process_sample(1.0), 0.0);
+    /// assert_eq!(delay.process_sample(0.0), 0.0);
+    /// assert_eq!(delay.process_sample(0.0), 1.0);
+    /// ```
+    pub fn new_unit_delay(delay_samples: usize) -> Self {
+        Self {
+            levels: Vec::new(),
+            min_block: delay_samples,
+            identity_delay: Some((vec![0.0; delay_samples], 0)),
+            td_head: None,
+            td_head_len: 0,
+        }
+    }
+
+    /// Create a new NUPC engine from an impulse response.
+    ///
+    /// # Arguments
+    /// * `ir` - Impulse response samples (single channel)
+    /// * `min_block` - Minimum block size (determines latency)
+    pub fn new(ir: &[f32], min_block: usize) -> Self {
+        NupcKernel::new(ir, min_block).instantiate()
+    }
+
+    /// Create with a time-domain head for zero-latency processing.
+    ///
+    /// The first `head_taps` samples of the IR are processed in the time domain
+    /// (zero latency). The remaining IR is handled by the FFT levels.
+    /// The FFT partition plan starts at offset `head_taps` into the IR.
+    pub fn new_with_head(ir: &[f32], min_block: usize, head_taps: usize) -> Self {
+        NupcKernel::new_with_head(ir, min_block, head_taps).instantiate()
+    }
+
+    /// Process a single sample through all partition levels.
+    ///
+    /// Each level accumulates samples independently at its own block size.
+    /// The output is the sum of contributions from all levels.
+    pub fn process_sample(&mut self, sample: f32) -> f32 {
+        if let Some((history, position)) = &mut self.identity_delay {
+            if history.is_empty() {
+                return sample;
+            }
+            let output = history[*position];
+            history[*position] = sample;
+            *position += 1;
+            if *position == history.len() {
+                *position = 0;
+            }
+            return output;
+        }
+        let mut output = 0.0;
+        // Time-domain head: zero-latency direct convolution of first taps
+        if let Some(ref mut head) = self.td_head {
+            output += head.process_sample(sample);
+        }
+        // FFT levels: handle the remaining IR tail
+        for level in &mut self.levels {
+            output += level.push_sample(sample);
+        }
+        output
+    }
+
+    /// Return the largest prepared FFT block, excluding direct taps.
+    ///
+    /// Returns zero when no FFT levels are needed, including a pure direct head.
+    pub fn largest_block_size(&self) -> usize {
+        self.levels
+            .iter()
+            .map(|level| level.kernel.block_size)
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Returns the number of IR samples handled by the time-domain head (0 if disabled).
+    pub fn head_taps(&self) -> usize {
+        self.td_head_len
+    }
+
+    /// Process a block without changing sample chronology or transform phases.
+    ///
+    /// Overwrites only `input.len()` output slots and leaves any remaining slots
+    /// unchanged. Each level retains its existing boundaries and absolute
+    /// output delay; contiguous ready spans are added in the same level order.
+    ///
+    /// # Panics
+    ///
+    /// Panics before processing if `output` is shorter than `input`.
+    pub fn process_block(&mut self, input: &[f32], output: &mut [f32]) {
+        assert!(output.len() >= input.len());
+        let output = &mut output[..input.len()];
+        if let Some((history, position)) = &mut self.identity_delay {
+            if history.is_empty() {
+                output.copy_from_slice(input);
+                return;
+            }
+            let mut at = 0;
+            while at < input.len() {
+                let count = (input.len() - at).min(history.len() - *position);
+                output[at..at + count].copy_from_slice(&history[*position..*position + count]);
+                history[*position..*position + count].copy_from_slice(&input[at..at + count]);
+                at += count;
+                *position += count;
+                if *position == history.len() {
+                    *position = 0;
+                }
+            }
+            return;
+        }
+        if let Some(head) = &mut self.td_head {
+            for (sample, &input) in output.iter_mut().zip(input) {
+                *sample = 0.0 + head.process_sample(input);
+            }
+        } else {
+            output.fill(0.0);
+        }
+        for level in &mut self.levels {
+            level.process_add_block(input, output);
+        }
+    }
+
+    /// Reset all internal state.
+    pub fn reset(&mut self) {
+        if let Some((history, position)) = &mut self.identity_delay {
+            history.fill(0.0);
+            *position = 0;
+        }
+        if let Some(ref mut head) = self.td_head {
+            head.reset();
+        }
+        for level in &mut self.levels {
+            level.reset();
+        }
+    }
+
+    /// Return the processing latency, including the optional direct convolution head.
+    pub fn latency_samples(&self) -> usize {
+        if self.td_head.is_some() {
+            0
+        } else {
+            self.min_block
+        }
+    }
+
+    pub fn shares_ir_kernel_with(&self, other: &Self) -> bool {
+        if self.identity_delay.is_some() || other.identity_delay.is_some() {
+            return false;
+        }
+        self.levels.len() == other.levels.len()
+            && self
+                .levels
+                .iter()
+                .zip(&other.levels)
+                .all(|(a, b)| Arc::ptr_eq(&a.kernel, &b.kernel))
+    }
+}
+
+impl std::fmt::Debug for NupcEngine {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NupcEngine")
+            .field("num_levels", &self.levels.len())
+            .field("min_block", &self.min_block)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+#[path = "final_tail_cost.rs"]
+mod final_tail_cost;

@@ -1,0 +1,17 @@
+{
+  "plan_sha256": "0c5a35385f5a6d39e0d8026f22fdf55ec3ff553b984f1d788c47a595f4e022a7",
+  "binary_sha256": {
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_convolution-687e900abba5c3ae": "b8e3089702b38630a29ace91031b15d2e8b230e3157f964f19e1229492b64466"
+  },
+  "source_sha256": {
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/partition_level.rs": "e7581034682413ab7e5ed2bc4145fb21e7db8251431aaa42c60a6f21e101d486",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/nupc_engine.rs": "c581aced649ff1880359cd9393e87f58f0f9e7003c705a666590b9d7f5464d2a",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/convolution_plugin.rs": "25c6d0a07277511d532b4fa31c8d06ad21d2aeb431000f2f0525a26411e32642",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc/span_tests.rs": "33abbd32c3af85f60eeff6d687375a9d951748c15724acf71928431ac3fbd57c",
+    "crates/sotf-plugins/crates/plugins-spatial/src/nupc.rs": "873b81f397b8affc938a102922689c84ec171ca8d9fc088d888073045139e358",
+    "crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/span_cost.rs": "2968bae8bca00abc557344f23a550fbf9917ec22615f8bbaae6cd7b3aa62006f",
+    "audit/artifacts/remaining-convolution-eq-span-20261024/scalar-stream-baseline.rs.txt": "52773a57aed9e74b988d1955ee8e1fae1ca04db7c5bd41a274582626fec372b2"
+  },
+  "scope": "Isolated private stream cost, not full Plugin/native certification; original rejected overlap/UPC changes remain restored.",
+  "hashes_unchanged_after_measurement": true
+}

@@ -1265,6 +1265,24 @@
             "audit/artifacts/remaining-convolution-eq-20261024/verify-first-batch.py",
             "audit/artifacts/remaining-convolution-eq-20261024/verify-identity-only.py"
           ]
+        },
+        {
+          "requirement": "Reject the bulk-span convolution candidate when the fixed complete comparison fails performance and control-stability guards.",
+          "status": "rejected_candidate_restored",
+          "result": "Bulk-span production candidate passes functional/reference checks but fails the unchanged48case192ABBA screen:817200callback durations, exactwaveform; changedaggregate0.938188, largestchanged2.174127 and unchangedcontrols0.561577..1.360999 versus0.90..1.10. These do not establish a controlled performance win or a cause for excursions. Initial run stopped40trials on32channelWAV fixture; correctedAIFF all48setup preflight passes, definitions/guards identical, fullrawtrial retained. No samples removed or limits changed. Four owned production/module files restored byte-for-byte to24e72a4, trial-only modules absent.273affectedrelease tests/10retainedignores and strictall-targetClippy pass; archived verifier confirms rejection and restoration. No candidate DSP ships; capacity/deadlines/FIR-M1 unresolved.",
+          "evidence": [
+            "audit/artifacts/remaining-convolution-eq-span-20261024/README.md",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-plan.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/measured-source.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/fixture-setup-validation.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-analysis.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-acceptance-failure.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-distribution-diagnostic.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/restored-validation.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/restoration-verification.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
+          ]
         }
       ],
       "evidence": [
@@ -1438,7 +1456,18 @@
         "audit/artifacts/plugin-audit-20261018/verify-final-tail-retry.py",
         "audit/artifacts/plugin-audit-20261018/run-final-tail-retry.py",
         "crates/sotf-plugins/crates/plugins-spatial/src/nupc/final_tail_cost.rs",
-        "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json"
+        "audit/artifacts/plugin-audit-20261018/final-tail-retry-restored-validation.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/README.md",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-plan.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/measured-source.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/fixture-setup-validation.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-analysis.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-acceptance-failure.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-distribution-diagnostic.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/restored-validation.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/restoration-verification.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
       ]
     },
     {
@@ -1719,6 +1748,19 @@
             "audit/artifacts/remaining-denoiser-zero-reduction-20261024/optional-qa.json",
             "audit/artifacts/remaining-denoiser-zero-reduction-20261024/verify.py"
           ]
+        },
+        {
+          "requirement": "Reject gain-risk and decision-directed remedies that regress fixed vowel, noise-step or recorded quality guards.",
+          "status": "rejected_candidates_restored",
+          "result": "Archive commit ac4700c retains three independent investigations. Natural decision-directed clean-power recurrence passes scalar algebra but fails vowel preservation. The MCRA smoothed binary minimum indicator approaches0.999992 after a noise-only step and cannot be treated as calibrated speech posterior. SNR-weighted risk passes component math but vowel ratios0.322626/0.480574 fail0.5, one recorded SDR delta-0.311379 fails-0.25 and step attenuation regresses. DD-only ablation isolates up to8.902dB lost step attenuation before the new risk law. All failed trials/initial diagnostic read mistakes are preserved. Production restored to21806c0;134tests/4existingignores and strictClippy pass,48 original characterization records exact. Next work targets noise-estimator tracking, not another gain-mask assumption.",
+          "evidence": [
+            "audit/artifacts/remaining-denoiser-dd-feedback-20261024/README.md",
+            "audit/artifacts/remaining-denoiser-dd-feedback-20261024/verify.py",
+            "audit/artifacts/remaining-denoiser-presence-risk-20261024/README.md",
+            "audit/artifacts/remaining-denoiser-presence-risk-20261024/verify.py",
+            "audit/artifacts/remaining-denoiser-snr-risk-20261024/README.md",
+            "audit/artifacts/remaining-denoiser-snr-risk-20261024/verify.py"
+          ]
         }
       ],
       "evidence": [
@@ -1759,7 +1801,13 @@
         "audit/artifacts/remaining-denoiser-zero-reduction-20261024/component-analysis.json",
         "audit/artifacts/remaining-denoiser-zero-reduction-20261024/clippy.json",
         "audit/artifacts/remaining-denoiser-zero-reduction-20261024/optional-qa.json",
-        "audit/artifacts/remaining-denoiser-zero-reduction-20261024/verify.py"
+        "audit/artifacts/remaining-denoiser-zero-reduction-20261024/verify.py",
+        "audit/artifacts/remaining-denoiser-dd-feedback-20261024/README.md",
+        "audit/artifacts/remaining-denoiser-dd-feedback-20261024/verify.py",
+        "audit/artifacts/remaining-denoiser-presence-risk-20261024/README.md",
+        "audit/artifacts/remaining-denoiser-presence-risk-20261024/verify.py",
+        "audit/artifacts/remaining-denoiser-snr-risk-20261024/README.md",
+        "audit/artifacts/remaining-denoiser-snr-risk-20261024/verify.py"
       ],
       "remaining": [
         "Investigate initial speech contamination during the106.6667ms bootstrap and later vowel loss. Correcting fast adaptation to exactly two ordinary updates changes original later-vowel projections0.09458/0.12125to0.09460/0.12429,stillpoor. Six-source development matrix has small mixed SDR changes; no speech-preservation or listening acceptance claim.",
@@ -2596,6 +2644,24 @@
             "audit/artifacts/remaining-fir-anchors-20261024/initial-result-wrong-design-density.json",
             "audit/artifacts/remaining-fir-anchors-20261024/checkpoint.json"
           ]
+        },
+        {
+          "requirement": "Reject the bulk-span convolution candidate when the fixed complete comparison fails performance and control-stability guards.",
+          "status": "rejected_candidate_restored",
+          "result": "Bulk-span production candidate passes functional/reference checks but fails the unchanged48case192ABBA screen:817200callback durations, exactwaveform; changedaggregate0.938188, largestchanged2.174127 and unchangedcontrols0.561577..1.360999 versus0.90..1.10. These do not establish a controlled performance win or a cause for excursions. Initial run stopped40trials on32channelWAV fixture; correctedAIFF all48setup preflight passes, definitions/guards identical, fullrawtrial retained. No samples removed or limits changed. Four owned production/module files restored byte-for-byte to24e72a4, trial-only modules absent.273affectedrelease tests/10retainedignores and strictall-targetClippy pass; archived verifier confirms rejection and restoration. No candidate DSP ships; capacity/deadlines/FIR-M1 unresolved.",
+          "evidence": [
+            "audit/artifacts/remaining-convolution-eq-span-20261024/README.md",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-plan.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/measured-source.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/fixture-setup-validation.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-analysis.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-acceptance-failure.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/paired-distribution-diagnostic.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/restored-validation.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/restoration-verification.json",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
+            "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
+          ]
         }
       ],
       "evidence": [
@@ -2631,7 +2697,18 @@
         "audit/artifacts/remaining-fir-anchors-20261024/prototype.py",
         "audit/artifacts/remaining-fir-anchors-20261024/result.json",
         "audit/artifacts/remaining-fir-anchors-20261024/initial-result-wrong-design-density.json",
-        "audit/artifacts/remaining-fir-anchors-20261024/checkpoint.json"
+        "audit/artifacts/remaining-fir-anchors-20261024/checkpoint.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/README.md",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-plan.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/measured-source.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/fixture-setup-validation.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-analysis.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-acceptance-failure.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/paired-distribution-diagnostic.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/restored-validation.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/restoration-verification.json",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py",
+        "audit/artifacts/remaining-convolution-eq-span-20261024/manifest.sha256.json"
       ]
     },
     {

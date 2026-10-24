@@ -1,0 +1,445 @@
+{
+  "comparators_verified": true,
+  "screen_passed": false,
+  "changed_aggregate_ratio": 0.9381878728246661,
+  "largest_changed_ratio": 2.1741271278149625,
+  "control_ratio_min": 0.5615766505784594,
+  "control_ratio_max": 1.360999411842565,
+  "maximum_waveform_error": 0.0,
+  "callbacks": 817200,
+  "comparisons": [
+    {
+      "case": "48000_2x1_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 118086396.5,
+      "span_median_total_ns": 89798287.5,
+      "ratio": 0.7604456581076212,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_2x1_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 404704199.5,
+      "span_median_total_ns": 560557074.0,
+      "ratio": 1.3851031807738876,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_2x2_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 114483935.5,
+      "span_median_total_ns": 144956055.0,
+      "ratio": 1.2661693919493184,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_2x2_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 167471925.0,
+      "span_median_total_ns": 308806926.0,
+      "ratio": 1.8439325039107302,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_12x1_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 212625890.5,
+      "span_median_total_ns": 70698885.0,
+      "ratio": 0.3325036515249774,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_12x1_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 734078899.5,
+      "span_median_total_ns": 625556733.0,
+      "ratio": 0.8521655280189674,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_12x12_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 42558578.5,
+      "span_median_total_ns": 29226478.0,
+      "ratio": 0.6867352959168972,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_12x12_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 186284391.0,
+      "span_median_total_ns": 138886138.5,
+      "ratio": 0.7455597205672482,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_32x1_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 112958187.0,
+      "span_median_total_ns": 162882466.5,
+      "ratio": 1.4419713243095873,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_32x1_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 368232009.0,
+      "span_median_total_ns": 506961257.0,
+      "ratio": 1.3767441303561418,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_32x32_cyclic_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 113507191.0,
+      "span_median_total_ns": 33872411.5,
+      "ratio": 0.29841643689341235,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_32x32_cyclic_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 193329353.0,
+      "span_median_total_ns": 259502273.0,
+      "ratio": 1.3422807709908386,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_2x4_matrix_ordinary",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 73122094.0,
+      "span_median_total_ns": 22521744.5,
+      "ratio": 0.30800190842455905,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_2x4_matrix_head",
+      "rate": 48000,
+      "control": false,
+      "scalar_median_total_ns": 151668250.0,
+      "span_median_total_ns": 283831967.0,
+      "ratio": 1.871400026043684,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_common_upc12",
+      "rate": 48000,
+      "control": true,
+      "scalar_median_total_ns": 823666041.0,
+      "span_median_total_ns": 462551616.5,
+      "ratio": 0.5615766505784594,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "48000_common_inactive32",
+      "rate": 48000,
+      "control": true,
+      "scalar_median_total_ns": 517628107.0,
+      "span_median_total_ns": 682219253.5,
+      "ratio": 1.3179718107927243,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x1_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 129066224.0,
+      "span_median_total_ns": 178014262.5,
+      "ratio": 1.3792474667888324,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x1_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 629935142.5,
+      "span_median_total_ns": 630073251.0,
+      "ratio": 1.000219242411928,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x2_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 72601448.0,
+      "span_median_total_ns": 48947059.5,
+      "ratio": 0.6741884748634766,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x2_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 243332288.5,
+      "span_median_total_ns": 136879600.0,
+      "ratio": 0.5625213194836657,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_12x1_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 193383755.0,
+      "span_median_total_ns": 71585826.0,
+      "ratio": 0.3701749715222977,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_12x1_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 867681982.5,
+      "span_median_total_ns": 809240447.5,
+      "ratio": 0.9326463656285499,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_12x12_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 65742039.5,
+      "span_median_total_ns": 57010919.0,
+      "ratio": 0.8671912133179257,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_12x12_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 194200934.5,
+      "span_median_total_ns": 183758500.0,
+      "ratio": 0.9462287113762575,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_32x1_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 115234670.5,
+      "span_median_total_ns": 76482992.0,
+      "ratio": 0.6637151099416734,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_32x1_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 541311088.0,
+      "span_median_total_ns": 538446468.0,
+      "ratio": 0.9947079968182732,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_32x32_cyclic_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 123076247.0,
+      "span_median_total_ns": 44765817.0,
+      "ratio": 0.3637242611078318,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_32x32_cyclic_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 152411744.5,
+      "span_median_total_ns": 134257063.5,
+      "ratio": 0.8808839761032983,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x4_matrix_ordinary",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 42664786.5,
+      "span_median_total_ns": 23059034.5,
+      "ratio": 0.5404699376615889,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_2x4_matrix_head",
+      "rate": 96000,
+      "control": false,
+      "scalar_median_total_ns": 171252908.0,
+      "span_median_total_ns": 372325593.0,
+      "ratio": 2.1741271278149625,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_common_upc12",
+      "rate": 96000,
+      "control": true,
+      "scalar_median_total_ns": 465305615.5,
+      "span_median_total_ns": 330489716.5,
+      "ratio": 0.7102637610441648,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "96000_common_inactive32",
+      "rate": 96000,
+      "control": true,
+      "scalar_median_total_ns": 585735328.5,
+      "span_median_total_ns": 583135848.5,
+      "ratio": 0.99556202285654,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x1_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 197616069.0,
+      "span_median_total_ns": 178255810.5,
+      "ratio": 0.9020309502260163,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x1_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 743123608.5,
+      "span_median_total_ns": 526127883.5,
+      "ratio": 0.707995113440135,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x2_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 132172721.5,
+      "span_median_total_ns": 58163692.5,
+      "ratio": 0.44005821957747915,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x2_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 334035886.0,
+      "span_median_total_ns": 276031534.0,
+      "ratio": 0.8263529326307174,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_12x1_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 212567746.0,
+      "span_median_total_ns": 99724074.0,
+      "ratio": 0.4691401958978292,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_12x1_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 834977791.0,
+      "span_median_total_ns": 738315096.0,
+      "ratio": 0.8842332142939596,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_12x12_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 61693477.0,
+      "span_median_total_ns": 46981855.5,
+      "ratio": 0.7615368396240659,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_12x12_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 135471837.0,
+      "span_median_total_ns": 115598794.5,
+      "ratio": 0.8533049898777116,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_32x1_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 109837954.5,
+      "span_median_total_ns": 80502775.0,
+      "ratio": 0.7329231081046762,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_32x1_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 375680196.0,
+      "span_median_total_ns": 477755630.5,
+      "ratio": 1.271708318902176,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_32x32_cyclic_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 55758458.5,
+      "span_median_total_ns": 86528317.0,
+      "ratio": 1.551841986449464,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_32x32_cyclic_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 289737519.5,
+      "span_median_total_ns": 221902329.5,
+      "ratio": 0.76587364274719,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x4_matrix_ordinary",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 102944339.5,
+      "span_median_total_ns": 26943958.5,
+      "ratio": 0.2617332689768727,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_2x4_matrix_head",
+      "rate": 192000,
+      "control": false,
+      "scalar_median_total_ns": 304480811.5,
+      "span_median_total_ns": 304969779.0,
+      "ratio": 1.001605905796136,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_common_upc12",
+      "rate": 192000,
+      "control": true,
+      "scalar_median_total_ns": 738577851.5,
+      "span_median_total_ns": 766172969.5,
+      "ratio": 1.0373625040934495,
+      "maximum_error": 0.0
+    },
+    {
+      "case": "192000_common_inactive32",
+      "rate": 192000,
+      "control": true,
+      "scalar_median_total_ns": 648358717.0,
+      "span_median_total_ns": 882415832.5,
+      "ratio": 1.360999411842565,
+      "maximum_error": 0.0
+    }
+  ],
+  "scope": "Isolated private stream cost, not full Plugin/native certification; original rejected overlap/UPC changes remain restored."
+}

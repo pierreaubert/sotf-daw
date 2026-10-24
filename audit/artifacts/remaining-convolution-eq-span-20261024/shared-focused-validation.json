@@ -1,0 +1,22 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "plugins-spatial",
+    "--lib",
+    "--release",
+    "--offline",
+    "--locked",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 49.20626187324524,
+  "stdout": "\nrunning 23 tests\ntest nupc::head_tests::direct_head_paired_callback_cost_abba ... ignored, explicit isolated paired cost diagnostic; not a functional deferral or CI deadline gate\ntest nupc::nupc_engine::final_tail_cost::final_tail_paired_callback_cost_abba ... ignored, Explicit ABBA wall diagnostic; never a CI timing gate\ntest nupc::overlap_cost::paired_overlap_callback_cost_abba ... ignored, Explicit frozen-engine ABBA wall diagnostic; never a CI timing gate\nnupc_half_spectra checks=108 failures=0 legacy_complex_values=70980 actual_complex_values=35598\nnupc_coalesced_coverage cases=120 failures=0 original_levels=438 actual_levels=249\ntest nupc::real_fft_tests::prepared_unit_delay_preserves_samples_and_reset_through_arbitrary_callbacks ... ok\ntest nupc::real_fft_tests::real_spectra_store_only_nonnegative_frequency_bins ... ok\ntest nupc::tests::instantiated_channels_share_immutable_ir_kernels ... ok\ntest nupc::tests::nupc_preserves_absolute_offsets_across_partition_levels ... ok\ntest nupc::tests::reported_latency_matches_impulse_for_each_head_size ... ok\ntest nupc::tests::test_nupc_impulse_response ... ok\ntest nupc::coalesced_tests::runtime_has_one_level_per_block_size_with_unchanged_partition_coverage ... ok\ntest nupc::tests::test_nupc_reset ... ok\ntest nupc::tests::test_nupc_vs_upc_simple ... ok\ntest nupc::tests::test_partition_planning ... ok\ntest nupc::tests::test_partition_planning_empty ... ok\ntest nupc::tests::test_partition_planning_short_ir ... ok\ntest nupc::tests::zero_latency_head_preserves_tail_offset ... ok\ndirect_head_f64 cases=18 maximum_error=5.3350127399154346e-8\ntest nupc::head_tests::direct_head_matches_f64_convolution_at_every_history_wrap_and_lane_boundary ... ok\nnupc_real_direct_reference cases=54 maximum_error=1.5679317962036254e-8\ntest nupc::real_fft_tests::real_fft_render_matches_independent_f64_direct_convolution_through_complete_tail ... ok\nnupc_phase_layout cases=1176 checks=16464 failures=0\ntest nupc::phase_tests::prepared_phase_and_reset_follow_each_level_block_size ... ok\nnupc_coalesced_unmerged cases=45 maximum_error=2.2351741790771484e-8\ntest nupc::coalesced_tests::merged_levels_match_separate_delayed_groups_through_reset_and_complete_tail ... ok\nhead_fft_example head=257 blocks=[256, 512, 1024, 2048] first_delay=1\nhead_fft_selection cases=962 levels=5260 failures=0\ntest nupc::head_partition_tests::every_supported_head_selects_power_two_tail_blocks_under_the_requested_cap ... ok\nnupc_large_sparse_reference cases=4 maximum_error=2.420713940409769e-8\ntest nupc::real_fft_tests::large_partition_levels_preserve_sparse_absolute_taps_and_last_tail_sample ... ok\nnupc_phase_f64 cases=36 maximum_error=1.5832483768463135e-8 exact_replay=true\ntest nupc::phase_tests::phased_engines_match_f64_convolution_and_exact_replay_through_complete_tail ... ok\n\ntest result: ok. 20 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.48s\n\n",
+  "stderr": "   Compiling math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)\n   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)\n    Finished `release` profile [optimized] target(s) in 48.64s\n     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/plugins_spatial-a996c46844be86d5)\n"
+}

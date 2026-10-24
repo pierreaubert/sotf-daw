@@ -1,0 +1,4 @@
+
+thread 'convolution_plugin::span_cost::paired_span_stream_cost_abba' (358645870) panicked at crates/sotf-plugins/crates/sotf-plugin-convolution/src/lib/span_cost.rs:84:10:
+called `Result::unwrap()` on an `Err` value: "Probe: malformed stream: riff: invalid channel count"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

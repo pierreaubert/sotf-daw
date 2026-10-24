@@ -1,0 +1,2022 @@
+{
+  "acceptance_unchanged": true,
+  "note": "Descriptive distribution only. No durations discarded, no revised guards, no identified causal source for excursions. TokenSave separately reported an external index rebuild during the measurement.",
+  "cases": [
+    {
+      "case": "48000_2x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 117374608,
+          "median_callback_ns": 16125.0,
+          "maximum_callback_ns": 2081833,
+          "callbacks_above_1ms": 10,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 63141115,
+          "median_callback_ns": 1833.0,
+          "maximum_callback_ns": 2475541,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 116455460,
+          "median_callback_ns": 1917.0,
+          "maximum_callback_ns": 18794459,
+          "callbacks_above_1ms": 21,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 118798185,
+          "median_callback_ns": 16208.0,
+          "maximum_callback_ns": 2092459,
+          "callbacks_above_1ms": 10,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_2x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 435850438,
+          "median_callback_ns": 28708.0,
+          "maximum_callback_ns": 20948750,
+          "callbacks_above_1ms": 26,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 831820492,
+          "median_callback_ns": 23542.0,
+          "maximum_callback_ns": 89883958,
+          "callbacks_above_1ms": 75,
+          "callbacks_above_10ms": 11
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 289293656,
+          "median_callback_ns": 19125.0,
+          "maximum_callback_ns": 7999083,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 373557961,
+          "median_callback_ns": 27125.0,
+          "maximum_callback_ns": 8458708,
+          "callbacks_above_1ms": 20,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_2x2_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 93427486,
+          "median_callback_ns": 16500.0,
+          "maximum_callback_ns": 15466542,
+          "callbacks_above_1ms": 12,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 147236618,
+          "median_callback_ns": 2042.0,
+          "maximum_callback_ns": 40820583,
+          "callbacks_above_1ms": 19,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 142675492,
+          "median_callback_ns": 1958.0,
+          "maximum_callback_ns": 15949500,
+          "callbacks_above_1ms": 23,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 135540385,
+          "median_callback_ns": 17375.0,
+          "maximum_callback_ns": 29485417,
+          "callbacks_above_1ms": 19,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "48000_2x2_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 170952329,
+          "median_callback_ns": 25666.0,
+          "maximum_callback_ns": 6044792,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 482368724,
+          "median_callback_ns": 21792.0,
+          "maximum_callback_ns": 115193584,
+          "callbacks_above_1ms": 29,
+          "callbacks_above_10ms": 6
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 135245128,
+          "median_callback_ns": 19125.0,
+          "maximum_callback_ns": 3797166,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 163991521,
+          "median_callback_ns": 25500.0,
+          "maximum_callback_ns": 3762625,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_12x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 105201866,
+          "median_callback_ns": 65313.0,
+          "maximum_callback_ns": 572167,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 70090812,
+          "median_callback_ns": 31312.0,
+          "maximum_callback_ns": 530208,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 71306958,
+          "median_callback_ns": 31083.0,
+          "maximum_callback_ns": 749375,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 320049915,
+          "median_callback_ns": 74645.5,
+          "maximum_callback_ns": 75838542,
+          "callbacks_above_1ms": 22,
+          "callbacks_above_10ms": 4
+        }
+      ]
+    },
+    {
+      "case": "48000_12x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 757673443,
+          "median_callback_ns": 156958.5,
+          "maximum_callback_ns": 89442708,
+          "callbacks_above_1ms": 38,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 781243781,
+          "median_callback_ns": 120125.0,
+          "maximum_callback_ns": 88736708,
+          "callbacks_above_1ms": 49,
+          "callbacks_above_10ms": 11
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 469869685,
+          "median_callback_ns": 120250.0,
+          "maximum_callback_ns": 12618125,
+          "callbacks_above_1ms": 41,
+          "callbacks_above_10ms": 5
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 710484356,
+          "median_callback_ns": 152979.5,
+          "maximum_callback_ns": 161270208,
+          "callbacks_above_1ms": 36,
+          "callbacks_above_10ms": 6
+        }
+      ]
+    },
+    {
+      "case": "48000_12x12_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 43157250,
+          "median_callback_ns": 59708.5,
+          "maximum_callback_ns": 291417,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 29362296,
+          "median_callback_ns": 30958.0,
+          "maximum_callback_ns": 387541,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 29090660,
+          "median_callback_ns": 30500.0,
+          "maximum_callback_ns": 251042,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 41959907,
+          "median_callback_ns": 56792.0,
+          "maximum_callback_ns": 283750,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_12x12_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 104787041,
+          "median_callback_ns": 141833.0,
+          "maximum_callback_ns": 3279958,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 88351535,
+          "median_callback_ns": 111521.0,
+          "maximum_callback_ns": 2832542,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 189420742,
+          "median_callback_ns": 125583.5,
+          "maximum_callback_ns": 19721416,
+          "callbacks_above_1ms": 18,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 267781741,
+          "median_callback_ns": 170938.0,
+          "maximum_callback_ns": 101954333,
+          "callbacks_above_1ms": 23,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "48000_32x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 113306281,
+          "median_callback_ns": 198895.5,
+          "maximum_callback_ns": 388167,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 88043770,
+          "median_callback_ns": 138583.5,
+          "maximum_callback_ns": 4973125,
+          "callbacks_above_1ms": 1,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 237721163,
+          "median_callback_ns": 160083.5,
+          "maximum_callback_ns": 44544500,
+          "callbacks_above_1ms": 14,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 112610093,
+          "median_callback_ns": 199291.5,
+          "maximum_callback_ns": 482958,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_32x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 358161903,
+          "median_callback_ns": 403770.5,
+          "maximum_callback_ns": 15136791,
+          "callbacks_above_1ms": 49,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 752822331,
+          "median_callback_ns": 376208.0,
+          "maximum_callback_ns": 85817917,
+          "callbacks_above_1ms": 71,
+          "callbacks_above_10ms": 14
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 261100183,
+          "median_callback_ns": 330833.0,
+          "maximum_callback_ns": 8610916,
+          "callbacks_above_1ms": 32,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 378302115,
+          "median_callback_ns": 387333.5,
+          "maximum_callback_ns": 51018583,
+          "callbacks_above_1ms": 42,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "48000_32x32_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 44886965,
+          "median_callback_ns": 176750.0,
+          "maximum_callback_ns": 286666,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 33683704,
+          "median_callback_ns": 128937.5,
+          "maximum_callback_ns": 192041,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 34061119,
+          "median_callback_ns": 135833.5,
+          "maximum_callback_ns": 185542,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 182127417,
+          "median_callback_ns": 218104.0,
+          "maximum_callback_ns": 43177542,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 3
+        }
+      ]
+    },
+    {
+      "case": "48000_32x32_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 130901458,
+          "median_callback_ns": 388624.5,
+          "maximum_callback_ns": 3826792,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 110703454,
+          "median_callback_ns": 294812.5,
+          "maximum_callback_ns": 3608708,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 408301092,
+          "median_callback_ns": 348667.0,
+          "maximum_callback_ns": 43594292,
+          "callbacks_above_1ms": 47,
+          "callbacks_above_10ms": 9
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 255757248,
+          "median_callback_ns": 429312.5,
+          "maximum_callback_ns": 51304916,
+          "callbacks_above_1ms": 34,
+          "callbacks_above_10ms": 3
+        }
+      ]
+    },
+    {
+      "case": "48000_2x4_matrix_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 40532988,
+          "median_callback_ns": 23542.0,
+          "maximum_callback_ns": 484708,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 22820142,
+          "median_callback_ns": 7250.0,
+          "maximum_callback_ns": 515541,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 22223347,
+          "median_callback_ns": 5896.0,
+          "maximum_callback_ns": 486292,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 105711200,
+          "median_callback_ns": 25791.5,
+          "maximum_callback_ns": 43655292,
+          "callbacks_above_1ms": 5,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "48000_2x4_matrix_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 153808891,
+          "median_callback_ns": 49041.5,
+          "maximum_callback_ns": 3998417,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 126157979,
+          "median_callback_ns": 36709.0,
+          "maximum_callback_ns": 4390250,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 441505955,
+          "median_callback_ns": 43854.0,
+          "maximum_callback_ns": 53258792,
+          "callbacks_above_1ms": 30,
+          "callbacks_above_10ms": 6
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 149527609,
+          "median_callback_ns": 48167.0,
+          "maximum_callback_ns": 3676916,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "48000_common_upc12",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 485210333,
+          "median_callback_ns": 2500.0,
+          "maximum_callback_ns": 66048750,
+          "callbacks_above_1ms": 17,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 321291494,
+          "median_callback_ns": 2459.0,
+          "maximum_callback_ns": 405083,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 603811739,
+          "median_callback_ns": 2959.0,
+          "maximum_callback_ns": 42370166,
+          "callbacks_above_1ms": 49,
+          "callbacks_above_10ms": 5
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 1162121749,
+          "median_callback_ns": 3250.0,
+          "maximum_callback_ns": 84068625,
+          "callbacks_above_1ms": 133,
+          "callbacks_above_10ms": 16
+        }
+      ]
+    },
+    {
+      "case": "48000_common_inactive32",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 265164146,
+          "median_callback_ns": 7959.0,
+          "maximum_callback_ns": 64166,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 616775585,
+          "median_callback_ns": 10917.0,
+          "maximum_callback_ns": 78489875,
+          "callbacks_above_1ms": 21,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 747662922,
+          "median_callback_ns": 11542.0,
+          "maximum_callback_ns": 60331875,
+          "callbacks_above_1ms": 24,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 770092068,
+          "median_callback_ns": 11500.0,
+          "maximum_callback_ns": 58419750,
+          "callbacks_above_1ms": 31,
+          "callbacks_above_10ms": 10
+        }
+      ]
+    },
+    {
+      "case": "96000_2x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 137706435,
+          "median_callback_ns": 19125.0,
+          "maximum_callback_ns": 2348917,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 284914008,
+          "median_callback_ns": 2208.0,
+          "maximum_callback_ns": 72994000,
+          "callbacks_above_1ms": 32,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 71114517,
+          "median_callback_ns": 2125.0,
+          "maximum_callback_ns": 2247375,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 120426013,
+          "median_callback_ns": 16458.0,
+          "maximum_callback_ns": 1975416,
+          "callbacks_above_1ms": 14,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_2x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 364214125,
+          "median_callback_ns": 27875.0,
+          "maximum_callback_ns": 8530000,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 963128704,
+          "median_callback_ns": 24291.0,
+          "maximum_callback_ns": 109087208,
+          "callbacks_above_1ms": 64,
+          "callbacks_above_10ms": 14
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 297017798,
+          "median_callback_ns": 19458.0,
+          "maximum_callback_ns": 8437125,
+          "callbacks_above_1ms": 17,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 895656160,
+          "median_callback_ns": 36708.0,
+          "maximum_callback_ns": 50071959,
+          "callbacks_above_1ms": 77,
+          "callbacks_above_10ms": 12
+        }
+      ]
+    },
+    {
+      "case": "96000_2x2_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 55907769,
+          "median_callback_ns": 15208.5,
+          "maximum_callback_ns": 1210833,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 68056790,
+          "median_callback_ns": 1625.0,
+          "maximum_callback_ns": 38929500,
+          "callbacks_above_1ms": 5,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 29837329,
+          "median_callback_ns": 1708.0,
+          "maximum_callback_ns": 1268167,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 89295127,
+          "median_callback_ns": 16500.0,
+          "maximum_callback_ns": 7958084,
+          "callbacks_above_1ms": 15,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_2x2_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 185400266,
+          "median_callback_ns": 26917.0,
+          "maximum_callback_ns": 6130250,
+          "callbacks_above_1ms": 12,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 138419429,
+          "median_callback_ns": 19500.0,
+          "maximum_callback_ns": 3778458,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 135339771,
+          "median_callback_ns": 18792.0,
+          "maximum_callback_ns": 3866375,
+          "callbacks_above_1ms": 8,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 301264311,
+          "median_callback_ns": 31417.0,
+          "maximum_callback_ns": 21613041,
+          "callbacks_above_1ms": 28,
+          "callbacks_above_10ms": 3
+        }
+      ]
+    },
+    {
+      "case": "96000_12x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 103719215,
+          "median_callback_ns": 65563.0,
+          "maximum_callback_ns": 578750,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 70894282,
+          "median_callback_ns": 31416.0,
+          "maximum_callback_ns": 552541,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 72277370,
+          "median_callback_ns": 29937.5,
+          "maximum_callback_ns": 1710875,
+          "callbacks_above_1ms": 3,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 283048295,
+          "median_callback_ns": 85562.5,
+          "maximum_callback_ns": 55313792,
+          "callbacks_above_1ms": 19,
+          "callbacks_above_10ms": 3
+        }
+      ]
+    },
+    {
+      "case": "96000_12x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 905563295,
+          "median_callback_ns": 186500.0,
+          "maximum_callback_ns": 97417584,
+          "callbacks_above_1ms": 52,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 823717143,
+          "median_callback_ns": 142625.0,
+          "maximum_callback_ns": 51861083,
+          "callbacks_above_1ms": 69,
+          "callbacks_above_10ms": 13
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 794763752,
+          "median_callback_ns": 140770.5,
+          "maximum_callback_ns": 131108708,
+          "callbacks_above_1ms": 54,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 829800670,
+          "median_callback_ns": 188500.0,
+          "maximum_callback_ns": 87121000,
+          "callbacks_above_1ms": 52,
+          "callbacks_above_10ms": 11
+        }
+      ]
+    },
+    {
+      "case": "96000_12x12_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 78741492,
+          "median_callback_ns": 66083.5,
+          "maximum_callback_ns": 19373292,
+          "callbacks_above_1ms": 2,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 81490212,
+          "median_callback_ns": 41333.0,
+          "maximum_callback_ns": 15422625,
+          "callbacks_above_1ms": 10,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 32531626,
+          "median_callback_ns": 34520.5,
+          "maximum_callback_ns": 267792,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 52742587,
+          "median_callback_ns": 68624.5,
+          "maximum_callback_ns": 348833,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_12x12_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 253012503,
+          "median_callback_ns": 191624.5,
+          "maximum_callback_ns": 49180792,
+          "callbacks_above_1ms": 20,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 245277371,
+          "median_callback_ns": 157542.0,
+          "maximum_callback_ns": 48277125,
+          "callbacks_above_1ms": 27,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 122239629,
+          "median_callback_ns": 151187.5,
+          "maximum_callback_ns": 6002042,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 135389366,
+          "median_callback_ns": 185792.0,
+          "maximum_callback_ns": 3597500,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_32x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 116729801,
+          "median_callback_ns": 203750.0,
+          "maximum_callback_ns": 398583,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 75028384,
+          "median_callback_ns": 122729.0,
+          "maximum_callback_ns": 294708,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 77937600,
+          "median_callback_ns": 129187.5,
+          "maximum_callback_ns": 319375,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 113739540,
+          "median_callback_ns": 200271.0,
+          "maximum_callback_ns": 386416,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_32x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 523680081,
+          "median_callback_ns": 454666.5,
+          "maximum_callback_ns": 67438417,
+          "callbacks_above_1ms": 63,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 532175211,
+          "median_callback_ns": 370396.0,
+          "maximum_callback_ns": 50679875,
+          "callbacks_above_1ms": 65,
+          "callbacks_above_10ms": 7
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 544717725,
+          "median_callback_ns": 375270.5,
+          "maximum_callback_ns": 65411959,
+          "callbacks_above_1ms": 57,
+          "callbacks_above_10ms": 7
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 558942095,
+          "median_callback_ns": 474229.0,
+          "maximum_callback_ns": 55546250,
+          "callbacks_above_1ms": 63,
+          "callbacks_above_10ms": 8
+        }
+      ]
+    },
+    {
+      "case": "96000_32x32_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 138287545,
+          "median_callback_ns": 228187.5,
+          "maximum_callback_ns": 24588500,
+          "callbacks_above_1ms": 19,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 55595581,
+          "median_callback_ns": 157458.5,
+          "maximum_callback_ns": 4729583,
+          "callbacks_above_1ms": 5,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 33936053,
+          "median_callback_ns": 130479.5,
+          "maximum_callback_ns": 186333,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 107864949,
+          "median_callback_ns": 225249.5,
+          "maximum_callback_ns": 29501458,
+          "callbacks_above_1ms": 5,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "96000_32x32_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 161561161,
+          "median_callback_ns": 478458.5,
+          "maximum_callback_ns": 4308541,
+          "callbacks_above_1ms": 17,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 137812712,
+          "median_callback_ns": 378375.0,
+          "maximum_callback_ns": 4428041,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 130701415,
+          "median_callback_ns": 355750.0,
+          "maximum_callback_ns": 4179166,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 143262328,
+          "median_callback_ns": 425020.5,
+          "maximum_callback_ns": 4074542,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_2x4_matrix_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 43780202,
+          "median_callback_ns": 25166.5,
+          "maximum_callback_ns": 546875,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 24102606,
+          "median_callback_ns": 7229.5,
+          "maximum_callback_ns": 530500,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 22015463,
+          "median_callback_ns": 6708.5,
+          "maximum_callback_ns": 507875,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 41549371,
+          "median_callback_ns": 24083.0,
+          "maximum_callback_ns": 529416,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_2x4_matrix_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 180792244,
+          "median_callback_ns": 49250.0,
+          "maximum_callback_ns": 10164959,
+          "callbacks_above_1ms": 11,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 411963417,
+          "median_callback_ns": 42854.5,
+          "maximum_callback_ns": 86855791,
+          "callbacks_above_1ms": 35,
+          "callbacks_above_10ms": 5
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 332687769,
+          "median_callback_ns": 42209.0,
+          "maximum_callback_ns": 96266375,
+          "callbacks_above_1ms": 19,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 161713572,
+          "median_callback_ns": 52042.0,
+          "maximum_callback_ns": 4058333,
+          "callbacks_above_1ms": 11,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "96000_common_upc12",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 326384012,
+          "median_callback_ns": 2292.0,
+          "maximum_callback_ns": 858292,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 333009780,
+          "median_callback_ns": 2333.0,
+          "maximum_callback_ns": 465500,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 327969653,
+          "median_callback_ns": 2333.0,
+          "maximum_callback_ns": 527291,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 604227219,
+          "median_callback_ns": 2500.0,
+          "maximum_callback_ns": 58951959,
+          "callbacks_above_1ms": 32,
+          "callbacks_above_10ms": 5
+        }
+      ]
+    },
+    {
+      "case": "96000_common_inactive32",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 590175698,
+          "median_callback_ns": 12500.0,
+          "maximum_callback_ns": 16113042,
+          "callbacks_above_1ms": 31,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 576676513,
+          "median_callback_ns": 12125.0,
+          "maximum_callback_ns": 14649792,
+          "callbacks_above_1ms": 36,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 589595184,
+          "median_callback_ns": 12208.0,
+          "maximum_callback_ns": 29960708,
+          "callbacks_above_1ms": 37,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 581294959,
+          "median_callback_ns": 12333.0,
+          "maximum_callback_ns": 28192750,
+          "callbacks_above_1ms": 20,
+          "callbacks_above_10ms": 6
+        }
+      ]
+    },
+    {
+      "case": "192000_2x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 148786887,
+          "median_callback_ns": 20875.0,
+          "maximum_callback_ns": 2687708,
+          "callbacks_above_1ms": 16,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 170631395,
+          "median_callback_ns": 2208.0,
+          "maximum_callback_ns": 29957000,
+          "callbacks_above_1ms": 29,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 185880226,
+          "median_callback_ns": 2166.0,
+          "maximum_callback_ns": 27739167,
+          "callbacks_above_1ms": 29,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 246445251,
+          "median_callback_ns": 21459.0,
+          "maximum_callback_ns": 49977667,
+          "callbacks_above_1ms": 24,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "192000_2x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 741969894,
+          "median_callback_ns": 33625.0,
+          "maximum_callback_ns": 46364167,
+          "callbacks_above_1ms": 66,
+          "callbacks_above_10ms": 9
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 542417506,
+          "median_callback_ns": 22667.0,
+          "maximum_callback_ns": 36542667,
+          "callbacks_above_1ms": 46,
+          "callbacks_above_10ms": 7
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 509838261,
+          "median_callback_ns": 22875.0,
+          "maximum_callback_ns": 25204458,
+          "callbacks_above_1ms": 53,
+          "callbacks_above_10ms": 5
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 744277323,
+          "median_callback_ns": 33875.0,
+          "maximum_callback_ns": 27826208,
+          "callbacks_above_1ms": 71,
+          "callbacks_above_10ms": 10
+        }
+      ]
+    },
+    {
+      "case": "192000_2x2_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 145742707,
+          "median_callback_ns": 17292.0,
+          "maximum_callback_ns": 14321500,
+          "callbacks_above_1ms": 23,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 50094644,
+          "median_callback_ns": 1875.0,
+          "maximum_callback_ns": 8411500,
+          "callbacks_above_1ms": 10,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 66232741,
+          "median_callback_ns": 1958.0,
+          "maximum_callback_ns": 9569500,
+          "callbacks_above_1ms": 12,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 118602736,
+          "median_callback_ns": 17000.0,
+          "maximum_callback_ns": 11120000,
+          "callbacks_above_1ms": 20,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "192000_2x2_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 306212519,
+          "median_callback_ns": 31584.0,
+          "maximum_callback_ns": 38266333,
+          "callbacks_above_1ms": 26,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 228290385,
+          "median_callback_ns": 22750.0,
+          "maximum_callback_ns": 9836042,
+          "callbacks_above_1ms": 27,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 323772683,
+          "median_callback_ns": 23042.0,
+          "maximum_callback_ns": 22277166,
+          "callbacks_above_1ms": 38,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 361859253,
+          "median_callback_ns": 31958.0,
+          "maximum_callback_ns": 12719250,
+          "callbacks_above_1ms": 41,
+          "callbacks_above_10ms": 4
+        }
+      ]
+    },
+    {
+      "case": "192000_12x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 219058579,
+          "median_callback_ns": 93542.0,
+          "maximum_callback_ns": 9436125,
+          "callbacks_above_1ms": 31,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 118818757,
+          "median_callback_ns": 35250.0,
+          "maximum_callback_ns": 19379583,
+          "callbacks_above_1ms": 3,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 80629391,
+          "median_callback_ns": 35125.0,
+          "maximum_callback_ns": 623458,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 206076913,
+          "median_callback_ns": 81333.5,
+          "maximum_callback_ns": 20740417,
+          "callbacks_above_1ms": 20,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "192000_12x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 849616518,
+          "median_callback_ns": 185604.0,
+          "maximum_callback_ns": 53875708,
+          "callbacks_above_1ms": 78,
+          "callbacks_above_10ms": 10
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 764769175,
+          "median_callback_ns": 134437.5,
+          "maximum_callback_ns": 151501542,
+          "callbacks_above_1ms": 59,
+          "callbacks_above_10ms": 7
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 711861017,
+          "median_callback_ns": 135375.0,
+          "maximum_callback_ns": 74928375,
+          "callbacks_above_1ms": 62,
+          "callbacks_above_10ms": 6
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 820339064,
+          "median_callback_ns": 179166.5,
+          "maximum_callback_ns": 67203167,
+          "callbacks_above_1ms": 77,
+          "callbacks_above_10ms": 7
+        }
+      ]
+    },
+    {
+      "case": "192000_12x12_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 75456338,
+          "median_callback_ns": 75625.0,
+          "maximum_callback_ns": 6019500,
+          "callbacks_above_1ms": 4,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 60939965,
+          "median_callback_ns": 42750.0,
+          "maximum_callback_ns": 4106125,
+          "callbacks_above_1ms": 5,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 33023746,
+          "median_callback_ns": 34729.5,
+          "maximum_callback_ns": 304542,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 47930616,
+          "median_callback_ns": 63604.5,
+          "maximum_callback_ns": 355250,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "192000_12x12_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 144329710,
+          "median_callback_ns": 164771.0,
+          "maximum_callback_ns": 5353375,
+          "callbacks_above_1ms": 17,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 128567569,
+          "median_callback_ns": 140396.0,
+          "maximum_callback_ns": 6045000,
+          "callbacks_above_1ms": 14,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 102630020,
+          "median_callback_ns": 130166.5,
+          "maximum_callback_ns": 3255833,
+          "callbacks_above_1ms": 9,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 126613964,
+          "median_callback_ns": 163312.5,
+          "maximum_callback_ns": 5592291,
+          "callbacks_above_1ms": 11,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "192000_32x1_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 110218036,
+          "median_callback_ns": 197000.0,
+          "maximum_callback_ns": 372583,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 80565883,
+          "median_callback_ns": 129646.0,
+          "maximum_callback_ns": 318125,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 80439667,
+          "median_callback_ns": 133958.0,
+          "maximum_callback_ns": 296125,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 109457873,
+          "median_callback_ns": 196312.5,
+          "maximum_callback_ns": 369916,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "192000_32x1_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 278332213,
+          "median_callback_ns": 374541.5,
+          "maximum_callback_ns": 7560625,
+          "callbacks_above_1ms": 33,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 722982944,
+          "median_callback_ns": 340770.5,
+          "maximum_callback_ns": 95132041,
+          "callbacks_above_1ms": 73,
+          "callbacks_above_10ms": 10
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 232528317,
+          "median_callback_ns": 295874.5,
+          "maximum_callback_ns": 7186792,
+          "callbacks_above_1ms": 23,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 473028179,
+          "median_callback_ns": 454812.5,
+          "maximum_callback_ns": 129911792,
+          "callbacks_above_1ms": 33,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    },
+    {
+      "case": "192000_32x32_cyclic_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 54365953,
+          "median_callback_ns": 219770.5,
+          "maximum_callback_ns": 288375,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 107693419,
+          "median_callback_ns": 172042.0,
+          "maximum_callback_ns": 39139583,
+          "callbacks_above_1ms": 4,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 65363215,
+          "median_callback_ns": 174292.0,
+          "maximum_callback_ns": 5582416,
+          "callbacks_above_1ms": 3,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 57150964,
+          "median_callback_ns": 225041.5,
+          "maximum_callback_ns": 719000,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        }
+      ]
+    },
+    {
+      "case": "192000_32x32_cyclic_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 306284797,
+          "median_callback_ns": 490812.0,
+          "maximum_callback_ns": 17994583,
+          "callbacks_above_1ms": 66,
+          "callbacks_above_10ms": 3
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 225358250,
+          "median_callback_ns": 395458.5,
+          "maximum_callback_ns": 23785708,
+          "callbacks_above_1ms": 41,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 218446409,
+          "median_callback_ns": 480312.5,
+          "maximum_callback_ns": 7586083,
+          "callbacks_above_1ms": 49,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 273190242,
+          "median_callback_ns": 476896.0,
+          "maximum_callback_ns": 67287292,
+          "callbacks_above_1ms": 42,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "192000_2x4_matrix_ordinary",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 90690859,
+          "median_callback_ns": 27375.0,
+          "maximum_callback_ns": 11773083,
+          "callbacks_above_1ms": 11,
+          "callbacks_above_10ms": 1
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 27562417,
+          "median_callback_ns": 6938.0,
+          "maximum_callback_ns": 601375,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 26325500,
+          "median_callback_ns": 6500.0,
+          "maximum_callback_ns": 574834,
+          "callbacks_above_1ms": 0,
+          "callbacks_above_10ms": 0
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 115197820,
+          "median_callback_ns": 29500.0,
+          "maximum_callback_ns": 10556041,
+          "callbacks_above_1ms": 14,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "192000_2x4_matrix_head",
+      "control": false,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 373986078,
+          "median_callback_ns": 60792.0,
+          "maximum_callback_ns": 63133000,
+          "callbacks_above_1ms": 30,
+          "callbacks_above_10ms": 5
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 254154920,
+          "median_callback_ns": 46000.0,
+          "maximum_callback_ns": 21073208,
+          "callbacks_above_1ms": 31,
+          "callbacks_above_10ms": 2
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 355784638,
+          "median_callback_ns": 45625.0,
+          "maximum_callback_ns": 33012958,
+          "callbacks_above_1ms": 47,
+          "callbacks_above_10ms": 4
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 234975545,
+          "median_callback_ns": 59604.5,
+          "maximum_callback_ns": 11830292,
+          "callbacks_above_1ms": 24,
+          "callbacks_above_10ms": 1
+        }
+      ]
+    },
+    {
+      "case": "192000_common_upc12",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 789111135,
+          "median_callback_ns": 3042.0,
+          "maximum_callback_ns": 84431125,
+          "callbacks_above_1ms": 76,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 757960106,
+          "median_callback_ns": 3458.0,
+          "maximum_callback_ns": 42926750,
+          "callbacks_above_1ms": 87,
+          "callbacks_above_10ms": 7
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 774385833,
+          "median_callback_ns": 3292.0,
+          "maximum_callback_ns": 37138333,
+          "callbacks_above_1ms": 71,
+          "callbacks_above_10ms": 8
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 688044568,
+          "median_callback_ns": 3041.0,
+          "maximum_callback_ns": 56585625,
+          "callbacks_above_1ms": 81,
+          "callbacks_above_10ms": 3
+        }
+      ]
+    },
+    {
+      "case": "192000_common_inactive32",
+      "control": true,
+      "trials": [
+        {
+          "trial": 0,
+          "candidate": false,
+          "total_ns": 724577762,
+          "median_callback_ns": 14417.0,
+          "maximum_callback_ns": 56502292,
+          "callbacks_above_1ms": 34,
+          "callbacks_above_10ms": 6
+        },
+        {
+          "trial": 1,
+          "candidate": true,
+          "total_ns": 973972983,
+          "median_callback_ns": 13500.0,
+          "maximum_callback_ns": 35059542,
+          "callbacks_above_1ms": 96,
+          "callbacks_above_10ms": 13
+        },
+        {
+          "trial": 2,
+          "candidate": true,
+          "total_ns": 790858682,
+          "median_callback_ns": 13333.0,
+          "maximum_callback_ns": 31231125,
+          "callbacks_above_1ms": 59,
+          "callbacks_above_10ms": 9
+        },
+        {
+          "trial": 3,
+          "candidate": false,
+          "total_ns": 572139672,
+          "median_callback_ns": 13500.0,
+          "maximum_callback_ns": 69480792,
+          "callbacks_above_1ms": 13,
+          "callbacks_above_10ms": 2
+        }
+      ]
+    }
+  ]
+}

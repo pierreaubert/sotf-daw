@@ -1,0 +1,12 @@
+{
+  "phase": "During live comparator session 38610 after first 48 kHz group began",
+  "source": "mcp__tokensave__tokensave_status tool response, passive read only",
+  "index_rebuild_in_progress": true,
+  "active_branch": "feat/issue-9-plugin-audit",
+  "branch_fallback": true,
+  "served_branch": "main",
+  "initiated_by_this_worker": false,
+  "cpu_cost_measured": false,
+  "causal_attribution_established": false,
+  "acceptance_policy": "All original durations and guard failures retained; no outlier removal or rerun from this observation."
+}

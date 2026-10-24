@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "proxy",
+    "python3",
+    "audit/artifacts/remaining-convolution-eq-span-20261024/verify-restored.py"
+  ],
+  "exit_code": 0,
+  "stdout": "{\n  \"comparators_verified\": true,\n  \"screen_passed\": false,\n  \"changed_aggregate_ratio\": 0.9381878728246661,\n  \"largest_changed_ratio\": 2.1741271278149625,\n  \"control_ratio_min\": 0.5615766505784594,\n  \"control_ratio_max\": 1.360999411842565,\n  \"maximum_waveform_error\": 0.0,\n  \"callbacks\": 817200,\n  \"scope\": \"Isolated private stream cost, not full Plugin/native certification; original rejected overlap/UPC changes remain restored.\"\n}\n{\n  \"restored_to\": \"24e72a4\",\n  \"exact_source_paths\": 4,\n  \"tests_passed\": 273,\n  \"tests_ignored\": 10,\n  \"strict_clippy_passed\": true,\n  \"rejected_candidate_archived\": true\n}\n",
+  "stderr": ""
+}

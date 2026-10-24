@@ -1,0 +1,274 @@
+impl ConvolutionPlugin {
+    fn process_stream_scalar_span_baseline(
+        &mut self,
+        buffer: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        // Issue #6: enable flush-to-zero / denormals-are-zero at the top of
+        // the callback so FFT multiply-adds cannot generate costly denormals.
+        enable_ftz_daz();
+
+        let nf = context.num_frames;
+        validate_interleaved_in_place("Convolution", nf, self.channels, buffer.len())?;
+
+        let state_guard = Arc::clone(&self.ir_runtime.state);
+        let state = match state_guard.as_ref() {
+            Some(s) => s,
+            None => {
+                let latency = self.latency_samples();
+                for frame in 0..nf {
+                    let base = frame * self.channels;
+                    self.mix.advance();
+                    self.gain_linear.advance();
+                    for ch in 0..self.channels {
+                        let dry = buffer[base + ch];
+                        let output = if latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.inactive_dry_delay[ch][self.inactive_dry_delay_pos];
+                            self.inactive_dry_delay[ch][self.inactive_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[base + ch] = output;
+                        self.last_output[ch] = output;
+                    }
+                    if latency > 0 {
+                        self.inactive_dry_delay_pos += 1;
+                        if self.inactive_dry_delay_pos == latency {
+                            self.inactive_dry_delay_pos = 0;
+                        }
+                    }
+                }
+                drop(state_guard);
+                self.finish_output_block(buffer, nf);
+                return Ok(nf);
+            }
+        };
+
+        // NUPC path: per-channel block processing with non-uniform partitions.
+        // Avoids the UPC's fixed PARTITION_SIZE constraint for lower latency.
+        //
+        // Issue #3 fix (NUPC): advance smoothers one sample at a time so that
+        // mix/gain transitions are sample-accurate rather than block-quantized.
+        let matrix_nupc = self.true_stereo && self.nupc_engines.len() == 4;
+        let channel_nupc = !self.true_stereo
+            && !self.nupc_engines.is_empty()
+            && self.nupc_engines.len() == self.channels;
+        if matrix_nupc || channel_nupc {
+            let wet_latency = if self.nupc_engines[0].head_taps() > 0 {
+                0
+            } else {
+                self.nupc_engines[0].latency_samples()
+            };
+            debug_assert!(wet_latency <= PARTITION_SIZE);
+            for frame in 0..nf {
+                // Advance smoothers by one sample to get the value for this frame.
+                let mix = self.mix.advance();
+                let gain = self.gain_linear.advance();
+                let off = frame * self.channels;
+                if matrix_nupc {
+                    let dry_left = buffer[off];
+                    let dry_right = buffer[off + 1];
+                    let wet_left = self.nupc_engines[0].process_sample(dry_left)
+                        + self.nupc_engines[2].process_sample(dry_right);
+                    let wet_right = self.nupc_engines[1].process_sample(dry_left)
+                        + self.nupc_engines[3].process_sample(dry_right);
+                    for (ch, (dry, wet)) in [(dry_left, wet_left), (dry_right, wet_right)]
+                        .into_iter()
+                        .enumerate()
+                    {
+                        let aligned_dry = if wet_latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.nupc_dry_delay[ch][self.nupc_dry_delay_pos];
+                            self.nupc_dry_delay[ch][self.nupc_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[off + ch] = aligned_dry * (1.0 - mix) + wet * mix * gain;
+                    }
+                } else {
+                    for ch in 0..self.channels {
+                        let dry = buffer[off + ch];
+                        let wet = self.nupc_engines[ch].process_sample(dry);
+                        let aligned_dry = if wet_latency == 0 {
+                            dry
+                        } else {
+                            let delayed = self.nupc_dry_delay[ch][self.nupc_dry_delay_pos];
+                            self.nupc_dry_delay[ch][self.nupc_dry_delay_pos] = dry;
+                            delayed
+                        };
+                        buffer[off + ch] = aligned_dry * (1.0 - mix) + wet * mix * gain;
+                    }
+                }
+                if wet_latency > 0 {
+                    self.nupc_dry_delay_pos += 1;
+                    if self.nupc_dry_delay_pos == wet_latency {
+                        self.nupc_dry_delay_pos = 0;
+                    }
+                }
+            }
+            drop(state_guard);
+            self.finish_output_block(buffer, nf);
+            return Ok(nf);
+        }
+
+        // UPC path: uniform partitioned convolution.
+        //
+        // Issue #1 fix: Use a dedicated `output_ring` buffer to hold completed
+        // partition output.  When a partition finishes its IFFT+overlap-add,
+        // its PARTITION_SIZE output samples (with mix/gain applied) are stored
+        // in `output_ring`.  In the same per-frame loop that feeds new input
+        // into `input_buffers`, we simultaneously drain the ring into the
+        // output positions of the in-place buffer.  Because the input copy and
+        // ring drain both advance by exactly one frame per iteration, every
+        // output sample is delivered exactly once regardless of host buffer
+        // size alignment with PARTITION_SIZE.
+        let num_partitions = state.num_partitions;
+
+        let mut in_pos = 0;
+        while in_pos < nf {
+            // Per-frame step: copy one frame of input AND (if available) drain
+            // one frame from the output ring into the buffer.
+            //
+            // We must read the dry input for `input_buffers` BEFORE overwriting
+            // `buffer[in_pos]` with the ring output, because it is in-place.
+            let buf_base = in_pos * self.channels;
+
+            // Save incoming dry samples into input_buffers.
+            let fill_idx = self.input_fill;
+            self.mix_envelope[fill_idx] = self.mix.advance();
+            self.gain_envelope[fill_idx] = self.gain_linear.advance();
+            for ch in 0..self.channels {
+                self.input_buffers[ch][fill_idx] = buffer[buf_base + ch];
+            }
+
+            // Write output ring sample (or zero if ring is not yet ready).
+            if self.output_ring_available > 0 {
+                let out_idx = self.output_ring_read;
+                for ch in 0..self.channels {
+                    buffer[buf_base + ch] = self.output_ring[ch][out_idx];
+                }
+                self.output_ring_read += 1;
+                self.output_ring_available -= 1;
+            } else {
+                // Ring is empty (startup or immediately after a partition
+                // completed in the same frame).  Output silence for this frame
+                // — the UPC path has inherent PARTITION_SIZE latency.
+                for ch in 0..self.channels {
+                    buffer[buf_base + ch] = 0.0;
+                }
+            }
+
+            self.input_fill += 1;
+            in_pos += 1;
+
+            if self.input_fill == PARTITION_SIZE {
+                let inv_n = 1.0 / FFT_SIZE as f32;
+
+                self.fdl_head = if self.fdl_head == 0 {
+                    num_partitions - 1
+                } else {
+                    self.fdl_head - 1
+                };
+
+                for ch in 0..self.channels {
+                    self.fft_time[..PARTITION_SIZE].copy_from_slice(&self.input_buffers[ch]);
+                    self.fft_time[PARTITION_SIZE..].fill(0.0);
+                    state
+                        .fft_forward
+                        .as_ref()
+                        .expect("UPC state must have a forward FFT plan")
+                        .process_with_scratch(
+                            &mut self.fft_time,
+                            &mut self.fft_spectrum,
+                            &mut self.ir_runtime.fft_scratch,
+                        )
+                        .expect("prepared UPC forward transform dimensions");
+
+                    let off_base = (self.fdl_head * self.channels + ch) * FFT_BINS;
+                    self.ir_runtime.fdl_flat[off_base..off_base + FFT_BINS]
+                        .copy_from_slice(&self.fft_spectrum);
+                }
+
+                for output_ch in 0..self.channels {
+                    self.fft_sum.fill(Complex::new(0.0, 0.0));
+                    // Keep the audio callback on its current thread. Dispatching
+                    // short FFT work to Rayon’s global pool introduces
+                    // unbounded scheduling and wake-up latency.
+                    for p in 0..num_partitions {
+                        let fdl_p = (self.fdl_head + p) % num_partitions;
+                        if self.true_stereo {
+                            for input_ch in 0..2 {
+                                let ir_ch = input_ch * 2 + output_ch;
+                                let fdl_off = (fdl_p * self.channels + input_ch) * FFT_BINS;
+                                complex_mul_add_simd(
+                                    &mut self.fft_sum,
+                                    &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+                                    &state.partitions[ir_ch][p],
+                                );
+                            }
+                        } else {
+                            let fdl_off = (fdl_p * self.channels + output_ch) * FFT_BINS;
+                            let ir_ch = if state.ir_channels == 1 {
+                                0
+                            } else {
+                                output_ch % state.ir_channels
+                            };
+                            complex_mul_add_simd(
+                                &mut self.fft_sum,
+                                &self.ir_runtime.fdl_flat[fdl_off..fdl_off + FFT_BINS],
+                                &state.partitions[ir_ch][p],
+                            );
+                        }
+                    }
+                    // DC and Nyquist are real in the implicit Hermitian spectrum.
+                    self.fft_sum[0].im = 0.0;
+                    self.fft_sum[FFT_BINS - 1].im = 0.0;
+                    state
+                        .fft_inverse
+                        .as_ref()
+                        .expect("UPC state must have an inverse FFT plan")
+                        .process_with_scratch(
+                            &mut self.fft_sum,
+                            &mut self.fft_time,
+                            &mut self.ir_runtime.fft_scratch,
+                        )
+                        .expect("prepared UPC inverse dimensions and real endpoints");
+
+                    for i in 0..FFT_SIZE {
+                        self.output_accum[output_ch][i] += self.fft_time[i] * inv_n;
+                    }
+                }
+
+                // Commit the PARTITION_SIZE output samples into `output_ring`,
+                // applying linearly interpolated mix/gain per sample.
+                // The input dry signal for these samples was already saved in
+                // `input_buffers` — use it for the dry/wet blend.
+                for i in 0..PARTITION_SIZE {
+                    // Envelopes were captured when each input sample arrived,
+                    // then delayed with the matching output partition.
+                    let m = self.mix_envelope[i];
+                    let g = self.gain_envelope[i];
+                    let wet_g = m * g;
+                    let dry_g = 1.0 - m;
+                    for ch in 0..self.channels {
+                        let dry = self.input_buffers[ch][i];
+                        self.output_ring[ch][i] = dry * dry_g + self.output_accum[ch][i] * wet_g;
+                    }
+                }
+                self.output_ring_read = 0;
+                self.output_ring_available = PARTITION_SIZE;
+
+                // Advance the overlap-add tail.
+                for ch in 0..self.channels {
+                    self.output_accum[ch].copy_within(PARTITION_SIZE..FFT_SIZE, 0);
+                    self.output_accum[ch][PARTITION_SIZE..].fill(0.0);
+                }
+                self.input_fill = 0;
+            }
+        }
+        drop(state_guard);
+        self.finish_output_block(buffer, nf);
+        Ok(nf)
+    }
+}

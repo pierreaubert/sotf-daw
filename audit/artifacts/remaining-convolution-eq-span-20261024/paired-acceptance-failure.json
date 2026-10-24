@@ -1,0 +1,26 @@
+{
+  "accepted": false,
+  "changed_aggregate_guard_passed": true,
+  "changed_cases_outside_predeclared_guard": [
+    "48000_2x1_cyclic_head",
+    "48000_2x2_cyclic_ordinary",
+    "48000_2x2_cyclic_head",
+    "48000_32x1_cyclic_ordinary",
+    "48000_32x1_cyclic_head",
+    "48000_32x32_cyclic_head",
+    "48000_2x4_matrix_head",
+    "96000_2x1_cyclic_ordinary",
+    "96000_2x4_matrix_head",
+    "192000_32x1_cyclic_head",
+    "192000_32x32_cyclic_ordinary"
+  ],
+  "common_controls_outside_predeclared_guard": [
+    "48000_common_upc12",
+    "48000_common_inactive32",
+    "96000_common_upc12",
+    "192000_common_inactive32"
+  ],
+  "all_duration_samples_retained": true,
+  "rerun_authorized": false,
+  "cause_identified": false
+}
