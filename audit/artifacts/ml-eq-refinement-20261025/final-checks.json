@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_eq*.py"
+    ],
+    "exit_code": 0,
+    "seconds": 2.2060089998412877,
+    "output": ".....................\n----------------------------------------------------------------------\nRan 21 tests in 1.174s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/train_eq_refined.py",
+      "scripts/ml/evaluate_eq_refined.py",
+      "scripts/ml/analyze_eq_refined.py",
+      "scripts/ml/test_eq_refined.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.009941500145941973,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/train_eq_refined.py",
+      "scripts/ml/evaluate_eq_refined.py",
+      "scripts/ml/analyze_eq_refined.py",
+      "scripts/ml/test_eq_refined.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.00790616706945002,
+    "output": "4 files already formatted\n"
+  }
+]

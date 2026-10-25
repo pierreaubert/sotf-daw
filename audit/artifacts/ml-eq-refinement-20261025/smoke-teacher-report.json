@@ -1,0 +1,82 @@
+[
+  {
+    "mse_db2": 0.004240698147365045,
+    "max_db": 0.20759719025187084,
+    "solver_success": false,
+    "residual_calls": 138,
+    "initial_mse_db2": 0.042729502789009874,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.12109152644727858,
+    "max_db": 1.9111324965736323,
+    "solver_success": false,
+    "residual_calls": 170,
+    "initial_mse_db2": 0.6761838497534054,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.027846823599888892,
+    "max_db": 1.141253782321312,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.5362707774451915,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.0037122901017784034,
+    "max_db": 0.2528890456185705,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.02930873923656092,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.0006454102838458356,
+    "max_db": 0.1249131253380904,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.1608704220662733,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.07406802491854456,
+    "max_db": 1.826111247569603,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.10482437978962968,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.002021557169941277,
+    "max_db": 0.2493000264812295,
+    "solver_success": false,
+    "residual_calls": 138,
+    "initial_mse_db2": 0.03112887914279183,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.71220252500133,
+    "max_db": 6.623763571072562,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 1.0860310705519123,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 8.085140563609401e-05,
+    "max_db": 0.027227192968474867,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.08662418447658303,
+    "improved_label": true
+  },
+  {
+    "mse_db2": 0.043627947095227104,
+    "max_db": 1.349201320827735,
+    "solver_success": false,
+    "residual_calls": 154,
+    "initial_mse_db2": 0.25682730119340674,
+    "improved_label": true
+  }
+]

@@ -64,3 +64,12 @@ training runs include this helper with their frozen recipe. Existing model bytes
 and historical recipes are unchanged. The adjacent report checksum detects
 substitution relative to that report; it does not authenticate a report replaced
 with the model. Validation: `audit/artifacts/ml-eq-model-loading-20261025`.
+
+A paired warm-start experiment using solver-refined neural labels was rejected:
+its neural seed qualified on 2/23 non-flat probes, versus 3/23 for this model and
+3/23 for an equal-step original-label continuation. All pipelines qualified
+19/25 targets using unchanged classical searches. See
+`audit/artifacts/ml-eq-refinement-20261025` for frozen checkpoints, separate
+training/development/final identities, source snapshots and independent checks.
+These small synthetic correlated probes do not establish measured-target quality
+or a runtime improvement. The model in this directory remains unchanged.

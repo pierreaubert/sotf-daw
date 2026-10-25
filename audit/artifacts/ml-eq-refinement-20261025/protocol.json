@@ -1,0 +1,69 @@
+{
+  "final_seed": 20270301,
+  "parameter_cases": 6,
+  "rates": [
+    44100,
+    48000,
+    96000
+  ],
+  "shift_rates": [
+    88200,
+    192000
+  ],
+  "solver_budget": 200,
+  "noise_seed": 20270302,
+  "arms": [
+    "base",
+    "original-labels",
+    "refined-labels"
+  ],
+  "selection_frozen_before_final": true,
+  "full_training_command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_eq_refined.py",
+    "--weights",
+    "crates/sotf-plugins/models/eq-multiband/weights.json",
+    "--weights-sha256",
+    "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-eq-refinement-20261025/full",
+    "--examples",
+    "256",
+    "--development",
+    "12",
+    "--epochs",
+    "12",
+    "--teacher-budget",
+    "40",
+    "--development-budget",
+    "40",
+    "--seed",
+    "20270125",
+    "--exclude",
+    "crates/sotf-plugins/models/eq-multiband/data-manifest.json",
+    "--exclude",
+    "crates/sotf-plugins/models/eq-multiband/final-holdout.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-multiband-20261024/smoke-model/data-manifest.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-multiband-20261024/refinement-comparison.json",
+    "--exclude",
+    "/Volumes/home_tmp/tmp/ml-eq-refinement-20261025/smoke/data-manifest.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-refinement-20261025/smoke-verification.json"
+  ],
+  "source_sha256": {
+    "scripts/ml/train_eq_refined.py": "7ac382c5398ce3a30de638c5011269159dcb6d893496cd764902e4b68ebd2e25",
+    "scripts/ml/eq_multiband.py": "e919681aadfdd6cfc24e5763c9af1805c187561f4ef70e3fe48bced26564a620",
+    "scripts/ml/eq_model_loading.py": "7018d58831a26821bc454a38ccee7db2dd1c6785b9f5443e6ffe1d45c3cac063"
+  },
+  "evaluation_source_sha256": "93a132f162672e3c8ad3ded1921c5f369f314c5e312426d3d9a1512b4691f7e5",
+  "extra_cases": [
+    "noise-48000",
+    "noise-96000",
+    "jagged",
+    "flat",
+    "near-zero"
+  ],
+  "noise_sigma_db": 0.05
+}

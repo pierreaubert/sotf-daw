@@ -1,0 +1,20 @@
+{
+  "original-labels": {
+    "weights_sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+    "heldout_mse_db2": 0.10387305592052117,
+    "fresh_holdout_ids": [
+      "6badcf2f4cbd887489fa22b9175c867143181b41adc2ad6a5c7ca63e2c3149c0",
+      "7c8c4e16c64640061d36737eb12e65691c81bdd5a1e3c1c6ef204be579f08d7b"
+    ],
+    "selected_epoch": 0
+  },
+  "refined-labels": {
+    "weights_sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+    "heldout_mse_db2": 0.10387305592052117,
+    "fresh_holdout_ids": [
+      "6badcf2f4cbd887489fa22b9175c867143181b41adc2ad6a5c7ca63e2c3149c0",
+      "7c8c4e16c64640061d36737eb12e65691c81bdd5a1e3c1c6ef204be579f08d7b"
+    ],
+    "selected_epoch": 0
+  }
+}

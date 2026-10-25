@@ -1,0 +1,28 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_eq_refined.py",
+    "--experiment",
+    "/Volumes/home_tmp/tmp/ml-eq-refinement-20261025/full",
+    "--base",
+    "crates/sotf-plugins/models/eq-multiband/weights.json",
+    "--protocol",
+    "audit/artifacts/ml-eq-refinement-20261025/protocol.json",
+    "--output",
+    "audit/artifacts/ml-eq-refinement-20261025/final-evaluation",
+    "--exclude",
+    "crates/sotf-plugins/models/eq-multiband/data-manifest.json",
+    "--exclude",
+    "crates/sotf-plugins/models/eq-multiband/final-holdout.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-multiband-20261024/smoke-model/data-manifest.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-multiband-20261024/refinement-comparison.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-refinement-20261025/smoke-data-manifest.json",
+    "--exclude",
+    "audit/artifacts/ml-eq-refinement-20261025/smoke-verification.json"
+  ],
+  "exit_code": 0,
+  "seconds": 79.4005639590323
+}

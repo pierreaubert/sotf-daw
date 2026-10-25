@@ -1,0 +1,12 @@
+{
+  "accepted": true,
+  "method": "canonical-flat",
+  "parameters": {
+    "filters": [],
+    "auto_gain": {
+      "enabled": false
+    }
+  },
+  "elapsed_seconds": 0.00015287497080862522,
+  "target_sha256": "191c84bf6b3f4e5a2899042cdfccc528fbc6d6ba86ad5c03b52878e602629267"
+}

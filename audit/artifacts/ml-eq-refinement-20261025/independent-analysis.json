@@ -1,0 +1,14 @@
+{
+  "teacher_cases": 256,
+  "improved_teacher_labels": 256,
+  "stable_teacher_sections": 1536,
+  "max_teacher_mse_discrepancy": 7.713996108549281e-12,
+  "selected_epochs": {
+    "original-labels": 11,
+    "refined-labels": 11
+  },
+  "accepted_exports_checked": 57,
+  "rejected_exports_checked": 18,
+  "max_export_rms_discrepancy": 0.0,
+  "qualification": "Independent analog/bilinear response check and recorded selection replay; no perceptual or measured-target evidence"
+}

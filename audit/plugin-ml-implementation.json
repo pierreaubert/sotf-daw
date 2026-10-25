@@ -230,7 +230,12 @@
         "audit/artifacts/ml-eq-multiband-20261024/README.md",
         "scripts/ml/eq_model_loading.py",
         "scripts/ml/test_eq_model_loading.py",
-        "audit/artifacts/ml-eq-model-loading-20261025"
+        "audit/artifacts/ml-eq-model-loading-20261025",
+        "scripts/ml/train_eq_refined.py",
+        "scripts/ml/evaluate_eq_refined.py",
+        "scripts/ml/analyze_eq_refined.py",
+        "scripts/ml/test_eq_refined.py",
+        "audit/artifacts/ml-eq-refinement-20261025"
       ],
       "remaining": [
         "Improve refinement-aware neural initialization: current neural seed qualifies in 7/18 fits vs 15/18 for the strongest classical seed",
@@ -247,6 +252,19 @@
         "fresh_refinement_cases": 18,
         "native_magnitude_max_error_db": 4.914579198736799e-07,
         "native_complex_max_error": 3.307764148246827e-08
+      },
+      "refinement_label_experiment": {
+        "status": "negative_not_adopted",
+        "training_examples": 256,
+        "development_examples": 12,
+        "final_parameter_identities": 6,
+        "final_probes": 25,
+        "nonflat_probes": 23,
+        "base_neural_accepted": 3,
+        "original_label_control_neural_accepted": 3,
+        "refined_label_neural_accepted": 2,
+        "all_arms_combined_accepted": 19,
+        "qualification": "Small synthetic correlated rate/noise probes; no measured-target, perceptual or cold-runtime claim"
       }
     },
     {

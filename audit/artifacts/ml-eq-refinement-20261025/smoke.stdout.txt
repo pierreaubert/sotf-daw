@@ -1,0 +1,4 @@
+{"arm": "original-labels", "epoch": 1, "loss": 0.33063857450571066, "qualified": 0, "mse": 0.08241685106349192}
+{"arm": "original-labels", "epoch": 2, "loss": 0.3084356863042336, "qualified": 0, "mse": 0.08425601354862564}
+{"arm": "refined-labels", "epoch": 1, "loss": 0.309466150658691, "qualified": 0, "mse": 0.08575529709752854}
+{"arm": "refined-labels", "epoch": 2, "loss": 0.28724547287000274, "qualified": 0, "mse": 0.0824707215718024}
