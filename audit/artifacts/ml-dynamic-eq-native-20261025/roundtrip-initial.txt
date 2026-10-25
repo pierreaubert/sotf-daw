@@ -1,0 +1,14 @@
+test_returned_native_parameters_reopen_complete_schema (test_dynamic_eq_native.DynamicEqNativeTests.test_returned_native_parameters_reopen_complete_schema) ... FAIL
+
+======================================================================
+FAIL: test_returned_native_parameters_reopen_complete_schema (test_dynamic_eq_native.DynamicEqNativeTests.test_returned_native_parameters_reopen_complete_schema)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/test_dynamic_eq_native.py", line 179, in test_returned_native_parameters_reopen_complete_schema
+    self.assertIn("stereo_pairs", metadata["requested_params"])
+AssertionError: 'stereo_pairs' not found in {'attack_ms': 2.0, 'bands': [{'active': True, 'band_ratio': 4.0, 'band_threshold': -24.0, 'frequency': 1000.0, 'gain': -6.0, 'placement': 'stereo', 'q': 0.699999988079071, 'shape': 'peak', 'shelf_slope': 1.0, 'solo': False}], 'knee': 0.0, 'link_channels': True, 'mix': 1.0, 'num_bands': 1, 'ratio': 4.0, 'release_ms': 50.0, 'threshold': -24.0}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.013s
+
+FAILED (failures=1)

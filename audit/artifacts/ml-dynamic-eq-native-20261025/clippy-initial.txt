@@ -1,0 +1,2 @@
+    Checking sotf-plugin-dynamic-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)
+    Finished `release` profile [optimized] target(s) in 1.33s

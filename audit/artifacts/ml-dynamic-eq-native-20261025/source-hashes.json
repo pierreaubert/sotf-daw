@@ -1,0 +1,11 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/bin/qa_dynamic_eq_render.rs": "842ca2b08db7c72a7d94a97d4a6c2ea72d4861691200cbee7d706045567a44d1",
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/Cargo.toml": "f4de8de6e99fc928b74fe06e6bb32f24089da2769e82821aa3abb5299b99baf9",
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dynamic_eq_plugin.rs": "63f1ca9a27b44922e3bd3efd2a3e08d6736c39c654fb703ed3f5f3fd879b54fc",
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/dyn_eq_band.rs": "6c17206e20af57b2eca67224061461486c3d8db5fe3131b9d0ed9eb5937b0188",
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/src/lib/response.rs": "dc4175c5259d51d616199784fc137cf76bdb525754cdf90e1b6004328f4649cc",
+  "scripts/ml/dynamic_eq_native.py": "0c2d70f2c82c4406e083d701553113b4ce277fabb805ceaa30a7b6ae75224158",
+  "scripts/ml/test_dynamic_eq_native.py": "884d4ac5adf5e8f955a93316479c300cc52d2cd22d451e8486ba56f2e6815b31",
+  "audit/plugin-ml-implementation.json": "812cf9ef836b4579bf10f9bfb032a3e9b6fd5b7fce16769e8b0917086a489130",
+  "Cargo.lock": "518868fa329d7c1fc9816513b11f3b6631500acdf05a2a23945d28737bfebfd6"
+}

@@ -1,0 +1,10 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/dynamic_eq_native.py",
+    "scripts/ml/test_dynamic_eq_native.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.017164167016744614
+}

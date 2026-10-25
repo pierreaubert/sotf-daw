@@ -1,0 +1,199 @@
+
+running 87 tests
+test response::tests::target_response_rejects_invalid_inputs ... ok
+test response::tests::target_response_has_shape_specific_endpoints_and_pivot ... ok
+test params::tests::param_index_coverage ... ok
+test params::tests::placement_choice_roundtrip_covers_all_routes ... ok
+test params::tests::old_bands_default_to_peak_stereo_without_pairs ... ok
+test params::tests::roundtrip_serde ... ok
+test tests::fallible_factory_constructor_rejects_invalid_serialized_state ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test tests::initialize_clamps_filter_centres_below_nyquist ... ok
+test tests::global_dynamics_retarget_inherited_bands_without_losing_overrides ... ok
+test dynamic_eq_plugin_params::tests::deserialize_empty_json_uses_param_specs_defaults ... ok
+test tests::misc::dry_buffer_follows_prepared_callback_budget ... ok
+test tests::misc::test_band_q_change_requires_rebuild ... ok
+test tests::batch_global_dynamics_preserve_inheritance_after_rebuild ... ok
+test tests::misc::test_dynamic_eq_no_boost_below_threshold ... ok
+test tests::misc::test_dynamic_eq_boosts_on_threshold ... ok
+test tests::misc::test_dynamic_eq_passthrough ... ok
+test tests::misc::test_eq_gain_uses_proportion_blend_not_coefficient_update ... ok
+test tests::misc::test_reset_rebuilds_eq_filters_at_zero_gain ... ok
+test tests::misc::test_band_frequency_change_requires_rebuild ... ok
+test tests::misc::test_sidechain_reads_dry_buffer_not_modified_output ... ok
+test tests::negotiated_storage_preserves_dynamic_eq_output ... ok
+test tests::reset_publishes_zero_monitoring_immediately ... ok
+test tests::reset_snaps_parameter_smoothers_to_targets ... ok
+test tests::misc::test_dynamic_eq_frequency_selective ... ok
+test tests::routing::placement_is_structural_and_validated ... ok
+test tests::routing::failed_tilt_reinitialize_preserves_populated_state_and_retries ... ok
+test tests::routing::routed_band_without_pairs_is_a_documented_silent_bypass_on_the_infallible_path ... ok
+test tests::routing::mid_band_passes_side_only_content_bit_exact_and_boosts_mid ... ok
+test tests::shelves::held_shelf_proportions_match_independent_full_waveform_recurrence ... ok
+test tests::routing::explicit_pairs_route_each_pair_and_pair_order_is_deterministic ... ok
+test tests::routing::invalid_pair_geometry_is_rejected_and_clamping_falls_back ... ok
+test tests::routing::side_band_passes_correlated_content_bit_exact_and_boosts_side ... ok
+test tests::shelves::invalid_shelf_reinitialize_preserves_populated_state_and_allows_valid_retry ... ok
+test tests::shelves::old_band_state_defaults_to_peak_with_unity_slope ... ok
+test tests::shelves::partial_shelf_gain_uses_amplitude_blend_not_a_redesigned_shelf ... ok
+test tests::shelves::shape_specific_detector_passes_its_side_and_rejects_the_other_side ... ok
+test tests::negotiated_constructor_bounds_dry_storage_and_rejects_oversize_without_mutation ... ok
+test tests::routing::threshold_automation_moves_routed_audio_at_all_rates ... ok
+test tests::routing::left_and_right_bands_leave_the_other_channel_bit_exact ... ok
+test tests::shelves::shelf_parameters_are_structural_and_zero_gain_boundary_is_preserved ... ok
+test tests::test_band_threshold_ratio_overrides_can_return_to_global ... ok
+test tests::test_bandpass_edges_use_exact_q_to_octave_bandwidth ... ok
+test tests::routing::disjoint_routed_bands_commute_and_repeat_bit_exactly ... ok
+test tests::test_dynamic_eq_data_update ... ok
+test tests::test_get_data_returns_cache ... ok
+test tests::test_get_effective_ratio ... ok
+test tests::test_from_params_clamping ... ok
+test tests::test_get_effective_threshold ... ok
+test tests::test_get_parameter_attack_release_knee ... ok
+test tests::test_get_parameter_band_solo ... ok
+test tests::test_get_parameter_unknown_returns_none ... ok
+test tests::shelves::public_shelf_process_preserves_both_sides_of_the_zero_gain_boundary ... ok
+test tests::test_info_and_channels ... ok
+test tests::test_initialize_keeps_prepared_dry_buf_budget ... ok
+test tests::test_link_channels_can_be_disabled_before_processing_stereo ... ok
+test tests::test_inactive_band_passthrough ... ok
+test tests::test_modulation_proportion_edge_cases ... ok
+test tests::test_parameter_roundtrip ... ok
+test tests::test_process_block_too_large_rejected ... ok
+test tests::test_link_channels_uses_shared_gr ... ok
+test tests::test_process_zero_frames ... ok
+test tests::test_rejects_mismatched_buffer_size ... ok
+test tests::test_reset_clears_monitoring_gr ... ok
+test tests::test_set_parameter_attack_roundtrip ... ok
+test tests::test_set_parameter_band_active ... ok
+test tests::test_set_parameter_band_frequency_alias ... ok
+test tests::test_set_parameter_band_solo ... ok
+test tests::test_set_parameter_band_threshold_and_ratio_roundtrip ... ok
+test tests::test_set_parameter_knee_roundtrip ... ok
+test tests::test_set_parameter_non_finite_rejected ... ok
+test tests::test_set_parameter_rejects_invalid_band_values ... ok
+test tests::test_set_parameter_release_roundtrip ... ok
+test tests::test_validate_parameter_rejects_bad_values ... ok
+test tests::test_solo_mutes_other_bands ... ok
+test tests::tilt::held_tilt_proportions_match_independent_recurrence ... ok
+test tests::shelves::public_mixed_peak_and_shelf_bands_keep_serial_audio_and_dry_detection ... ok
+test tests::tilt::tilt_coefficients_match_independent_analog_prototype ... ok
+test tests::tilt::tilt_ignores_q_and_shelf_slope ... ok
+test tests::zero_gain_and_settled_dry_fast_paths_preserve_dsp_state ... ok
+test tests::tilt::tilt_dc_step_attack_release_timing ... ok
+test tests::tilt::tilt_dc_step_attack_release_timing_confirmed_on_emitted_audio ... ok
+test tests::tilt::public_tilt_process_matches_independent_full_band_reference ... ok
+test tests::shelves::public_process_matches_independent_linked_and_unlinked_shelf_dynamics ... ok
+test tests::shelves::populated_mixed_shelf_reset_and_dry_to_wet_epochs_match_fresh_state ... ok
+test tests::tilt::tilt_absolute_threshold_sweep_matches_static_law ... ok
+test tests::shelves::shelf_coefficients_match_independent_prewarped_analog_reference ... ok
+
+test result: ok. 87 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test capture_aud139_optimized_callback_cpu_baseline ... ignored, manual AUD139 optimized pre-edit CPU baseline
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test capture_aud139_matched_peak_and_shelf_callback_cpu ... ignored, manual AUD139 matched Peak/LowShelf/HighShelf CPU comparison
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test capture_aud139_pre_edit_peak_audio_and_serialized_parameter_baseline ... ignored, manual pre-edit AUD139 Dynamic EQ audio/state artifact capture
+
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test capture_aud139_pre_edit_peak_audio ... ignored, manual AUD139 pre-edit Peak audio capture
+test aud139_peak_vectors_replay_from_tracked_fixtures ... ok
+
+test result: ok. 1 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test shelf_process_and_populated_reset_do_not_allocate_or_deallocate ... ok
+test dry_to_wet_shelf_epochs_reset_populated_filter_state ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 5 tests
+test first_meter_publication_and_contended_readers_do_not_allocate_or_free ... ok
+test tiny_nonzero_mix_is_active_and_bulk_retarget_does_not_reset_it ... ok
+test settling_to_dry_publishes_zero_at_the_same_sample_for_all_callbacks ... ok
+test audio_after_a_meter_boundary_cannot_change_that_boundarys_snapshot ... ok
+test diagnostic_publication_occurs_at_exact_sample_boundaries ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 1 test
+test held_target_response_surfaces_match_independent_first_transient_and_gain_envelopes ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+
+running 16 tests
+test info_and_channels_match_construction ... ok
+test from_params_clamps_out_of_bounds ... ok
+test filter_and_topology_parameters_require_rebuild ... ok
+test buffer_size_mismatch_returns_error ... ok
+test per_band_parameter_roundtrip ... ok
+test inactive_band_is_passthrough ... ok
+test initialize_changes_sample_rate ... ok
+test block_too_large_rejected ... ok
+test mix_zero_passthrough ... ok
+test invalid_parameter_rejected ... ok
+test parameters_list_contains_expected_ids ... ok
+test global_parameter_roundtrip ... ok
+test process_zero_frames_returns_zero ... ok
+test get_data_returns_typed_cache ... ok
+test reset_clears_state ... ok
+test dynamic_eq_attenuates_triggered_band ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test schema_exposes_placement_and_tilt_shape_range ... ok
+test placement_and_tilt_shape_are_structural_through_public_setters ... ok
+test json_state_carries_tilt_placement_and_pairs ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling sotf-plugin-dynamic-eq v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-dynamic-eq)
+    Finished `release` profile [optimized] target(s) in 1m 39s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_dynamic_eq-8dbe9f7334db55ae)
+     Running unittests bin/qa_dynamic_eq.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_dynamic_eq-b35bff3fcabc9495)
+     Running unittests bin/qa_dynamic_eq_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_dynamic_eq_render-98dbfa6ecde348a1)
+     Running tests/aud139_cpu_baseline.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/aud139_cpu_baseline-c8123ec625fd2822)
+     Running tests/aud139_cpu_shape_comparison.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/aud139_cpu_shape_comparison-a4f65ca5c846f929)
+     Running tests/aud139_peak_baseline.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/aud139_peak_baseline-dab670aa04cb0032)
+     Running tests/aud139_peak_replay.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/aud139_peak_replay-ef343b3797263ffd)
+     Running tests/aud139_shelf_lifecycle.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/aud139_shelf_lifecycle-63dd0c24a92b0125)
+     Running tests/audit_meter_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_meter_clock-7625fa60ed47e14c)
+     Running tests/audit_response_surface.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_response_surface-432db2902cbe3dbf)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-2a513c452ba6f5cb)
+     Running tests/routing_tilt_public.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/routing_tilt_public-e4a7ed4f3a3961f5)
+   Doc-tests sotf_plugin_dynamic_eq

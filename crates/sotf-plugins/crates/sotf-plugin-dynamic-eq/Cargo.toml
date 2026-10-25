@@ -27,3 +27,8 @@ math-dsp = { workspace = true }
 math-iir-fir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[[bin]]
+name = "qa-dynamic-eq-render"
+path = "bin/qa_dynamic_eq_render.rs"
+required-features = ["qa"]

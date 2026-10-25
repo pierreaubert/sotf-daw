@@ -1,0 +1,64 @@
+{
+  "appended_zero_frames": 4096,
+  "callback_frames": 193,
+  "channels": 2,
+  "full_target_band_response_db": [
+    [
+      -6.171695785941059e-14,
+      -0.06518688723103176,
+      -6.000000000000014,
+      -0.04760190864871573,
+      -9.643274665532871e-16
+    ]
+  ],
+  "input_frames": 72001,
+  "last_published_ui_gain_reduction_db": [
+    0.5405870079994202,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ],
+  "latency_samples": 0,
+  "output_frames": 76097,
+  "requested_params": {
+    "attack_ms": 0.10000000149011612,
+    "bands": [
+      {
+        "active": true,
+        "band_ratio": 4.0,
+        "band_threshold": -24.0,
+        "frequency": 1000.0,
+        "gain": -6.0,
+        "placement": "stereo",
+        "q": 1.0,
+        "shape": "peak",
+        "shelf_slope": 1.0,
+        "solo": false
+      }
+    ],
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "num_bands": 1,
+    "ratio": 4.0,
+    "release_ms": 100.0,
+    "stereo_pairs": null,
+    "threshold": -24.0
+  },
+  "response_hz": [
+    0.0,
+    100.0,
+    1000.0,
+    10000.0,
+    24000.0
+  ],
+  "sample_rate": 48000,
+  "scope": "Actual native Dynamic EQ, fresh construction, no automation; explicit zero extension is processed input and is not a finite IIR tail; static target responses and 10Hz UI GR snapshots are not per-sample applied response or control trajectories",
+  "status": "ok",
+  "input_sha256": "ccb03d98f56d51e4c9e68ec3adc995305507152d25c976b32163d0571297056b",
+  "output_sha256": "de7a1fa072e3af8ee1919cd02303d6646060a4fab7d95cd71e7b2ad40571c158"
+}

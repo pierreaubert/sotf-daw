@@ -1,0 +1,226 @@
+[
+  {
+    "rate": 44100,
+    "shape": "peak",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.16493401e-08,
+    "max_full_target_response_error_db": 5.20139487e-14
+  },
+  {
+    "rate": 44100,
+    "shape": "peak",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 2.207431726e-08,
+    "max_full_target_response_error_db": 1.776356839e-15
+  },
+  {
+    "rate": 44100,
+    "shape": "low_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.471099914e-08,
+    "max_full_target_response_error_db": 6.217248938e-15
+  },
+  {
+    "rate": 44100,
+    "shape": "low_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 2.226539242e-08,
+    "max_full_target_response_error_db": 1.261213356e-13
+  },
+  {
+    "rate": 44100,
+    "shape": "high_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.108389081e-08,
+    "max_full_target_response_error_db": 1.263711358e-13
+  },
+  {
+    "rate": 44100,
+    "shape": "high_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 8.649407557e-08,
+    "max_full_target_response_error_db": 1.598721155e-14
+  },
+  {
+    "rate": 44100,
+    "shape": "tilt",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 8.602922452e-08,
+    "max_full_target_response_error_db": 3.019806627e-14
+  },
+  {
+    "rate": 44100,
+    "shape": "tilt",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.289026196e-08,
+    "max_full_target_response_error_db": 5.329070518e-14
+  },
+  {
+    "rate": 48000,
+    "shape": "peak",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.419485079e-08,
+    "max_full_target_response_error_db": 8.881784197e-15
+  },
+  {
+    "rate": 48000,
+    "shape": "peak",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 2.227024501e-08,
+    "max_full_target_response_error_db": 1.171285291e-13
+  },
+  {
+    "rate": 48000,
+    "shape": "low_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.469063043e-08,
+    "max_full_target_response_error_db": 2.842170943e-13
+  },
+  {
+    "rate": 48000,
+    "shape": "low_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 2.169468996e-08,
+    "max_full_target_response_error_db": 3.019806627e-14
+  },
+  {
+    "rate": 48000,
+    "shape": "high_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.104325903e-08,
+    "max_full_target_response_error_db": 3.085847893e-14
+  },
+  {
+    "rate": 48000,
+    "shape": "high_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 8.822400066e-08,
+    "max_full_target_response_error_db": 3.443079155e-14
+  },
+  {
+    "rate": 48000,
+    "shape": "tilt",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 8.936940765e-08,
+    "max_full_target_response_error_db": 7.283063042e-14
+  },
+  {
+    "rate": 48000,
+    "shape": "tilt",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.105444278e-08,
+    "max_full_target_response_error_db": 3.552713679e-15
+  },
+  {
+    "rate": 96000,
+    "shape": "peak",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.423209139e-08,
+    "max_full_target_response_error_db": 2.997602166e-15
+  },
+  {
+    "rate": 96000,
+    "shape": "peak",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.943156855e-08,
+    "max_full_target_response_error_db": 2.304742645e-13
+  },
+  {
+    "rate": 96000,
+    "shape": "low_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.422531698e-08,
+    "max_full_target_response_error_db": 1.243449788e-13
+  },
+  {
+    "rate": 96000,
+    "shape": "low_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.466092964e-08,
+    "max_full_target_response_error_db": 1.172395514e-13
+  },
+  {
+    "rate": 96000,
+    "shape": "high_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.054461575e-08,
+    "max_full_target_response_error_db": 1.156852392e-13
+  },
+  {
+    "rate": 96000,
+    "shape": "high_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 8.464921208e-08,
+    "max_full_target_response_error_db": 3.481936961e-13
+  },
+  {
+    "rate": 96000,
+    "shape": "tilt",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 8.522100181e-08,
+    "max_full_target_response_error_db": 7.105427358e-14
+  },
+  {
+    "rate": 96000,
+    "shape": "tilt",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.117260033e-08,
+    "max_full_target_response_error_db": 1.225686219e-13
+  },
+  {
+    "rate": 192000,
+    "shape": "peak",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.449953096e-08,
+    "max_full_target_response_error_db": 6.605826997e-14
+  },
+  {
+    "rate": 192000,
+    "shape": "peak",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.332090066e-08,
+    "max_full_target_response_error_db": 9.103251284e-13
+  },
+  {
+    "rate": 192000,
+    "shape": "low_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 6.926314133e-09,
+    "max_full_target_response_error_db": 1.797673121e-12
+  },
+  {
+    "rate": 192000,
+    "shape": "low_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 7.392730816e-09,
+    "max_full_target_response_error_db": 4.565237077e-13
+  },
+  {
+    "rate": 192000,
+    "shape": "high_shelf",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 1.061593448e-08,
+    "max_full_target_response_error_db": 4.570912191e-13
+  },
+  {
+    "rate": 192000,
+    "shape": "high_shelf",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 8.886823988e-08,
+    "max_full_target_response_error_db": 1.804112415e-12
+  },
+  {
+    "rate": 192000,
+    "shape": "tilt",
+    "gain_db": -12,
+    "max_convex_sample_bound_violation": 8.886487746e-08,
+    "max_full_target_response_error_db": 9.643274666e-15
+  },
+  {
+    "rate": 192000,
+    "shape": "tilt",
+    "gain_db": 12,
+    "max_convex_sample_bound_violation": 1.061603805e-08,
+    "max_full_target_response_error_db": 2.344791028e-13
+  }
+]

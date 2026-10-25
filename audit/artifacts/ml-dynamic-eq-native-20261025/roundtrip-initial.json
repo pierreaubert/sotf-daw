@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_dynamic_eq_native.py",
+    "-k",
+    "returned_native",
+    "-v"
+  ],
+  "exit_code": 1,
+  "seconds": 0.7483066658023745
+}

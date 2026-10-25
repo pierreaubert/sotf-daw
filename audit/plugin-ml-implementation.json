@@ -272,8 +272,19 @@
       "requirements": [
         "ML can propose settings offline; the runtime gain envelope should remain transparent and bounded."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/bin/qa_dynamic_eq_render.rs",
+        "scripts/ml/dynamic_eq_native.py",
+        "scripts/ml/test_dynamic_eq_native.py",
+        "audit/artifacts/ml-dynamic-eq-native-20261025"
+      ],
+      "remaining": [
+        "Implement learned offline setting proposals against explicit targets with native waveform qualification and transparent bounded runtime controls. The renderer is a foundation, not a learned fitter.",
+        "Compare learned initialization/surrogate proposals against strong bounded classical optimization at equal native evaluation budgets; retain ambiguity and out-of-domain refusal.",
+        "Validate selected presets across held-out programme/levels, transients, rates/layouts, filter shapes, per-band overrides and routings; do not infer dynamic response from static full-target magnitude.",
+        "Validate listener quality, host/preset UI integration, CPU/memory/deadline budgets and cross-platform operation separately."
+      ]
     },
     {
       "plugin_id": 23,
