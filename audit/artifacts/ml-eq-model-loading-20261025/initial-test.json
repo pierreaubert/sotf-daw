@@ -1,0 +1,7 @@
+{
+  "exit_code": 1,
+  "tests": 4,
+  "errors": 1,
+  "cause": "New bounded-reader test called tell() after context manager closed BytesIO. Replaced with byte-counting reader; implementation unchanged.",
+  "resolved_by": "final-checks.json"
+}

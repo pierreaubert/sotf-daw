@@ -55,3 +55,12 @@ returns `qualified_proposals`: at most three individually qualified parameter
 sets with exact target/model identities. Without the flag, output fields and
 selection are unchanged. Rejected candidates do not expose controls in this
 payload. The FIR assistant checks the realized result before choosing an export.
+
+Current offline EQ tools read at most 8 MiB of weights and 1 MiB of training
+metadata. The loader hashes and parses the same bytes, validates exact parameter
+names/shapes and finite float32 values, and reports the loaded digest. Keep
+`scripts/ml/eq_model_loading.py` alongside either EQ tool when copying it; new
+training runs include this helper with their frozen recipe. Existing model bytes
+and historical recipes are unchanged. The adjacent report checksum detects
+substitution relative to that report; it does not authenticate a report replaced
+with the model. Validation: `audit/artifacts/ml-eq-model-loading-20261025`.

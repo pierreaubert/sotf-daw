@@ -19,6 +19,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from eq_model_loading import load_model
 from scipy.optimize import least_squares
 from scipy.signal import sosfreqz
 from torch import nn
@@ -193,6 +194,9 @@ def train(args):
         )
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "recipe.py").write_bytes(Path(__file__).read_bytes())
+    (args.output / "eq_model_loading.py").write_bytes(
+        Path(__file__).with_name("eq_model_loading.py").read_bytes()
+    )
     splits = {
         name: dataset(count, args.seed + offset)
         for name, count, offset in [
@@ -417,18 +421,7 @@ def fit(args):
         }
     else:
         load_start = time.monotonic()
-        report = json.loads((args.weights.parent / "training-report.json").read_text())
-        if sha(args.weights) != report["weights_sha256"]:
-            raise ValueError("Multiband weights SHA-256 mismatch")
-        raw = json.loads(args.weights.read_text())
-        if raw["contract"] != CONTRACT:
-            raise ValueError("Unsupported multiband model contract")
-        model = network()
-        model.load_state_dict(
-            {key: torch.as_tensor(value) for key, value in raw["weights"].items()},
-            strict=True,
-        )
-        model.eval()
+        model, weights_digest = load_model(args.weights, CONTRACT, network)
         load_seconds = time.monotonic() - load_start
         infer_start = time.monotonic()
         interpolated = np.interp(np.log(GRID), np.log(frequencies), target)
@@ -534,7 +527,7 @@ def fit(args):
                 for row in candidates
             ],
             "parameters": proposal_parameters(p) if accepted else None,
-            "weights_sha256": sha(args.weights),
+            "weights_sha256": weights_digest,
             "qualification": "Supplied-sample accuracy and sampled dense gain guard; no continuous response, quality, calibration, or speed advantage guarantee",
             "model_sample_rate_shift": rate not in TRAIN_RATES,
         }

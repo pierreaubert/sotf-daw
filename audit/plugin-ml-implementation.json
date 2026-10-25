@@ -227,7 +227,10 @@
         "scripts/ml/evaluate_eq_multiband.py",
         "scripts/ml/verify_eq_multiband.py",
         "crates/sotf-plugins/models/eq-multiband/validation.json",
-        "audit/artifacts/ml-eq-multiband-20261024/README.md"
+        "audit/artifacts/ml-eq-multiband-20261024/README.md",
+        "scripts/ml/eq_model_loading.py",
+        "scripts/ml/test_eq_model_loading.py",
+        "audit/artifacts/ml-eq-model-loading-20261025"
       ],
       "remaining": [
         "Improve refinement-aware neural initialization: current neural seed qualifies in 7/18 fits vs 15/18 for the strongest classical seed",

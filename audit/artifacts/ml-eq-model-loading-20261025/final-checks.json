@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_eq*.py"
+    ],
+    "exit_code": 0,
+    "seconds": 2.1508924579247832,
+    "output": "................\n----------------------------------------------------------------------\nRan 16 tests in 1.111s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/eq_model_loading.py",
+      "scripts/ml/eq_assistant.py",
+      "scripts/ml/eq_multiband.py",
+      "scripts/ml/test_eq_model_loading.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.016115125035867095,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/eq_model_loading.py",
+      "scripts/ml/eq_assistant.py",
+      "scripts/ml/eq_multiband.py",
+      "scripts/ml/test_eq_model_loading.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.01468029199168086,
+    "output": "4 files already formatted\n"
+  }
+]

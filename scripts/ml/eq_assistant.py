@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from eq_model_loading import load_model
 from scipy.optimize import least_squares
 from scipy.signal import freqz
 from torch import nn
@@ -97,6 +98,9 @@ def train(args):
     torch.manual_seed(20261024)
     args.output.mkdir(parents=True, exist_ok=True)
     (args.output / "recipe.py").write_bytes(Path(__file__).read_bytes())
+    (args.output / "eq_model_loading.py").write_bytes(
+        Path(__file__).with_name("eq_model_loading.py").read_bytes()
+    )
     splits = {
         name: dataset(count, seed)
         for name, count, seed in [
@@ -258,19 +262,7 @@ def fit(args):
             "parameters": {"filters": [], "auto_gain": {"enabled": False}},
         }
     else:
-        training_report = json.loads(
-            (args.weights.parent / "training-report.json").read_text()
-        )
-        if sha(args.weights) != training_report["weights_sha256"]:
-            raise ValueError("EQ model weights SHA-256 mismatch")
-        raw = json.loads(args.weights.read_text())
-        if raw["contract"] != "sotf-single-peak-v1":
-            raise ValueError("Unknown EQ model contract")
-        model = network()
-        model.load_state_dict(
-            {n: torch.as_tensor(v) for n, v in raw["weights"].items()}, strict=True
-        )
-        model.eval()
+        model, weights_digest = load_model(args.weights, "sotf-single-peak-v1", network)
         interpolated = np.interp(np.log(GRID), np.log(frequencies), target)
         with torch.no_grad():
             proposal = physical(
@@ -348,7 +340,9 @@ def fit(args):
         }
     result["elapsed_seconds"] = time.monotonic() - start
     result["target_sha256"] = sha(args.target)
-    result["weights_sha256"] = sha(args.weights)
+    result["weights_sha256"] = (
+        sha(args.weights) if result["method"] == "canonical-flat" else weights_digest
+    )
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps(result, indent=2, allow_nan=False))
     if not result["accepted"]:

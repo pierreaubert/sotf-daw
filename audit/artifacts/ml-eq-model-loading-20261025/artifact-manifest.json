@@ -1,0 +1,11 @@
+{
+  "README.md": "cbfb866297c28eb6b9c3ac37ff084f2a2aadfe799365129e71bfcbec666ef0c3",
+  "checks-r1.json": "eccb6265629915018d93f38d3e451f4df447a8c32ea8f29999b1e770affc3bc9",
+  "final-checks.json": "dda0a634b6cc71454815302c88a168c0672c41898ca811e3ff965fc62ada903d",
+  "fit-parity-r1.json": "98441141cd4a5a8506a58e59464d2a61678037bd8dade5b44f9a94eae3ec7fce",
+  "fit-parity.json": "f5c6c4ab7f7a9f7547b4e963eeec5d7eb3c67be0d7f8af40673b96a1603cbbaf",
+  "initial-test.json": "5e1101a7c6e1acff42f0c4f5cd39c1ebb64978edd529dd2d27f42e13a24744b7",
+  "linear-phase-tests.json": "28712e85e2bcfb8e4030093b574e8153aef4e352969bdc7d24c133dd8e19c68d",
+  "reproduce.py": "0c829457984036126d871af82563d674fcb1c4c98bf38cd30f6c8e51b4082ebb",
+  "source-manifest.json": "bb90d6b471730cb2581fd9705cf181b076fab64811f87b0f0f3d08e17716fc3d"
+}

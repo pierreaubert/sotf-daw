@@ -1,0 +1,13 @@
+{
+  "scripts/ml/eq_model_loading.py": "7018d58831a26821bc454a38ccee7db2dd1c6785b9f5443e6ffe1d45c3cac063",
+  "scripts/ml/eq_assistant.py": "f9c25b03576c307d3d65b18d03afebba69c4452a9f063288ea8195fcb6e32a95",
+  "scripts/ml/eq_multiband.py": "e919681aadfdd6cfc24e5763c9af1805c187561f4ef70e3fe48bced26564a620",
+  "scripts/ml/test_eq_model_loading.py": "4cd6f54a18914359aedbaa675345323f49100328e0c80c04cc914c5594db7f8a",
+  "scripts/ml/test_eq_assistant.py": "f85ecd4b7e507a16a47348113942b3ac38adb3e8b623c0e90f7804123d58663a",
+  "scripts/ml/test_eq_multiband.py": "7bb05273fe8cda2410b714f28afe4b6b9e556024066058e27a66a6f36abf1e80",
+  "scripts/ml/test_linear_phase_fit.py": "15d35d2e4410f1a5b4dc05035e08653c634c96ca2a95b8c93e1e4c3f4c872cfc",
+  "audit/plugin-ml-implementation.json": "bd4a8ff50ba39bbfdde992057d0915684cbd34eb181da683d8959b5ecb55ecda",
+  "crates/sotf-plugins/models/eq-multiband/README.md": "324512946b81fa4cf3d8825530ae7d0a8286995a5d5c8005e85693d65bfc1275",
+  "crates/sotf-plugins/models/eq-multiband/weights.json": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+  "crates/sotf-plugins/models/eq-single-peak/weights.json": "6107145b74209cca0b8f9562a02efd1442ded47a7f6a3e059a045e103197358d"
+}
