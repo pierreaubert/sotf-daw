@@ -484,7 +484,7 @@ pub use sotf_host::parameters::{
 };
 pub use sotf_host::plugin::{
     InPlacePlugin, InPlacePluginAdapter, Plugin, PluginCostClass, PluginInfo, PluginResult,
-    ProcessContext,
+    ProcessContext, ProcessingMode,
 };
 #[cfg(feature = "qa")]
 pub use sotf_host::test_utils::benchmark_plugin_full;

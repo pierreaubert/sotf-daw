@@ -32,6 +32,22 @@ pub use time_signature::*;
 pub use transport_info::*;
 pub use types::*;
 
+/// Execution environment selected before plugin initialization.
+///
+/// This is a host lifecycle choice, independent of transport playing/recording.
+/// Plugins may prepare synchronous inference for offline rendering. Realtime
+/// processing must retain its bounded, nonblocking callback contract. The mode
+/// remains fixed until the next initialization; reset does not change it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum ProcessingMode {
+    /// Deadline-driven playback with realtime callback restrictions.
+    #[default]
+    Realtime,
+    /// Offline rendering, where processing may wait for inference results.
+    Offline,
+}
+
 /// Bound on a plugin's response after its input becomes zero.
 ///
 /// This counts output-rate frames from the last input sample, including emitted
@@ -451,6 +467,24 @@ pub trait Plugin: Send {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
+    }
+
+    /// Initialize on the control thread for a fixed execution environment.
+    ///
+    /// The default delegates to `initialize` for plugins with identical behavior
+    /// in both environments. Mode-aware implementations must preserve the chosen
+    /// mode across reset. Calling `initialize` directly continues to select the
+    /// plugin's normal realtime behavior. This hook alone does not guarantee
+    /// deterministic offline output from plugins that use external state.
+    ///
+    /// # Errors
+    /// Returns initialization errors, including an unsupported execution mode.
+    fn initialize_with_mode(
+        &mut self,
+        sample_rate: f64,
+        _mode: ProcessingMode,
+    ) -> PluginResult<()> {
+        self.initialize(sample_rate)
     }
 
     /// Prepare callback storage on the control thread for a maximum input block.

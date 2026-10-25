@@ -194,7 +194,8 @@
         "audit/artifacts/ml-gate-20261025",
         "audit/artifacts/ml-gate-silero-20261025",
         "audit/artifacts/ml-gate-streaming-20261025",
-        "audit/artifacts/ml-gate-quality-20261025"
+        "audit/artifacts/ml-gate-quality-20261025",
+        "audit/artifacts/ml-processing-mode-20261025"
       ],
       "implementation": {
         "mode": "Explicit speech_protection config with optional neural-speech build feature; linked Downward mode only; defaults remain classical.",
@@ -204,9 +205,11 @@
         "remaining": [
           "Held-out multilingual speech/noise/music false-cut and false-protection evaluation, including noise/gain/rate shifts and listening.",
           "Controlled full-host CPU/memory/deadline measurements and Linux/Windows DAW validation.",
-          "User-facing structural configuration, faster-than-realtime render policy, and review before production adoption."
+          "User-facing structural configuration, realtime subdivision-contract review, and review before production adoption.",
+          "Automatic offline preparation/restoration of existing timeline track/master graphs; current explicit mode covers file-chain renders and caller-prepared hosts."
         ],
-        "streaming": "Bounded chronological 10 ms source packets; worker-only causal sinc resampling and recurrent state. Generation changes and source gaps restore pristine context. Backpressure immediately retires queued/in-flight observations and releases toward classical gain."
+        "streaming": "Bounded chronological 10 ms source packets; worker-only causal sinc resampling and recurrent state. Generation changes and source gaps restore pristine context. Backpressure immediately retires queued/in-flight observations and releases toward classical gain.",
+        "offline": "Explicit control-time ProcessingMode::Offline selects synchronous RNNoise/Silero inference over the same fixed source packets. Host adapters, oversampling, rate reinitialization and offline rendering forward the mode; reset retains it. Realtime remains asynchronous. Both model backends reproduce audio across reset/reinitialization, irregular partitions, external-key adaptation, and actual WAV export; the parallel API retains a chronological stream. Validation is local to the recorded development source and tested settings. Parallel file-chain renders retain one chronological stream for learned Gate configurations; timeline automatic preparation/restoration remains open."
       },
       "development_observations": {
         "source": "audit/artifacts/ml-gate-20261025/development-recordings.json",
@@ -221,16 +224,17 @@
         "interpretation": "Strong false speech evidence on this violin clip. Speech clips lack window labels and include pauses; their passing fractions are not speech recall. Unknown training overlap. Experimental implementation only; no adoption or general quality claim."
       },
       "verification": {
-        "feature_enabled_tests_passed": 117,
+        "feature_enabled_tests_passed": 122,
         "feature_disabled_tests_passed": 104,
         "final_live_worker_tests_passed": 8,
-        "strict_clippy": "All targets with Silero, RNNoise, and QA evaluation enabled.",
-        "engine": "Combined Silero/CREPE/DeepFilter test compilation and both typed preset roundtrip tests passed.",
+        "strict_clippy": "Host and Gate all-target checks passed with QA; Gate includes Silero/RNNoise. Engine lib/test Clippy passed with --no-deps and explicit dependency QA/Silero features. An unrestricted engine attempt stops at pre-existing sotf-streaming::run_server too_many_arguments; that dependency was not changed.",
+        "engine": "Current checkpoint: 26 model-enabled offline-renderer tests passed, including actual RNNoise/Silero WAV output bitwise agreement across 127/1024/3001-frame callbacks and parallel API fallback. The earlier combined CREPE/DeepFilter/Silero compilation and preset evidence remains in the streaming checkpoint.",
         "shared_loader_native_parity": "Same loader and step implementation used by live worker and native golden comparison; all 16 reference probes passed.",
         "source_timing": "Conservative filter-center timestamps and exact partition invariance verified, including noninteger source rates.",
         "heap_activity": "No allocations/frees in asserted cold, active, backpressure, or reset callbacks.",
         "formatting": "Focused rustfmt --check and git diff --check passed.",
-        "scope": "Local macOS functional evidence; no held-out quality, DAW deadline, or cross-platform adoption claim."
+        "scope": "Local macOS functional evidence; no held-out quality, DAW deadline, or cross-platform adoption claim.",
+        "offline": "Synchronous source-packet inference; direct Gate reset, reinitialization and arbitrary partition output agreement, readonly external key/adapted input, zero dropped packets, and actual non-classical protection verified for both models."
       },
       "silero_candidate": {
         "status": "streaming_runtime_locally_validated_experimental",
@@ -291,7 +295,7 @@
           "state_tolerance": 0.001
         },
         "interpretation": "Zero passing windows on the existing violin and cymbal clips; recurrent streaming scores exceed independent-window scores on three speech clips. Different grids/protocols and unlabeled speech pauses prevent a recall or general superiority claim. Unknown training overlap.",
-        "next": "Address the observed quiet-plosive gain-shift failure with separately selected development/held-out evidence; evaluate stronger classical speech presets and natural/colored-noise/rate shifts. Add an explicit offline processing/preparation contract before promising deterministic bounce behavior.",
+        "next": "Address quiet-plosive gain-shift robustness with separate development/held-out evidence; evaluate stronger classical speech presets and natural/colored-noise/rate shifts. Automate timeline offline preparation/restoration and resolve realtime learned Gate subdivision-contract semantics.",
         "runtime_evidence": "audit/artifacts/ml-gate-streaming-20261025",
         "local_runtime_results": {
           "full_gate_tests_passed": 117,
@@ -351,7 +355,7 @@
           "interpretation": "Silero improves some tail-window proxies and rejects the tested non-speech controls, but it is not uniformly better. Most energy-weighted speech losses are already small; counts are quiet-window engineering proxies, not word/intelligibility errors. No tuning was performed from these results.",
           "repeat": "Both real controller runs retained; source input bytes identical, no reported cut-count changes across repeat runs. Source pacing is after-work sleeping, not a DAW deadline benchmark.",
           "metric_correction": "Independent trace reduction identified f64 annotation mapping at 2.3s discarding one complete violin window. Raw reports preserved; final-analysis.json corrects four case rows from saved energies. Future native reductions repair only near-integer representation errors.",
-          "offline_contract": "ProcessContext and TransportInfo do not carry a realtime/offline processing mode. The offline renderer has a separate configuration; deterministic inference requires an explicit preparation/processing contract and remains open.",
+          "offline_contract": "Control-time ProcessingMode and initialize_with_mode propagate through the host, adapters, oversampling and file-chain offline renderer. Both Gate backends use synchronous packet inference offline. Actual WAV output matches the synchronous reference bitwise across tested blocks and the parallel API. Existing timeline graphs still require explicit offline preparation. Earlier quality measurements used realtime workers and do not establish offline quality.",
           "remaining": [
             "Held-out multilingual and natural-word/noise/intelligibility evaluation.",
             "Stronger speech-oriented classical baselines and wider noise/gain/rate shifts.",

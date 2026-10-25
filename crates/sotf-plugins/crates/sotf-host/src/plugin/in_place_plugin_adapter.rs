@@ -1,3 +1,4 @@
+use super::ProcessingMode;
 use super::in_place_plugin::InPlacePlugin;
 use super::plugin_info::PluginInfo;
 use super::process_context::ProcessContext;
@@ -91,8 +92,12 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        self.initialize_with_mode(sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         self.bounded.invalidate();
-        self.plugin.initialize(sample_rate)?;
+        self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
             [self.plugin.input_channels(), self.plugin.channels()],

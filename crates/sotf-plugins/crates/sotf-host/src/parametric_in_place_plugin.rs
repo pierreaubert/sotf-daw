@@ -12,8 +12,8 @@ use crate::parametric_plugin::{ParameterSchema, ParameterSet};
 use crate::plugin::bounded_in_place::{self, BoundedInPlace};
 use crate::plugin::{
     InPlacePlugin, Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass,
-    PluginDrainResult, PluginInfo, PluginResult, ProcessContext, validate_process_block_f32,
-    validate_process_block_f64,
+    PluginDrainResult, PluginInfo, PluginResult, ProcessContext, ProcessingMode,
+    validate_process_block_f32, validate_process_block_f64,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -86,6 +86,21 @@ pub trait ParametricInPlacePlugin: Send {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
+    }
+
+    /// Initialize for the host's fixed execution environment.
+    ///
+    /// Called on the control thread. Reset must preserve the chosen mode.
+    /// The default retains the existing initialization behavior.
+    ///
+    /// # Errors
+    /// Returns initialization errors or an unsupported-mode error.
+    fn initialize_with_mode(
+        &mut self,
+        sample_rate: f64,
+        _mode: ProcessingMode,
+    ) -> PluginResult<()> {
+        self.initialize(sample_rate)
     }
 
     /// Prepare maximum callback storage on the control thread after initialization.
@@ -398,8 +413,12 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        InPlacePlugin::initialize_with_mode(self, sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         self.bounded.invalidate();
-        self.plugin.initialize(sample_rate)?;
+        self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
             [self.plugin.input_channels(), self.plugin.channels()],
@@ -556,8 +575,12 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        Plugin::initialize_with_mode(self, sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         self.bounded.invalidate();
-        self.plugin.initialize(sample_rate)?;
+        self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
             [self.plugin.input_channels(), self.plugin.channels()],

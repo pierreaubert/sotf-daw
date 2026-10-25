@@ -1,0 +1,26 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-engine",
+    "--features",
+    "sotf-plugins/qa,silero-speech",
+    "--no-deps",
+    "--lib",
+    "--tests",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 16.158148050308228,
+  "final_source_manifest": "source-sha256.json"
+}

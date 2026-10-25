@@ -2,7 +2,9 @@ use super::misc::interleaved_to_planar;
 use super::misc::planar_to_interleaved;
 use super::oversampler::Oversampler;
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
-use crate::plugin::{InPlacePlugin, PluginDrainResult, PluginInfo, PluginResult, ProcessContext};
+use crate::plugin::{
+    InPlacePlugin, PluginDrainResult, PluginInfo, PluginResult, ProcessContext, ProcessingMode,
+};
 use std::any::Any;
 use std::sync::Arc;
 
@@ -114,13 +116,17 @@ impl<P: InPlacePlugin> InPlacePlugin for OversampledPlugin<P> {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        self.initialize_with_mode(sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         let os_rate = sample_rate * f64::from(self.factor);
         if !sample_rate.is_finite() || sample_rate <= 0.0 || !os_rate.is_finite() {
             return Err("Oversampled sample rate must be finite and positive".into());
         }
         self.sample_rate = sample_rate;
         // Initialize inner plugin at the oversampled rate
-        self.inner.initialize(os_rate)?;
+        self.inner.initialize_with_mode(os_rate, mode)?;
         let drain_frames = self.inner.drain_output_frames_max();
         let drain_samples = drain_frames
             .checked_mul(self.channels)

@@ -1,4 +1,4 @@
-//! Causal, bounded RNNoise speech observations; model work never runs on audio.
+//! Causal RNNoise observations with worker or explicit offline execution.
 //!
 //! Each window starts from reset model state and replays 100 ms of source.
 //! Dropped windows therefore cannot corrupt a recurrent stream. This trades
@@ -7,7 +7,58 @@
 use crate::speech_protection::{SpeechProtectionConfig, SpeechProtectionData};
 use plugins_denoiser::rnnoise::RnnoiseBackend;
 use plugins_inference::{AsyncInference, InferenceModel};
+use sotf_host::ProcessingMode;
 use std::f64::consts::PI;
+
+/// Execution is fixed during control-time preparation, never by a process flag.
+/// Offline inference may allocate and block, and must not enter a realtime host.
+pub(super) enum SpeechInference<M: InferenceModel> {
+    Realtime(AsyncInference<M>),
+    Offline {
+        model: Box<M>,
+        latest: Option<M::Output>,
+    },
+}
+
+impl<M: InferenceModel> SpeechInference<M>
+where
+    M::Output: Copy,
+{
+    pub(super) fn new(model: M, mode: ProcessingMode, name: &str) -> Result<Self, String> {
+        if mode == ProcessingMode::Offline {
+            Ok(Self::Offline {
+                model: Box::new(model),
+                latest: None,
+            })
+        } else {
+            AsyncInference::spawn(model, 2, name).map(Self::Realtime)
+        }
+    }
+
+    pub(super) fn try_send(&mut self, input: M::Input) -> bool {
+        match self {
+            Self::Realtime(worker) => worker.try_send(input).is_ok(),
+            Self::Offline { model, latest } => {
+                *latest = model.run(&input).ok();
+                latest.is_some()
+            }
+        }
+    }
+
+    pub(super) fn latest(&self) -> Option<M::Output> {
+        match self {
+            Self::Realtime(worker) => worker.with_latest(|value| *value),
+            Self::Offline { latest, .. } => *latest,
+        }
+    }
+
+    pub(super) fn reset(&mut self) {
+        match self {
+            Self::Realtime(worker) => worker.reset(),
+            Self::Offline { latest, .. } => *latest = None,
+        }
+    }
+}
 
 const MODEL_RATE: f64 = 48_000.0;
 const WINDOW_SAMPLES: usize = 4800;
@@ -97,7 +148,7 @@ fn resampling_weights(rate: f64) -> Vec<Vec<(usize, f64)>> {
 }
 
 pub(super) struct RnnoiseAssistant {
-    worker: AsyncInference<Model>,
+    worker: SpeechInference<Model>,
     config: SpeechProtectionConfig,
     ring: Vec<f32>,
     write: usize,
@@ -113,7 +164,11 @@ pub(super) struct RnnoiseAssistant {
 }
 
 impl RnnoiseAssistant {
-    pub(super) fn new(config: SpeechProtectionConfig, rate: f64) -> Result<Self, String> {
+    pub(super) fn new(
+        config: SpeechProtectionConfig,
+        rate: f64,
+        mode: ProcessingMode,
+    ) -> Result<Self, String> {
         config.validate()?;
         if !rate.is_finite() || !(8000.0..=192000.0).contains(&rate) {
             return Err("Gate neural speech supports source rates from 8 to 192 kHz".into());
@@ -123,12 +178,12 @@ impl RnnoiseAssistant {
         let length = (rate * 0.1).ceil() as usize;
         let max_age = (rate * f64::from(config.max_age_ms) * 0.001).ceil() as u64;
         Ok(Self {
-            worker: AsyncInference::spawn(
+            worker: SpeechInference::new(
                 Model {
                     backend,
                     weights: resampling_weights(rate),
                 },
-                2,
+                mode,
                 "gate-speech",
             )?,
             config,
@@ -164,12 +219,12 @@ impl RnnoiseAssistant {
             let first = self.ring.len() - self.write;
             frame.samples[..first].copy_from_slice(&self.ring[self.write..]);
             frame.samples[first..self.ring.len()].copy_from_slice(&self.ring[..self.write]);
-            if self.worker.try_send(frame).is_ok() {
+            if self.worker.try_send(frame) {
                 self.submitted += 1;
             } else {
                 self.dropped += 1;
             }
-            if let Some(observation) = self.worker.with_latest(|value| *value) {
+            if let Some(observation) = self.worker.latest() {
                 if self
                     .latest
                     .is_none_or(|previous| previous.end_sample != observation.end_sample)
@@ -248,15 +303,19 @@ pub(super) enum SpeechAssistant {
 }
 
 impl SpeechAssistant {
-    pub(super) fn new(config: SpeechProtectionConfig, rate: f64) -> Result<Self, String> {
+    pub(super) fn new(
+        config: SpeechProtectionConfig,
+        rate: f64,
+        mode: ProcessingMode,
+    ) -> Result<Self, String> {
         match &config.model {
             crate::SpeechProtectionModel::Rnnoise => {
-                RnnoiseAssistant::new(config, rate).map(|x| Self::Rnnoise(Box::new(x)))
+                RnnoiseAssistant::new(config, rate, mode).map(|x| Self::Rnnoise(Box::new(x)))
             }
             crate::SpeechProtectionModel::Silero { .. } => {
                 #[cfg(feature = "silero-speech")]
                 {
-                    crate::silero_stream::SileroAssistant::new(config, rate)
+                    crate::silero_stream::SileroAssistant::new(config, rate, mode)
                         .map(|x| Self::Silero(Box::new(x)))
                 }
                 #[cfg(not(feature = "silero-speech"))]

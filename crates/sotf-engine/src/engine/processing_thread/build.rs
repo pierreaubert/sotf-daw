@@ -4,7 +4,8 @@ use super::misc::configure_host_oversampling;
 use super::misc::create_plugin;
 use crate::{EngineOversamplingPolicy, PluginBuildDiagnostic};
 use sotf_plugins::{
-    EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost, create_plugin_with_external_key,
+    EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost, ProcessingMode,
+    create_plugin_with_external_key,
 };
 
 fn plugin_instance_id(parameters: &serde_json::Value) -> Option<usize> {
@@ -48,13 +49,51 @@ pub fn build_plugin_host(
     )
 }
 
+/// Build a plugin chain for realtime playback or offline rendering.
+///
+/// Mode is fixed before any plugin initializes. Offline hosts belong on a
+/// rendering thread; synchronous model work is allowed there.
+///
+/// # Errors
+/// Returns host preparation errors or mandatory routing-plugin failures.
+pub fn build_plugin_host_for_mode(
+    configs: &[PluginConfig],
+    sample_rate: u32,
+    channels: usize,
+    mode: ProcessingMode,
+) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
+    build_plugin_host_with_policy_and_mode(
+        configs,
+        sample_rate,
+        channels,
+        EngineOversamplingPolicy::PluginPreferred,
+        mode,
+    )
+}
+
 pub fn build_plugin_host_with_policy(
     configs: &[PluginConfig],
     sample_rate: u32,
     channels: usize,
     oversampling_policy: EngineOversamplingPolicy,
 ) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
-    let mut host = PluginHost::new(channels, sample_rate);
+    build_plugin_host_with_policy_and_mode(
+        configs,
+        sample_rate,
+        channels,
+        oversampling_policy,
+        ProcessingMode::Realtime,
+    )
+}
+
+fn build_plugin_host_with_policy_and_mode(
+    configs: &[PluginConfig],
+    sample_rate: u32,
+    channels: usize,
+    oversampling_policy: EngineOversamplingPolicy,
+    mode: ProcessingMode,
+) -> Result<(PluginHost, Vec<PluginBuildDiagnostic>), PluginBuildDiagnostic> {
+    let mut host = PluginHost::new_with_processing_mode(channels, sample_rate, mode);
     configure_host_oversampling(&mut host, oversampling_policy)
         .map_err(PluginBuildDiagnostic::host)?;
     let mut current_channels = channels;

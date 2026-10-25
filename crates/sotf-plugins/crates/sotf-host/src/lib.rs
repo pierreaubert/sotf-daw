@@ -159,8 +159,8 @@ pub use parametric_plugin::{
 };
 pub use plugin::{
     InPlacePlugin, InPlacePluginAdapter, LoopRange, MidiEvent, MidiMessage, Plugin,
-    PluginCostClass, PluginInfo, PluginResult, ProcessContext, TailLength, TimeSignature,
-    TransportInfo,
+    PluginCostClass, PluginInfo, PluginResult, ProcessContext, ProcessingMode, TailLength,
+    TimeSignature, TransportInfo,
 };
 
 #[cfg(feature = "qa")]

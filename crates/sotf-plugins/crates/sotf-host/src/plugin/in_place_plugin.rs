@@ -1,3 +1,4 @@
+use super::ProcessingMode;
 use super::plugin_info::PluginInfo;
 use super::process_context::ProcessContext;
 use super::types::{PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginResult};
@@ -62,6 +63,21 @@ pub trait InPlacePlugin: Send {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
+    }
+
+    /// Initialize for the host's fixed execution environment.
+    ///
+    /// Called on the control thread. Reset must preserve the chosen mode.
+    /// The default retains the existing initialization behavior.
+    ///
+    /// # Errors
+    /// Returns initialization errors or an unsupported-mode error.
+    fn initialize_with_mode(
+        &mut self,
+        sample_rate: f64,
+        _mode: ProcessingMode,
+    ) -> PluginResult<()> {
+        self.initialize(sample_rate)
     }
 
     /// Reset the plugin state

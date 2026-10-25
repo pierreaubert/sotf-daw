@@ -13,7 +13,7 @@
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{
     Plugin, PluginCompileMetadata, PluginCompiledOp, PluginCostClass, PluginDrainResult,
-    PluginInfo, PluginResult, ProcessContext,
+    PluginInfo, PluginResult, ProcessContext, ProcessingMode,
 };
 use std::any::Any;
 use std::collections::BTreeMap;
@@ -74,6 +74,21 @@ pub trait ParametricPlugin: Send {
     fn plugin_initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         let _ = sample_rate;
         Ok(())
+    }
+
+    /// Initialize for the host's fixed execution environment.
+    ///
+    /// Called on the control thread. Reset must preserve the chosen mode.
+    /// The default retains the existing initialization behavior.
+    ///
+    /// # Errors
+    /// Returns initialization errors or an unsupported-mode error.
+    fn plugin_initialize_with_mode(
+        &mut self,
+        sample_rate: f64,
+        _mode: ProcessingMode,
+    ) -> PluginResult<()> {
+        self.plugin_initialize(sample_rate)
     }
 
     /// Reset plugin state.
@@ -355,6 +370,10 @@ impl<T: ParametricPlugin> Plugin for ParametricPluginAdapter<T> {
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.plugin.plugin_initialize(sample_rate)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
+        self.plugin.plugin_initialize_with_mode(sample_rate, mode)
     }
 
     fn reset(&mut self) {

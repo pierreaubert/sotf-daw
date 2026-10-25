@@ -1,9 +1,11 @@
-//! Chronological, bounded speech packets with worker-only resampling and state.
+//! Chronological speech packets with worker or explicit offline inference.
 
+use crate::neural_speech::SpeechInference;
 use crate::neural_speech::{Observation, accepted};
 use crate::silero::SileroModel;
 use crate::{SpeechProtectionConfig, SpeechProtectionData, SpeechProtectionModel};
-use plugins_inference::{AsyncInference, InferenceModel};
+use plugins_inference::InferenceModel;
+use sotf_host::ProcessingMode;
 use std::f64::consts::PI;
 
 const MODEL_RATE: f64 = 16000.0;
@@ -209,7 +211,7 @@ impl InferenceModel for StreamModel {
 }
 
 pub(super) struct SileroAssistant {
-    worker: AsyncInference<StreamModel>,
+    worker: SpeechInference<StreamModel>,
     config: SpeechProtectionConfig,
     samples: [f32; MAX_PACKET],
     filled: usize,
@@ -226,14 +228,18 @@ pub(super) struct SileroAssistant {
 }
 
 impl SileroAssistant {
-    pub(super) fn new(config: SpeechProtectionConfig, rate: f64) -> Result<Self, String> {
+    pub(super) fn new(
+        config: SpeechProtectionConfig,
+        rate: f64,
+        mode: ProcessingMode,
+    ) -> Result<Self, String> {
         config.validate()?;
         let SpeechProtectionModel::Silero { model_path, sha256 } = &config.model else {
             return Err("Expected explicit Silero model configuration".into());
         };
         let model = StreamModel::new(SileroModel::load(model_path, sha256)?, rate)?;
         Ok(Self {
-            worker: AsyncInference::spawn(model, 2, "gate-silero")?,
+            worker: SpeechInference::new(model, mode, "gate-silero")?,
             max_age: (rate * f64::from(config.max_age_ms) * 0.001).ceil() as u64,
             config,
             samples: [0.0; MAX_PACKET],
@@ -266,7 +272,7 @@ impl SileroAssistant {
                 generation: self.generation,
             };
             self.filled = 0;
-            if self.worker.try_send(packet).is_ok() {
+            if self.worker.try_send(packet) {
                 self.submitted += 1;
             } else {
                 self.dropped += 1;
@@ -275,7 +281,7 @@ impl SileroAssistant {
                 // subsequent packet exposes the source gap to the worker.
                 self.worker.reset();
             }
-            if let Some(value) = self.worker.with_latest(|value| *value) {
+            if let Some(value) = self.worker.latest() {
                 if value.end_sample.is_some()
                     && self
                         .latest

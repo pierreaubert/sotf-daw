@@ -53,7 +53,9 @@ mod decoder_thread;
 pub use decoder_thread::DecoderThread;
 
 mod processing_thread;
-pub use processing_thread::{ProcessingThread, build_plugin_graph_host, build_plugin_host};
+pub use processing_thread::{
+    ProcessingThread, build_plugin_graph_host, build_plugin_host, build_plugin_host_for_mode,
+};
 
 pub(crate) mod manager_thread;
 pub use manager_thread::ManagerThread;

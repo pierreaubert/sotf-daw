@@ -4,9 +4,10 @@ use super::timeline_render_state_guard::TimelineRenderStateGuard;
 use super::types::OutputFormat;
 use crate::decoder::core::DecodedAudio;
 use crate::decoder::source::AudioSource;
-use crate::engine::build_plugin_host;
+use crate::engine::build_plugin_host_for_mode;
 use crate::engine::output_dither::TpdfDither;
 use hound::{SampleFormat, WavSpec, WavWriter};
+use sotf_plugins::ProcessingMode;
 use sotf_plugins::{DawHost, Plugin, ProcessContext, ResamplerPlugin};
 use std::io::{Seek, Write};
 use std::path::Path;
@@ -88,8 +89,13 @@ pub fn render_offline_with_tail(
         .transpose()
         .map_err(|_| "Offline progress duration exceeds the frame counter")?;
 
-    let (mut host, _warnings) = build_plugin_host(&config.plugins, output_rate, input_channels)
-        .map_err(|diagnostic| diagnostic.message)?;
+    let (mut host, _warnings) = build_plugin_host_for_mode(
+        &config.plugins,
+        output_rate,
+        input_channels,
+        ProcessingMode::Offline,
+    )
+    .map_err(|diagnostic| diagnostic.message)?;
     // The file rate is an export contract, even when the configured chain
     // changes its internal clock. Normalize the terminal stream before
     // measuring latency, trimming duration, or constructing the WAV header.
@@ -276,7 +282,7 @@ pub fn render_offline_with_tail(
 /// short decaying transient instead of a cold start. Slices therefore
 /// require explicit identity frame geometry from every plugin; program
 /// that does not qualify — sample-rate conversion, variable-frame or
-/// rate-changing chains, explicit tails — falls back to
+/// rate-changing chains, explicit tails, learned Gate speech analysis — falls back to
 /// [`render_offline`] unchanged. The whole programme is decoded into
 /// memory first, which is the price of slicing. Progress is reported
 /// once, coarsely, when all slices have completed.
@@ -294,7 +300,18 @@ pub fn render_offline_parallel(
     if config.frame_size == 0 {
         return Err("Offline render frame_size must be greater than zero".to_string());
     }
-    if num_threads <= 1 {
+    // Slice priming is finite and resets the analysis clock/model history.
+    // Neither Silero's recurrent context nor RNNoise's source-window grid has
+    // an audited equivalence bound for this approximation. Preserve one
+    // chronological stream for explicitly learned Gate configurations.
+    let speech_gate = config.plugins.iter().any(|plugin| {
+        plugin.plugin_type.eq_ignore_ascii_case("gate")
+            && plugin
+                .parameters
+                .get("speech_protection")
+                .is_some_and(|value| !value.is_null())
+    });
+    if num_threads <= 1 || speech_gate {
         return render_offline(config, on_progress);
     }
 
@@ -311,8 +328,13 @@ pub fn render_offline_parallel(
         return render_offline(config, on_progress);
     }
 
-    let (probe, _warnings) = build_plugin_host(&config.plugins, output_rate, input_channels)
-        .map_err(|diagnostic| diagnostic.message)?;
+    let (probe, _warnings) = build_plugin_host_for_mode(
+        &config.plugins,
+        output_rate,
+        input_channels,
+        ProcessingMode::Offline,
+    )
+    .map_err(|diagnostic| diagnostic.message)?;
     if probe.output_sample_rate(output_rate)? != f64::from(output_rate)
         || !probe.has_identity_frame_geometry()
     {
@@ -359,9 +381,13 @@ pub fn render_offline_parallel(
         .par_iter()
         .enumerate()
         .map(|(index, &(start, end))| {
-            let (mut host, _warnings) =
-                build_plugin_host(&config.plugins, output_rate, input_channels)
-                    .map_err(|diagnostic| diagnostic.message)?;
+            let (mut host, _warnings) = build_plugin_host_for_mode(
+                &config.plugins,
+                output_rate,
+                input_channels,
+                ProcessingMode::Offline,
+            )
+            .map_err(|diagnostic| diagnostic.message)?;
             let mut scratch: Vec<f32> = Vec::new();
             let mut emit = |host: &mut DawHost,
                             input: &[f32],

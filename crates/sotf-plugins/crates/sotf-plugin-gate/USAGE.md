@@ -151,10 +151,35 @@ latest frame endpoint; retained recurrent history may be older. Audio latency
 remains the configured Gate lookahead. Backpressure retires pending
 observations immediately and returns protection toward the classical result;
 processing resumes from fresh model history. Reset clears queued generations.
-Faster-than-realtime rendering can trigger this fallback and is not guaranteed
-to reproduce the learned decisions from realtime playback.
+Hosts that retain realtime preparation during a fast render can trigger this
+fallback and are not guaranteed to reproduce learned playback decisions.
 `warmup_complete`, `model_frames`, and `stream_restarts` supplement speech
 telemetry. Omitting `model` preserves the previous RNNoise detector.
+
+For file-chain offline rendering, the engine prepares the chain with
+`ProcessingMode::Offline`. Both RNNoise and Silero then evaluate complete
+analysis packets synchronously on the rendering thread, with no worker queue
+or wall-clock pacing. The parallel rendering API falls back to one chronological
+stream for learned Gate configurations; a finite slice preroll cannot guarantee
+matching recurrent context or analysis-clock phase. Program audio keeps its existing frame count and
+lookahead latency. Confidence, source-age, warmup, and gain bounds still apply.
+Incomplete final analysis packets remain incomplete; future audio is never
+invented to protect an earlier onset.
+
+Custom hosts select this mode before processing with
+`DawHost::new_with_processing_mode(channels, rate, ProcessingMode::Offline)`.
+Direct plugin callers use `initialize_with_mode(rate, ProcessingMode::Offline)`
+through the appropriate plugin trait. Reset preserves mode and restarts model
+history; ordinary `initialize(rate)` selects realtime behavior again. Offline
+inference may allocate and block, so an offline-prepared plugin or host belongs
+on a rendering thread. Existing timeline graphs retain their preparation mode;
+callers must prepare their track/master hosts offline explicitly. Automatic
+timeline graph reconstruction remains outstanding. Mode is not a preset
+parameter or an automation event.
+Repeated offline rendering is independent of worker scheduling; its decisions
+can differ from realtime playback, which may use delayed observations or fall
+back under load. The local regressions cover both models, resets, irregular
+block partitions, external-key adaptation, and actual WAV rendering.
 
 Silero remains experimental: rejecting the existing violin/cymbal probes and
 matching independent inference states does not establish held-out speech

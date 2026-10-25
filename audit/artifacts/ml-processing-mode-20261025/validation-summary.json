@@ -1,0 +1,105 @@
+{
+  "results": {
+    "host-mode": {
+      "exit_code": 0,
+      "passed": 4,
+      "result_lines": [
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    "host-bounded": {
+      "exit_code": 0,
+      "passed": 6,
+      "result_lines": [
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    "host-library": {
+      "exit_code": 0,
+      "passed": 714,
+      "result_lines": [
+        "test result: ok. 714 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.43s"
+      ]
+    },
+    "gate-final": {
+      "exit_code": 0,
+      "passed": 122,
+      "result_lines": [
+        "test result: ok. 61 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.11s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.88s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    "gate-default": {
+      "exit_code": 0,
+      "passed": 104,
+      "result_lines": [
+        "test result: ok. 53 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s",
+        "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+        "test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s",
+        "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s",
+        "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s",
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ]
+    },
+    "host-clippy": {
+      "exit_code": 0,
+      "passed": 0,
+      "result_lines": []
+    },
+    "gate-clippy-final": {
+      "exit_code": 0,
+      "passed": 0,
+      "result_lines": []
+    },
+    "engine-offline-model-final": {
+      "exit_code": 0,
+      "passed": 26,
+      "result_lines": [
+        "test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 813 filtered out; finished in 1.54s"
+      ]
+    },
+    "engine-clippy-final": {
+      "exit_code": 0,
+      "passed": 0,
+      "result_lines": []
+    },
+    "gate-offline-final": {
+      "exit_code": 0,
+      "passed": 1,
+      "result_lines": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 1.19s"
+      ]
+    },
+    "engine-model-retest": {
+      "exit_code": 0,
+      "passed": 1,
+      "result_lines": [
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 838 filtered out; finished in 1.54s"
+      ]
+    }
+  },
+  "rust_sources_unchanged": true,
+  "rustfmt_exit_code": 0,
+  "scope": "Local macOS functional/render regressions. Models/thresholds unchanged; no held-out quality or DAW deadline claim. Full 31-plugin/5-program audit remains open.",
+  "unrestricted_engine_clippy": "Stops in unchanged sotf-streaming/src/server/client_message.rs:18, too_many_arguments. Scoped engine --no-deps Clippy passes.",
+  "capture_normalization": "Captured text logs retain command output with only surplus blank lines at EOF removed for git whitespace checks."
+}

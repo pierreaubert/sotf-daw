@@ -1,0 +1,35 @@
+    Blocking waiting for file lock on build directory
+   Compiling sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)
+   Compiling sotf-testkit v0.1.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-testkit)
+    Finished `release` profile [optimized] target(s) in 15m 25s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_audio-763193660ac48638)
+
+running 26 tests
+test offline_renderer::tests::signal_delay::nonfinite_negative_or_unaddressable_signal_delay_is_rejected ... ok
+test offline_renderer::tests::signal_delay::fractional_signal_delays_are_rounded_only_at_the_terminal_clock ... ok
+test offline_renderer::tests::tail_duration::unrepresentable_tail_does_not_truncate_existing_output ... ok
+test offline_renderer::tests::offline_explicit_empty_bandsplit_does_not_truncate_destination ... ok
+test offline_renderer::tests::test_offline_float_render_preserves_headroom ... ok
+test offline_renderer::tests::render_timeline_restores_loop_range_when_progress_panics ... ok
+test offline_renderer::tests::test_offline_render_compensates_and_drains_plugin_latency ... ok
+test offline_renderer::tests::test_offline_render_passthrough ... ok
+test offline_renderer::tests::test_offline_render_progress ... ok
+test offline_renderer::tests::test_offline_render_rejects_invalid_configuration ... ok
+test offline_renderer::tests::offline_dynamic_eq_shelf_settings_match_separately_configured_core ... ok
+test offline_renderer::tests::test_render_timeline ... ok
+test offline_renderer::tests::test_offline_render_with_gain ... ok
+test offline_renderer::tests::tail_duration::explicit_tail_renders_analytic_feedback_echoes_and_preserves_zero_default ... ok
+test offline_renderer::tests::test_render_timeline_aligns_parallel_track_latencies ... ok
+test offline_renderer::tests::test_offline_render_supports_integer_wav_depths_with_dither ... ok
+test offline_renderer::tests::test_render_timeline_compensates_and_drains_master_latency ... ok
+test offline_renderer::tests::parallel_render_matches_serial_within_priming_transient ... ok
+test offline_renderer::tests::test_offline_render_resamples_to_requested_rate_and_duration ... ok
+test offline_renderer::tests::endpoint_composition::converter_response_survives_downstream_fir_until_the_compensated_endpoint ... ok
+test offline_renderer::tests::tail_duration::tail_preserves_source_converter_response_like_explicit_source_padding ... ok
+test offline_renderer::tests::endpoint_composition::endpoint_completion_allows_large_resampler_chunks_with_single_frame_callbacks ... ok
+test offline_renderer::tests::offline_typed_bandsplit_merge_preserves_phase_compensated_audio ... ok
+test offline_renderer::tests::tail_duration::explicit_tail_uses_export_clock_through_source_and_chain_resampling ... ok
+test offline_renderer::tests::rate_changing_chain_preserves_export_clock_pitch_and_duration ... ok
+test offline_renderer::tests::neural_speech::offline_speech_matches_synchronous_reference_across_render_block_sizes ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 813 filtered out; finished in 1.54s

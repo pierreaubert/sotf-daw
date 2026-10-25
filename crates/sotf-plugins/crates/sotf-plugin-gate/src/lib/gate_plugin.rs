@@ -1120,6 +1120,14 @@ impl ParametricInPlacePlugin for GatePlugin {
         param_bridge::get_parameter(GT, id, |index| self.param_value(index))
     }
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        self.initialize_with_mode(sample_rate, sotf_host::ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(
+        &mut self,
+        sample_rate: f64,
+        _processing_mode: sotf_host::ProcessingMode,
+    ) -> PluginResult<()> {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("Gate requires a finite, positive sample rate".into());
         }
@@ -1133,7 +1141,9 @@ impl ParametricInPlacePlugin for GatePlugin {
         let speech = self
             .speech_config
             .clone()
-            .map(|config| crate::neural_speech::SpeechAssistant::new(config, sample_rate))
+            .map(|config| {
+                crate::neural_speech::SpeechAssistant::new(config, sample_rate, _processing_mode)
+            })
             .transpose()?;
         let drain_samples = MAX_DRAIN_FRAMES
             .checked_mul(self.input_channels())

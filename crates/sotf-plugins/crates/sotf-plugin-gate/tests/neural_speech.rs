@@ -442,3 +442,105 @@ fn causal_silero_worker_preserves_classical_output_on_recorded_instrument_contro
         );
     }
 }
+
+#[cfg(feature = "neural-speech")]
+fn render_offline_gate(
+    gate: &mut GatePlugin,
+    speech: &[f32],
+    partitions: &[usize],
+) -> (Vec<f32>, f32) {
+    let mut result = Vec::with_capacity(speech.len() * 2);
+    let mut offset = 0;
+    let mut block = 0;
+    let mut peak_mix = 0.0_f32;
+    while offset < speech.len() {
+        let frames = partitions[block % partitions.len()].min(speech.len() - offset);
+        let mut buffer = Vec::with_capacity(frames * 4);
+        for &sample in &speech[offset..offset + frames] {
+            buffer.extend_from_slice(&[sample, -0.5 * sample, 0.001, -0.002]);
+        }
+        gate.process_in_place(&mut buffer, &ProcessContext::new(48_000, frames))
+            .unwrap();
+        for frame in buffer.as_chunks::<4>().0 {
+            assert_eq!(&frame[2..], &[0.001, -0.002]);
+            result.extend_from_slice(&frame[..2]);
+        }
+        let status = data(gate);
+        assert_eq!(status.dropped_windows, 0);
+        peak_mix = peak_mix.max(status.protection_mix);
+        offset += frames;
+        block += 1;
+    }
+    (result, peak_mix)
+}
+
+#[cfg(feature = "neural-speech")]
+#[test]
+fn offline_speech_is_deterministic_across_partitions_reset_and_adapters() {
+    use sotf_host::{ParametricInPlacePluginAdapter, Plugin, ProcessingMode};
+    let bytes =
+        include_bytes!("../../sotf-plugin-speech-denoiser/tests/fixtures/recorded/speech-0.pcm");
+    let mut speech: Vec<f32> = bytes
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|x| f32::from(i16::from_le_bytes([x[0], x[1]])) / 32768.0)
+        .collect();
+    // Keep a final partial analysis packet and partial process block.
+    speech.extend_from_slice(&[0.001; 13]);
+    #[cfg(feature = "silero-speech")]
+    let settings = [params(), silero_params()];
+    #[cfg(not(feature = "silero-speech"))]
+    let settings = [params()];
+    for mut settings in settings {
+        settings.sidechain_external = true;
+        let mut gate = GatePlugin::try_from_params(2, settings.clone()).unwrap();
+        gate.initialize_with_mode(48_000.0, ProcessingMode::Offline)
+            .unwrap();
+        let (reference, mix) = render_offline_gate(&mut gate, &speech, &[480]);
+        assert!(
+            mix > 0.1,
+            "offline inference must actually enable speech protection"
+        );
+        assert!(data(&gate).observed_windows > 100);
+        gate.reset();
+        let (reset, _) = render_offline_gate(&mut gate, &speech, &[1, 127, 511, 2003, 17]);
+        assert_eq!(
+            reference, reset,
+            "reset plus irregular partitions must reproduce every sample"
+        );
+        gate.initialize_with_mode(48_000.0, ProcessingMode::Offline)
+            .unwrap();
+        let (reinitialized, _) = render_offline_gate(&mut gate, &speech, &[4096]);
+        assert_eq!(reference, reinitialized);
+
+        let mut adapted =
+            ParametricInPlacePluginAdapter::new(GatePlugin::try_from_params(2, settings).unwrap());
+        Plugin::initialize_with_mode(&mut adapted, 48_000.0, ProcessingMode::Offline).unwrap();
+        let mut actual = Vec::with_capacity(reference.len());
+        for samples in speech.chunks(3001) {
+            let input: Vec<f32> = samples
+                .iter()
+                .flat_map(|&x| [x, -0.5 * x, 0.001, -0.002])
+                .collect();
+            let saved = input.clone();
+            let mut output = vec![0.0; samples.len() * 2];
+            assert_eq!(
+                Plugin::process(
+                    &mut adapted,
+                    &input,
+                    &mut output,
+                    &ProcessContext::new(48_000, samples.len())
+                )
+                .unwrap(),
+                samples.len()
+            );
+            assert_eq!(input, saved);
+            actual.extend(output);
+        }
+        assert_eq!(
+            reference, actual,
+            "asymmetric adapter subdivision must preserve offline inference and audio"
+        );
+    }
+}

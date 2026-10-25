@@ -10,6 +10,8 @@ use crate::plugins::{PluginSettings, PluginType};
 use std::path::Path;
 
 mod endpoint_composition;
+#[cfg(any(feature = "neural-speech", feature = "silero-speech"))]
+mod neural_speech;
 mod signal_delay;
 mod tail_duration;
 

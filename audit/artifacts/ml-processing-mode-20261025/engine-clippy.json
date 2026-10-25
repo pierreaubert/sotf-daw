@@ -1,0 +1,29 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-engine",
+    "--features",
+    "sotf-plugins/qa,silero-speech",
+    "--lib",
+    "--tests",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 82.29159808158875,
+  "source_sha256": {
+    "crates/sotf-engine/src/offline_renderer/tests/neural_speech.rs": "5a8884b31a8b1e0ed53624321aedf4d50711f72d5c15c5b0794cbc52f3988839",
+    "crates/sotf-engine/src/offline_renderer/render.rs": "9656a27931182d56eca6da98f7e73b8fd27f86d35b075a67469de52004cfebb4",
+    "crates/sotf-engine/src/offline_renderer/tests.rs": "c6e907f43e605025b4d7c1971ad2a2edd16c92cabb8892c3fc26b7e0bad006de"
+  }
+}

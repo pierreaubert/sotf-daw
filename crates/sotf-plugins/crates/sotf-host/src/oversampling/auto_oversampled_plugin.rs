@@ -4,6 +4,7 @@ use super::oversampler::Oversampler;
 use crate::parameters::{Parameter, ParameterId, ParameterValue};
 use crate::plugin::{
     Plugin, PluginCompileMetadata, PluginDrainResult, PluginInfo, PluginResult, ProcessContext,
+    ProcessingMode,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -109,11 +110,15 @@ impl Plugin for AutoOversampledPlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        self.initialize_with_mode(sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         let inner_rate = sample_rate * f64::from(self.factor);
         if !sample_rate.is_finite() || sample_rate <= 0.0 || !inner_rate.is_finite() {
             return Err("Oversampled sample rate must be finite and positive".into());
         }
-        self.inner.initialize(inner_rate)?;
+        self.inner.initialize_with_mode(inner_rate, mode)?;
         let drain_frames = self.inner.drain_output_frames_max();
         let drain_samples = drain_frames
             .checked_mul(self.channels)

@@ -44,7 +44,7 @@ use crate::external_plugin_process::ExternalPluginProcessEvent;
 use crate::param_specs::UpdateMode;
 use crate::parameters::{ParameterId, ParameterValue};
 use crate::plugin::{
-    Plugin, PluginCompiledOp, PluginCostClass, PluginDrainResult, ProcessContext,
+    Plugin, PluginCompiledOp, PluginCostClass, PluginDrainResult, ProcessContext, ProcessingMode,
     SinkAppendFailure, SinkQueueState, SinkServiceFailure, SinkTailPreflightError,
     SinkTransportFormat, SinkTransportRecoveryError as PluginSinkRecoveryError,
     SinkTransportRecoveryStatus, SinkTransportRepreparePlan, TailLength,
@@ -685,6 +685,7 @@ pub struct HostRenderStats {
 }
 
 pub struct DawHost {
+    processing_mode: ProcessingMode,
     pub(super) nodes: HashMap<NodeId, GraphNode>,
     /// Plugin storage indexed by NodeId — disjoint from `nodes` for borrow checker.
     /// `process()` can borrow `&self.nodes` (topology) and `&mut self.plugins[nid]` (plugin)
@@ -899,12 +900,26 @@ impl DawHost {
     }
 
     pub fn new<S: Into<f64>>(channels: usize, sample_rate: S) -> Self {
+        Self::new_with_processing_mode(channels, sample_rate, ProcessingMode::Realtime)
+    }
+
+    /// Create a host with an immutable execution mode for every node.
+    ///
+    /// The mode is passed during initial node preparation and rate-driven
+    /// reinitialization, including nodes appended after a build. Offline hosts
+    /// must never be used from a realtime callback.
+    pub fn new_with_processing_mode<S: Into<f64>>(
+        channels: usize,
+        sample_rate: S,
+        processing_mode: ProcessingMode,
+    ) -> Self {
         let sample_rate = sample_rate.into();
         let (parameter_event_tx, parameter_event_rx) =
             RingBuffer::new(PARAMETER_EVENT_QUEUE_CAPACITY);
         let (graph_mutation_tx, graph_mutation_rx) = RingBuffer::new(GRAPH_MUTATION_QUEUE_CAPACITY);
         let graph_next_node_id = Arc::new(AtomicUsize::new(0));
         Self {
+            processing_mode,
             nodes: HashMap::new(),
             plugins: Vec::new(),
             edges: Vec::new(),
@@ -987,6 +1002,11 @@ impl DawHost {
             },
         }
     }
+    /// Return the execution mode shared by this host's plugins.
+    pub fn processing_mode(&self) -> ProcessingMode {
+        self.processing_mode
+    }
+
     pub fn new_default(sr: u32) -> Self {
         Self::new(2, sr)
     }
@@ -1341,7 +1361,7 @@ impl DawHost {
                 .store(self.next_node_id, Ordering::Release);
         }
         plugin = self.auto_oversample_plugin(plugin)?;
-        plugin.initialize(input_sample_rate)?;
+        plugin.initialize_with_mode(input_sample_rate, self.processing_mode)?;
         let input_channels = plugin.input_channels();
         let output_channels = plugin.output_channels();
         self.nodes.insert(
@@ -1567,7 +1587,7 @@ impl DawHost {
                 }
                 let plugin = self.plugins[id].as_mut().unwrap();
                 if self.node_input_sample_rates[id] != input_rate {
-                    plugin.initialize(input_rate)?;
+                    plugin.initialize_with_mode(input_rate, self.processing_mode)?;
                 }
                 self.node_input_sample_rates[id] = input_rate;
                 let output_rate = if self.nodes[&id].bypassed {

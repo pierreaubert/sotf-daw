@@ -1,0 +1,31 @@
+{
+  "command": [
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "--config",
+    "skip_children=true",
+    "crates/sotf-engine/src/engine/mod.rs",
+    "crates/sotf-engine/src/engine/processing_thread/build.rs",
+    "crates/sotf-engine/src/offline_renderer/render.rs",
+    "crates/sotf-engine/src/offline_renderer/tests.rs",
+    "crates/sotf-engine/src/offline_renderer/tests/neural_speech.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/host/daw_host.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/oversampling/auto_oversampled_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/oversampling/oversampled_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/parametric_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/plugin/in_place_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-host/src/plugin/in_place_plugin_adapter.rs",
+    "crates/sotf-plugins/crates/sotf-host/tests/processing_mode.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/gate_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-gate/src/neural_speech.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-gate/src/silero_stream.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-gate/tests/neural_speech.rs",
+    "crates/sotf-plugins/src/lib.rs"
+  ],
+  "exit_code": 0
+}

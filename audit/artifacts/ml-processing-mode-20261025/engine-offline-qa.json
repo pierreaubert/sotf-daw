@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-engine",
+    "--features",
+    "qa,silero-speech",
+    "--lib",
+    "offline_renderer",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 0.05249309539794922
+}
