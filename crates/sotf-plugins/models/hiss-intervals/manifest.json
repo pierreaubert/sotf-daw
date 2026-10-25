@@ -34,6 +34,8 @@
     "facade_feature": "hiss-interval-review",
     "preparation": "Explicit bounded single-read model loading; requested path/hash/setup/age persist; unavailable or unsupported inference keeps classical audio and publishes a reason",
     "diagnostics": "Stable ProfileSnapshot retains a read-only reader for final-callback results",
-    "evidence": "audit/artifacts/ml-hiss-host-20261025"
+    "evidence": "audit/artifacts/ml-hiss-host-20261025",
+    "reviewed_profile_preparation": "Retained reader verifies the current review token and original PCM SHA256, measures a native profile off-thread, rechecks source identity, and returns profile/context/observation without changing the running processor. Caller explicitly reconstructs a preset to install it.",
+    "reviewed_profile_evidence": "audit/artifacts/ml-hiss-reviewed-export-20261025"
   }
 }

@@ -157,6 +157,28 @@ fn explicit_review_applies_exact_original_interval_and_matches_native_capture() 
         process(&mut reviewed, &mut rendered, 500);
         let observation = wait(&reviewed);
         assert!(observation.scores.unwrap().review_candidate);
+        use sotf_plugin_hiss_reducer::{
+            interval_config::IntervalReviewPreparation, snapshot::ProfileSnapshot,
+        };
+        let snapshot = reviewed
+            .get_data()
+            .unwrap()
+            .downcast::<ProfileSnapshot>()
+            .unwrap();
+        let IntervalReviewPreparation::Ready(reader) =
+            snapshot.interval_review_preparation().unwrap()
+        else {
+            panic!("review reader unavailable");
+        };
+        let prepared = reader
+            .prepare_reviewed_profile(observation, &original)
+            .unwrap();
+        assert_eq!(prepared.observation, observation);
+        assert_eq!(&prepared.context, reader.context());
+        assert_eq!(
+            serde_json::to_value(&prepared.profile).unwrap(),
+            serde_json::to_value(&expected).unwrap()
+        );
         assert_eq!(
             serde_json::to_value(reviewed.persisted_params()).unwrap(),
             before
@@ -164,6 +186,16 @@ fn explicit_review_applies_exact_original_interval_and_matches_native_capture() 
 
         let mut changed = original.clone();
         changed[0] += 0.001;
+        assert!(
+            reader
+                .prepare_reviewed_profile(observation, &changed)
+                .is_err()
+        );
+        assert!(
+            reader
+                .prepare_reviewed_profile(observation, &original[..RATE - 1])
+                .is_err()
+        );
         assert!(
             reviewed
                 .apply_reviewed_interval_profile(observation, &changed)
@@ -178,6 +210,11 @@ fn explicit_review_applies_exact_original_interval_and_matches_native_capture() 
             start_frame: 501,
             ..observation
         };
+        assert!(
+            reader
+                .prepare_reviewed_profile(altered_token, &original)
+                .is_err()
+        );
         assert!(
             reviewed
                 .apply_reviewed_interval_profile(altered_token, &original)
@@ -214,6 +251,11 @@ fn explicit_review_applies_exact_original_interval_and_matches_native_capture() 
         assert!(reviewed.persisted_params().use_captured_profile);
         assert!(!reviewed.is_capturing());
         assert!(reviewed.interval_review_status().unwrap().epoch > observation.epoch);
+        assert!(
+            reader
+                .prepare_reviewed_profile(observation, &original)
+                .is_err()
+        );
         assert!(
             reviewed
                 .interval_review_status()

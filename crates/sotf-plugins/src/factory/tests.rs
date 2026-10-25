@@ -457,7 +457,7 @@ fn hiss_reducer_factory_review_unavailable_preserves_audio() {
 
 #[cfg(feature = "hiss-interval-review")]
 #[test]
-fn hiss_reducer_factory_review_reader_observes_final_window() {
+fn hiss_reducer_factory_review_profile_reconstructs_without_mutating_source() {
     use sotf_plugin_hiss_reducer::{
         interval_config::IntervalReviewPreparation, snapshot::ProfileSnapshot,
     };
@@ -497,17 +497,74 @@ fn hiss_reducer_factory_review_reader_observes_final_window() {
             .unwrap();
     }
     let deadline = Instant::now() + Duration::from_secs(3);
-    loop {
+    let observation = loop {
         if let Some(value) = reader.status().unwrap().observation {
             assert_eq!((value.start_frame, value.end_frame), (100, 48100));
             assert!(value.scores.unwrap().review_candidate);
-            break;
+            break value;
         }
         assert!(Instant::now() < deadline);
         std::thread::sleep(Duration::from_millis(1));
+    };
+    assert!(snapshot.try_export().unwrap().is_none());
+    let reviewed = reader
+        .prepare_reviewed_profile(observation, &source)
+        .unwrap();
+    assert_eq!(reviewed.observation, observation);
+    assert_eq!(&reviewed.context, reader.context());
+    assert!(snapshot.try_export().unwrap().is_none());
+    let mut adopted = parameters.clone();
+    adopted["captured_profile"] = serde_json::to_value(&reviewed.profile).unwrap();
+    adopted["use_captured_profile"] = serde_json::json!(true);
+    let reloaded: serde_json::Value =
+        serde_json::from_slice(&serde_json::to_vec(&adopted).unwrap()).unwrap();
+    let mut rebuilt = create_plugin("hiss_reducer", &reloaded, 1, 48000).unwrap();
+    rebuilt.initialize(48000.0).unwrap();
+    let rebuilt_snapshot = rebuilt
+        .get_data()
+        .unwrap()
+        .downcast::<ProfileSnapshot>()
+        .unwrap();
+    let exported = rebuilt_snapshot.try_export().unwrap().unwrap();
+    assert_eq!(exported.profile, reviewed.profile);
+    assert!(exported.use_flag);
+    // The explicitly reconstructed preset renders like a fresh native processor
+    // with the same measured profile. The original running processor is unchanged.
+    let mut native = sotf_plugin_hiss_reducer::HissReducerPlugin::from_params(
+        1,
+        sotf_plugin_hiss_reducer::HissReducerPluginParams {
+            captured_profile: Some(reviewed.profile.clone()),
+            use_captured_profile: true,
+            ..Default::default()
+        },
+    );
+    use sotf_host::ParametricInPlacePlugin;
+    native.initialize(48000.0).unwrap();
+    let mut expected = source.clone();
+    native
+        .process_in_place(
+            &mut expected,
+            &sotf_host::ProcessContext::new(48000.0, source.len()),
+        )
+        .unwrap();
+    let mut actual = vec![0.0; source.len()];
+    for start in (0..source.len()).step_by(193) {
+        let end = (start + 193).min(source.len());
+        let context =
+            sotf_host::ProcessContext::new(48000.0, end - start).with_sample_position(start as u64);
+        rebuilt
+            .process(&source[start..end], &mut actual[start..end], &context)
+            .unwrap();
     }
+    assert_eq!(actual, expected);
+    assert!(snapshot.try_export().unwrap().is_none());
     drop(plugin);
     assert!(!reader.status().unwrap().worker_alive);
+    assert!(
+        reader
+            .prepare_reviewed_profile(observation, &source)
+            .is_err()
+    );
 }
 
 #[test]

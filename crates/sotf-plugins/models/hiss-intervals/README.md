@@ -243,3 +243,34 @@ the worker running. Keep final reader destruction on a control/UI thread.
 The generic factory path and feature-disabled fallback are validated in
 `audit/artifacts/ml-hiss-host-20261025`; review UI and live host application commands
 remain open.
+
+## Preparing a reviewed profile through a factory reader
+
+After an explicit user selection, a retained reader can call
+`prepare_reviewed_profile(observation, original_dry_pcm)` on a control thread.
+It requires the current candidate and exact original PCM geometry/SHA256, performs
+native profile measurement, then rechecks the current source token. Missing,
+contended, reset, expired, superseded or changed observations are rejected.
+This allocating operation belongs outside the audio callback.
+
+The returned `ReviewedIntervalProfile` retains the measured `profile`, exact
+recording `context` and source/model `observation` provenance. Keep the provenance
+with the user's review. Only its `profile` belongs in the existing native
+`captured_profile` preset field. Preparation neither changes the running plugin
+nor consumes a review token, arms capture or changes the profile-use flag.
+
+A factory caller can explicitly save/reconstruct a Hiss preset with that profile
+and the user's chosen `use_captured_profile` setting. This uses ordinary native
+profile persistence; no delayed `learn_noise` trigger is needed. The generic
+factory regression reconstructs such JSON, exports the identical measured profile
+and renders bit-for-bit like a fresh native processor across different callback
+sizes. The original running processor remains profileless throughout. Native
+in-place explicit application and reader preparation share the same measurement
+implementation. Tests also reject altered source/token data and preparation
+after worker shutdown or token retirement. Evidence:
+`audit/artifacts/ml-hiss-reviewed-export-20261025`.
+
+The returned profile remains a manual user choice. No output from the classifier
+automatically creates, replaces or enables a live noise profile. UI presentation,
+live graph application commands and actual host resource/lifecycle acceptance
+remain open; this factory/preset workflow is local functional evidence.

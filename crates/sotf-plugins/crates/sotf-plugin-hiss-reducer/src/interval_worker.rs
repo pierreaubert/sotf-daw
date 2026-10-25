@@ -5,7 +5,8 @@
 //! Whole completed intervals are submitted to the shared newest-input bridge;
 //! superseding an older interval cannot corrupt this stateless classifier.
 //! Construction, replacement and destruction belong on a control thread.
-//! No result has a path to a native capture or profile mutation.
+//! The worker never initiates capture or profile mutation. Explicit control-time
+//! preparation can measure caller-provided original PCM after review.
 
 // Rust guideline compliant 2026-02-21
 use crate::interval_proposals::{IntervalContext, IntervalError, IntervalModel, IntervalScores};
@@ -70,7 +71,7 @@ struct ReviewSource {
 ///
 /// The audio owner publishes source metadata; the inference worker publishes
 /// results independently. Readers check both source consistency and generation.
-/// Retaining this handle never keeps the worker running or permits capture.
+/// Retaining this handle never keeps the worker running or mutates live capture.
 #[derive(Debug)]
 pub struct IntervalReviewReader {
     inference: InferenceReader<IntervalObservation>,
@@ -79,10 +80,63 @@ pub struct IntervalReviewReader {
     max_age: u64,
 }
 
+/// Native profile and source provenance prepared by an explicit review request.
+///
+/// Retain the context and observation with the profile when saving review
+/// provenance. Only `profile` belongs in the existing native captured-profile
+/// preset field. This value does not mutate or authorize any running processor.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReviewedIntervalProfile {
+    /// Complete native broadband and measured-spectrum profile.
+    pub profile: crate::profile::NoiseProfileData,
+    /// Recording geometry and declared setup identity.
+    pub context: IntervalContext,
+    /// Reviewed source range, epoch, model identity and exact source PCM identity.
+    pub observation: IntervalObservation,
+}
+
 impl IntervalReviewReader {
     /// Returns the explicitly selected recording context.
     pub fn context(&self) -> &IntervalContext {
         &self.context
+    }
+
+    /// Prepares a native profile from an explicitly reviewed original interval.
+    ///
+    /// Call on a control thread after a person selects the current candidate.
+    /// The caller must retain the original dry PCM. Measurement allocates and
+    /// never mutates the running processor or its profile-use flag. A caller can
+    /// explicitly reconstruct a preset with the returned profile; review UI and
+    /// graph ownership remain the caller's responsibility. Preparation does not
+    /// consume the token, and scores cannot identify whether a noise effect is
+    /// desired. Context and current token are checked again after measurement.
+    ///
+    /// # Errors
+    /// Rejects unavailable, contended, changed, expired or non-candidate tokens,
+    /// mismatched PCM geometry/digest, and incomplete native measurement.
+    pub fn prepare_reviewed_profile(
+        &self,
+        observation: IntervalObservation,
+        source: &[f32],
+    ) -> Result<ReviewedIntervalProfile, String> {
+        let current = self.status().map_err(|error| error.to_string())?;
+        if current.observation != Some(observation) {
+            return Err("Hiss interval is not a current review candidate".into());
+        }
+        let profile = measure_reviewed_profile(&self.context, observation, source)?;
+        if self
+            .status()
+            .map_err(|error| error.to_string())?
+            .observation
+            != Some(observation)
+        {
+            return Err("Hiss review changed during profile preparation".into());
+        }
+        Ok(ReviewedIntervalProfile {
+            profile,
+            context: self.context.clone(),
+            observation,
+        })
     }
 
     /// Reads coherent source metadata and the newest available observation.
@@ -132,6 +186,57 @@ impl IntervalReviewReader {
         }
         Err(crate::snapshot::SnapshotBusy)
     }
+}
+
+pub(crate) fn measure_reviewed_profile(
+    context: &IntervalContext,
+    observation: IntervalObservation,
+    source: &[f32],
+) -> Result<crate::profile::NoiseProfileData, String> {
+    use crate::profile::{
+        CaptureState, NoiseProfileData, PROFILE_FLOOR_MIN_DB, SpectralProfileData,
+        profile_format_version,
+    };
+    use plugins_denoiser::spectral_profile::{
+        SPECTRAL_PROFILE_FFT_SIZE, SPECTRAL_PROFILE_HOP_SIZE, SPECTRAL_PROFILE_NUM_BINS,
+        SPECTRAL_PROFILE_WINDOW,
+    };
+    if !observation
+        .scores
+        .is_ok_and(|scores| scores.review_candidate)
+        || observation.end_frame.checked_sub(observation.start_frame)
+            != Some(context.sample_rate as u64)
+        || source.len() != context.sample_rate * context.channels
+        || pcm_sha256(source) != observation.source_sha256
+    {
+        return Err("Reviewed Hiss candidate or original PCM geometry/SHA256 mismatch".into());
+    }
+    let mut capture = CaptureState::new(context.channels);
+    capture.start(context.sample_rate as f64, context.frequency_hz as f32)?;
+    capture.accumulate(source);
+    let mut floors = vec![PROFILE_FLOOR_MIN_DB; context.channels];
+    let mut spectrum = vec![0.0; context.channels * SPECTRAL_PROFILE_NUM_BINS];
+    let summary = capture
+        .take_completed(&mut floors, &mut spectrum)
+        .ok_or_else(|| "Reviewed Hiss native measurement did not complete".to_string())?;
+    Ok(NoiseProfileData {
+        format_version: profile_format_version(summary.sample_rate, true),
+        sample_rate: summary.sample_rate,
+        channels: summary.channels,
+        measurement_cutoff_hz: summary.measurement_cutoff_hz,
+        floor_db_per_channel: floors,
+        frames_analyzed: summary.frames_analyzed,
+        spectral: Some(SpectralProfileData {
+            fft_size: SPECTRAL_PROFILE_FFT_SIZE,
+            hop_size: SPECTRAL_PROFILE_HOP_SIZE,
+            window: SPECTRAL_PROFILE_WINDOW.to_string(),
+            sample_rate: summary.sample_rate,
+            channels: summary.channels,
+            num_bins: SPECTRAL_PROFILE_NUM_BINS,
+            power_per_channel_bin: spectrum,
+            hops_analyzed: summary.spectral_hops_analyzed,
+        }),
+    })
 }
 
 struct SourceInterval {

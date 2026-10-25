@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "--config",
+    "skip_children=true",
+    "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/interval_review.rs",
+    "crates/sotf-plugins/src/factory/tests.rs"
+  ],
+  "exit_code": 0,
+  "output": ""
+}

@@ -516,38 +516,8 @@ impl HissReducerPlugin {
         {
             return Err("Hiss interval is not a current explicitly reviewable candidate".into());
         }
-        let context = worker.context();
-        if source.len() != context.sample_rate * context.channels
-            || interval_worker::pcm_sha256(source) != observation.source_sha256
-        {
-            return Err("Reviewed Hiss source PCM geometry or SHA256 mismatch".into());
-        }
-        let mut capture = CaptureState::new(self.channels);
-        capture.start(self.sample_rate, self.params.frequency_hz)?;
-        capture.accumulate(source);
-        let mut floors = vec![PROFILE_FLOOR_MIN_DB; self.channels];
-        let mut spectrum = vec![0.0; self.channels * SPECTRAL_PROFILE_NUM_BINS];
-        let summary = capture
-            .take_completed(&mut floors, &mut spectrum)
-            .ok_or_else(|| "Reviewed Hiss native measurement did not complete".to_string())?;
-        let profile = NoiseProfileData {
-            format_version: profile_format_version(summary.sample_rate, true),
-            sample_rate: summary.sample_rate,
-            channels: summary.channels,
-            measurement_cutoff_hz: summary.measurement_cutoff_hz,
-            floor_db_per_channel: floors,
-            frames_analyzed: summary.frames_analyzed,
-            spectral: Some(SpectralProfileData {
-                fft_size: SPECTRAL_PROFILE_FFT_SIZE,
-                hop_size: SPECTRAL_PROFILE_HOP_SIZE,
-                window: SPECTRAL_PROFILE_WINDOW.to_string(),
-                sample_rate: summary.sample_rate,
-                channels: summary.channels,
-                num_bins: SPECTRAL_PROFILE_NUM_BINS,
-                power_per_channel_bin: spectrum,
-                hops_analyzed: summary.spectral_hops_analyzed,
-            }),
-        };
+        let profile =
+            interval_worker::measure_reviewed_profile(worker.context(), observation, source)?;
         self.restore_profile(&profile)?;
         if let Some(worker) = &mut self.interval_worker {
             worker.reset();

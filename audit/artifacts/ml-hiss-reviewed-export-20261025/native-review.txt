@@ -1,0 +1,27 @@
+   Compiling sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
+    Finished `release` profile [optimized] target(s) in 40.11s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hiss_reducer-81e35317dab66b24)
+
+running 8 tests
+test interval_proposals::tests::extreme_finite_parameters_refuse_numeric_overflow ... ok
+test interval_proposals::tests::incomplete_nonfinite_and_unexcited_physical_channels_abstain ... ok
+test interval_proposals::tests::integrity_schema_policy_and_context_are_enforced ... ok
+test interval_worker::tests::future_observation_and_dead_worker_are_never_usable ... ok
+test interval_worker::tests::reset_during_inflight_inference_only_accepts_new_epoch ... ok
+test interval_worker::tests::occupied_pool_discards_entire_interval_without_heap_activity ... ok
+test interval_worker::tests::full_queue_rejection_retains_buffers_and_retires_old_results ... ok
+test interval_proposals::tests::python_parity_across_rates_channels_and_odd_fft_size ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+     Running tests/interval_review.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/interval_review-f638b79ea5ad74d7)
+
+running 6 tests
+test silent_input_reports_abstention_and_does_not_create_a_profile ... ok
+test incomplete_windows_age_and_transport_discontinuity_abstain ... ok
+test configuration_reset_and_context_changes_preserve_stored_profile ... ok
+test eof_drain_keeps_native_tail_and_does_not_complete_partial_interval ... ok
+test explicit_review_applies_exact_original_interval_and_matches_native_capture ... ok
+test worker_matches_direct_model_and_preserves_audio_profiles_and_partitions ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s

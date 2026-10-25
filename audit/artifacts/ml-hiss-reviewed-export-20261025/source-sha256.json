@@ -1,0 +1,6 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs": "2c70a28db38dfa8ad1a1dda61306a62ebbf78a9063314a61441754e7d4f1ee11",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs": "ad0e7fa25c3327280c14fc54dc21ce7c069b6c33e0a1634fe265dcaa6638cefa",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/interval_review.rs": "1567ca9e590a5913cc507476526c19357556998bed9e4d03ce2d21003f91d38e",
+  "crates/sotf-plugins/src/factory/tests.rs": "fed35117213730f3352510384cd37c89291a16284bf9524c52f57006338ae9ba"
+}

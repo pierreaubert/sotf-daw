@@ -589,12 +589,13 @@
         "audit/artifacts/ml-hiss-worker-20261025",
         "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_config.rs",
         "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/interval_config.rs",
-        "audit/artifacts/ml-hiss-host-20261025"
+        "audit/artifacts/ml-hiss-host-20261025",
+        "audit/artifacts/ml-hiss-reviewed-export-20261025"
       ],
       "remaining": [
         "Review-only logistic interval model now fits explicit grouped labels with bootstrap/support abstention. Current synthetic functional data show no improvement over the classical baseline, and identical noise PCM used as desired programme still receives a review proposal. Explicitly capturing that counterfactual attenuates it by9.59dB. No automatic-capture or general semantic-safety claim.",
         "Collect adequate real whole-source labels, compare stronger classical baselines and calibrate source-shift/abstention behavior. The current score lower bound is heuristic, not calibrated probability, and cannot resolve identical-audio intended-use ambiguity.",
-        "Native worker and exact original-PCM application now have generic factory/preset configuration and retained hosted review diagnostics, with explicit unavailable-model classical fallback. Still implement a user review flow and live host application commands; validate actual DAW lifecycle/deadlines and cross-platform behavior. No automatic capture or real-source qualification.",
+        "Native worker, exact original-PCM application and generic factory/preset configuration now support retained hosted diagnostics plus immutable profile preparation with source provenance. Explicit preset reconstruction installs the measured profile and matches fresh native rendering. Still integrate a user review flow/live graph application commands and validate actual DAW lifecycle, resource/deadline and cross-platform behavior. No automatic capture or real-source qualification.",
         "Quantify native noise reduction and programme damage with all declared backend/threshold settings; current controlled capture contamination raises the floor by19.72dB and increases spectral speech high-band loss from0.785 to3.815dB at the default threshold. This is development-only conditional attenuation, not classification accuracy.",
         "Real held-out noise/music/multilingual recordings, level/rate/layout shifts, listening and host/resource/cross-platform acceptance remain open."
       ]
