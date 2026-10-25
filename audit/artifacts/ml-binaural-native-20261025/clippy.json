@@ -1,0 +1,28 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "--offline",
+    "--locked",
+    "--release",
+    "-p",
+    "sotf-plugin-binaural",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-binaural-render",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-j",
+    "2",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 0.4958005831576884,
+  "environment_overrides": {
+    "TMPDIR": "/Volumes/home_tmp/tmp",
+    "SOTF_BINAURAL_RENDERER": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-binaural-render"
+  }
+}

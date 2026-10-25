@@ -118,8 +118,18 @@
       "requirements": [
         "ML HRTF selection from measurements/preferences is plausible offline; online inference must not delay head tracking unpredictably."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-binaural/bin/qa_binaural_render.rs",
+        "scripts/ml/binaural_native.py",
+        "scripts/ml/test_binaural_native.py",
+        "audit/artifacts/ml-binaural-native-20261025"
+      ],
+      "remaining": [
+        "Implement explicit offline HRTF selection from measured responses or controlled listener preferences, with candidate file identities and matching audition context. The native renderer is the validation foundation, not a learned selector.",
+        "Use adequate listener/source-disjoint data and held-out directions/programmes; the existing KEMAR mannequin fixture cannot prove personalized HRTF quality.",
+        "Validate native selected preset reopening and normalization/level invariants; keep model inference outside head tracking and verify host/resource behavior separately."
+      ]
     },
     {
       "plugin_id": 14,

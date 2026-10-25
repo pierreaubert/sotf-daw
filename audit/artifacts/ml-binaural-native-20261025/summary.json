@@ -1,0 +1,23 @@
+{
+  "status": "native_foundation_for_offline_hrtf_selection",
+  "native_tests_passed": 172,
+  "existing_native_tests_ignored": 6,
+  "python_integration_tests_passed": 5,
+  "convolution_conditions": 8,
+  "max_convolution_error": 1.004094476e-05,
+  "convolution_bound": 3.117531775e-05,
+  "native_floor": 1e-05,
+  "floor_tap_reference_scale": 32,
+  "fixed_room_reflection_order": 0,
+  "qa_binary_sha256": "aecf8e8de978c0e40fa6f427c7d9049a63f872b0cd38eac36a5012a455f95a42",
+  "fixture_sha256": "e7035994f5fd754058424c061380ee92b1d5ed58fccef2887a4266916616acdf",
+  "smoke_hashes_verified": true,
+  "external_raw_evidence": "/Volumes/home_tmp/tmp/ml-binaural-native-20261025/smoke-direct",
+  "not_yet_implemented": [
+    "learned selection",
+    "controlled preference collection",
+    "selected preset export/reopen",
+    "personalized listener acceptance"
+  ],
+  "full_ml_audit_complete": false
+}

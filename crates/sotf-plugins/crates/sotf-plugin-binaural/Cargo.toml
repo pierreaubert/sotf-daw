@@ -41,3 +41,8 @@ sofa-reader = { workspace = true }
 [[bench]]
 name = "binaural-decoder-benchmark"
 harness = false
+
+[[bin]]
+name = "qa-binaural-render"
+path = "bin/qa_binaural_render.rs"
+required-features = ["qa"]

@@ -1,0 +1,11 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/bin/qa_binaural_render.rs": "9fdda3ece4ee7b1e17f81071be3b97c72c8878c4b4b3ce5ead488eef5aad6f7b",
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/Cargo.toml": "389b663098c293c5c8e5daa21882eed1cc7bd0ac4c069d122631faf5f9670b29",
+  "scripts/ml/binaural_native.py": "cc459377a80dfb5cbc1f7d6310b354597553a77013c1cbc6547e20ed707f3548",
+  "scripts/ml/test_binaural_native.py": "4d690de74d10f8322c9d6c981d4d7d7d12f3b82dbe803472ed7bb5026daddb52",
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/lib/binaural_decoder_plugin.rs": "4714bcd5c4df4353d6e9b2eb66d0dbf8c2baa1f18ec02d2334e85b555c02cee5",
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/src/room/room_model.rs": "d322d47893fe0d978616c03853dd9b6f38f0cd0593fcebc4bc21fe31d6124c35",
+  "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/fixtures/kemar/manifest.json": "f274c6bde051f015beb412e4ba72f85066046bda7aa8997c7e18e4fb5a09ec83",
+  "Cargo.lock": "518868fa329d7c1fc9816513b11f3b6631500acdf05a2a23945d28737bfebfd6",
+  "audit/plugin-ml-implementation.json": "71637ccf07a8b90b00311d59916c4c8a76e7080b606536a53534b46833a5aedb"
+}

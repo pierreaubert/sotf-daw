@@ -1,0 +1,23 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "--release",
+    "-p",
+    "sotf-plugin-binaural",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-j",
+    "2"
+  ],
+  "exit_code": 0,
+  "seconds": 6.156354874838144,
+  "environment_overrides": {
+    "TMPDIR": "/Volumes/home_tmp/tmp",
+    "SOTF_BINAURAL_RENDERER": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-binaural-render"
+  }
+}

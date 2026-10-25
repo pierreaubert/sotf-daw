@@ -1,0 +1,18 @@
+convolution rate=44100 eq=False fft=2048 max_error=9.986520639e-06 bound=3.117531775e-05
+convolution rate=44100 eq=True fft=2048 max_error=9.982206329e-06 bound=3.117531775e-05
+convolution rate=48000 eq=False fft=2048 max_error=9.753067323e-06 bound=3.117531775e-05
+convolution rate=48000 eq=True fft=2048 max_error=1.001496192e-05 bound=3.117531775e-05
+convolution rate=96000 eq=False fft=2048 max_error=9.9671287e-06 bound=3.117531775e-05
+convolution rate=96000 eq=True fft=2048 max_error=1.000055714e-05 bound=3.117531775e-05
+convolution rate=192000 eq=False fft=4096 max_error=9.962806123e-06 bound=3.117531775e-05
+convolution rate=192000 eq=True fft=4096 max_error=1.004094476e-05 bound=3.117531775e-05
+test_actual_native_impulses_predict_full_random_render (test_binaural_native.NativeBinauralTests.test_actual_native_impulses_predict_full_random_render) ... ok
+test_callback_and_finalized_prefix_invariance (test_binaural_native.NativeBinauralTests.test_callback_and_finalized_prefix_invariance) ... ok
+test_insufficient_design_capacity_fails_without_output (test_binaural_native.NativeBinauralTests.test_insufficient_design_capacity_fails_without_output) ... ok
+test_invalid_sofa_fails_without_output (test_binaural_native.NativeBinauralTests.test_invalid_sofa_fails_without_output) ... ok
+test_silence_supported_layouts_and_geometry_rejection (test_binaural_native.NativeBinauralTests.test_silence_supported_layouts_and_geometry_rejection) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.655s
+
+OK

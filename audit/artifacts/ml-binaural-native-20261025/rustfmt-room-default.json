@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "crates/sotf-plugins/crates/sotf-plugin-binaural/bin/qa_binaural_render.rs"
+  ],
+  "exit_code": 0,
+  "seconds": 0.03924666601233184
+}

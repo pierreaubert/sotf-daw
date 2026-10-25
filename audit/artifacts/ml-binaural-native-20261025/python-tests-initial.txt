@@ -1,0 +1,17 @@
+test_actual_native_impulses_predict_full_random_render (test_binaural_native.NativeBinauralTests.test_actual_native_impulses_predict_full_random_render) ... FAIL
+test_callback_and_finalized_prefix_invariance (test_binaural_native.NativeBinauralTests.test_callback_and_finalized_prefix_invariance) ... ok
+test_invalid_sofa_fails_without_output (test_binaural_native.NativeBinauralTests.test_invalid_sofa_fails_without_output) ... ok
+test_silence_supported_layouts_and_geometry_rejection (test_binaural_native.NativeBinauralTests.test_silence_supported_layouts_and_geometry_rejection) ... ok
+
+======================================================================
+FAIL: test_actual_native_impulses_predict_full_random_render (test_binaural_native.NativeBinauralTests.test_actual_native_impulses_predict_full_random_render)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/test_binaural_native.py", line 62, in test_actual_native_impulses_predict_full_random_render
+    self.assertLess(float(np.max(np.abs(actual - expected))), 2e-6)
+AssertionError: 1.021178333916739e-05 not less than 2e-06
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.701s
+
+FAILED (failures=1)
