@@ -148,6 +148,29 @@ class EnergyTests(unittest.TestCase):
 
 @unittest.skipUnless(RENDERER, "Set SOTF_AMBISONICS_RENDERER")
 class NativeTests(unittest.TestCase):
+    def test_quarter_second_high_rate_order7_64_speaker_audition_capacity(self):
+        x = np.zeros((48000, 64), dtype=np.float32)
+        x[0, 0] = 0.1
+        params = preset(
+            order=7,
+            target_layout="custom",
+            custom_layout=custom_layout(64),
+            dual_band=True,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            y, m = render(
+                x,
+                RENDERER,
+                Path(directory) / "high",
+                params,
+                [1] * 64,
+                rate=192000,
+                zeros=4096,
+            )
+            self.assertEqual(y.shape, (52096, 64))
+            self.assertEqual(m["tail"], "unknown_recursive")
+            self.assertGreater(np.max(abs(y)), 0)
+
     def test_native_single_dual_allrad_and_reloaded_callbacks(self):
         rng = np.random.default_rng(20261027)
         with tempfile.TemporaryDirectory() as directory:

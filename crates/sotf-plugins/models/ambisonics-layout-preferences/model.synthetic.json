@@ -1,0 +1,78 @@
+{
+  "model": {
+    "format": "sotf-bt-ambisonics-layout-v1",
+    "candidate_ids": [
+      "candidate-0",
+      "candidate-1",
+      "candidate-2"
+    ],
+    "utilities": [
+      -2.5683086394545853,
+      2.5683086394545853,
+      5.385426584579684e-19
+    ],
+    "presentation_side_bias": -7.451982925822448e-08
+  },
+  "context": {
+    "listener_id": "synthetic-listener",
+    "playback_setup_id": "synthetic-5.1-array",
+    "room_id": "synthetic-room",
+    "calibration_id": "uncalibrated-functional-probe",
+    "session_id": "functional-consistent",
+    "criterion": "overall_preference",
+    "normalization": "ACN/SN3D",
+    "sample_rate": 48000,
+    "renderer_sha256": "dd1da5c882f855b3ee4d06b832847f3ed2c736f078e25d3e6954a59457274003",
+    "decoder_parameters": {
+      "order": 1,
+      "target_layout": "5.1",
+      "max_re_weighting": true,
+      "dual_band": true,
+      "algorithm": "mode_matching"
+    }
+  },
+  "candidates": [
+    {
+      "id": "candidate-0",
+      "parameters": {
+        "speaker_gains": [
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "candidate-1",
+      "parameters": {
+        "speaker_gains": [
+          0.9419326186180115,
+          1.0427066087722778,
+          1.0122356414794922,
+          1.0,
+          0.959430456161499,
+          1.0394742488861084
+        ]
+      }
+    },
+    {
+      "id": "candidate-2",
+      "parameters": {
+        "speaker_gains": [
+          1.055554747581482,
+          0.9561358690261841,
+          0.9862123131752014,
+          1.0,
+          1.038959264755249,
+          0.958872377872467
+        ]
+      }
+    }
+  ],
+  "accepted": true,
+  "session_sha256": "913d8d166983886054870c7ed34142a7968a5f6aa3a79d06dbc6b264c015686e",
+  "data_origin": "synthetic_validation"
+}

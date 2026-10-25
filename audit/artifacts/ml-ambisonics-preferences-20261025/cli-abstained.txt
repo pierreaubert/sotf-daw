@@ -1,0 +1,1 @@
+{"accepted": false, "selected_id": null, "reasons": ["unstable_programme_bootstrap", "no_held_programme_prediction_advantage"], "automatic_apply": false}

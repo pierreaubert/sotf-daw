@@ -156,7 +156,7 @@ def render(signal, renderer, work, params, gains, rate=48000, callback=193, zero
         or not 1 <= callback <= 4096
         or type(zeros) is not int
         or not 0 <= zeros <= 65536
-        or (len(x) + zeros) * (x.shape[1] + len(g)) > 4_000_000
+        or (len(x) + zeros) * (x.shape[1] + len(g)) > 16_000_000
     ):
         raise ValueError("Unsupported finite bounded Ambisonics render")
     work = Path(work)

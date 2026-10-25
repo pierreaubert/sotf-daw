@@ -17,7 +17,8 @@ use std::path::PathBuf;
 #[global_allocator]
 static ALLOCATOR: CountingAlloc = CountingAlloc;
 // Bound the combined input/output working set, including observation zeros.
-const MAX_SAMPLES: usize = 4_000_000;
+// Includes250ms of order7/64-speaker audio at192kHz, with observation zeros.
+const MAX_SAMPLES: usize = 16_000_000;
 const MAX_ZERO_FRAMES: usize = 65_536;
 const MAX_REQUEST_BYTES: usize = 65_536;
 

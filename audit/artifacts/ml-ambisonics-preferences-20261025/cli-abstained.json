@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/fit_ambisonics_preferences.py",
+    "--session",
+    "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025-final/ties-session.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-ambisonics-render",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025-final/cli-abstained"
+  ],
+  "exit_code": 2,
+  "expected_exit_code": 2,
+  "seconds": 0.49823595816269517
+}

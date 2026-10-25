@@ -1,0 +1,12 @@
+{
+  "cases": 7,
+  "native_auditions_verified": 168,
+  "independent_bootstrap_fits": 1400,
+  "independent_lopo_fits": 56,
+  "max_fit_error": 1.641467810564734e-07,
+  "max_bootstrap_error": 1.656215400380745e-07,
+  "max_lopo_error": 8.419076477639287e-09,
+  "max_native_metric_error": 0.0,
+  "max_energy_error": 1.1277658710561812e-16,
+  "scope": "Independent numerical and native/export accounting only; simulated labels provide no human preference, spatial quality or calibrated confidence evidence."
+}

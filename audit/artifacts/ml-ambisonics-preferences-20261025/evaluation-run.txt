@@ -1,0 +1,89 @@
+{
+  "scope": "Seven simulated preference conditions over eight generated source groups and three corrections; not human listener observations, learned spatial quality, calibrated confidence or population acceptance.",
+  "cases": [
+    {
+      "case": "consistent",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/consistent-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/consistent/report.json",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "reasons": [],
+      "native_auditions": 24,
+      "reopen_max_error": 0.0
+    },
+    {
+      "case": "baseline-preferred",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/baseline-preferred-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/baseline-preferred/report.json",
+      "accepted": true,
+      "selected_id": "candidate-0",
+      "reasons": [],
+      "native_auditions": 24,
+      "reopen_max_error": 0.0
+    },
+    {
+      "case": "ties",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/ties-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/ties/report.json",
+      "accepted": false,
+      "selected_id": null,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ],
+      "native_auditions": 24,
+      "reopen_max_error": 0
+    },
+    {
+      "case": "heterogeneous",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/heterogeneous-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/heterogeneous/report.json",
+      "accepted": false,
+      "selected_id": null,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ],
+      "native_auditions": 24,
+      "reopen_max_error": 0
+    },
+    {
+      "case": "side-bias",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/side-bias-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/side-bias/report.json",
+      "accepted": false,
+      "selected_id": null,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "presentation_side_bias"
+      ],
+      "native_auditions": 24,
+      "reopen_max_error": 0
+    },
+    {
+      "case": "level-mismatch",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/level-mismatch-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/level-mismatch/report.json",
+      "accepted": false,
+      "selected_id": null,
+      "reasons": [
+        "native_auditions_not_rms_level_matched"
+      ],
+      "native_auditions": 24,
+      "reopen_max_error": 0
+    },
+    {
+      "case": "energy-mismatch",
+      "session": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/energy-mismatch-session.json",
+      "report": "/Volumes/home_tmp/tmp/ml-ambisonics-preferences-20261025/energy-mismatch/report.json",
+      "accepted": false,
+      "selected_id": null,
+      "reasons": [
+        "candidate_diffuse_energy_not_normalized",
+        "native_auditions_not_rms_level_matched"
+      ],
+      "native_auditions": 24,
+      "reopen_max_error": 0
+    }
+  ]
+}

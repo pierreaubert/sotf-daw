@@ -1,0 +1,11 @@
+test_cli_emits_review_preset_and_returns_two_on_abstention (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_cli_emits_review_preset_and_returns_two_on_abstention) ... ok
+test_consistent_preferences_export_exact_native_decoder_and_correction (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_consistent_preferences_export_exact_native_decoder_and_correction) ... ok
+test_hash_context_groups_protocol_lfe_and_bound_refusals (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_hash_context_groups_protocol_lfe_and_bound_refusals) ... ok
+test_level_or_energy_mismatch_refuses_without_preset (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_level_or_energy_mismatch_refuses_without_preset) ... ok
+test_ties_heterogeneity_and_side_bias_abstain (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_ties_heterogeneity_and_side_bias_abstain) ... ok
+test_unexcited_native_auditions_and_untrimmed_headroom_refuse (test_ambisonics_preferences.AmbisonicsPreferencesTests.test_unexcited_native_auditions_and_untrimmed_headroom_refuse) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.446s
+
+OK

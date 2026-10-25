@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_ambisonics_*.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "seconds": 4.944000750081614
+}

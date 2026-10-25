@@ -1,0 +1,24 @@
+{
+  "python": "3.12.10",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "renderer_sha256": "dd1da5c882f855b3ee4d06b832847f3ed2c736f078e25d3e6954a59457274003",
+  "source_sha256": {
+    "scripts/ml/ambisonics_native.py": "55365007d59ce89db0944a79656e3eb7a590f229a83086ce8fa3a76ca7294e4e",
+    "scripts/ml/test_ambisonics_native.py": "112919c69d10c1a146226e92d6e802a70d97ad9fe4f108c24202077ca276f648",
+    "scripts/ml/fit_ambisonics_preferences.py": "2ece504befdadb714c983e5c7aaab0607aeda5a5e80a7fca6dbd8f96da05ee2c",
+    "scripts/ml/ambisonics_preference_cases.py": "e2c50eff3a60f8e405ff61578ebe6e4e5feef8d6b209e0a700ce56191717785f",
+    "scripts/ml/test_ambisonics_preferences.py": "fd356c9f9d80d84bfe9f9d10e800e570ba8658579a11af03eb8031b7990fc7d8",
+    "scripts/ml/evaluate_ambisonics_preferences.py": "193015ee3850086556787a6fe1cfd213adcf6a55159ab50cdea9669696d3006c",
+    "scripts/ml/analyze_ambisonics_preferences.py": "e3781f4d3bca81543819935716bce50f77ed1649c62c77925a80a4a297a39ffc",
+    "scripts/ml/preference_ranking.py": "3443e6199b667abd9efc8016f55646f9af66c0fd2bdf0bff180737bc8bec40a6",
+    "crates/sotf-plugins/crates/sotf-plugin-ambisonics/bin/qa_ambisonics_render.rs": "ff5a8be321499b68b1a6f4523ac8eb94f93facea9d89e7f799a9af549290a3ed",
+    "crates/sotf-plugins/src/factory/tests/ambisonics_preferences.rs": "33b3208eabc96055546517568b6e49b6010cf12c0a87d56026c86a1704c82657",
+    "crates/sotf-plugins/models/ambisonics-layout-preferences/model.synthetic.json": "b25c1577190440a423f82046aaed30fc54aaef58df2143fd0a6467cd6d94d441",
+    "crates/sotf-plugins/models/ambisonics-layout-preferences/preset.synthetic.json": "01f48ee0c0e8c8a54ce4ed40c4f4b57f68a55b4891f9a2dd5dd31e4309b95c0e",
+    "crates/sotf-plugins/models/ambisonics-layout-preferences/manifest.json": "8474a72a134465d9315e6b35078a760a78a0a670025b358088fb1c127d576ca9"
+  },
+  "model_bytes": 1827,
+  "fixture_matches_api_and_direct_cli": true,
+  "scope": "Generated source PCM and simulated listener labels only; no external data downloads, redistribution or listening benefit claim."
+}

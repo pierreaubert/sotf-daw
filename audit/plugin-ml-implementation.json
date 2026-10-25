@@ -79,13 +79,21 @@
         "scripts/ml/ambisonics_native.py",
         "scripts/ml/test_ambisonics_native.py",
         "scripts/ml/evaluate_ambisonics_native.py",
-        "audit/artifacts/ml-ambisonics-native-20261025"
+        "audit/artifacts/ml-ambisonics-native-20261025",
+        "scripts/ml/fit_ambisonics_preferences.py",
+        "scripts/ml/ambisonics_preference_cases.py",
+        "scripts/ml/test_ambisonics_preferences.py",
+        "scripts/ml/evaluate_ambisonics_preferences.py",
+        "scripts/ml/analyze_ambisonics_preferences.py",
+        "crates/sotf-plugins/models/ambisonics-layout-preferences",
+        "crates/sotf-plugins/src/factory/tests/ambisonics_preferences.rs",
+        "audit/artifacts/ml-ambisonics-preferences-20261025"
       ],
       "remaining": [
-        "Implement offline learned listener/layout preference selection with exact context, grouped uncertainty/abstention and bounded candidates; current deterministic normalization and native renderer are supporting infrastructure only.",
-        "Validate reviewed decoder-plus-correction preset export through the actual factory and host, including headroom, channel roles and explicit apply behavior; custom layouts above16 outputs remain DSP-only.",
-        "Obtain independent source/level/rate/layout shift and actual spatial/listening quality evidence versus the uncorrected classical decoder; procedural functional probes establish no learned preference advantage.",
-        "Complete resource, host and Linux/Windows DAW/CI acceptance when user-provided recordings and hosts become available."
+        "Controlled real listener preference and spatial-quality acceptance against the unchanged classical decoder on fresh whole-source material; simulated labels establish numerical/export correctness only, with no learned preference advantage claim.",
+        "Calibrate grouped uncertainty and admission thresholds on separate development observations, then freeze independent listener/source/level/rate/layout shift assessment.",
+        "Full host and resource acceptance under reviewed application, including engine admission for custom layouts above16 outputs; actual production-factory preset reconstruction is verified locally.",
+        "Linux/Windows DAW/CI and provided-recording acceptance when the user supplies the unavailable recordings and hosts."
       ]
     },
     {

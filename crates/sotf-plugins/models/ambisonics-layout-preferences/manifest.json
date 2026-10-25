@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "optional_offline_per_session_speaker_layout_preference_ranking",
+  "status": "synthetic_functional_validation_only",
+  "pretrained_weights": null,
+  "synthetic_fixture": {
+    "path": "model.synthetic.json",
+    "sha256": "b25c1577190440a423f82046aaed30fc54aaef58df2143fd0a6467cd6d94d441",
+    "bytes": 1827
+  },
+  "method": "Regularized categorical Bradley-Terry utilities plus presentation-side bias, equal whole-source weight,200 source bootstraps and leave-one-source-out prediction; selects only explicitly auditioned candidates.",
+  "native_boundary": "Unchanged ACN/SN3D native Ambisonics decoder followed by diagonal native Matrix; named/custom layouts, mode matching/AllRAD, single/dual band; no inference in realtime processing.",
+  "constraints": "Positive gains0.8..1.25; LFE gain1 and silent decoder rows; normalized uniform-direction SN3D electrical energy for LF,HF and cross term within2e-6; raw and audition sample peaks<=0.999; RMS-level spread<=0.25dB; no automatic normalization or limiting in fitter.",
+  "admission": "2..12 candidates including unchanged decoder; at least8 source groups and32 trials, both comparison orders, connected graphs,200 grouped bootstrap winner/margin stability, held-source prediction advantage and limited side bias.",
+  "scope": "44.1..192kHz,orders1..7,1..64 custom outputs (engine admission above16 remains unvalidated); programme>=250ms;16M combined samples per render,32M aggregate source samples,128M session render budget,1MiB session JSON,4096 observation zeros with unknown recursive dual-band tail.",
+  "identity": "SHA256 for renderer, source PCM and native output; exact listener/setup/room/calibration/session/decoder context; reviewed two-node JSON preset and separate audition trims.",
+  "uncertainty": "Source-bootstrap stability is not calibrated population confidence; protocol and source grouping are self-reported; ties use half labels; RMS matching is not perceived-loudness or acoustic calibration.",
+  "data": "Eight generated programmes,three corrections,predetermined synthetic choices;no human listener observations or external recordings.",
+  "evidence": "audit/artifacts/ml-ambisonics-preferences-20261025",
+  "license": "GPL-3.0-or-later",
+  "remaining": [
+    "Controlled listener preference and spatial-quality acceptance against the unchanged decoder with fresh whole-source material.",
+    "Calibrate admission/uncertainty on separate development data then freeze independent listener/source/rate/layout shift tests.",
+    "Actual host/setup,wide-output admission,resource and Linux/Windows DAW/CI acceptance."
+  ]
+}
