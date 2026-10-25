@@ -1,0 +1,1 @@
+{"direct_cases": 8, "oversampled_cases": 32, "latencies": [512], "deployment_admitted": false}

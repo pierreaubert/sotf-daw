@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_saturation_oversampling.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "seconds": 0.3892031251452863
+}

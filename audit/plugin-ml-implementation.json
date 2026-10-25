@@ -947,11 +947,13 @@
         "crates/sotf-plugins/crates/sotf-plugin-analog-common/src/hardware_candidate.rs",
         "scripts/ml/analyze_saturation_alias.py",
         "audit/ml-saturation-candidate-20261025.md",
-        "audit/artifacts/ml-saturation-candidate-20261025"
+        "audit/artifacts/ml-saturation-candidate-20261025",
+        "scripts/ml/analyze_saturation_oversampling.py",
+        "scripts/ml/test_saturation_oversampling.py"
       ],
       "remaining": [
         "No trained or admitted measured-hardware Saturation model: calibrated identified-target captures and disjoint fitting/validation sources remain.",
-        "Alias/target comparisons for fitted models and oversampled learned-route design; current direct-tanh fixtures are untrained boundary probes.",
+        "Qualify fitted models with rate-correct oversampling and measured target comparisons. Analytic 2x/4x tests now record full-spectrum aliases and512-sample host latency; these are correlated untrained fixtures.",
         "DC-switch/activation semantics, full memory/runtime/contended budgets, stereo and cross-platform DAW validation."
       ]
     },

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_saturation_oversampling.py",
+    "--native-log",
+    "audit/artifacts/ml-saturation-candidate-20261025/oversampled-full-spectrum.txt",
+    "--output",
+    "audit/artifacts/ml-saturation-candidate-20261025/oversampled-independent-spectrum.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.4531015839893371
+}

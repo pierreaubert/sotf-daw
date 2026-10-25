@@ -1,0 +1,5 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-saturation/tests/candidate.rs": "aa28db2c56a732228ae5dadc049b8f4294db986b85e23da5d9c6e74fa4822871",
+  "scripts/ml/analyze_saturation_oversampling.py": "41120313ff2d685a47db7826d942eff139c7e9eadaf092a12e995dd22db92a11",
+  "scripts/ml/test_saturation_oversampling.py": "a5c999afe6871111821242173af6b585336e83e8f7a4759b70d799a0bd5b3948"
+}
