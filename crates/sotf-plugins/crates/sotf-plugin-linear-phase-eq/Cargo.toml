@@ -26,6 +26,11 @@ name = "qa-dynamic-linear-phase-eq"
 path = "bin/qa_dynamic_linear_phase_eq.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-linear-phase-eq-export"
+path = "bin/qa_linear_phase_eq_export.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 math-iir-fir = { workspace = true }

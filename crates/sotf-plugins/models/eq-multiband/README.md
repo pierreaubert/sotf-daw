@@ -44,3 +44,8 @@ candidates selected classically. Native magnitude/phase at 44.1/48/96 kHz matche
 independent analog/bilinear references within 4.92e-7 dB / 3.31e-8 complex error.
 `validation.json` and `audit/artifacts/ml-eq-multiband-20261024` hold the evidence.
 The model is GPL-3.0-or-later and uses only synthetic filter responses.
+
+The optional [Linear-phase EQ export tool](../linear-phase-fit/README.md) reuses
+these weights and classical comparisons, then validates the final native f32 FIR
+against the original target and reports actual/additional latency. This adds a
+realization/export path without changing this model or its adoption evidence.

@@ -1,0 +1,43 @@
+{
+  "case": "native-tap-limit",
+  "index": 6,
+  "source_parameter_identity": "e06905f797d5fc39a14835d01865977d70428adc7b1595612b89c78c770cfa7f",
+  "target_sha256": "fc34f7a7bd9073dc1faca943f3d4658e8d99ba7e2151f9df87169675a36c0287",
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_linear_phase_eq.py",
+    "--target",
+    "audit/artifacts/ml-linear-phase-fit-20261025/experiment/native-tap-limit-target.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-linear-phase-eq-export",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-linear-phase-fit-20261025/native-tap-limit/output",
+    "--work-dir",
+    "/Volumes/home_tmp/tmp/ml-linear-phase-fit-20261025/native-tap-limit/work",
+    "--max-evaluations",
+    "200",
+    "--proposal",
+    "/Volumes/home_tmp/tmp/ml-linear-phase-fit-20261025/native-tap-limit/input-proposal.json"
+  ],
+  "exit_code": 2,
+  "elapsed_seconds_including_import_fit_native_validation": 0.6326030420605093,
+  "directory": "/Volumes/home_tmp/tmp/ml-linear-phase-fit-20261025/native-tap-limit",
+  "report": {
+    "accepted": false,
+    "parameters": null,
+    "automatic_apply": false,
+    "sample_rate": 96000,
+    "target_sha256": "fc34f7a7bd9073dc1faca943f3d4658e8d99ba7e2151f9df87169675a36c0287",
+    "proposal_sha256": "08deeb05de04809f45c31291342f9941c6ddf6d0907a74dd08c0211e76a3d6fd",
+    "fit_method": "declared-native-limit-proposal",
+    "proposal_weights_sha256": null,
+    "model_sample_rate_shift": false,
+    "neural_candidate_evaluated": false,
+    "native": {
+      "error": "accuracy mode cannot meet sampled 0.05 dB criterion at maximum 8192 taps (6.5718259883972525 dB at 30.000000000000004 Hz); no filter was installed",
+      "status": "rejected"
+    },
+    "renderer_sha256": "d7bac94af56f0dae075dd44d4cf9b7c5b69f313e4a512691cc21de472ac51b9d",
+    "error": "native FIR accuracy preparation rejected the proposal"
+  }
+}

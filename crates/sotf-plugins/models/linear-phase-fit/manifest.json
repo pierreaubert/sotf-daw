@@ -1,0 +1,33 @@
+{
+  "format": "sotf_linear_phase_fit_assistant_v1",
+  "status": "experimental_in_progress",
+  "license": "GPL-3.0-or-later",
+  "initializer": "../eq-multiband/weights.json",
+  "weights_sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+  "training_performed": false,
+  "runtime": "Offline Python learned/classical proposal refinement, native accuracy-mode FIR design, independent final FIR checks; no runtime inference or automatic preset application.",
+  "input": "64..8192 monotonic response samples covering 20..20000 Hz; integer rate 44100..192000 Hz; target within +/-24 dB.",
+  "topology": "Shared mono/stereo FIR, four peaks plus two S=1 shelves, auto gain disabled, full wet, linear phase. Exporter checks mono; preset shares one kernel across channels.",
+  "acceptance": {
+    "supplied_target_rms_db": 0.1,
+    "supplied_target_max_db": 0.5,
+    "native_accuracy_max_db": 0.05,
+    "independent_dense_fir_vs_ideal_max_db": 0.05001,
+    "max_abs_dense_response_db": 24,
+    "linear_phase_residual_degrees": 0.001
+  },
+  "latency": "Actual selected support/2 design samples +32 native partition samples; additional latency relative to saved manual support is reported in samples and ms. WAV contains design delay; its consumer adds processing latency.",
+  "evidence": "audit/artifacts/ml-linear-phase-fit-20261025",
+  "functional_probe_cases": 8,
+  "qualified_exports": 5,
+  "required_rejections": 3,
+  "selected_neural_fits": 2,
+  "selected_classical_fits": 2,
+  "flat_without_model": 1,
+  "general_ml_adoption_recommended": false,
+  "remaining": [
+    "Broader independent measured/noisy targets, boundary and out-of-family qualification; current eight cases are functional probes, not population acceptance.",
+    "Controlled learned-versus-strongest-classical refinement/cost comparison and FIR-aware candidate selection; current tool validates the already selected IIR proposal. Prior multiband neural adoption result remains negative.",
+    "Application review/import and real-host/platform validation; no active preset is modified by the CLI."
+  ]
+}

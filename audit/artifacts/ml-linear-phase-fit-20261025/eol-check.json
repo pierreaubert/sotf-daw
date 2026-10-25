@@ -1,0 +1,16 @@
+{
+  "checks": [
+    {
+      "path": "crates/sotf-plugins/models/eq-multiband/weights.json",
+      "sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+      "git_blob_sha1": "3e4c6d9a6c155d0991969fe79abd7f8299d5dfc5",
+      "autocrlf_clean_bytes_unchanged": true
+    },
+    {
+      "path": "audit/artifacts/ml-linear-phase-fit-20261025/experiment/protocol.json",
+      "sha256": "d47def5a7096df2f781a1c735fd92b473744d878d20e290f1f35fdb23e51c117",
+      "git_blob_sha1": "21e883c1ae7cf9abcff872a0f4324da357f906ac",
+      "autocrlf_clean_bytes_unchanged": true
+    }
+  ]
+}

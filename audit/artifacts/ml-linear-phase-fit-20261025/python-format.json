@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/fit_linear_phase_eq.py",
+    "scripts/ml/evaluate_linear_phase_fit.py",
+    "scripts/ml/analyze_linear_phase_fit.py",
+    "scripts/ml/test_linear_phase_fit.py"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.010212959023192525
+}

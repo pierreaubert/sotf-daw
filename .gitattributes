@@ -8,3 +8,5 @@ crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json -text
 audit/artifacts/ml-ir-denoise-20261025/** -text
 audit/artifacts/ml-ir-preservation-20261025/** -text
 audit/artifacts/ml-ir-measured-20261025/** -text
+crates/sotf-plugins/models/eq-multiband/weights.json -text
+audit/artifacts/ml-linear-phase-fit-20261025/** -text

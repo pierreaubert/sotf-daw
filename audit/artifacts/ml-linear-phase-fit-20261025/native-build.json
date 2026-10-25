@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "build",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-p",
+    "sotf-plugin-linear-phase-eq",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-linear-phase-eq-export"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 17.004448291147128
+}

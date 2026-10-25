@@ -1,0 +1,17 @@
+{
+  ".gitattributes": "c79297007b7b7c6347e2984cbf2fd256f5d392fe6d20dc7bc312b6d80fbc12d2",
+  "audit/plugin-ml-implementation.json": "ab12499f7e4a610bdc760743bbde19ec96eb307c52ffb473c529a1772a5feae7",
+  "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/Cargo.toml": "41db49497c33bf8386587234cf138cd9b23e7ada49be04708b7631a6945de194",
+  "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/USAGE.md": "1da57070a79a710861749a281b69eb1f5f43f5c64fe65d15945966f03a80245e",
+  "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq_export.rs": "6d027ea733869dfb7b5084dd597aa16421f0f0b440d5b05528e9f31f2e9f7a5b",
+  "crates/sotf-plugins/models/eq-multiband/README.md": "7597d5d165a135ebee96249977b01da8db824d5107362ce9d5bc96d5b638de47",
+  "crates/sotf-plugins/models/eq-multiband/weights.json": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+  "crates/sotf-plugins/models/linear-phase-fit/README.md": "95274edab1244c54626e452c609d1236c742559d31bc0809e449b4986fe15831",
+  "crates/sotf-plugins/models/linear-phase-fit/manifest.json": "2c7b53683694795f0431f4067b9414b73d8a369c8f827c5d8f84db6de27d52be",
+  "scripts/ml/analyze_linear_phase_fit.py": "4e6f687ff113e5ecebd419908937c509b336a56dd81d80d5ba6fcf184c4611ad",
+  "scripts/ml/eq-requirements.txt": "ac7bcbad75d7d0be308e4e4a57894ba8e86654f88729c56f8147afa3133029f3",
+  "scripts/ml/eq_multiband.py": "2ee35d251965712c1f2bc18558b9edc539ab286ea6a1e7f386fda10345b0c1d2",
+  "scripts/ml/evaluate_linear_phase_fit.py": "230ea8ce236f7b18d826d178f950817fe3aefa7a6b356533b14c2b104ae36d57",
+  "scripts/ml/fit_linear_phase_eq.py": "f25dff64a329518e47017144d870b783a3d76b1135b391a1dc7471d74101ecdb",
+  "scripts/ml/test_linear_phase_fit.py": "6a5e18c417aa5f4572482dee1e04dcc716113b91edda76931e1e83e53645091c"
+}

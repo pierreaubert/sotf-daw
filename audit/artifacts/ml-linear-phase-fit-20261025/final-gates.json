@@ -1,0 +1,23 @@
+{
+  "required_commands": [
+    "native-build",
+    "native-clippy",
+    "python-tests-final",
+    "python-style-final",
+    "python-format-final",
+    "rust-format",
+    "evaluate",
+    "independent-analysis",
+    "reproduce-final"
+  ],
+  "required_commands_passed": true,
+  "expected_cli_rejection": {
+    "record": "malformed-proposal-check.json",
+    "exit_code": 2
+  },
+  "resolved_failure": {
+    "record": "python-tests-r1.json",
+    "resolution": "Explicit dictionary guard; final tests and malformed CLI probe pass."
+  },
+  "scope": "This checkpoint only; full audit remains active."
+}

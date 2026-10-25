@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_linear_phase_fit.py",
+    "--evidence",
+    "audit/artifacts/ml-linear-phase-fit-20261025/experiment",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-linear-phase-eq-export",
+    "--temporary",
+    "/Volumes/home_tmp/tmp/ml-linear-phase-analysis-20261025",
+    "--output",
+    "audit/artifacts/ml-linear-phase-fit-20261025/independent-validation.json"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.7375477498862892
+}

@@ -470,8 +470,21 @@
       "requirements": [
         "ML filter fitting can run offline; runtime filtering should remain a validated FIR operation."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/fit_linear_phase_eq.py",
+        "scripts/ml/evaluate_linear_phase_fit.py",
+        "scripts/ml/analyze_linear_phase_fit.py",
+        "scripts/ml/test_linear_phase_fit.py",
+        "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq_export.rs",
+        "crates/sotf-plugins/models/linear-phase-fit",
+        "audit/artifacts/ml-linear-phase-fit-20261025"
+      ],
+      "remaining": [
+        "Broader independent measured/noisy targets, boundary and out-of-family qualification; current eight cases are functional probes, not population acceptance.",
+        "Controlled learned-versus-strongest-classical refinement/cost comparison and FIR-aware candidate selection; current tool validates the already selected IIR proposal. Prior multiband neural adoption result remains negative.",
+        "Application review/import and real-host/platform validation; no active preset is modified by the CLI."
+      ]
     },
     {
       "plugin_id": 31,

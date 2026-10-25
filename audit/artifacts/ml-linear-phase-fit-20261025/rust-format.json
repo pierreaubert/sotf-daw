@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--check",
+    "crates/sotf-plugins/crates/sotf-plugin-linear-phase-eq/bin/qa_linear_phase_eq_export.rs"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.04904708289541304
+}
