@@ -1,0 +1,98 @@
+[
+  {
+    "case": "mid-tilt-96k",
+    "method": "classical",
+    "clip_role": "train",
+    "aggregate_relative_rms": 0.001760804713785243,
+    "worst_channel": {
+      "channel": 0,
+      "relative_rms": 0.0023455461480181724,
+      "max_abs": 0.0015943408943712711,
+      "scale_rms": 0.07264112668231446
+    }
+  },
+  {
+    "case": "left-low-shelf-48k",
+    "method": "surrogate",
+    "clip_role": "validation",
+    "aggregate_relative_rms": 0.000836802345261409,
+    "worst_channel": {
+      "channel": 0,
+      "relative_rms": 0.002026848097774162,
+      "max_abs": 0.002086356282234192,
+      "scale_rms": 0.07237154040625669
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "classical",
+    "clip_role": "train",
+    "aggregate_relative_rms": 0.0005436420609105198,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.0006326171569526196,
+      "scale_rms": 0.00015000547362554694
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "classical",
+    "clip_role": "train",
+    "aggregate_relative_rms": 0.0005679081076402199,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.000664282706566155,
+      "scale_rms": 0.0001488464928683162
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "classical",
+    "clip_role": "validation",
+    "aggregate_relative_rms": 0.0005380108469896014,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.0005551460781134665,
+      "scale_rms": 0.00014970060672805723
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "surrogate",
+    "clip_role": "train",
+    "aggregate_relative_rms": 0.0005436420609105198,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.0006326171569526196,
+      "scale_rms": 0.00015000547362554694
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "surrogate",
+    "clip_role": "train",
+    "aggregate_relative_rms": 0.0005679081076402199,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.000664282706566155,
+      "scale_rms": 0.0001488464928683162
+    }
+  },
+  {
+    "case": "silent-channel-corruption",
+    "method": "surrogate",
+    "clip_role": "validation",
+    "aggregate_relative_rms": 0.0005380108469896014,
+    "worst_channel": {
+      "channel": 7,
+      "relative_rms": 1.0,
+      "max_abs": 0.0005551460781134665,
+      "scale_rms": 0.00014970060672805723
+    }
+  }
+]

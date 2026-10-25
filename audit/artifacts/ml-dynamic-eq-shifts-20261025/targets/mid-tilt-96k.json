@@ -1,0 +1,61 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 96000,
+  "channels": 2,
+  "template": {
+    "num_bands": 1,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "tilt",
+        "placement": "mid",
+        "shelf_slope": 1.0,
+        "frequency": 1500,
+        "q": 0.7,
+        "gain": 4,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "whole-source-20622026",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/input-0.f32le",
+      "input_sha256": "8759ca7b9430989fb1d0b9ee606b43b50c5c3c63e341daefcf4884e2927784c4",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/reference-0.f32le",
+      "reference_sha256": "8a14ec61799d07eefe3150dbe9def76db36e32ce675182676b341a558d294199"
+    },
+    {
+      "id": "whole-source-20622027",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/input-1.f32le",
+      "input_sha256": "1da3e8244e66b59664e7904b406bdde36085a61290a2b752415cdf8ea66ca7fc",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/reference-1.f32le",
+      "reference_sha256": "26da610a7abef2f69aa2289349d7956927717c4ae7953e9165e595a04e6fc879"
+    },
+    {
+      "id": "whole-source-20622028",
+      "role": "validation",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/input-2.f32le",
+      "input_sha256": "856c777f75bfa54c77530bbc52ffcb172565c9e98f4598ea60d5b867f426f6e3",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/mid-tilt-96k-case/reference-2.f32le",
+      "reference_sha256": "8e26d3b6659e70708a1beb148964ed27c47e133b076dd5481622f4e7904ec2d2"
+    }
+  ]
+}

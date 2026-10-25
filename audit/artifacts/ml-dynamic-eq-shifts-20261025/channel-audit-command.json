@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/audit_dynamic_eq_channels.py",
+    "--evaluation",
+    "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+    "--evaluation",
+    "audit/artifacts/ml-dynamic-eq-shifts-20261025/negative-initial.json",
+    "--evaluation",
+    "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+    "--output",
+    "audit/artifacts/ml-dynamic-eq-shifts-20261025/independent-channel-audit.json"
+  ],
+  "exit_code": 0,
+  "seconds": 1.4151553330011666
+}

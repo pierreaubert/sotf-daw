@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_dynamic_eq_shifts.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-dynamic-eq-render",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final",
+    "--output",
+    "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json"
+  ],
+  "exit_code": 0,
+  "seconds": 49.47954141697846
+}

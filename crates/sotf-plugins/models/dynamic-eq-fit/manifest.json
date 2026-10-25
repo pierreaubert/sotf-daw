@@ -13,15 +13,19 @@
   "method": "Fixed Matern5/2 GP learned from native training losses, expected improvement over log10 loss, then bounded Nelder-Mead. Classical comparator uses the same initial Sobol design, additional Sobol proposals and the same refinement, under the same proposal allowance.",
   "runtime_boundary": "Existing native Dynamic EQ processes every candidate. No learned inference or envelope replacement in audio processing.",
   "data": "Two training sources and at least one separately identified validation source; whole-source grouping and sample alignment are declared. Current experiment is synthetic native reconstruction at 48 kHz mono.",
-  "admission": "Each train/validation clip relative RMS <=0.002 and max absolute error <=0.01; at least 0.001 relative-RMS and 50% improvement over dry; native preset reopening within 1e-7; refuse observed nearby-loss alternatives at normalized control distance >=0.099.",
+  "admission": "Each train/validation clip relative RMS <=0.002 and max absolute error <=0.01; at least 0.001 relative-RMS and 50% improvement over dry; native preset reopening within 1e-7; refuse observed nearby-loss alternatives at normalized control distance >=0.099. Additionally every channel must have error RMS / max(input RMS, reference RMS, 1e-6) <=0.002 and max absolute error <=0.01, preventing aggregate masking of quiet channels.",
   "uncertainty": "Observed search history and coordinate sensitivity probes are not global identifiability or calibrated confidence.",
   "default_method": "classical",
   "surrogate_adoption": "Opt-in experiment only. Improves two unknown-control development cases, worsens the harder one; both methods reject the harder case. No general superiority claim.",
-  "evidence": "audit/artifacts/ml-dynamic-eq-fit-20261025",
+  "evidence": [
+    "audit/artifacts/ml-dynamic-eq-fit-20261025",
+    "audit/artifacts/ml-dynamic-eq-shifts-20261025"
+  ],
   "remaining": [
     "Structural/per-band learned proposal coverage and broader classical comparisons",
     "Real paired recordings, held-out levels/transients/rates/layouts/shapes/routes and listening",
     "Calibrated ambiguity/admission policy and actual host/resource/cross-platform validation"
   ],
-  "license": "GPL-3.0-or-later"
+  "license": "GPL-3.0-or-later",
+  "synthetic_shift_coverage": "Eight additional cases:44.1/48/96/192kHz;1/2/6/8 channels;1/2/8 bands;all shapes/placements. Eight-channel case is a silent-channel corruption negative, not a positive eight-channel quality claim."
 }

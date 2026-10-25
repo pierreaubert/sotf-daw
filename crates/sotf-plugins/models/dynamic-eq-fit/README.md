@@ -123,10 +123,48 @@ reopening difference zero. Seven tests cover GP algebra, bounds, export/refusal,
 identity, validation isolation and CLI output preservation. A separate CLI run
 successfully fits/exports the unknown-control near target.
 
-All experiments use synthetic native references, 48 kHz mono and one/two fixed
-band structures. This does not prove behavior across the renderer's wider
+The initial six experiments use synthetic native references, 48 kHz mono and
+one/two fixed band structures. This does not prove behavior across the renderer's wider
 geometry, real recordings, structural proposals, independent per-band dynamics,
 continuous transport, listeners or host/resource/cross-platform conditions.
 These requirements remain open. Raw evidence is external under
 `/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025`; no audio or pretrained weights
 are redistributed.
+
+## Channel qualification and rate/layout shifts
+
+Qualification now adds a per-channel bound to the original aggregate checks.
+For each channel, error RMS is divided by the maximum of input RMS, reference
+RMS and 1e-6 (-120 dBFS). It must be <=0.002, and channel max absolute error
+must be <=0.01. Including reference energy handles legitimate cross-channel
+Mid/Side output when that input channel is quiet. The floor keeps the metric
+finite for wholly silent channels. The original aggregate objective and gates
+remain in place; this addition only makes admission stricter. It does not
+change search, GP priors, proposals, dynamics or native processing.
+
+A new eight-channel negative exposed why this is necessary: an independent
+Stereo band receives exact silence on channel8, and native output there is zero,
+but the reference contains low noise. Aggregate validation relative RMS is only
+0.000538 and max absolute error remains below0.01, so both earlier methods
+incorrectly exported a preset. That channel's own relative error is1. The
+corrected gate refuses both. Initial accepted reports, failing regression and
+original fitter are preserved. Search/sensitivity traces before and after the
+fix are exactly identical. Qualification also refuses two ordinary routed cases
+that aggregate RMS would have admitted (classical Mid/Tilt and GP Left/LowShelf).
+
+Eight additional fixed synthetic cases cover four rates (44.1/48/96/192kHz),
+1/2/6/8 channels,1/2/8 bands, every shape/placement, custom six-channel stereo
+pairs, and explicit silent-channel/unexcited-Side negatives. Each method admits
+four cases, with different winners: GP alone admits Mid/Tilt96k; classical alone
+admits Left/LowShelf48k. Both admit192k mono, custom-pair six-channel and eight-band
+stereo cases, and refuse Side/HighShelf44.1k and both negative controls.
+The eight-channel case is a negative only; it proves refusal, not positive
+quality for eight-channel material. No method dominates and GP remains opt-in.
+
+An independent raw-channel audit checks the12 prior runs,2 initial negative
+runs and16 corrected shift runs. It verifies source/output identities, channel
+metrics, native reopening, decisions and unchanged negative search traces.
+Prior mono admission decisions are unchanged. These synthetic checks remain
+separate from real material, structural/per-band model coverage, listening,
+calibrated confidence and actual host/resource/cross-platform acceptance.
+See `audit/artifacts/ml-dynamic-eq-shifts-20261025` for exact evidence.

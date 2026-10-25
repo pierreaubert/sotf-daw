@@ -134,6 +134,27 @@ def metrics(x, y, reference):
     }
 
 
+def channel_metrics(x, y, reference):
+    """Qualify each channel against its own input/reference energy and floor."""
+    error = y.astype(float) - reference
+    energy = np.maximum(
+        np.mean(x.astype(float) ** 2, axis=0),
+        np.mean(reference.astype(float) ** 2, axis=0),
+    )
+    scale = np.sqrt(np.maximum(energy, 1e-12))
+    relative = np.sqrt(np.mean(error * error, axis=0)) / scale
+    peaks = np.max(np.abs(error), axis=0)
+    return [
+        {
+            "channel": i,
+            "relative_rms": float(relative[i]),
+            "max_abs": float(peaks[i]),
+            "scale_rms": float(scale[i]),
+        }
+        for i in range(x.shape[1])
+    ]
+
+
 def run(data, renderer, output, budget=160, method="classical"):
     if (
         type(budget) is not int
@@ -183,6 +204,11 @@ def run(data, renderer, output, budget=160, method="classical"):
         )
         current = metrics(audio, y, reference)
         baseline = metrics(audio, audio, reference)
+        channels = channel_metrics(audio, y, reference)
+        if any(
+            c["relative_rms"] > RMS_LIMIT or c["max_abs"] > MAX_LIMIT for c in channels
+        ):
+            reasons.append(clip["role"] + "_channel_waveform_mismatch")
         if current["relative_rms"] > RMS_LIMIT or current["max_abs"] > MAX_LIMIT:
             reasons.append(clip["role"] + "_waveform_mismatch")
         if (
@@ -208,6 +234,7 @@ def run(data, renderer, output, budget=160, method="classical"):
                 "role": clip["role"],
                 "metrics": current,
                 "dry_baseline": baseline,
+                "channel_metrics": channels,
                 "reopen_max_error": reopen_error,
             }
         )

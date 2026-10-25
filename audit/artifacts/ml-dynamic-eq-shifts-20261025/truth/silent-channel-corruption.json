@@ -1,0 +1,42 @@
+{
+  "spec": {
+    "id": "silent-channel-corruption",
+    "rate": 48000,
+    "channels": 8,
+    "linked": false,
+    "known_initial": true,
+    "bands": [
+      {
+        "frequency": 1000,
+        "gain": -6
+      }
+    ]
+  },
+  "seed": 20627026,
+  "hidden_parameters": {
+    "num_bands": 1,
+    "threshold": -23.0,
+    "ratio": 4.5,
+    "attack_ms": 3.5,
+    "release_ms": 80.0,
+    "knee": 0.0,
+    "link_channels": false,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 1.0,
+        "frequency": 1000,
+        "q": 0.7,
+        "gain": -6,
+        "band_threshold": -23.0,
+        "band_ratio": 4.5,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "qualification": "Fixed synthetic shifts; silent-channel corruption is an impossible-output negative control for independent Stereo bands and starts at true dynamics to isolate admission. Orthogonal Side input has no Side excitation."
+}

@@ -1,0 +1,61 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 44100,
+  "channels": 2,
+  "template": {
+    "num_bands": 1,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 0.0,
+    "link_channels": false,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "high_shelf",
+        "placement": "side",
+        "shelf_slope": 0.7,
+        "frequency": 4000,
+        "q": 0.7,
+        "gain": -5,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "whole-source-20623026",
+      "role": "train",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/input-0.f32le",
+      "input_sha256": "be70d263aac57a312ff9adb371b8569ab2f881ca3435d57f2f1de7d684e03676",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/reference-0.f32le",
+      "reference_sha256": "f829b884e8a6eb036a141332d7dfba35c5e59ee127d9c40754d21fd1db93e444"
+    },
+    {
+      "id": "whole-source-20623027",
+      "role": "train",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/input-1.f32le",
+      "input_sha256": "fc472662b7d215b881d3140f681fa88ffe530ba5222442018649d56248fcd108",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/reference-1.f32le",
+      "reference_sha256": "e8179e4ac86910a7fde24e14d4a435b106e39685c4b6ac87cbb3145e1064bf0c"
+    },
+    {
+      "id": "whole-source-20623028",
+      "role": "validation",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/input-2.f32le",
+      "input_sha256": "9c9224cd6d4f2741b8143a4462c6273dd1422e73210e0ea4af9f74b9fd60496e",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/side-high-shelf-44k1-case/reference-2.f32le",
+      "reference_sha256": "b3d1451e20c8160559e500d22d950cd9e5a20d5cd5f5382bc268942de22a3134"
+    }
+  ]
+}

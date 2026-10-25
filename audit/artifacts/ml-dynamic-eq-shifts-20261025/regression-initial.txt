@@ -1,0 +1,14 @@
+test_silent_channel_corruption_abstains (test_fit_dynamic_eq.NativeFitTests.test_silent_channel_corruption_abstains) ... FAIL
+
+======================================================================
+FAIL: test_silent_channel_corruption_abstains (test_fit_dynamic_eq.NativeFitTests.test_silent_channel_corruption_abstains)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/test_fit_dynamic_eq.py", line 149, in test_silent_channel_corruption_abstains
+    self.assertFalse(result["accepted"])
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 1 test in 1.536s
+
+FAILED (failures=1)

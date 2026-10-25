@@ -133,6 +133,33 @@ class NativeFitTests(unittest.TestCase):
         self.assertIn("no_material_advantage_over_dry", result["reasons"])
         self.assertFalse((self.root / "dry/preset.json").exists())
 
+    def test_silent_channel_corruption_abstains(self):
+        data = copy.deepcopy(self.known)
+        data["channels"] = 8
+        for i, c in enumerate(data["clips"]):
+            x = np.fromfile(c["input_file"], dtype="<f4")
+            target = np.fromfile(c["reference_file"], dtype="<f4")
+            audio = np.repeat(x[:, None], 8, axis=1)
+            audio[:, -1] = 0
+            reference = np.repeat(target[:, None], 8, axis=1)
+            reference[:, -1] = (
+                np.random.default_rng(20631026 + i).normal(size=len(x)) * 0.00015
+            )
+            source = self.root / f"eight-channel-input-{i}.f32le"
+            source.write_bytes(audio.astype("<f4").tobytes())
+            ref = self.root / f"eight-channel-target-{i}.f32le"
+            ref.write_bytes(reference.astype("<f4").tobytes())
+            c.update(
+                input_file=str(source),
+                input_sha256=digest(source.read_bytes()),
+                reference_file=str(ref),
+                reference_sha256=digest(ref.read_bytes()),
+            )
+        result = run(data, RENDERER, self.root / "silent-channel-negative", budget=40)
+        self.assertFalse(result["accepted"])
+        self.assertIn("validation_channel_waveform_mismatch", result["reasons"])
+        self.assertFalse((self.root / "silent-channel-negative/preset.json").exists())
+
     def test_identity_grouping_and_cli_output_preservation(self):
         data = copy.deepcopy(self.data)
         data["clips"][-1]["input_sha256"] = data["clips"][0]["input_sha256"]

@@ -1,0 +1,61 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 48000,
+  "channels": 8,
+  "template": {
+    "num_bands": 1,
+    "threshold": -23.0,
+    "ratio": 4.5,
+    "attack_ms": 3.5,
+    "release_ms": 80.0,
+    "knee": 0.0,
+    "link_channels": false,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 1.0,
+        "frequency": 1000,
+        "q": 0.7,
+        "gain": -6,
+        "band_threshold": -23.0,
+        "band_ratio": 4.5,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "whole-source-20627026",
+      "role": "train",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/input-0.f32le",
+      "input_sha256": "3f2c2c77fb5e123759e8fb0246d5cd439d748b18f0c8bb627db92a1cdec4989a",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/reference-0.f32le",
+      "reference_sha256": "77c9fff45e83a942268a9494d03369cbef253c7e360cd7ccb31306473be6c033"
+    },
+    {
+      "id": "whole-source-20627027",
+      "role": "train",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/input-1.f32le",
+      "input_sha256": "6b7f7708aa2209ac01ffb907eea691c20db5a196384f7e6d234a3c5aa52c89d1",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/reference-1.f32le",
+      "reference_sha256": "7d0c5a2dfc2e2396a6407bb6e61638931d9cce03b116a888d55d0e7dc04c303f"
+    },
+    {
+      "id": "whole-source-20627028",
+      "role": "validation",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/input-2.f32le",
+      "input_sha256": "a677087addc0e14887dd332f8c2eea83d0f3cbd71681f5295c3681e775230133",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/silent-channel-corruption-case/reference-2.f32le",
+      "reference_sha256": "f64baf942e99d9ecb4803b81534c5bf36cab84614ac6c9abc675fd3e10e99c73"
+    }
+  ]
+}

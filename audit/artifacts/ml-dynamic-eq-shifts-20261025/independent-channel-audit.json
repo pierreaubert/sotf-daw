@@ -1,0 +1,2417 @@
+{
+  "reports_checked": 30,
+  "qualification_clips_checked": 90,
+  "raw_native_renders_verified": 180,
+  "maximum_metric_difference": 1.7763568394002505e-15,
+  "maximum_reopen_error": 0.0,
+  "legacy_acceptance_changes": [
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/negative-initial.json",
+      "case": "silent-channel-corruption",
+      "method": "classical"
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/negative-initial.json",
+      "case": "silent-channel-corruption",
+      "method": "surrogate"
+    }
+  ],
+  "negative_search_and_sensitivity_bit_identical_before_after": 2,
+  "rows": [
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "near",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20611026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0014561338291844827,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0014561338291844824,
+              "max_abs": 0.002650529146194458,
+              "scale_rms": 0.12728548442320956
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20611027",
+          "role": "train",
+          "aggregate_relative_rms": 0.001608301472128149,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.001608301472128149,
+              "max_abs": 0.0023520290851593018,
+              "scale_rms": 0.12618145751242998
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20611028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0016097015236485278,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0016097015236485278,
+              "max_abs": 0.002331957221031189,
+              "scale_rms": 0.13027098287122998
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "near",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20611026",
+          "role": "train",
+          "aggregate_relative_rms": 5.2111807792677344e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 5.211180779267734e-06,
+              "max_abs": 9.685754776000977e-06,
+              "scale_rms": 0.12728548442320956
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20611027",
+          "role": "train",
+          "aggregate_relative_rms": 5.015429620014548e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 5.015429620014548e-06,
+              "max_abs": 9.119510650634766e-06,
+              "scale_rms": 0.12618145751242998
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20611028",
+          "role": "validation",
+          "aggregate_relative_rms": 4.827663183895674e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 4.827663183895673e-06,
+              "max_abs": 1.1980533599853516e-05,
+              "scale_rms": 0.13027098287122998
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "far",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "source-20612026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0004483592246765501,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00044835922467655016,
+              "max_abs": 0.0015451312065124512,
+              "scale_rms": 0.09560822033615628
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20612027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005554496507541213,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0005554496507541213,
+              "max_abs": 0.00324365496635437,
+              "scale_rms": 0.1170283607236235
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20612028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.004445754219098929,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.004445754219098929,
+              "max_abs": 0.021741367876529694,
+              "scale_rms": 0.10036684417262859
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "far",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "source-20612026",
+          "role": "train",
+          "aggregate_relative_rms": 0.000635177246525472,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.000635177246525472,
+              "max_abs": 0.00228094682097435,
+              "scale_rms": 0.09560822033615628
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20612027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0007061123991686268,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0007061123991686269,
+              "max_abs": 0.0041813924908638,
+              "scale_rms": 0.1170283607236235
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20612028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.006775024781278528,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.006775024781278528,
+              "max_abs": 0.03105653077363968,
+              "scale_rms": 0.10036684417262859
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "two-band",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20613026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00041362625422287463,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00041362625422287463,
+              "max_abs": 0.0005399584770202637,
+              "scale_rms": 0.14037708953656172
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20613027",
+          "role": "train",
+          "aggregate_relative_rms": 0.00016891853503082867,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00016891853503082864,
+              "max_abs": 0.00023837387561798096,
+              "scale_rms": 0.07976054783002294
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20613028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.00038216943673925595,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00038216943673925595,
+              "max_abs": 0.0003508329391479492,
+              "scale_rms": 0.11533267537856001
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "two-band",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20613026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00018758259512330526,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0001875825951233052,
+              "max_abs": 0.0002567470073699951,
+              "scale_rms": 0.14037708953656172
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20613027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0001182443261769351,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0001182443261769351,
+              "max_abs": 9.840726852416992e-05,
+              "scale_rms": 0.07976054783002294
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20613028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.00027495764065587464,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0002749576406558747,
+              "max_abs": 0.00022463500499725342,
+              "scale_rms": 0.11533267537856001
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "shifted",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "source-20614026",
+          "role": "train",
+          "aggregate_relative_rms": 0.49200698327826115,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.49200698327826115,
+              "max_abs": 0.30902286525815725,
+              "scale_rms": 0.09515506905951938
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20614027",
+          "role": "train",
+          "aggregate_relative_rms": 0.4959955417303706,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.4959955417303706,
+              "max_abs": 0.3504708372056484,
+              "scale_rms": 0.10253181351938026
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20614028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.4791186504468622,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.47911865044686225,
+              "max_abs": 0.38012971775606275,
+              "scale_rms": 0.17564058725400947
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "shifted",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "source-20614026",
+          "role": "train",
+          "aggregate_relative_rms": 0.49200698327826115,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.49200698327826115,
+              "max_abs": 0.30902286525815725,
+              "scale_rms": 0.09515506905951938
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20614027",
+          "role": "train",
+          "aggregate_relative_rms": 0.4959955417303706,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.4959955417303706,
+              "max_abs": 0.3504708372056484,
+              "scale_rms": 0.10253181351938026
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20614028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.4791186504468622,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.47911865044686225,
+              "max_abs": 0.38012971775606275,
+              "scale_rms": 0.17564058725400947
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "dry",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20615026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11200486862827938
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20615027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10245362566207417
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20615028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10902750174532048
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "dry",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20615026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11200486862827938
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20615027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10245362566207417
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20615028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10902750174532048
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "known-control",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20616026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10439317021313374
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20616027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.1521734390354402
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20616028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10966768133859049
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json",
+      "case": "known-control",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "source-20616026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10439317021313374
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20616027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.1521734390354402
+            }
+          ]
+        },
+        {
+          "clip_id": "source-20616028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10966768133859049
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/negative-initial.json",
+      "case": "silent-channel-corruption",
+      "method": "classical",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20627026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005436420609105198,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08646869978030546
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.12637756719632826
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.14081748395814395
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09074600668037325
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11689867623883576
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06271950850163925
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08380987392184198
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0006326171569526196,
+              "scale_rms": 0.00015000547362554694
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005679081076402199,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06938944927667204
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11373156287289723
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10470252510451576
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10166707571275463
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09450343274314311
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09999809138426982
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10351456275502403
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.000664282706566155,
+              "scale_rms": 0.0001488464928683162
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0005380108469896014,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11560482702175263
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10292710722738724
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10824817931134535
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08252668552525509
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11690435314185718
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11658665045729029
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08761425285994837
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0005551460781134665,
+              "scale_rms": 0.00014970060672805723
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/negative-initial.json",
+      "case": "silent-channel-corruption",
+      "method": "surrogate",
+      "legacy_report": true,
+      "accepted": true,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20627026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005436420609105198,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08646869978030546
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.12637756719632826
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.14081748395814395
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09074600668037325
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11689867623883576
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06271950850163925
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08380987392184198
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0006326171569526196,
+              "scale_rms": 0.00015000547362554694
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005679081076402199,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06938944927667204
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11373156287289723
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10470252510451576
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10166707571275463
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09450343274314311
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09999809138426982
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10351456275502403
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.000664282706566155,
+              "scale_rms": 0.0001488464928683162
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0005380108469896014,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11560482702175263
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10292710722738724
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10824817931134535
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08252668552525509
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11690435314185718
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11658665045729029
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08761425285994837
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0005551460781134665,
+              "scale_rms": 0.00014970060672805723
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "mono-192k",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20621026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0016562289936077079,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0016562289936077079,
+              "max_abs": 0.0013867020606994629,
+              "scale_rms": 0.11891067590450893
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20621027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0012202037772954216,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0012202037772954216,
+              "max_abs": 0.0010326206684112549,
+              "scale_rms": 0.10484768253815586
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20621028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.001560960389854651,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0015609603898546509,
+              "max_abs": 0.0015552043914794922,
+              "scale_rms": 0.1168081566551656
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "mono-192k",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20621026",
+          "role": "train",
+          "aggregate_relative_rms": 4.3256419207600615e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 4.325641920760061e-06,
+              "max_abs": 4.827976226806641e-06,
+              "scale_rms": 0.11891067590450893
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20621027",
+          "role": "train",
+          "aggregate_relative_rms": 3.6182731142953187e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 3.6182731142953187e-06,
+              "max_abs": 2.637505531311035e-06,
+              "scale_rms": 0.10484768253815586
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20621028",
+          "role": "validation",
+          "aggregate_relative_rms": 4.526159285198076e-06,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 4.526159285198076e-06,
+              "max_abs": 5.930662155151367e-06,
+              "scale_rms": 0.1168081566551656
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "mid-tilt-96k",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20622026",
+          "role": "train",
+          "aggregate_relative_rms": 0.001760804713785243,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0023455461480181724,
+              "max_abs": 0.0015943408943712711,
+              "scale_rms": 0.07264112668231446
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00127972769088318,
+              "max_abs": 0.001594342291355133,
+              "scale_rms": 0.1331401262701636
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20622027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0009670916804219829,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0007963768253609637,
+              "max_abs": 0.0010344088077545166,
+              "scale_rms": 0.138199290050445
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0010123595582081414,
+              "max_abs": 0.001034403219819069,
+              "scale_rms": 0.10871507684220069
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20622028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.001105097260712156,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0008138489561388752,
+              "max_abs": 0.001271229237318039,
+              "scale_rms": 0.1479399937972302
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0015780760287381296,
+              "max_abs": 0.0012712255120277405,
+              "scale_rms": 0.07629598076136411
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "mid-tilt-96k",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20622026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0006206592117189693,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0008267722811640309,
+              "max_abs": 0.0005526724271476269,
+              "scale_rms": 0.07264112668231446
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0004510863321113,
+              "max_abs": 0.0005526766180992126,
+              "scale_rms": 0.1331401262701636
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20622027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0003460795829766579,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00028498800927174566,
+              "max_abs": 0.00037376582622528076,
+              "scale_rms": 0.138199290050445
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.000362279263861661,
+              "max_abs": 0.00037375837564468384,
+              "scale_rms": 0.10871507684220069
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20622028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0003246053294321704,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00023905555100655314,
+              "max_abs": 0.00036253035068511963,
+              "scale_rms": 0.1479399937972302
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.000463535700214514,
+              "max_abs": 0.00036253035068511963,
+              "scale_rms": 0.07629598076136411
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "side-high-shelf-44k1",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20623026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00027571199286575716,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00024718810973525096,
+              "max_abs": 0.0002900362014770508,
+              "scale_rms": 0.0882104830667656
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0003170762682888949,
+              "max_abs": 0.0002900063991546631,
+              "scale_rms": 0.0687675682529561
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20623027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0004462871463891884,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00038968181152976056,
+              "max_abs": 0.001263633370399475,
+              "scale_rms": 0.10717613006057404
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0005378991090394985,
+              "max_abs": 0.0012636184692382812,
+              "scale_rms": 0.07764385455140835
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20623028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.002045037796845839,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0017702687238532408,
+              "max_abs": 0.002253614366054535,
+              "scale_rms": 0.12803467492497153
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0025068775652306746,
+              "max_abs": 0.002253621816635132,
+              "scale_rms": 0.09041354388628194
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "side-high-shelf-44k1",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20623026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00025471624691102894,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0002283644750985455,
+              "max_abs": 0.00024178624153137207,
+              "scale_rms": 0.0882104830667656
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0002929306053518436,
+              "max_abs": 0.00024177506566047668,
+              "scale_rms": 0.0687675682529561
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20623027",
+          "role": "train",
+          "aggregate_relative_rms": 0.00042999310304326965,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0003754547302044128,
+              "max_abs": 0.0012581348419189453,
+              "scale_rms": 0.10717613006057404
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0005182598941030668,
+              "max_abs": 0.0012581348419189453,
+              "scale_rms": 0.07764385455140835
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20623028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0020138861360634156,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.001743301902947299,
+              "max_abs": 0.0023842081427574158,
+              "scale_rms": 0.12803467492497153
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0024686917294112613,
+              "max_abs": 0.002384200692176819,
+              "scale_rms": 0.09041354388628194
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "left-low-shelf-48k",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20624026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0006971041083512861,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.000856999830818099,
+              "max_abs": 0.0011194050312042236,
+              "scale_rms": 0.10957882885886969
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08659086981656675
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20624027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005516339053096993,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0005507428193957516,
+              "max_abs": 0.0008471310138702393,
+              "scale_rms": 0.11391616412653283
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.03577783786607506
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20624028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0007498074635301513,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0018161347655857765,
+              "max_abs": 0.0019359886646270752,
+              "scale_rms": 0.07237154040625669
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.16064734897463845
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "left-low-shelf-48k",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20624026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0007252913145694935,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0008916523750662898,
+              "max_abs": 0.001102149486541748,
+              "scale_rms": 0.10957882885886969
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08659086981656675
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20624027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005816246494014209,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0005806851177169146,
+              "max_abs": 0.0008675083518028259,
+              "scale_rms": 0.11391616412653283
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.03577783786607506
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20624028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.000836802345261409,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.002026848097774162,
+              "max_abs": 0.002086356282234192,
+              "scale_rms": 0.07237154040625669
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.16064734897463845
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "custom-pairs-six-channel-96k",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20625026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00020147105203486716,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00021372299189752135,
+              "max_abs": 9.22083854675293e-05,
+              "scale_rms": 0.11460673281321648
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00014484130721412482,
+              "max_abs": 0.00013996660709381104,
+              "scale_rms": 0.11965123924401738
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0002893640292894741,
+              "max_abs": 9.223818778991699e-05,
+              "scale_rms": 0.08454998073235363
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.00015650895100739471,
+              "max_abs": 0.00013998150825500488,
+              "scale_rms": 0.11498025130631126
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.00026002133378621534,
+              "max_abs": 0.00011185556650161743,
+              "scale_rms": 0.09578257872179405
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.00017899295422719782,
+              "max_abs": 0.0001118779182434082,
+              "scale_rms": 0.1403974799023513
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20625027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0002093775305629791,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00021378181364616088,
+              "max_abs": 0.00010949000716209412,
+              "scale_rms": 0.11716508945688656
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00020256698290311263,
+              "max_abs": 0.00012668967247009277,
+              "scale_rms": 0.11934908207029064
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.000217496395584184,
+              "max_abs": 0.00010949373245239258,
+              "scale_rms": 0.11537481968794375
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0002101287022417293,
+              "max_abs": 0.00012668967247009277,
+              "scale_rms": 0.11510022113284718
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0001699091958643985,
+              "max_abs": 0.00012063980102539062,
+              "scale_rms": 0.1267076018559543
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0002760733432095019,
+              "max_abs": 0.00012063980102539062,
+              "scale_rms": 0.07805779270255837
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20625028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0001929457245895981,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00039768021685510606,
+              "max_abs": 0.00010114908218383789,
+              "scale_rms": 0.042269960827957254
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00024716547227854904,
+              "max_abs": 0.00010508298873901367,
+              "scale_rms": 0.10030815647051361
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0001641694903884164,
+              "max_abs": 0.00010114908218383789,
+              "scale_rms": 0.10215229329624984
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.00022600601455913792,
+              "max_abs": 0.0001050606369972229,
+              "scale_rms": 0.10966626418730534
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.00011794000070522634,
+              "max_abs": 0.0001611262559890747,
+              "scale_rms": 0.11456377702209683
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0001336482967545711,
+              "max_abs": 0.00017642974853515625,
+              "scale_rms": 0.11245937605090008
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "custom-pairs-six-channel-96k",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20625026",
+          "role": "train",
+          "aggregate_relative_rms": 0.00020988453140749998,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00017500548860234424,
+              "max_abs": 0.00031768903136253357,
+              "scale_rms": 0.11460673281321648
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00019143604789284324,
+              "max_abs": 0.00022661685943603516,
+              "scale_rms": 0.11965123924401738
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0002030274212461892,
+              "max_abs": 0.00021603703498840332,
+              "scale_rms": 0.08454998073235363
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0002574152230346667,
+              "max_abs": 0.000329531729221344,
+              "scale_rms": 0.11498025130631126
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.00025823175777671425,
+              "max_abs": 0.00018027424812316895,
+              "scale_rms": 0.09578257872179405
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.00017838763014250335,
+              "max_abs": 0.00018027424812316895,
+              "scale_rms": 0.1403974799023513
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20625027",
+          "role": "train",
+          "aggregate_relative_rms": 0.00020448175284415736,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0002129843647257938,
+              "max_abs": 0.0001933276653289795,
+              "scale_rms": 0.11716508945688656
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00016836702708598224,
+              "max_abs": 0.00019094347953796387,
+              "scale_rms": 0.11934908207029064
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.00023394089787768092,
+              "max_abs": 0.00030665844678878784,
+              "scale_rms": 0.11537481968794375
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.00017940731503019564,
+              "max_abs": 0.0002270340919494629,
+              "scale_rms": 0.11510022113284718
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.00017297984155671963,
+              "max_abs": 0.00017777085304260254,
+              "scale_rms": 0.1267076018559543
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0002970235331895195,
+              "max_abs": 0.00031943246722221375,
+              "scale_rms": 0.07805779270255837
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20625028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.00030796486846385057,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0005688058861523789,
+              "max_abs": 0.00018462911248207092,
+              "scale_rms": 0.042269960827957254
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00030424948049088935,
+              "max_abs": 0.0006052255630493164,
+              "scale_rms": 0.10030815647051361
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.00022625890067246086,
+              "max_abs": 0.0001360177993774414,
+              "scale_rms": 0.10215229329624984
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.00026709762361189665,
+              "max_abs": 0.0005530118942260742,
+              "scale_rms": 0.10966626418730534
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.00032061623494394496,
+              "max_abs": 0.0005440115928649902,
+              "scale_rms": 0.11456377702209683
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.000327576591928534,
+              "max_abs": 0.0005501061677932739,
+              "scale_rms": 0.11245937605090008
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "eight-band-stereo-44k1",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20626026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0001600387171861983,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0001443565900290465,
+              "max_abs": 0.00018779560923576355,
+              "scale_rms": 0.15013252840200375
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0001832621640480971,
+              "max_abs": 0.00040161609649658203,
+              "scale_rms": 0.11617039391193937
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20626027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0002322715317759979,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0002447886201107732,
+              "max_abs": 0.0002936124801635742,
+              "scale_rms": 0.0843274212645352
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00021837435905333594,
+              "max_abs": 0.0002371668815612793,
+              "scale_rms": 0.08234289164799792
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20626028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.00017009902694006823,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.00015523242383733274,
+              "max_abs": 0.00024352967739105225,
+              "scale_rms": 0.12580039485206568
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.00018874818873540442,
+              "max_abs": 0.00033220648765563965,
+              "scale_rms": 0.10694646990074899
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "eight-band-stereo-44k1",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": true,
+      "channel_qualified_acceptance": true,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20626026",
+          "role": "train",
+          "aggregate_relative_rms": 6.153781790773338e-05,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 5.928208464854014e-05,
+              "max_abs": 8.873641490936279e-05,
+              "scale_rms": 0.15013252840200375
+            },
+            {
+              "channel": 1,
+              "relative_rms": 6.513128926908286e-05,
+              "max_abs": 0.00015079975128173828,
+              "scale_rms": 0.11617039391193937
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20626027",
+          "role": "train",
+          "aggregate_relative_rms": 8.2615024793911e-05,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 7.444061511098449e-05,
+              "max_abs": 7.888674736022949e-05,
+              "scale_rms": 0.0843274212645352
+            },
+            {
+              "channel": 1,
+              "relative_rms": 9.039750099655294e-05,
+              "max_abs": 9.016692638397217e-05,
+              "scale_rms": 0.08234289164799792
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20626028",
+          "role": "validation",
+          "aggregate_relative_rms": 4.756378770207584e-05,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 4.3573526908874284e-05,
+              "max_abs": 4.569441080093384e-05,
+              "scale_rms": 0.12580039485206568
+            },
+            {
+              "channel": 1,
+              "relative_rms": 5.2588021166491986e-05,
+              "max_abs": 6.490945816040039e-05,
+              "scale_rms": 0.10694646990074899
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "silent-channel-corruption",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20627026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005436420609105198,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08646869978030546
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.12637756719632826
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.14081748395814395
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09074600668037325
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11689867623883576
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06271950850163925
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08380987392184198
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0006326171569526196,
+              "scale_rms": 0.00015000547362554694
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005679081076402199,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06938944927667204
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11373156287289723
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10470252510451576
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10166707571275463
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09450343274314311
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09999809138426982
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10351456275502403
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.000664282706566155,
+              "scale_rms": 0.0001488464928683162
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0005380108469896014,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11560482702175263
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10292710722738724
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10824817931134535
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08252668552525509
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11690435314185718
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11658665045729029
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08761425285994837
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0005551460781134665,
+              "scale_rms": 0.00014970060672805723
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "silent-channel-corruption",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [
+        "train_channel_waveform_mismatch",
+        "validation_channel_waveform_mismatch"
+      ],
+      "clips": [
+        {
+          "clip_id": "whole-source-20627026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005436420609105198,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08646869978030546
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.12637756719632826
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.14081748395814395
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09074600668037325
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11689867623883576
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06271950850163925
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08380987392184198
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0006326171569526196,
+              "scale_rms": 0.00015000547362554694
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0005679081076402199,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.06938944927667204
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11373156287289723
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10470252510451576
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10166707571275463
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09450343274314311
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.09999809138426982
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10351456275502403
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.000664282706566155,
+              "scale_rms": 0.0001488464928683162
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20627028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0005380108469896014,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11560482702175263
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10292710722738724
+            },
+            {
+              "channel": 2,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.10824817931134535
+            },
+            {
+              "channel": 3,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08252668552525509
+            },
+            {
+              "channel": 4,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11690435314185718
+            },
+            {
+              "channel": 5,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11658665045729029
+            },
+            {
+              "channel": 6,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08761425285994837
+            },
+            {
+              "channel": 7,
+              "relative_rms": 1.0,
+              "max_abs": 0.0005551460781134665,
+              "scale_rms": 0.00014970060672805723
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "unexcited-side",
+      "method": "classical",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20628026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08847039401772551
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08847039401772551
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20628027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11810577452134685
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11810577452134685
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20628028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.0878176704612953
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.0878176704612953
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "evaluation": "audit/artifacts/ml-dynamic-eq-shifts-20261025/evaluation.json",
+      "case": "unexcited-side",
+      "method": "surrogate",
+      "legacy_report": false,
+      "accepted": false,
+      "channel_qualified_acceptance": false,
+      "channel_reasons": [],
+      "clips": [
+        {
+          "clip_id": "whole-source-20628026",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08847039401772551
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.08847039401772551
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20628027",
+          "role": "train",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11810577452134685
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.11810577452134685
+            }
+          ]
+        },
+        {
+          "clip_id": "whole-source-20628028",
+          "role": "validation",
+          "aggregate_relative_rms": 0.0,
+          "channels": [
+            {
+              "channel": 0,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.0878176704612953
+            },
+            {
+              "channel": 1,
+              "relative_rms": 0.0,
+              "max_abs": 0.0,
+              "scale_rms": 0.0878176704612953
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "scope": "Raw qualification/admission checks only; optimizer numerical algebra was separately verified. Synthetic rate/layout shifts are not real-material, perceptual or deadline acceptance."
+}

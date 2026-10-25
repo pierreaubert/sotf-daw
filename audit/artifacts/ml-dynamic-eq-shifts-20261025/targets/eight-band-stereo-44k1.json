@@ -1,0 +1,145 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 44100,
+  "channels": 2,
+  "template": {
+    "num_bands": 8,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 4.0,
+    "link_channels": false,
+    "mix": 0.85,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 0.7,
+        "frequency": 450,
+        "q": 1.0,
+        "gain": 2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "low_shelf",
+        "placement": "left",
+        "shelf_slope": 0.7,
+        "frequency": 1050,
+        "q": 1.0,
+        "gain": -2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "high_shelf",
+        "placement": "right",
+        "shelf_slope": 0.7,
+        "frequency": 1650,
+        "q": 1.0,
+        "gain": 2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "tilt",
+        "placement": "mid",
+        "shelf_slope": 0.7,
+        "frequency": 2250,
+        "q": 1.0,
+        "gain": -2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "peak",
+        "placement": "side",
+        "shelf_slope": 0.7,
+        "frequency": 2850,
+        "q": 1.0,
+        "gain": 2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "low_shelf",
+        "placement": "stereo",
+        "shelf_slope": 0.7,
+        "frequency": 3450,
+        "q": 1.0,
+        "gain": -2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "high_shelf",
+        "placement": "left",
+        "shelf_slope": 0.7,
+        "frequency": 4050,
+        "q": 1.0,
+        "gain": 2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "tilt",
+        "placement": "right",
+        "shelf_slope": 0.7,
+        "frequency": 4650,
+        "q": 1.0,
+        "gain": -2,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "whole-source-20626026",
+      "role": "train",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/input-0.f32le",
+      "input_sha256": "72cd15bf57455242ba208a2126acdcfcf895296def2aa9208b066e02e6d85a03",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/reference-0.f32le",
+      "reference_sha256": "dd8247ac1749f40ae545f96817c1a9575512835184a50d4206a36d2c859f6072"
+    },
+    {
+      "id": "whole-source-20626027",
+      "role": "train",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/input-1.f32le",
+      "input_sha256": "3dd84facb36f95ce22c43eb7e5c42eaa964d4d41cb608d470ca431c0e44d1068",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/reference-1.f32le",
+      "reference_sha256": "9c4639af2b7f577d84d9c83ac8d7284a0192b097438f4dca49f00317bfcd67dc"
+    },
+    {
+      "id": "whole-source-20626028",
+      "role": "validation",
+      "frames": 11026,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/input-2.f32le",
+      "input_sha256": "30a3802e7bcdd0fabe199722f6b8ed93e89f4ee4e00ecd66e3895274a583836f",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/eight-band-stereo-44k1-case/reference-2.f32le",
+      "reference_sha256": "e4ede6ba7d535f657f1f2b41cf0d771db182e492a0e806ea87cabe316042dca8"
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 48000,
+  "channels": 2,
+  "template": {
+    "num_bands": 1,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "side",
+        "shelf_slope": 1.0,
+        "frequency": 1000,
+        "q": 0.7,
+        "gain": -6,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "whole-source-20628026",
+      "role": "train",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/input-0.f32le",
+      "input_sha256": "89aaa1b7e9d77f2e9ce8356a2b5fdf5440dde6f97f44f7946b08eedf3351ef86",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/reference-0.f32le",
+      "reference_sha256": "89aaa1b7e9d77f2e9ce8356a2b5fdf5440dde6f97f44f7946b08eedf3351ef86"
+    },
+    {
+      "id": "whole-source-20628027",
+      "role": "train",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/input-1.f32le",
+      "input_sha256": "057c41d666f328b8e817b40466e047c21dcede942937ff612a294e80644a36e1",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/reference-1.f32le",
+      "reference_sha256": "057c41d666f328b8e817b40466e047c21dcede942937ff612a294e80644a36e1"
+    },
+    {
+      "id": "whole-source-20628028",
+      "role": "validation",
+      "frames": 12001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/input-2.f32le",
+      "input_sha256": "cfa47b3536d5bd5a267dea01908deddbc1542485ef7558708c2201b73ceeeeb8",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-shifts-20261025/final/unexcited-side-case/reference-2.f32le",
+      "reference_sha256": "cfa47b3536d5bd5a267dea01908deddbc1542485ef7558708c2201b73ceeeeb8"
+    }
+  ]
+}

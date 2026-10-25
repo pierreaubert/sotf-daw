@@ -1,0 +1,22 @@
+{
+  "reports_checked": 30,
+  "qualification_clips_checked": 90,
+  "raw_native_renders_verified": 180,
+  "maximum_metric_difference": 1.7763568394002505e-15,
+  "maximum_reopen_error": 0.0,
+  "negative_search_and_sensitivity_bit_identical_before_after": 2,
+  "scope": "Raw qualification/admission checks only; optimizer numerical algebra was separately verified. Synthetic rate/layout shifts are not real-material, perceptual or deadline acceptance.",
+  "status": "channel_admission_corrected_synthetic_shift_validation",
+  "initial_invalid_admissions": 2,
+  "corrected_invalid_admissions": 0,
+  "prior_mono_admissions_unchanged": 12,
+  "new_shift_runs": 16,
+  "admitted_by_method": {
+    "classical": 4,
+    "surrogate": 4
+  },
+  "tests_passed": 8,
+  "search_objective_optimizer_and_native_adapter_unchanged": true,
+  "surrogate_general_adoption": false,
+  "full_ml_audit_complete": false
+}

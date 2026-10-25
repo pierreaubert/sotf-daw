@@ -1,0 +1,88 @@
+{
+  "spec": {
+    "id": "custom-pairs-six-channel-96k",
+    "rate": 96000,
+    "channels": 6,
+    "linked": false,
+    "mix": 0.75,
+    "pairs": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "bands": [
+      {
+        "frequency": 800,
+        "gain": -4,
+        "placement": "mid"
+      },
+      {
+        "shape": "tilt",
+        "frequency": 1800,
+        "gain": 2,
+        "placement": "side"
+      }
+    ]
+  },
+  "seed": 20625026,
+  "hidden_parameters": {
+    "num_bands": 2,
+    "threshold": -23.0,
+    "ratio": 4.5,
+    "attack_ms": 3.5,
+    "release_ms": 80.0,
+    "knee": 0.0,
+    "link_channels": false,
+    "mix": 0.75,
+    "stereo_pairs": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "mid",
+        "shelf_slope": 1.0,
+        "frequency": 800,
+        "q": 0.7,
+        "gain": -4,
+        "band_threshold": -23.0,
+        "band_ratio": 4.5,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "tilt",
+        "placement": "side",
+        "shelf_slope": 1.0,
+        "frequency": 1800,
+        "q": 0.7,
+        "gain": 2,
+        "band_threshold": -23.0,
+        "band_ratio": 4.5,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "qualification": "Fixed synthetic shifts; silent-channel corruption is an impossible-output negative control for independent Stereo bands and starts at true dynamics to isolate admission. Orthogonal Side input has no Side excitation."
+}
