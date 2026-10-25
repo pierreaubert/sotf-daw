@@ -90,8 +90,28 @@ reproduced model and full training report bytes exactly. Native process/reset/
 drain allocation guards remain active with preallocated trace storage. No model
 or renderer rebuild occurred while waveform evaluation consumed them.
 
-Remaining implementation: independent onset, pumping and musical-noise metrics;
-confidence calibration and remedy for clean-material failure; complete measured
-memory and callback budgets; then recorded material and cross-platform DAW validation.
+Additional diagnostic checkpoint: independent source-energy onset labels use
+10 ms frames, a rise of at least 6 dB above the previous frame, a -35 dB relative
+level floor and 100 ms grouping. The following 30 ms desired component has mean
+relative RMS onset errors of 0.44–0.90 across the 12 cases containing desired
+material. Active-frame envelope-error standard deviation is 1.30–4.58 dB for
+the learned route. These are descriptive errors, not calibrated pumping or
+audibility scores. Residual spectral isolation compares each bin with its eight
+neighbors. Its positive local-contrast 99th percentile increases over classical
+in 11 of 12 noisy cases (differences -0.002 to +0.338 dB); this is a spectral proxy,
+not a validated musical-noise score. The full report reopens and hash-checks the
+frozen native waveforms and conditional gains. Seven Python tests now pass,
+including known-gain onset damage and spectral-isolation gain invariance.
+
+All 18 local native callback budget cases pass: mono/stereo at 44.1/48/96 kHz,
+ordinary classical, explicit missing-model fallback and the trained model. Each
+uses 16 warmups, 300 measured 193-frame callbacks and a fixed budget of 80% of the
+callback duration. The worst observed callback uses 4.64% of its deadline. The
+test runs alone; this is not a cross-platform or multi-instance contention result.
+Existing spectral latency stays 1024 samples and model lookahead stays zero.
+
+Remaining implementation: calibrated perceptual/artifact acceptance, confidence
+calibration and remedy for clean-material failure; complete measured heap memory;
+then recorded material and cross-platform DAW/contended deadline validation.
 Product controls and click-free activation require an independently demonstrated
 quality benefit. No production admission or full audit completion is claimed.

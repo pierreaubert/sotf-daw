@@ -903,11 +903,12 @@
         "scripts/ml/calibrate_expander_mask.py",
         "scripts/ml/test_expander_mask.py",
         "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/bin/qa_expander_mask_render.rs",
-        "crates/sotf-plugins/models/expander-denoising-mask/manifest.json"
+        "crates/sotf-plugins/models/expander-denoising-mask/manifest.json",
+        "scripts/ml/analyze_expander_artifacts.py"
       ],
       "remaining": [
-        "Synthetic candidate is unadmitted: severe clean-material mask failure and output damage; confidence calibration and independent onset/pumping/musical-noise metrics remain.",
-        "Complete memory and callback budgets; recorded music/noise and cross-platform DAW validation.",
+        "Synthetic candidate remains unadmitted: severe clean-material mask failure and output damage; confidence calibration and perceptual/artifact acceptance remain. Descriptive onset/modulation/spectral-isolation diagnostics are recorded.",
+        "Complete heap memory accounting; recorded music/noise and cross-platform DAW/contended deadlines. All 18 local callback budget cases passed.",
         "Production controls and click-free activation require independently demonstrated quality benefit; post-hoc noise-lead controls do not establish admission."
       ]
     },

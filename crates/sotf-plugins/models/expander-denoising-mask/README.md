@@ -26,6 +26,10 @@ Matched spectral error improves over a simple flatness mask, while clean-only
 mask error is severe. Thirteen native waveform cases improve SNR versus the
 chosen ratio-four classical settings but usually leak more noise; clean-only
 damage remains unacceptable. This does not establish a deployment advantage.
+Source-labeled onset/envelope diagnostics and residual spectral-isolation proxies
+are recorded separately from perceptual acceptance. All 18 local callback budget
+probes pass, covering mono/stereo, three clocks and classical/missing/learned modes;
+this does not establish contended host deadlines or complete heap accounting.
 
 See `audit/ml-expander-mask-20261025.md` and its artifact directory for frozen
 source identities, parity, waveform/component errors, and post-hoc noise-lead

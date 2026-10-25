@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 import numpy as np
+from analyze_expander_artifacts import onset_envelope, spectral_isolation
 from expander_mask_model import export, features, load, objective, predict
 from expander_mask_native import reference, render
 from train_expander_mask import scene
@@ -20,6 +21,36 @@ MODEL = (
 
 
 class ExpanderMaskTests(unittest.TestCase):
+    def test_independent_onset_labels_and_known_gain_damage(self):
+        clean = np.zeros((1000, 1))
+        clean[300:350] = 1
+        clean[700:750] = 0.5
+        actual = onset_envelope(clean, 0.5 * clean, 1000)
+        self.assertEqual(
+            [x["source_time_seconds"] for x in actual["onsets"]], [0.3, 0.7]
+        )
+        for item in actual["onsets"]:
+            self.assertAlmostEqual(item["projection_gain"], 0.5)
+            self.assertAlmostEqual(item["relative_rms_error"], 0.5)
+        self.assertLess(actual["active_envelope_error_std_db"], 1e-12)
+        self.assertEqual(
+            onset_envelope(np.zeros_like(clean), clean, 1000)["active_frames"], 0
+        )
+        with self.assertRaises(ValueError):
+            onset_envelope(clean, clean, 0)
+
+    def test_noise_spectral_isolation_is_gain_invariant(self):
+        noise = np.random.default_rng(20275112).normal(size=(8192, 2))
+        a, b = spectral_isolation(noise), spectral_isolation(0.5 * noise)
+        self.assertEqual(a["eligible_bins"], b["eligible_bins"])
+        self.assertAlmostEqual(
+            a["positive_local_contrast_p99_db"],
+            b["positive_local_contrast_p99_db"],
+            places=12,
+        )
+        self.assertEqual(a["above_10db_fraction"], b["above_10db_fraction"])
+        self.assertIsNone(spectral_isolation(np.zeros_like(noise)))
+
     def test_features_match_scalar_replicate_edge_reference(self):
         rng = np.random.default_rng(20275118)
         power, previous = 10 ** rng.uniform(-12, -1, (2, 513))

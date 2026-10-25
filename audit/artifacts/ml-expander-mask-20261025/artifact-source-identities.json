@@ -1,0 +1,5 @@
+{
+  "scripts/ml/analyze_expander_artifacts.py": "568c3b57a0e222c41310c376a40b282a8d214998a612ae1c10c25ffa390c54f4",
+  "scripts/ml/test_expander_mask.py": "ac7f76469c77842ded553fa786634591579f44c182d4e113f46f2aea57dd072e",
+  "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/denoising.rs": "ad200c0a888c1847d2465b1f7db71f7051161eafed24e54b61f5113e9b17b5e0"
+}

@@ -46,9 +46,18 @@
   },
   "evidence": "audit/artifacts/ml-expander-mask-20261025",
   "remaining": [
-    "Clean-material failure, confidence calibration and independent artifact metrics",
-    "Complete memory and callback budgets",
-    "Recorded music/noise and cross-platform DAW validation",
+    "Clean-material failure, confidence calibration and perceptual/artifact acceptance",
+    "Complete heap accounting and contended/cross-platform deadlines",
+    "Recorded music/noise and DAW validation",
     "Product selector and click-free activation only after demonstrated quality benefit"
-  ]
+  ],
+  "additional_qualification": {
+    "local_callback_budget_cases": 18,
+    "local_callback_budget_passes": 18,
+    "python_tests": 7,
+    "source_labeled_onset_and_envelope_diagnostics": true,
+    "residual_spectral_isolation_proxy": true,
+    "perceptual_acceptance": false,
+    "complete_heap_measurement": false
+  }
 }

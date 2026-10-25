@@ -270,3 +270,58 @@ fn constant_mask_matches_independent_full_complex_wola_and_energy_bound() {
     let output_energy = actual.iter().map(|x| f64::from(*x).powi(2)).sum::<f64>();
     assert!(output_energy <= input_energy * (1.0 + 1e-5));
 }
+
+#[test]
+#[ignore = "Local callback evidence; run alone with one test thread"]
+fn measure_frozen_candidate_callback_budget() {
+    use std::time::Instant;
+    let bytes = include_bytes!("../../../models/expander-denoising-mask/model.synthetic.json");
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../models/expander-denoising-mask/parity.synthetic.json"
+    ))
+    .unwrap();
+    let sha = fixture["model_sha256"].as_str().unwrap();
+    let mut cases = Vec::new();
+    const CALLBACK: usize = 193;
+    for rate in [44100, 48000, 96000] {
+        for channels in [1, 2] {
+            for mode in ["classical", "missing_model", "learned"] {
+                let mut plugin = make(channels, rate);
+                if mode != "classical" {
+                    let model = if mode == "learned" {
+                        Some(DenoisingMask::from_json(bytes, sha).unwrap())
+                    } else {
+                        None
+                    };
+                    plugin.configure_denoising(model).unwrap();
+                }
+                let input: Vec<_> = (0..CALLBACK * channels)
+                    .map(|i| ((i * 13 % 97) as f32 - 48.0) / 1024.0)
+                    .collect();
+                let mut buffer = input.clone();
+                let context = ProcessContext::new(rate, CALLBACK);
+                for _ in 0..16 {
+                    buffer.copy_from_slice(&input);
+                    plugin.process_in_place(&mut buffer, &context).unwrap();
+                }
+                let mut times = Vec::with_capacity(300);
+                for _ in 0..300 {
+                    buffer.copy_from_slice(&input);
+                    let start = Instant::now();
+                    plugin.process_in_place(&mut buffer, &context).unwrap();
+                    times.push(start.elapsed().as_secs_f64());
+                }
+                times.sort_by(f64::total_cmp);
+                let deadline = CALLBACK as f64 / f64::from(rate);
+                cases.push(serde_json::json!({"mode":mode,"sample_rate":rate,"channels":channels,"callback_frames":CALLBACK,"callbacks":300,
+                    "p50_seconds":times[150],"p95_seconds":times[285],"p99_seconds":times[297],"maximum_seconds":times[299],
+                    "deadline_seconds":deadline,"declared_local_budget_seconds":0.8*deadline,"local_budget_pass":times[299]<=0.8*deadline,
+                    "latency_samples":plugin.latency_samples(),"added_model_lookahead_samples":0,"selection_counters":plugin.denoising_counters()}));
+            }
+        }
+    }
+    println!(
+        "{}",
+        serde_json::json!({"cases":cases,"deployment_admitted":false,"scope":"Local native callback wall time with fixed 80% budget, 16 warmups and 300 callbacks. This does not prove cross-platform host deadlines or full heap memory."})
+    );
+}
