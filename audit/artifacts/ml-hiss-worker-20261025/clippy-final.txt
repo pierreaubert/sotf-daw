@@ -1,0 +1,19 @@
+    Checking sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
+error: using `chunks_exact_mut` with a constant chunk size
+   --> crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs:121:56
+    |
+121 |         for (sample, target) in chunk.iter().zip(bytes.chunks_exact_mut(size_of::<f32>())) {
+    |                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+help: consider using `as_chunks_mut::<{ size_of::<f32>() }>()` instead
+   --> crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs:121:56
+    |
+121 |         for (sample, target) in chunk.iter().zip(bytes.chunks_exact_mut(size_of::<f32>())) {
+    |                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks
+    = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`
+
+error: could not compile `sotf-plugin-hiss-reducer` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `sotf-plugin-hiss-reducer` (lib test) due to 1 previous error

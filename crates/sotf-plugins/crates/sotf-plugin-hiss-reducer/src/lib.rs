@@ -1,5 +1,7 @@
 #[cfg(feature = "interval-proposals")]
 pub mod interval_proposals;
+#[cfg(feature = "interval-proposals")]
+pub mod interval_worker;
 pub mod params;
 pub mod profile;
 pub mod snapshot;
@@ -198,6 +200,10 @@ impl Default for HissReducerPluginParams {
 }
 
 pub struct HissReducerPlugin {
+    #[cfg(feature = "interval-proposals")]
+    interval_worker: Option<interval_worker::IntervalWorker>,
+    #[cfg(feature = "interval-proposals")]
+    interval_epoch: u64,
     channels: usize,
     sample_rate: f64,
     initialized: bool,
@@ -276,6 +282,10 @@ impl HissReducerPlugin {
         spectral_reducer.set_params(params.frequency_hz, params.threshold_db, params.strength);
         debug_assert_eq!(SPECTRAL_PROFILE_NUM_BINS, SPECTRAL_HISS_NUM_BINS);
         let mut plugin = Self {
+            #[cfg(feature = "interval-proposals")]
+            interval_worker: None,
+            #[cfg(feature = "interval-proposals")]
+            interval_epoch: 0,
             channels,
             sample_rate,
             initialized: false,
@@ -332,6 +342,151 @@ impl HissReducerPlugin {
         plugin.refresh_backend_params();
         plugin.rebuild_cached_parameters();
         Ok(plugin)
+    }
+
+    /// Configures review-only inference on a control thread after initialization.
+    ///
+    /// An explicit, validated model must match the current physical geometry and
+    /// cutoff. `maximum_endpoint_age_frames` bounds source-clock lag after each
+    /// analyzed one-second interval, up to ten seconds. `None` disables review.
+    /// Construction, replacement and disabling allocate or join worker threads;
+    /// they must never occur inside an audio callback. Setup identity comes from
+    /// the explicitly selected model context and must describe the actual source.
+    /// No profile or preset field is changed, and no capture is triggered.
+    ///
+    /// # Errors
+    /// Rejects uninitialized setup, context mismatch, invalid age, epoch exhaustion
+    /// or worker creation failure. A failed configuration retains the old worker.
+    #[cfg(feature = "interval-proposals")]
+    pub fn configure_interval_review(
+        &mut self,
+        model: Option<interval_proposals::IntervalModel>,
+        maximum_endpoint_age_frames: u64,
+    ) -> PluginResult<()> {
+        let epoch = self
+            .interval_worker
+            .as_ref()
+            .map_or(self.interval_epoch, |worker| worker.epoch())
+            .checked_add(1)
+            .ok_or_else(|| "Hiss review epoch exhausted".to_string())?;
+        let next = if let Some(model) = model {
+            let context = model.context();
+            if !self.initialized
+                || context.sample_rate as f64 != self.sample_rate
+                || context.channels != self.channels
+                || context.frequency_hz != f64::from(self.params.frequency_hz)
+            {
+                return Err(
+                    "Hiss interval review requires initialized matching rate/channels/cutoff"
+                        .into(),
+                );
+            }
+            Some(interval_worker::IntervalWorker::new(
+                model,
+                maximum_endpoint_age_frames,
+                epoch,
+            )?)
+        } else {
+            None
+        };
+        self.interval_worker = next;
+        self.interval_epoch = epoch;
+        Ok(())
+    }
+
+    /// Returns current review diagnostics without waiting or allocating.
+    ///
+    /// Results are conditional review information, never instructions to capture.
+    /// Stale, future, previous-epoch and unavailable results are omitted.
+    #[cfg(feature = "interval-proposals")]
+    pub fn interval_review_status(&self) -> Option<interval_worker::IntervalWorkerStatus> {
+        self.interval_worker.as_ref().map(|worker| worker.status())
+    }
+
+    /// Returns the explicit recording context associated with review observations.
+    #[cfg(feature = "interval-proposals")]
+    pub fn interval_review_context(&self) -> Option<&interval_proposals::IntervalContext> {
+        self.interval_worker.as_ref().map(|worker| worker.context())
+    }
+
+    /// Stores a profile from an explicitly reviewed, unchanged source interval.
+    ///
+    /// Call only on a control thread after a person selects the currently valid
+    /// review candidate. The caller must retain the exact original dry PCM;
+    /// applying `learn_noise` to later live audio would capture a different interval.
+    /// This method allocates and measures the selected PCM with the native capture
+    /// engine, then publishes its profile. It retains the existing profile-use
+    /// flag. The classifier never calls this method. Scores cannot establish that
+    /// a desired noise effect is unwanted; the user's review remains necessary.
+    /// Successful application retires the review token. Errors preserve profiles.
+    ///
+    /// # Errors
+    /// Rejects absent, expired, superseded, reset or non-candidate observations,
+    /// mismatched PCM geometry/digest, active capture, draining or invalid profile
+    /// measurement. No partially measured profile is published.
+    #[cfg(feature = "interval-proposals")]
+    pub fn apply_reviewed_interval_profile(
+        &mut self,
+        observation: interval_worker::IntervalObservation,
+        source: &[f32],
+    ) -> PluginResult<NoiseProfileData> {
+        let worker = self
+            .interval_worker
+            .as_ref()
+            .ok_or_else(|| "Hiss interval review is not configured".to_string())?;
+        if worker.status().observation != Some(observation)
+            || !observation
+                .scores
+                .is_ok_and(|scores| scores.review_candidate)
+            || self.capture.is_active()
+            || self.drain_remaining.is_some()
+        {
+            return Err("Hiss interval is not a current explicitly reviewable candidate".into());
+        }
+        let context = worker.context();
+        if source.len() != context.sample_rate * context.channels
+            || interval_worker::pcm_sha256(source) != observation.source_sha256
+        {
+            return Err("Reviewed Hiss source PCM geometry or SHA256 mismatch".into());
+        }
+        let mut capture = CaptureState::new(self.channels);
+        capture.start(self.sample_rate, self.params.frequency_hz)?;
+        capture.accumulate(source);
+        let mut floors = vec![PROFILE_FLOOR_MIN_DB; self.channels];
+        let mut spectrum = vec![0.0; self.channels * SPECTRAL_PROFILE_NUM_BINS];
+        let summary = capture
+            .take_completed(&mut floors, &mut spectrum)
+            .ok_or_else(|| "Reviewed Hiss native measurement did not complete".to_string())?;
+        let profile = NoiseProfileData {
+            format_version: profile_format_version(summary.sample_rate, true),
+            sample_rate: summary.sample_rate,
+            channels: summary.channels,
+            measurement_cutoff_hz: summary.measurement_cutoff_hz,
+            floor_db_per_channel: floors,
+            frames_analyzed: summary.frames_analyzed,
+            spectral: Some(SpectralProfileData {
+                fft_size: SPECTRAL_PROFILE_FFT_SIZE,
+                hop_size: SPECTRAL_PROFILE_HOP_SIZE,
+                window: SPECTRAL_PROFILE_WINDOW.to_string(),
+                sample_rate: summary.sample_rate,
+                channels: summary.channels,
+                num_bins: SPECTRAL_PROFILE_NUM_BINS,
+                power_per_channel_bin: spectrum,
+                hops_analyzed: summary.spectral_hops_analyzed,
+            }),
+        };
+        self.restore_profile(&profile)?;
+        if let Some(worker) = &mut self.interval_worker {
+            worker.reset();
+        }
+        Ok(profile)
+    }
+
+    #[cfg(feature = "interval-proposals")]
+    fn refresh_interval_geometry(&mut self) {
+        if let Some(worker) = &mut self.interval_worker {
+            worker.set_geometry(self.sample_rate, self.channels, self.params.frequency_hz);
+        }
     }
 
     fn maximum_frequency(sample_rate: f64) -> PluginResult<f32> {
@@ -459,6 +614,8 @@ impl HissReducerPlugin {
                     .as_float()
                     .ok_or_else(|| "frequency_hz must be a float".to_string())?;
                 self.refresh_backend_params();
+                #[cfg(feature = "interval-proposals")]
+                self.refresh_interval_geometry();
             }
             "strength" => {
                 self.params.strength = value
@@ -1015,6 +1172,8 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
         }
         let use_changed = next.use_captured_profile != self.params.use_captured_profile;
         self.params = Self::canonicalize_params(next, self.sample_rate, self.channels)?;
+        #[cfg(feature = "interval-proposals")]
+        self.refresh_interval_geometry();
         self.reducer.set_enabled(self.params.enabled, false);
         self.spectral_reducer.set_enabled(self.params.enabled);
         self.refresh_backend_params();
@@ -1079,6 +1238,13 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
         self.params = Self::canonicalize_params(self.params.clone(), sample_rate, self.channels)?;
         self.sample_rate = sample_rate;
+        #[cfg(feature = "interval-proposals")]
+        {
+            if let Some(worker) = &mut self.interval_worker {
+                worker.reset();
+            }
+            self.refresh_interval_geometry();
+        }
         self.reducer.initialize(sample_rate)?;
         self.spectral_reducer.set_enabled(self.params.enabled);
         self.spectral_reducer.initialize(sample_rate)?;
@@ -1116,6 +1282,10 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "interval-proposals")]
+        if let Some(worker) = &mut self.interval_worker {
+            worker.reset();
+        }
         self.reducer.reset();
         self.spectral_reducer.reset();
         // Reset discards a partial capture and preserves the stored profile
@@ -1155,6 +1325,10 @@ impl ParametricInPlacePlugin for HissReducerPlugin {
 
         if context.num_frames > 0 && self.drain_remaining.is_some() {
             return Err("Reset spectral hiss before processing input after drain starts".into());
+        }
+        #[cfg(feature = "interval-proposals")]
+        if let Some(worker) = &mut self.interval_worker {
+            worker.push(buffer, context.transport.sample_position);
         }
         // Capture measures the input before either reducer runs, in both DSP
         // modes. Drain input never accumulates: capture is frozen there.

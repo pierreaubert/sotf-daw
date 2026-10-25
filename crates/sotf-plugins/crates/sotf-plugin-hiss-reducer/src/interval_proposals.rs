@@ -159,6 +159,7 @@ struct ModelDocument {
 pub struct IntervalModel {
     context: IntervalContext,
     parameters: Parameters,
+    sha256: [u8; 32],
 }
 
 /// Conditional review scores; these are not calibrated noise probabilities.
@@ -224,12 +225,18 @@ impl IntervalModel {
         Ok(Self {
             context: doc.context,
             parameters: doc.parameters,
+            sha256: Sha256::digest(raw).into(),
         })
     }
 
     /// Returns the exact recording context this model accepts.
     pub fn context(&self) -> &IntervalContext {
         &self.context
+    }
+
+    /// Returns the verified model identity retained in review proposals.
+    pub fn sha256(&self) -> [u8; 32] {
+        self.sha256
     }
 
     /// Scores one complete physical-channel interval on a background or control thread.

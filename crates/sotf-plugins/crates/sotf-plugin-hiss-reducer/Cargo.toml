@@ -14,7 +14,7 @@ path = "src/lib.rs"
 
 [features]
 qa = ["sotf-host/qa"]
-interval-proposals = ["dep:rustfft", "dep:sha2"]
+interval-proposals = ["dep:rustfft", "dep:sha2", "dep:plugins-inference"]
 
 [[bin]]
 name = "qa-hiss-reducer"
@@ -28,6 +28,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 rustfft = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+plugins-inference = { workspace = true, optional = true }
 
 [dev-dependencies]
 hound = { workspace = true }

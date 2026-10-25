@@ -1,0 +1,7 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/Cargo.toml": "c1b03f5ab696c1b7ffa94c64011a1183bfea7dfc87b9cc4d1a752d548bf1b492",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs": "c33da9f6c93257afcd0ef772e84cfbe84c0ee01f2f4f1c09ef4aebfef99eeae3",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_proposals.rs": "6bd473609abd17ac08ab6b987646b9b426c18fbbe20e97b0eac50de254e6acd6",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs": "d941d36e09e4702c16fec1ab733a008e6970f1ea111ca8738d53816c0dd39835",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/interval_review.rs": "c2ceede4b526a1ca67ea1bd90ff876c0f3b964999dddb566947ed7c9319fd67e"
+}

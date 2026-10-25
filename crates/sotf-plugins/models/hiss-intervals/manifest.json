@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "kind": "optional_offline_source_labelled_interval_review_model",
+  "kind": "optional_source_labelled_interval_review_model",
   "default_model": null,
   "example_model": {
     "file": "model.synthetic.json",
@@ -9,7 +9,7 @@
   },
   "status": "review_only_no_automatic_capture",
   "automatic_capture": false,
-  "worker_integration": false,
+  "worker_integration": true,
   "method": "Regularized logistic regression over16 amplitude-invariant channel-min/max features; equal source weight,50 source bootstraps, leave-one-whole-source-out review gates and labelled-noise support rejection.",
   "admission": "At least8 source groups and6 groups per class; no held-source programme review candidates; held-source noise coverage>=0.25. Candidate needs fifth-percentile bootstrap score>=0.95 and standardized nearest-noise support distance<=1.5.",
   "uncertainty": "Scores and bootstrap bounds are heuristic, not calibrated probabilities or semantic safe-noise guarantees.",
@@ -17,14 +17,16 @@
   "finding": "No advantage over classical baseline on32 simple fresh synthetic probes. Identical PCM used as desired noise effect and unwanted hiss gets the same review proposal; explicit diagnostic capture attenuates the desired effect9.593dB. No general automatic-capture adoption.",
   "remaining": [
     "Adequate real grouped labels, independent source/level/rate/layout shifts and calibrated abstention",
-    "Causal worker/source-clock/reset/staleness/overload lifecycle and explicit profile application",
+    "Generic host structural configuration, review UI and actual DAW lifecycle/deadline validation",
     "Listener/host/resource/cross-platform validation"
   ],
   "license": "GPL-3.0-or-later",
   "rust_inference": {
     "feature": "interval-proposals",
     "module": "sotf_plugin_hiss_reducer::interval_proposals",
-    "thread_contract": "Allocating control/background-thread API only; no worker or plugin integration yet",
+    "thread_contract": "Model loading and direct evaluate allocate off the audio thread; native plugin worker handles inference asynchronously after explicit control-time configuration.",
     "evidence": "audit/artifacts/ml-hiss-rust-20261025"
-  }
+  },
+  "worker_integration_scope": "Native Hiss API with bounded complete-window delivery and hash-bound explicit control-thread application; generic factory/preset/UI integration remains pending.",
+  "worker_evidence": "audit/artifacts/ml-hiss-worker-20261025"
 }

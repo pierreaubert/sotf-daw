@@ -1,0 +1,6 @@
+{
+  "base_commit": "9a34fd46c8e4a27a25622857caa2388936f404ea",
+  "scope": "Local functional validation; no DAW deadline, real-source quality, or cross-platform acceptance",
+  "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+  "uname": "arm64"
+}

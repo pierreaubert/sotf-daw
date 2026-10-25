@@ -3,16 +3,16 @@
 `fit_hiss_intervals.py` learns from explicitly labelled one-second examples.
 `propose_hiss_intervals.py` returns review candidates and abstentions. It never
 starts native capture, writes a profile/preset or changes stored/active profiles.
-The existing explicit interval selection remains necessary. Worker/host
-integration is still open; this implementation is offline.
+The existing explicit interval selection remains necessary. The CLI is offline;
+the native Hiss crate also provides an optional background worker.
 
 The Hiss crate also exposes `interval_proposals` behind the opt-in
 `interval-proposals` Cargo feature. `IntervalModel::from_bytes` verifies bounded
 model bytes, an explicit SHA256, policy and exact `IntervalContext` before use.
 `evaluate` extracts features and returns review scores for exactly one second of
 interleaved PCM. Both operations allocate and belong on a control/background
-thread. This feature adds no plugin parameter, default model, worker or capture
-action. Finite parameters that overflow inference arithmetic return an error.
+thread. Finite parameters that overflow inference arithmetic return an error.
+No default model, preset field or automatic capture action is added.
 Ten deterministic Python/Rust reference probes cover 44.1/48/96/192 kHz,
 one/two/eight channels, and the odd 883-point FFT at 44150 Hz. PCM byte hashes,
 all features, main/bootstrap scores, support distances and decisions match;
@@ -93,8 +93,8 @@ all legitimate noisy programme sounds.
 Offline proposals use nonoverlapping completed one-second windows. Frame times
 start at the supplied file's frame0; `available_at_frame` equals interval end.
 Incomplete EOF is unused, with no backward application or future interpolation.
-Appending future samples leaves completed proposals unchanged. Actual streaming
-worker epochs, callback queues and stale-result policies are not implemented yet.
+Appending future samples leaves completed proposals unchanged. The native worker
+uses the same completed-window rule with absolute host positions and epochs.
 
 ```sh
 python scripts/ml/fit_hiss_intervals.py --session labels.json --output new-model
@@ -135,5 +135,58 @@ Raw generated/native data remain under
 `/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025`. No audio is redistributed;
 recorded /s/ is the existing attributed CC BY-SA3.0 development fixture and is
 not used to fit the example model. Real grouped labels, stronger baselines,
-calibrated abstention, causal worker/host lifecycle, listening, resource/deadline
+calibrated abstention, full host/UI integration, listening, resource/deadline
 and cross-platform validation remain open.
+
+## Native worker and explicit application
+
+After initialization, call `configure_interval_review(Some(model), max_age_frames)`
+on the control thread. The model must match the current rate, physical channel
+count and cutoff; its explicit setup identity must describe the recording chain.
+`None` disables review. Configuration, replacement and destruction allocate or
+join the worker and must never run on the audio callback. No model path or review
+state is added to presets or the generic plugin factory at this checkpoint.
+
+Feed actual source positions using `ProcessContext::with_sample_position` or
+equivalent transport metadata. Repeated default position0 is a discontinuity,
+not an implicit advancing clock. Complete nonoverlapping one-second intervals
+start at the first source frame after preparation/reset/seek. Zero-length input
+cannot complete a window; EOF drain never contributes synthetic audio. Audio
+latency and native tail behavior remain unchanged.
+
+Three preallocated source buffers and a two-slot queue bound retained PCM storage
+to `3 * sample_rate * channels * 4` bytes (576000 bytes at48kHz mono;
+18432000 bytes at192kHz/eight channels), excluding model/FFT working memory.
+Only whole independent windows are submitted; the shared worker may supersede
+older queued windows. Reported submissions therefore are not inference counts.
+The audio callback does no FFT, hash, allocation, buffer destruction or waiting.
+Result access uses the shared bridge's nonblocking try-lock and returns no result
+on contention. This local functional contract is not a DAW deadline measurement.
+
+`interval_review_status` omits previous-epoch, future, expired and dead-worker
+results. Maximum endpoint age is explicitly configured from0 to ten source
+seconds; it excludes the preceding analyzed second. Reset, transport jump, cutoff
+or rate mismatch retires old results. Queue rejection and an occupied buffer pool
+invalidate old proposals; an overloaded interval is discarded in full. Restoring
+matching geometry starts a fresh epoch. Model failures/insufficient excitation
+are explicit abstentions. No inference result calls `learn_noise`, clears a
+profile or replaces one.
+
+Every observation carries its epoch, source frame range, model SHA256 and exact
+float32 little-endian PCM SHA256. After a person explicitly reviews a candidate,
+`apply_reviewed_interval_profile(observation, original_dry_pcm)` can measure and
+store that exact interval on a control thread. The caller must retain original
+PCM; firing `learn_noise` after a proposal would capture later audio. Application
+requires the current fresh candidate and matching full PCM digest, refuses active
+capture/draining, preserves the profile-use flag and retires the token on success.
+Rejected requests preserve the stored profile. The native measurement matches
+ordinary explicit capture in both backends. This explicit method is never called
+by the worker; identical audio with different intended uses still requires human
+judgment. A UI and host configuration/review flow remain to be integrated.
+
+Native evidence is in `audit/artifacts/ml-hiss-worker-20261025`. Tests include
+in-flight reset, forced queue rejection, occupied-pool recovery, future/dead/stale
+result refusal, geometry changes, allocation/deallocation guards, direct model
+agreement, bitwise audio/profile preservation, EOF tails and explicit original-PCM
+profile application. These establish local functional behavior, not real-source
+classification accuracy or cross-platform acceptance.

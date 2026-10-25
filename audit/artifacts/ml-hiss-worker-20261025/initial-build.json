@@ -1,0 +1,6 @@
+{
+  "exit_code": 101,
+  "stage": "integration test compile without QA",
+  "diagnostic": "Host test_utils and CountingAlloc are gated by qa/debug_assertions; corrected release validation to enable qa,interval-proposals, consistent with existing release tests.",
+  "corrected_integration_test_result": "4 passed, 0 ignored"
+}
