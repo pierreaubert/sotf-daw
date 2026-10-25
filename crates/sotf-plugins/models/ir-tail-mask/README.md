@@ -1,10 +1,12 @@
 # Experimental offline IR tail mask — rejected for general adoption
 
 This optional experiment estimates a linked time mask for the late part of an
-impulse response. It does **not** pass the audit's measured-response preservation
-requirement. On generated final scenes it beats the better classical method in
-only 2/48 cases. A late-reflection shift loses 9.074 dB of clean-IR reconstruction
-SNR despite meeting the current response bounds. Do not use this as an automatic
+impulse response. It does **not** pass the audit's full measured-response
+preservation requirement. The original unprotected model beats the better
+classical method in only 2/48 final cases and loses 9.074 dB reconstruction SNR
+on one late-reflection shift. An optional local-noise-budget policy now prevents
+such large losses in a new synthetic probe, with the model weights unchanged.
+Measured-IR and listening acceptance remain open; do not use this as an automatic
 IR cleaner. Convolution defaults and realtime DSP are unchanged.
 
 The exported model is project-trained, GPL-3.0-or-later, with no external IRs,
@@ -12,7 +14,9 @@ recordings or pretrained weights. SHA-256:
 `a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39`.
 There are 241 parameters (964 bytes as f32). Offline NumPy inference uses an
 8→24 tanh→1 sigmoid network with output bounded to 0.05..1. Model loading checks
-identity, file size, format, shapes, finite values and weight bounds. Training
+identity, file size, format, shapes, finite values and weight bounds. Hashing and
+parsing use the same bounded byte read, so a concurrent path replacement cannot
+substitute unverified weights. Training
 uses Torch only; prediction parity maximum error is 1.04e-7.
 
 ## Offline contract
@@ -54,7 +58,7 @@ Other accepted file geometries do not have model quality validation. Memory and
 file I/O occur offline; there is no additional runtime latency or inference task
 in the convolution processor.
 
-## Evidence and limitations
+## Original unprotected evidence and limitations
 
 Training uses 256 generated scenes; 48 disjoint development scenes select the
 weights. Model bytes/hash are frozen before generating 48 final scenes and 30
@@ -85,6 +89,67 @@ and missing-model exports at 16/48 kHz, mono/stereo, and callbacks 1/193/1024.
 After compensating the normal 1024-sample UPC latency, maximum IR error is 5.97e-8.
 This validates loading/filter realization, not the denoiser's quality, true-stereo
 routing, other rates, native host deadlines, or measured response preservation.
+
+## Optional local preservation policy
+
+Pass `--preservation-policy` and its matching `--policy-sha256` to constrain the
+proposal using the supplied prefix's per-channel noise power. The selected policy
+uses nonoverlapping 5 ms windows and a noise fraction of 0.5. For channel energy
+`E` in a window and reference-noise budget `B = 0.5 * prefix_noise_power * frames`,
+the gain floor is `1 - min(0.95, B/E)`. A common linked floor is the largest channel
+floor. Removed energy in each channel/window is therefore at most `B` in exact
+arithmetic. The f32 result is checked again; a budget violation rejects the
+candidate. A zero-noise channel conservatively forces unchanged linked output.
+The first 50 ms after arrival and preceding samples remain exact.
+
+This is a noise-reference-relative constraint, not a bound on unknown clean IR
+error. A bad or unrepresentative prefix can still invalidate the assumption.
+Protection does not identify the true clean decay, provide acoustic calibration,
+or guarantee every frequency or perceptual feature. Unprotected behavior remains
+available for reproducibility when the policy is omitted.
+
+Sixty **new** development scenes select window/fraction independently for the
+learned, Wiener and decay methods; all three select 5 ms / 0.5. Policies are saved
+and hashed before generating 72 fresh final scenes and 32 fresh shifts. Their
+source hashes are disjoint from all 382 prior and 60 development inputs. The new
+probe expands to 16/44.1/48/96 kHz and adds late packets, truncation, nonstationary
+prefixes and linked four-channel signals. Four-channel paths are correlated
+copies, not independent spatial measurements.
+
+All 104 guarded learned exports avoid reconstruction SNR loss in this probe,
+including 32 exact fallbacks (eight due to the nonstationary prefix). Accepted
+exports number 72. Median improvement over unchanged input is 1.525 dB in the
+72 final cases and 1.962 dB in the 32 shifts. Learned output beats the better
+independently calibrated classical method in only 6/72 final and 6/32 shift cases.
+This supports the protection rule more strongly than general ML adoption.
+Unprotected learned output loses up to 8.905 dB on the same new cases.
+
+Independent analysis verifies each per-channel/window budget and all sampled
+response metrics. With mixture-derived decisions held fixed on known clean IRs,
+worst conditional full-IR projection loss is 0.00805 dB and worst conditional
+late-structure loss is 0.02514 dB. These are generated-data results. The largest
+removed-energy/budget ratio is 0.94786, below one. All eight nonstationary-prefix
+cases retain original samples exactly. Seventy-two native UPC renders verify
+36 guarded/invalid-policy/missing-model WAV exports at four sample rates and
+callbacks 193/1024. Maximum error after compensating native latency is 5.97e-8.
+All 234 legacy export arrays remain identical when the policy is omitted.
+
+Evidence: `audit/artifacts/ml-ir-preservation-20261025`. Policy SHA-256:
+`1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b`.
+
+```sh
+python scripts/ml/ir_denoise.py --input measured.wav --output reviewed.wav \
+  --report reviewed.json --model crates/sotf-plugins/models/ir-tail-mask/model.json \
+  --model-sha256 a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39 \
+  --preservation-policy crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json \
+  --policy-sha256 1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b \
+  --arrival-ms 80 --noise-prefix-ms 60
+```
+
+Policy files have bounded size, exact schema, finite bounded numeric controls
+and an explicit raw-byte identity. Missing, malformed or mismatched policy data
+exports original f32 samples with a report. Path and identity must be supplied
+together. No automatic loading or normalization is introduced.
 
 ## Reproduction
 

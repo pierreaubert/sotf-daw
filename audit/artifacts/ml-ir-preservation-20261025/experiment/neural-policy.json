@@ -1,0 +1,5 @@
+{
+  "format": "sotf_ir_preservation_policy_v1",
+  "window_ms": 5.0,
+  "noise_fraction": 0.5
+}

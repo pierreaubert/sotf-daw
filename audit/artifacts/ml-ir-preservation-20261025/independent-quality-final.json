@@ -1,0 +1,93 @@
+{
+  "cases": 104,
+  "sources_disjoint": true,
+  "prefix_failure_fallback_cases": 8,
+  "max_metric_error": 0.0,
+  "max_response_error": 1.7530421558831222e-13,
+  "max_removed_noise_ratio": 0.9478577247838694,
+  "worst_conditional_clean_projection_loss_db": 0.008048441491174991,
+  "worst_conditional_structure_projection_loss_db": 0.025137946403884733,
+  "conditional_scope": "Mixture-derived masks held fixed and applied to known clean IR; not measured-device acceptance or inference of clean structure from PCM.",
+  "splits": {
+    "final": {
+      "neural": {
+        "accepted": 51,
+        "median_improvement_db": 1.5247994208475637,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.00014462871061949703
+      },
+      "wiener": {
+        "accepted": 49,
+        "median_improvement_db": 1.485045312358186,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.00010218798683686204
+      },
+      "decay": {
+        "accepted": 54,
+        "median_improvement_db": 0.5249784564661526,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.023392711263347424
+      },
+      "neural_unprotected": {
+        "accepted": 39,
+        "median_improvement_db": 0.0,
+        "worst_improvement_db": -8.716008112595233,
+        "max_added_structure_loss_db": 1.796564964969488
+      },
+      "wiener_unprotected": {
+        "accepted": 41,
+        "median_improvement_db": 0.665700839333022,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.0021721024090205735
+      },
+      "decay_unprotected": {
+        "accepted": 47,
+        "median_improvement_db": 0.5297359055730451,
+        "worst_improvement_db": -12.793402323059235,
+        "max_added_structure_loss_db": 2.996917167872562
+      },
+      "neural_better_than_best_classical": 6
+    },
+    "shift": {
+      "neural": {
+        "accepted": 21,
+        "median_improvement_db": 1.9615988326138396,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.02521964838338868
+      },
+      "wiener": {
+        "accepted": 21,
+        "median_improvement_db": 1.915211029733174,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.02515523936043639
+      },
+      "decay": {
+        "accepted": 21,
+        "median_improvement_db": 1.3503568129524206,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.025155427644812694
+      },
+      "neural_unprotected": {
+        "accepted": 11,
+        "median_improvement_db": 0.0,
+        "worst_improvement_db": -8.904675217696319,
+        "max_added_structure_loss_db": 2.9458813384029647
+      },
+      "wiener_unprotected": {
+        "accepted": 13,
+        "median_improvement_db": 0.0,
+        "worst_improvement_db": 0.0,
+        "max_added_structure_loss_db": 0.024993762043108162
+      },
+      "decay_unprotected": {
+        "accepted": 11,
+        "median_improvement_db": 0.0,
+        "worst_improvement_db": -7.484144783522702,
+        "max_added_structure_loss_db": 1.9170655087147166
+      },
+      "neural_better_than_best_classical": 6
+    }
+  },
+  "adoption_recommended": false,
+  "conclusion": "Local budget addresses large synthetic late-structure losses, but learned advantage is limited and measured-room/noise validation remains open."
+}

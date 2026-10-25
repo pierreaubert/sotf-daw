@@ -1,0 +1,17 @@
+{
+  ".gitattributes": "62397b1eb7a9191581a185b05bea4ff1708ef9c1f8f12ac62e172bd1c42a8856",
+  "audit/plugin-ml-implementation.json": "966181ca77d8da0ff962dcdee85845049344cda866e20879f7eda6dfc45dd341",
+  "crates/sotf-plugins/crates/sotf-plugin-convolution/USAGE.md": "124ee0c6ce58a9f814d24e70402a96015bd1be6ba219679db4025c125a0ca87f",
+  "crates/sotf-plugins/models/ir-tail-mask/README.md": "ecb2e3bf81baf0c154ce71aaba6027f7773c4dd5a7b9af379ec6092e477568d0",
+  "crates/sotf-plugins/models/ir-tail-mask/manifest.json": "5eda98d674f161d584d398c429d4f3c5992694816d38752b6cd5e147f6cbccac",
+  "crates/sotf-plugins/models/ir-tail-mask/model.json": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+  "scripts/ml/analyze_ir_preservation.py": "3aaa1885a312d75863b6104e65e025edd71ad7705adb9950d79e43e420338af7",
+  "scripts/ml/evaluate_ir_preservation.py": "370ae1020caf7df24f404b5074991c35a12a8f3500bdf0a6420dfad94573c87d",
+  "scripts/ml/ir_denoise.py": "4c4edb2a057ab1fa3793361778b36e40a4f47a6afb781745195b661ce87ce820",
+  "scripts/ml/ir_preservation.py": "4badc44da1ab163855383c42899f25a63a8f11a2ed656c2769603d97a162f743",
+  "scripts/ml/test_ir_denoise.py": "a21b0293806bf2c7235334eb25d44fcc93867bd4ea614b4e7a4c5c9e76584454",
+  "scripts/ml/test_ir_preservation.py": "9c6f116f6461607867e7a4c979f0142b532981bbce19b293e3e44e74ce19695d",
+  "scripts/ml/train_ir_denoise.py": "de76573667e906974bffabbddbb1770a8aa23c080c320238b8a9088187e87d96",
+  "scripts/ml/verify_ir_preservation.py": "a07a8120c4c0f8e6b1a0a5c65feb7d0feb563cb86a8d31ddcd816847ebdbd8f4"
+}

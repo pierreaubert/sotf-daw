@@ -1,0 +1,14 @@
+test_invalid_geometry_and_nonfinite_input (test_ir_denoise.IrDenoiseTests.test_invalid_geometry_and_nonfinite_input) ... ok
+test_late_structural_change_can_trigger_response_rejection (test_ir_denoise.IrDenoiseTests.test_late_structural_change_can_trigger_response_rejection) ... ok
+test_linked_mask_and_protected_samples_are_exact (test_ir_denoise.IrDenoiseTests.test_linked_mask_and_protected_samples_are_exact) ... ok
+test_malformed_model_rejected_before_inference (test_ir_denoise.IrDenoiseTests.test_malformed_model_rejected_before_inference) ... ok
+test_missing_model_cli_exports_exact_original (test_ir_denoise.IrDenoiseTests.test_missing_model_cli_exports_exact_original) ... ok
+test_arbitrary_mask_obeys_every_channel_window_budget (test_ir_preservation.PreservationTests.test_arbitrary_mask_obeys_every_channel_window_budget) ... ok
+test_invalid_or_mismatched_policy_rejected (test_ir_preservation.PreservationTests.test_invalid_or_mismatched_policy_rejected) ... ok
+test_late_reflection_is_preserved_above_noise (test_ir_preservation.PreservationTests.test_late_reflection_is_preserved_above_noise) ... ok
+test_zero_noise_channel_forces_exact_linked_preservation (test_ir_preservation.PreservationTests.test_zero_noise_channel_forces_exact_linked_preservation) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.289s
+
+OK

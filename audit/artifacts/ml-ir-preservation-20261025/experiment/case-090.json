@@ -1,0 +1,143 @@
+{
+  "index": 90,
+  "split": "shift",
+  "metadata": {
+    "seed": 20282043,
+    "rate": 48000,
+    "family": "prefix_step",
+    "frames": 72000,
+    "channels": 2,
+    "arrival": 3840,
+    "noise_frames": 2880,
+    "rt60_parameter_seconds": 0.6822471680736034,
+    "nominal_snr_db": 31.162956482652508
+  },
+  "directory": "/Volumes/home_tmp/tmp/ml-ir-preservation-20261025/case-090",
+  "arrays": {
+    "clean": {
+      "sha256": "b9f5efe6a9ac735473e452c0d310c43e29aec0d41ade08e0f6989811c7be748c",
+      "floats": 144000
+    },
+    "noisy": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "neural": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "neural_mask": {
+      "sha256": "33f70cab6a78936dfe260543d70fed04c1e1b2c772675fa144694c8930edf966",
+      "doubles": 72000
+    },
+    "neural_unprotected": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "wiener": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "wiener_mask": {
+      "sha256": "33f70cab6a78936dfe260543d70fed04c1e1b2c772675fa144694c8930edf966",
+      "doubles": 72000
+    },
+    "wiener_unprotected": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "decay": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    },
+    "decay_mask": {
+      "sha256": "33f70cab6a78936dfe260543d70fed04c1e1b2c772675fa144694c8930edf966",
+      "doubles": 72000
+    },
+    "decay_unprotected": {
+      "sha256": "873c6eb479b592dc3b8cffb6fb03b6e1e18ad8cad65d9b60fbefcdfe1d68531a",
+      "floats": 144000
+    }
+  },
+  "methods": {
+    "unchanged": {
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      }
+    },
+    "neural": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "neural_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": null
+    },
+    "wiener": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "wiener_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": null
+    },
+    "decay": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "decay_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 30.036007719505076,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.00022687949555719254
+      },
+      "policy_sha256": null
+    }
+  }
+}

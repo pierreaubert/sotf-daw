@@ -1,0 +1,47 @@
+{
+  "format": "sotf_ir_preservation_experiment_v1",
+  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "development_seed": 20280025,
+  "development_cases": 60,
+  "development_rates": [
+    16000,
+    48000
+  ],
+  "final_seed": 20281025,
+  "final_cases": 72,
+  "final_rates": [
+    16000,
+    44100,
+    48000,
+    96000
+  ],
+  "shift_seed": 20282025,
+  "shift_cases": 32,
+  "shift_families": [
+    "late_packet",
+    "truncated",
+    "prefix_step",
+    "linked_four"
+  ],
+  "policy_grid": {
+    "window_ms": [
+      1.0,
+      5.0,
+      20.0
+    ],
+    "noise_fraction": [
+      0.25,
+      0.5,
+      1.0
+    ]
+  },
+  "selection": "Each method independently chooses among policies meeting development worst SNR delta >= -0.25 dB and max added structure projection loss <= 0.1 dB. Maximize median improvement, then worst improvement. If none qualifies, record failure and select max worst improvement, then median.",
+  "freeze": "Write selected policies/hashes before generating or reading any new final/shift source. Keep original model weights unchanged.",
+  "source_sha256": {
+    "evaluate_ir_preservation.py": "370ae1020caf7df24f404b5074991c35a12a8f3500bdf0a6420dfad94573c87d",
+    "ir_preservation.py": "4badc44da1ab163855383c42899f25a63a8f11a2ed656c2769603d97a162f743",
+    "ir_denoise.py": "86300f17c0287204e03cc75e4b8b1101987a94824d0f45f84a80ae5fe58d9f10",
+    "train_ir_denoise.py": "de76573667e906974bffabbddbb1770a8aa23c080c320238b8a9088187e87d96"
+  },
+  "scope": "Generated mono/stereo plus linked four-channel shift, simulated IRs and stationary/piecewise noise; no measured-room or listening acceptance."
+}

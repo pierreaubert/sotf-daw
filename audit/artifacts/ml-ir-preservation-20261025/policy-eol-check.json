@@ -1,0 +1,23 @@
+{
+  "checks": [
+    {
+      "path": "crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json",
+      "sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+      "git_blob_sha1": "b752bdfcc00403ac777ea250537f852c334cde7c",
+      "autocrlf_clean_bytes_unchanged": true
+    },
+    {
+      "path": "audit/artifacts/ml-ir-preservation-20261025/experiment/neural-policy.json",
+      "sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+      "git_blob_sha1": "b752bdfcc00403ac777ea250537f852c334cde7c",
+      "autocrlf_clean_bytes_unchanged": true
+    },
+    {
+      "path": "audit/artifacts/ml-ir-preservation-20261025/experiment/evaluation-source/ir_preservation.py",
+      "sha256": "4badc44da1ab163855383c42899f25a63a8f11a2ed656c2769603d97a162f743",
+      "git_blob_sha1": "bf73b3fe3066390210477e65e65fd4e6258774ac",
+      "autocrlf_clean_bytes_unchanged": true
+    }
+  ],
+  "scope": "Raw-byte checksummed policy and evidence remain unmodified by Git clean filtering with autocrlf=true."
+}

@@ -136,13 +136,19 @@
         "scripts/ml/test_ir_denoise.py",
         "crates/sotf-plugins/models/ir-tail-mask",
         "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_ir.rs",
-        "audit/artifacts/ml-ir-denoise-20261025"
+        "audit/artifacts/ml-ir-denoise-20261025",
+        "scripts/ml/ir_preservation.py",
+        "scripts/ml/evaluate_ir_preservation.py",
+        "scripts/ml/analyze_ir_preservation.py",
+        "scripts/ml/verify_ir_preservation.py",
+        "scripts/ml/test_ir_preservation.py",
+        "audit/artifacts/ml-ir-preservation-20261025"
       ],
       "remaining": [
-        "Develop protection of late reflections and multi-slope/coherent decays using separate development material; evaluate new final data.",
+        "Measured IR/noise or repeated-measurement validation of late structure: new 60-case development / 104-case fresh final-shift local-budget policy avoids synthetic SNR losses, but cannot establish unknown clean measured-response preservation.",
         "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
         "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration.",
-        "Current model fails general adoption: only 2/48 final cases beat the better classical baseline; one admitted late-reflection shift loses 9.074 dB reconstruction SNR despite response bounds. Keep optional offline experiment only."
+        "Unprotected model remains rejected. Optional guarded model beats the better independently calibrated classical method in only 12/104 fresh cases; measured/perceptual benefit and general adoption remain unproven."
       ]
     },
     {

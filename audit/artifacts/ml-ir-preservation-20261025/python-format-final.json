@@ -1,0 +1,17 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/ir_denoise.py",
+    "scripts/ml/ir_preservation.py",
+    "scripts/ml/train_ir_denoise.py",
+    "scripts/ml/evaluate_ir_preservation.py",
+    "scripts/ml/analyze_ir_preservation.py",
+    "scripts/ml/verify_ir_preservation.py",
+    "scripts/ml/test_ir_denoise.py",
+    "scripts/ml/test_ir_preservation.py"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.009434707928448915
+}

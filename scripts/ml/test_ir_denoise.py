@@ -1,14 +1,25 @@
 """Check IR timing, response rejection, linked masking and CLI fallback contracts."""
 
+import hashlib
 import json
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
-from ir_denoise import apply, load_model, response_checks, sha, validate_input
+from ir_denoise import (
+    FEATURES,
+    FORMAT,
+    HIDDEN,
+    apply,
+    load_model,
+    response_checks,
+    sha,
+    validate_input,
+)
 from scipy.io import wavfile
 
 
@@ -97,6 +108,55 @@ class IrDenoiseTests(unittest.TestCase):
             again = subprocess.run(command, check=False, capture_output=True, text=True)
             self.assertNotEqual(again.returncode, 0)
             self.assertEqual(sha(output), before)
+
+    def test_model_identity_covers_the_bytes_actually_parsed(self):
+        model = {
+            "format": FORMAT,
+            "w1": np.zeros((HIDDEN, FEATURES)).tolist(),
+            "b1": np.zeros(HIDDEN).tolist(),
+            "w2": np.zeros(HIDDEN).tolist(),
+            "b2": 1.0,
+        }
+        original = json.dumps(model).encode()
+        replacement = json.dumps({**model, "b2": 2.0}).encode()
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / "model.json"
+            target.write_bytes(original)
+            original_open = Path.open
+            replaced = False
+
+            class ReplaceAfterRead:
+                def __init__(self, handle):
+                    self.handle = handle
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, *_args):
+                    self.handle.close()
+
+                def read(self, size=-1):
+                    nonlocal replaced
+                    raw = self.handle.read(size)
+                    self.handle.close()
+                    with original_open(target, "wb") as writer:
+                        writer.write(replacement)
+                    replaced = True
+                    return raw
+
+            def open_during_replace(path, mode="r", *args, **kwargs):
+                handle = original_open(path, mode, *args, **kwargs)
+                return (
+                    ReplaceAfterRead(handle)
+                    if path == target and mode == "rb" and not replaced
+                    else handle
+                )
+
+            with patch.object(Path, "open", open_during_replace):
+                loaded = load_model(target, hashlib.sha256(original).hexdigest())
+            self.assertTrue(replaced)
+            self.assertEqual(target.read_bytes(), replacement)
+            self.assertEqual(float(loaded["b2"]), 1.0)
 
     def test_malformed_model_rejected_before_inference(self):
         with tempfile.TemporaryDirectory() as directory:

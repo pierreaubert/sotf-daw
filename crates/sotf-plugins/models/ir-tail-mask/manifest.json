@@ -19,7 +19,7 @@
   "runtime": "Offline NumPy only. Separate reviewed float32 WAV export; no convolution audio-thread inference, automatic replacement, resampling, trimming, delay or normalization.",
   "model_identity": "Caller supplies expected raw-byte SHA-256; malformed/missing model retains original f32 samples.",
   "adoption_recommended": false,
-  "quality_gate": "failed_late_structure_preservation_and_classical_comparison",
+  "quality_gate": "Unprotected model failed; optional local-budget policy passes the fresh synthetic preservation probe, while measured-IR and broader model-adoption gates remain open.",
   "evidence": "audit/artifacts/ml-ir-denoise-20261025",
   "quality": {
     "numpy_torch_max_error": 1.0330431265970219e-07,
@@ -30,8 +30,24 @@
     "worst_shift_classical_decay_improvement_db": -1.7671564703007343
   },
   "remaining": [
-    "Develop protection of late reflections and multi-slope/coherent decays using separate development material; evaluate new final data.",
+    "Validate preservation of weak late structures using independent measured IR/noise or repeated measurements; local prefix-noise budgets pass a fresh synthetic probe but do not prove clean measured-response preservation.",
     "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
     "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration."
-  ]
+  ],
+  "preservation_policy": {
+    "format": "sotf_ir_preservation_policy_v1",
+    "sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+    "window_ms": 5.0,
+    "noise_fraction": 0.5,
+    "selection": "60 new development cases; separate policy selection for learned/Wiener/decay, before new final/shift generation. Original model weights unchanged.",
+    "evidence": "audit/artifacts/ml-ir-preservation-20261025",
+    "new_final_cases": 72,
+    "new_shift_cases": 32,
+    "neural_final_median_improvement_db": 1.5247994208475637,
+    "neural_shift_median_improvement_db": 1.9615988326138396,
+    "neural_worst_improvement_db": 0.0,
+    "neural_better_than_best_classical": 12,
+    "worst_conditional_structure_projection_loss_db": 0.025137946403884733,
+    "guarantee": "Removed energy per short channel/window bounded against stationary prefix-derived noise budget. This does not identify or guarantee the unknown clean IR."
+  }
 }

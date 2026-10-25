@@ -1,0 +1,21 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/verify_ir_preservation.py",
+    "--evidence",
+    "audit/artifacts/ml-ir-preservation-20261025/experiment",
+    "--previous-evidence",
+    "audit/artifacts/ml-ir-denoise-20261025/experiment",
+    "--model",
+    "crates/sotf-plugins/models/ir-tail-mask/model.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-convolution-ir",
+    "--temporary",
+    "/Volumes/home_tmp/tmp/ml-ir-preservation-native-20261025",
+    "--output",
+    "audit/artifacts/ml-ir-preservation-20261025/native-verification.json"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 6.611932375002652,
+  "native_source_and_binary_match_previous_verified_build": true
+}

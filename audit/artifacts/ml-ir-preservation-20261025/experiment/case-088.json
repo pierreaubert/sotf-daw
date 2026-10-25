@@ -1,0 +1,143 @@
+{
+  "index": 88,
+  "split": "shift",
+  "metadata": {
+    "seed": 20282041,
+    "rate": 16000,
+    "family": "prefix_step",
+    "frames": 24000,
+    "channels": 2,
+    "arrival": 1280,
+    "noise_frames": 960,
+    "rt60_parameter_seconds": 0.7192875260771151,
+    "nominal_snr_db": 35.13332657871935
+  },
+  "directory": "/Volumes/home_tmp/tmp/ml-ir-preservation-20261025/case-088",
+  "arrays": {
+    "clean": {
+      "sha256": "4199cef3701f18dc28ba3a1cd0d64e7b8f08b6efee0acb2fe83309f97029d6e2",
+      "floats": 48000
+    },
+    "noisy": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "neural": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "neural_mask": {
+      "sha256": "d7374a8d569d9cbdf797abccb522ed0d7101b604ed73cf4f73f9cc7484e5cf2e",
+      "doubles": 24000
+    },
+    "neural_unprotected": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "wiener": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "wiener_mask": {
+      "sha256": "d7374a8d569d9cbdf797abccb522ed0d7101b604ed73cf4f73f9cc7484e5cf2e",
+      "doubles": 24000
+    },
+    "wiener_unprotected": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "decay": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    },
+    "decay_mask": {
+      "sha256": "d7374a8d569d9cbdf797abccb522ed0d7101b604ed73cf4f73f9cc7484e5cf2e",
+      "doubles": 24000
+    },
+    "decay_unprotected": {
+      "sha256": "755955e0df5c95797899327530653e184d3c435e38bfccaa5a105f8b42be1985",
+      "floats": 48000
+    }
+  },
+  "methods": {
+    "unchanged": {
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      }
+    },
+    "neural": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "neural_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": null
+    },
+    "wiener": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "wiener_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": null
+    },
+    "decay": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "decay_unprotected": {
+      "checks": {
+        "accepted": false,
+        "fallback_error": "noise reference is silent or nonstationary"
+      },
+      "quality": {
+        "snr_db": 34.07734939940352,
+        "improvement_db": 0.0,
+        "projection_loss_db": -0.0007303835803554891
+      },
+      "policy_sha256": null
+    }
+  }
+}

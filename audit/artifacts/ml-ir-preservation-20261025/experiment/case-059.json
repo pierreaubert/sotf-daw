@@ -1,0 +1,236 @@
+{
+  "index": 59,
+  "split": "final",
+  "metadata": {
+    "seed": 20281084,
+    "rate": 96000,
+    "family": "colored_noise",
+    "frames": 192000,
+    "channels": 1,
+    "arrival": 7680,
+    "noise_frames": 5760,
+    "rt60_parameter_seconds": 0.87860861177008,
+    "nominal_snr_db": 38.07602823279288
+  },
+  "directory": "/Volumes/home_tmp/tmp/ml-ir-preservation-20261025/case-059",
+  "arrays": {
+    "clean": {
+      "sha256": "6fc64b2c85c76e1350cb1b88371063ba1d796eac9e346987ce3501645819be64",
+      "floats": 192000
+    },
+    "noisy": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    },
+    "neural": {
+      "sha256": "479469afecf0e96e7014f2cbc5803b6af7b9c32a02153efa9a3a1081266bcfeb",
+      "floats": 192000
+    },
+    "neural_mask": {
+      "sha256": "2622c476aa425ef14dc98b812b2e03d3d96c836d7b4b0ea5867bd3b447aeb038",
+      "doubles": 192000
+    },
+    "neural_unprotected": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    },
+    "wiener": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    },
+    "wiener_mask": {
+      "sha256": "22b521b37b512662b62004a527f0769c953b21004eb840109762380897be8c75",
+      "doubles": 192000
+    },
+    "wiener_unprotected": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    },
+    "decay": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    },
+    "decay_mask": {
+      "sha256": "22b521b37b512662b62004a527f0769c953b21004eb840109762380897be8c75",
+      "doubles": 192000
+    },
+    "decay_unprotected": {
+      "sha256": "1f8ba96537ad0145520da64a670e1fabf66f64c676fcc77925eae3a2e6843939",
+      "floats": 192000
+    }
+  },
+  "methods": {
+    "unchanged": {
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      }
+    },
+    "neural": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.005334946106723561,
+        "max_magnitude_change_db": 0.9930191116927645,
+        "max_phase_change_degrees": 6.349419155086411,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.9162033272227588,
+          "windows": 374,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "quality": {
+        "snr_db": 40.74988754656397,
+        "improvement_db": 2.673859185103324,
+        "projection_loss_db": 0.00041888881226919436
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "neural_unprotected": {
+      "checks": {
+        "accepted": false,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.00907204267253971,
+        "max_magnitude_change_db": 1.6984294868631773,
+        "max_phase_change_degrees": 9.913481365360571,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      },
+      "policy_sha256": null
+    },
+    "wiener": {
+      "checks": {
+        "accepted": false,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.005350743141948526,
+        "max_magnitude_change_db": 1.0015747025226238,
+        "max_phase_change_degrees": 6.309175109898794,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.9170801500577261,
+          "windows": 374,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "wiener_unprotected": {
+      "checks": {
+        "accepted": false,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.009439673070477021,
+        "max_magnitude_change_db": 1.8436756170019013,
+        "max_phase_change_degrees": 10.73881316237005,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      },
+      "policy_sha256": null
+    },
+    "decay": {
+      "checks": {
+        "accepted": false,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.005350743141948526,
+        "max_magnitude_change_db": 1.0015747025226238,
+        "max_phase_change_degrees": 6.309175109898794,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.9170801500577261,
+          "windows": 374,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      },
+      "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b"
+    },
+    "decay_unprotected": {
+      "checks": {
+        "accepted": false,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.009445192165053979,
+        "max_magnitude_change_db": 1.825790246327466,
+        "max_phase_change_degrees": 10.86476774972633,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 38.07602836146065,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0001984489972479267
+      },
+      "policy_sha256": null
+    }
+  }
+}

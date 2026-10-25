@@ -174,5 +174,6 @@ Input → Partition → FFT → Frequency Domain Line (ring buffer)
 
 An optional [offline learned tail-mask experiment](../../models/ir-tail-mask/README.md)
 exports a separate IR for review. It does not modify loaded IRs or add inference
-to audio processing. The current model fails late-reflection preservation and is
-not recommended for general use; sampled response bounds alone proved insufficient.
+to audio processing. The unprotected model fails late-reflection preservation.
+An optional local-noise-budget policy improves fresh synthetic tests; measured-IR
+and listening acceptance remain open, so general use is not recommended.

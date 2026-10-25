@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+from ir_preservation import load_policy, preserve_tail
 from scipy.io import wavfile
 
 FORMAT = "sotf_ir_tail_mask_v1"
@@ -103,9 +104,11 @@ def analyze(samples, rate, arrival, noise_frames):
 
 
 def load_model(path, expected):
-    if not expected or path.stat().st_size > 131072 or sha(path) != expected:
+    with path.open("rb") as handle:
+        raw = handle.read(131073)
+    if not expected or len(raw) > 131072 or hashlib.sha256(raw).hexdigest() != expected:
         raise ValueError("model identity or size mismatch")
-    model = json.loads(path.read_text())
+    model = json.loads(raw)
     if not isinstance(model, dict) or model.get("format") != FORMAT:
         raise ValueError("unsupported model format")
     for name, shape in [
@@ -194,7 +197,15 @@ def response_checks(original, candidate, rate, arrival):
     }
 
 
-def propose(samples, rate, arrival, noise_frames, model, method="neural"):
+def propose(
+    samples,
+    rate,
+    arrival,
+    noise_frames,
+    model,
+    method="neural",
+    preservation_policy=None,
+):
     samples = validate_input(samples, rate, arrival, noise_frames)
     features, starts, _, ratio, predicted = analyze(
         samples, rate, arrival, noise_frames
@@ -211,7 +222,15 @@ def propose(samples, rate, arrival, noise_frames, model, method="neural"):
     else:
         raise ValueError("unknown method")
     candidate, mask = apply(samples, rate, arrival, starts, gains)
+    preservation = None
+    if preservation_policy is not None:
+        candidate, mask, preservation = preserve_tail(
+            samples, rate, arrival, noise_frames, mask, preservation_policy
+        )
     checks = response_checks(samples, candidate, rate, arrival)
+    if preservation is not None:
+        checks["preservation"] = preservation
+        checks["accepted"] = checks["accepted"] and preservation["within_budget"]
     return candidate if checks["accepted"] else samples.astype("<f4"), checks, mask
 
 
@@ -224,7 +243,13 @@ def main():
     parser.add_argument("--model-sha256", required=True)
     parser.add_argument("--arrival-ms", type=float, required=True)
     parser.add_argument("--noise-prefix-ms", type=float, required=True)
+    parser.add_argument("--preservation-policy", type=Path)
+    parser.add_argument("--policy-sha256")
     args = parser.parse_args()
+    if bool(args.preservation_policy) != bool(args.policy_sha256):
+        raise ValueError(
+            "preservation policy path and SHA-256 must be supplied together"
+        )
     if (
         args.output.exists()
         or args.report.exists()
@@ -251,7 +276,14 @@ def main():
     checks, error = None, None
     try:
         model = load_model(args.model, args.model_sha256)
-        result, checks, _ = propose(samples, rate, arrival, noise_frames, model)
+        policy = (
+            load_policy(args.preservation_policy, args.policy_sha256)
+            if args.preservation_policy
+            else None
+        )
+        result, checks, _ = propose(
+            samples, rate, arrival, noise_frames, model, preservation_policy=policy
+        )
     except (OSError, KeyError, TypeError, ValueError) as exc:
         result, error = samples.astype("<f4"), str(exc)
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -262,6 +294,7 @@ def main():
         "input_sha256": sha(args.input),
         "output_sha256": sha(args.output),
         "model_sha256": args.model_sha256,
+        "preservation_policy_sha256": args.policy_sha256,
         "sample_rate": rate,
         "frames": len(samples),
         "channels": samples.shape[1],
