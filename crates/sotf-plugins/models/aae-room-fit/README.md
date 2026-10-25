@@ -107,3 +107,37 @@ was 3.971 s versus 3.716 s. No speedup or measured-room acceptance is claimed.
 The independent reducer checked each trace minimum, render budget, Infinite
 native tail, category coverage and zero target audio-hash overlap with all
 1,984 corpus records. See `inverse-final-independent-reduction.json`.
+
+
+## Measured and observation-shift checkpoint
+
+`audit/artifacts/ml-aae-shift-20261025` adds six published Aachen AIR room
+responses at 48 kHz, each with fixed approximate arrival annotations shifted
+by -24/0/+24 samples. Five rooms pass the fixed profile proxy under all three
+annotations; the booth fails under all three. The neural search beats the
+classical native dictionary search only for lecture and stairway responses.
+The classical result wins for booth, office, meeting room and large hall.
+These are six rooms with correlated variants, not 18 independent rooms.
+
+The ten-condition synthetic shift probe covers 16/48/96 kHz, two truncations,
+three noise levels, a 5 ms late origin and a -20 dB gain change. Seven pass the
+profile proxy. The 250 ms and 10 dB SNR inputs fail admission; the 20 dB SNR
+input fails exact fitting. No weight, threshold or search setting was tuned
+from these measurements. The independent reducer checks native trace errors,
+render budgets and fallback decisions, and reports clean-reference full-window
+errors for synthetic inputs separately from possibly corrupted input fit loss.
+
+A short-recording bug was corrected before this evaluation: native candidate
+energy is integrated over the same captured duration as the target. Masking
+later feature times alone left a biased denominator from future native energy.
+A 0.5-second native identity regression changes from 0.0321 dB error to zero;
+full eight-second observations retain the previous behavior. Both model and
+native dictionary still propose from eight-second training descriptors, so
+short-record performance requires native verification and remains limited.
+
+The archive remains in an external cache. Its original `h_air` MATLAB arrays
+were used for evaluation only; no AIR recording was trained on or redistributed.
+The current [RWTH project page](https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database/)
+names an MIT license, but the pinned historical download lacks that file. Its
+license-file reconciliation and arrival annotation uncertainty are recorded in
+`measured-provenance.json`. Spatial/listening acceptance remains open.

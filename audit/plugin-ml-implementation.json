@@ -22,12 +22,16 @@
         "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_fit_render.rs",
         "crates/sotf-plugins/models/aae-room-fit/manifest.json",
         "crates/sotf-plugins/models/aae-room-fit/README.md",
-        "audit/artifacts/ml-aae-fit-20261025"
+        "audit/artifacts/ml-aae-fit-20261025",
+        "scripts/ml/evaluate_aae_room_shift.py",
+        "scripts/ml/analyze_aae_room_shift.py",
+        "audit/artifacts/ml-aae-shift-20261025"
       ],
       "remaining": [
-        "Independent measured deconvolved-room IR evaluation with reliable direct-arrival provenance; no identified local recording admitted yet.",
-        "Cross-rate, noise/truncation/arrival-error shift validation and calibrated admission/quality criteria.",
-        "Perceptual and spatial suitability review; finite-window normalized decay fit alone does not establish a room match."
+        "Broader independent measured-room acceptance with reliable ground-truth arrival annotations; preliminary six-room AIR evaluation uses approximate arrivals and correlated variants.",
+        "Reconcile the legacy AIR archive with the current primary-page MIT license statement before redistributing any external IR data; no AIR recordings were committed or used in training.",
+        "Expand cross-rate, noise, truncation and arrival shift validation beyond the frozen ten-condition single-layout probe; calibrate admission/quality criteria.",
+        "Spatial and perceptual suitability review; neural fitting improved only two of six measured rooms versus the native dictionary baseline, so no general adoption claim."
       ]
     },
     {

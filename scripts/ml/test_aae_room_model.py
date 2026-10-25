@@ -58,11 +58,13 @@ class AnalyticRenderer:
 
     def __init__(self):
         self.calls = 0
+        self.observation_seconds = []
 
-    def render(self, unit, layout, preset, *, rate):
+    def render(self, unit, layout, preset, *, rate, seconds=8):
         self.calls += 1
+        self.observation_seconds.append(seconds)
         p = parameters(unit, layout, preset)
-        frame = np.arange(rate * 8)
+        frame = np.arange(round(rate * seconds))
         delay = round(p["pre_delay_ms"] * rate / 1000)
         time = np.maximum(frame - delay, 0) / rate
         audio = np.exp(-3 * math.log(10) * time / p["rt60"])
@@ -142,6 +144,14 @@ class ModelTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "observed decay"):
             fit(target, renderer, layout="5.0", rate=RATE, budget=8)
         self.assertEqual(renderer.calls, 0)
+
+    def test_native_energy_integration_uses_only_the_measured_window(self):
+        source = np.exp(-3 * math.log(10) * np.arange(RATE) / RATE / 0.3)
+        target = describe(source, RATE)
+        renderer = AnalyticRenderer()
+        fit(target, renderer, layout="5.0", rate=RATE, budget=8)
+        self.assertGreater(renderer.calls, 0)
+        self.assertEqual(renderer.observation_seconds, [1.0] * renderer.calls)
 
     def test_perfect_surrogate_claim_does_not_bypass_native_rejection(self):
         source = np.zeros(RATE * 8)

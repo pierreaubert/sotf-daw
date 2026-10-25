@@ -1,0 +1,17 @@
+[
+  {
+    "mutation": "native_budget",
+    "rejected": true,
+    "error": "native budget mismatch"
+  },
+  {
+    "mutation": "qualification",
+    "rejected": true,
+    "error": "qualification disagrees with exact native error"
+  },
+  {
+    "mutation": "per_curve_error",
+    "rejected": true,
+    "error": "per-curve errors disagree with native objective"
+  }
+]

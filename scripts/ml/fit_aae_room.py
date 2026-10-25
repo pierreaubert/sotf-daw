@@ -202,7 +202,12 @@ def fit(
             return cache[key]
         if len(records) >= budget:
             raise BudgetExhausted
-        audio, metadata = renderer.render(unit, layout, preset, rate=rate)
+        # Reverse-integrated energy is normalized over the captured window.
+        # Compare the same window: masking later feature times alone does not
+        # remove unobserved future energy from an eight-second native response.
+        audio, metadata = renderer.render(
+            unit, layout, preset, rate=rate, seconds=target["observed_seconds"]
+        )
         measured = describe(audio, rate)
         value = float(
             np.mean((measured["features"][mask] - target["features"][mask]) ** 2)

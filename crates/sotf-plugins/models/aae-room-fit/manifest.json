@@ -46,5 +46,16 @@
     "inference_or_quality_tuning_from_final": false
   },
   "process_memory_evidence": "audit/artifacts/ml-aae-fit-20261025/cli-*/time-stderr.txt (macOS whole offline command; includes Python/SciPy/native worker, not audio-callback budget)",
-  "loader_hardening_parity": "audit/artifacts/ml-aae-fit-20261025/loader-hardening-parity.json"
+  "loader_hardening_parity": "audit/artifacts/ml-aae-fit-20261025/loader-hardening-parity.json",
+  "observation_shift_validation": {
+    "artifacts": "audit/artifacts/ml-aae-shift-20261025",
+    "measured_rooms": 6,
+    "measured_arrival_variants": 18,
+    "measured_profile_qualified_variants": 15,
+    "measured_neural_lower_error_variants": 6,
+    "synthetic_shift_cases": 10,
+    "synthetic_profile_qualified": 7,
+    "weights_or_threshold_changes": false,
+    "candidate_observation": "Native verification integrates over the same captured duration as the target; training descriptors remain eight-second observations."
+  }
 }

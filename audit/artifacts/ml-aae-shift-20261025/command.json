@@ -1,0 +1,29 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_aae_room_shift.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aae-fit-render",
+    "--temporary",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/audit/artifacts/ml-aae-shift-20261025/renders",
+    "--model",
+    "crates/sotf-plugins/models/aae-room-fit/model.json",
+    "--model-sha256",
+    "f13de094177d7d8270d34bb8e1bc4a49fcd6f43d9a04536220169721df97c2d8",
+    "--dictionary",
+    "crates/sotf-plugins/models/aae-room-fit/native_dictionary.npz",
+    "--air-archive",
+    "/Volumes/home_tmp/tmp/ml-aae-air-20261025/air_database_release_1_4.zip",
+    "--output",
+    "audit/artifacts/ml-aae-shift-20261025/evaluation",
+    "--budget",
+    "64"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 164.88334202766418,
+  "thread_limits": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  }
+}

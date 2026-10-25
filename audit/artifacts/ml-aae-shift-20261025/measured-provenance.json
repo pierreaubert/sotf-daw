@@ -1,0 +1,11 @@
+{
+  "primary_project_url": "https://www.iks.rwth-aachen.de/en/research/tools-downloads/databases/aachen-impulse-response-database/",
+  "primary_page_license_statement": "For license information see the included MIT license file.",
+  "historical_archive_contains_license_file": false,
+  "data_policy": "Evaluation only; no raw AIR files included in repository and no AIR training or fine-tuning.",
+  "authors": "Marco Jeub, Magnus Schaefer and Peter Vary; RWTH Aachen University",
+  "reference": "A Binaural Room Impulse Response Database for the Evaluation of Dereverberation Algorithms, DSP 2009",
+  "input_format": "Original MATLAB h_air double arrays and air_info.fs, no fade or deconvolution in this workflow; documented by upstream load_air.m",
+  "arrival_annotations": "Fixed first substantial arrivals, approximate; evaluate -24/0/+24 samples at48k, no dataset ground truth claimed.",
+  "source_access": "Current project HTML failed direct requests with connection reset/502; primary search snapshot supplied license statement; pinned legacy archive downloaded successfully. Current archive/license reconciliation remains open before redistribution."
+}
