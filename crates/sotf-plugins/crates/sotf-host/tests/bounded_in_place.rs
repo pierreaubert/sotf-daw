@@ -420,3 +420,254 @@ fn direct_parametric_in_place_fallback_retains_keys_and_input_stride() {
         assert_eq!(&frame[2..], &original[index * 4 + 2..index * 4 + 4]);
     }
 }
+
+// A deliberately block-dependent processor cannot opt in to subdivision.
+// The output embeds the original callback length, transport, and event offset.
+#[derive(Default)]
+struct DirectProbe {
+    calls: usize,
+    native_f64: bool,
+}
+
+impl DirectProbe {
+    fn gain(&mut self, context: &ProcessContext) -> f64 {
+        self.calls += 1;
+        assert_eq!(context.transport.sample_position, 1234);
+        assert_eq!(context.midi_events.len(), 1);
+        assert_eq!(context.midi_events[0].sample_offset, context.num_frames - 1);
+        context.num_frames as f64 * 0.000001
+    }
+}
+
+impl ParametricInPlacePlugin for DirectProbe {
+    fn info(&self) -> PluginInfo {
+        PluginInfo::new("direct probe", "1", "test")
+    }
+    fn channels(&self) -> usize {
+        2
+    }
+    fn input_channels(&self) -> usize {
+        4
+    }
+    fn supports_direct_buffer_processing(&self) -> bool {
+        true
+    }
+    fn supports_f64(&self) -> bool {
+        self.native_f64
+    }
+    fn parameter_schema(&self) -> ParameterSchema {
+        vec![]
+    }
+    fn current_values(&self) -> ParameterSet {
+        ParameterSet::new()
+    }
+    fn apply_values(&mut self, _: ParameterSet) -> PluginResult<()> {
+        Ok(())
+    }
+    fn parametric_get_parameter(&self, _: &ParameterId) -> Option<ParameterValue> {
+        Some(ParameterValue::Int(self.calls as i32))
+    }
+    fn reset(&mut self) {
+        self.calls = 0;
+    }
+    fn process_in_place(&mut self, _: &mut [f32], _: &ProcessContext) -> PluginResult<usize> {
+        Err("The direct route must not use the in-place f32 method".into())
+    }
+    fn process_out_of_place(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let gain = self.gain(context) as f32;
+        for (input, output) in input
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(output.as_chunks_mut::<2>().0)
+        {
+            output[0] = (input[0] + input[2]) * gain;
+            output[1] = (input[1] - input[3]) * gain;
+        }
+        Ok(context.num_frames)
+    }
+    fn process_out_of_place_f64(
+        &mut self,
+        input: &[f64],
+        output: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let gain = self.gain(context);
+        for (input, output) in input
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(output.as_chunks_mut::<2>().0)
+        {
+            for (channel, value) in output.iter_mut().enumerate() {
+                let key = if channel == 0 { input[2] } else { -input[3] };
+                *value = if self.native_f64 {
+                    (input[channel] + key) * gain
+                } else {
+                    f64::from((input[channel] as f32 + key as f32) * gain as f32)
+                };
+            }
+        }
+        Ok(context.num_frames)
+    }
+    fn process_in_place_f64(
+        &mut self,
+        buffer: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let gain = self.gain(context);
+        for frame in buffer.as_chunks_mut::<4>().0 {
+            if self.native_f64 {
+                frame[0] = (frame[0] + frame[2]) * gain;
+                frame[1] = (frame[1] - frame[3]) * gain;
+            } else {
+                frame[0] = f64::from((frame[0] as f32 + frame[2] as f32) * gain as f32);
+                frame[1] = f64::from((frame[1] as f32 - frame[3] as f32) * gain as f32);
+            }
+        }
+        Ok(context.num_frames)
+    }
+}
+
+fn direct_adapter(view: usize, native_f64: bool) -> Box<dyn Plugin> {
+    let probe = DirectProbe {
+        native_f64,
+        ..Default::default()
+    };
+    let adapted = ParametricInPlacePluginAdapter::new(probe);
+    if view == 0 {
+        Box::new(adapted)
+    } else {
+        Box::new(InPlacePluginAdapter::new(adapted))
+    }
+}
+
+#[test]
+fn direct_routes_keep_one_whole_callback_context_and_readonly_input_without_heap_activity() {
+    use sotf_host::plugin::{MidiEvent, MidiMessage};
+    let frames = 131_073;
+    let events = [MidiEvent::new(frames - 1, MidiMessage::note_on(0, 60, 100))];
+    let context = ProcessContext::new(48_000, frames)
+        .with_sample_position(1234)
+        .with_midi_events(&events);
+    let input32: Vec<f32> = (0..frames)
+        .flat_map(|n| [n as f32 * 0.00001, 0.25, 0.125, -0.5])
+        .collect();
+    let input64: Vec<f64> = input32
+        .iter()
+        .map(|&x| f64::from(x) + 2.0_f64.powi(-40))
+        .collect();
+    let saved32 = input32.clone();
+    let saved64 = input64.clone();
+    for view in 0..2 {
+        for native in [false, true] {
+            let mut plugin = direct_adapter(view, native);
+            plugin.initialize(48_000.0).unwrap();
+            let mut out32 = vec![f32::NAN; frames * 2];
+            without_heap(|| plugin.process(&input32, &mut out32, &context).unwrap());
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("calls")),
+                Some(ParameterValue::Int(1))
+            );
+            let gain32 = (frames as f64 * 0.000001) as f32;
+            for (source, output) in input32
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(out32.as_chunks::<2>().0)
+            {
+                assert_eq!(
+                    *output,
+                    [
+                        (source[0] + source[2]) * gain32,
+                        (source[1] - source[3]) * gain32
+                    ]
+                );
+            }
+            plugin.reset();
+            let mut out64 = vec![f64::NAN; frames * 2];
+            without_heap(|| plugin.process_f64(&input64, &mut out64, &context).unwrap());
+            assert_eq!(
+                plugin.get_parameter(&ParameterId::from("calls")),
+                Some(ParameterValue::Int(1))
+            );
+            let gain64 = frames as f64 * 0.000001;
+            for (source, output) in input64
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .zip(out64.as_chunks::<2>().0)
+            {
+                let expected = if native {
+                    [
+                        (source[0] + source[2]) * gain64,
+                        (source[1] - source[3]) * gain64,
+                    ]
+                } else {
+                    [
+                        f64::from((source[0] as f32 + source[2] as f32) * gain64 as f32),
+                        f64::from((source[1] as f32 - source[3] as f32) * gain64 as f32),
+                    ]
+                };
+                assert_eq!(*output, expected);
+            }
+        }
+    }
+    assert_eq!(input32, saved32);
+    assert_eq!(input64, saved64);
+}
+
+#[test]
+fn direct_routes_reject_invalid_whole_callbacks_before_output_or_signal_state_changes() {
+    use sotf_host::plugin::{MidiEvent, MidiMessage};
+    let frames = 1001;
+    let events = [MidiEvent::new(frames - 1, MidiMessage::note_on(0, 60, 100))];
+    let context = ProcessContext::new(48_000, frames)
+        .with_sample_position(1234)
+        .with_midi_events(&events);
+    for view in 0..2 {
+        let mut plugin = direct_adapter(view, false);
+        let mut input = vec![0.25; frames * 4];
+        let mut output = vec![0.123; frames * 2];
+        let saved = output.clone();
+        assert!(plugin.process(&input, &mut output, &context).is_err());
+        plugin.initialize(48_000.0).unwrap();
+        input[frames * 4 - 1] = f32::NAN;
+        assert!(plugin.process(&input, &mut output, &context).is_err());
+        input[frames * 4 - 1] = 0.25;
+        let wrong_rate = ProcessContext {
+            sample_rate: 96_000.0,
+            ..context
+        };
+        assert!(plugin.process(&input, &mut output, &wrong_rate).is_err());
+        assert!(
+            plugin
+                .process(&input[..input.len() - 1], &mut output, &context)
+                .is_err()
+        );
+        assert_eq!(output, saved);
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("calls")),
+            Some(ParameterValue::Int(0))
+        );
+        let mut input64 = vec![0.25; frames * 4];
+        let mut output64 = vec![0.123; frames * 2];
+        let saved64 = output64.clone();
+        input64[frames * 4 - 1] = f64::NAN;
+        assert!(
+            plugin
+                .process_f64(&input64, &mut output64, &context)
+                .is_err()
+        );
+        assert_eq!(output64, saved64);
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("calls")),
+            Some(ParameterValue::Int(0))
+        );
+    }
+}

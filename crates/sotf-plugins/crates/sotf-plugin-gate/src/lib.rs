@@ -1,5 +1,8 @@
 pub mod params;
 
+#[path = "lib/buffer.rs"]
+mod buffer;
+
 #[path = "lib/above_threshold.rs"]
 mod above_threshold;
 #[path = "lib/mode.rs"]

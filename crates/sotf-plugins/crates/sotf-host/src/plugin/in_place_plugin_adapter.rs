@@ -40,6 +40,9 @@ impl<T: InPlacePlugin> InPlacePluginAdapter<T> {
         if self.plugin.supports_f64() {
             return self.plugin.process_in_place_f64(buffer, context);
         }
+        if self.plugin.supports_direct_buffer_processing() {
+            return self.plugin.process_in_place_f64(buffer, context);
+        }
         if self.plugin.supports_bounded_subdivision() {
             let channels = [self.plugin.input_channels(), self.plugin.channels()];
             validate_process_block_f64(buffer, buffer, context, channels[0], channels[0])?;
@@ -100,6 +103,7 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
         self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
+            self.plugin.supports_direct_buffer_processing(),
             [self.plugin.input_channels(), self.plugin.channels()],
             self.plugin.supports_f64(),
             sample_rate,
@@ -118,6 +122,10 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
     ) -> Result<usize, String> {
         let channels = [self.plugin.input_channels(), self.plugin.channels()];
         validate_process_block_f32(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_direct_buffer_processing() {
+            self.bounded.validate(channels, context)?;
+            return self.plugin.process_out_of_place(input, output, context);
+        }
         if self.plugin.supports_bounded_subdivision() || channels[0] != channels[1] {
             self.bounded.validate(channels, context)?;
         }
@@ -173,6 +181,10 @@ impl<T: InPlacePlugin> Plugin for InPlacePluginAdapter<T> {
     ) -> Result<usize, String> {
         let channels = [self.plugin.input_channels(), self.plugin.channels()];
         validate_process_block_f64(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_direct_buffer_processing() {
+            self.bounded.validate(channels, context)?;
+            return self.plugin.process_out_of_place_f64(input, output, context);
+        }
         let subdivide = self.plugin.supports_bounded_subdivision();
         if subdivide || channels[0] != channels[1] {
             self.bounded.validate(channels, context)?;

@@ -56,9 +56,54 @@ pub trait ParametricInPlacePlugin: Send {
     /// must precede mutation; no later subcall may fail for that same context.
     /// Standard adapters prepare bounded scratch during initialization, without
     /// imposing a maximum public callback size. Asymmetric adapter layouts
-    /// require this opt-in; direct in-place calls retain their full input stride.
+    /// require this opt-in or direct buffer processing; direct in-place calls
+    /// retain their full input stride.
     fn supports_bounded_subdivision(&self) -> bool {
         false
+    }
+
+    /// Process complete buffers directly without adapter subdivision or conversion storage.
+    ///
+    /// Opting in requires both out-of-place methods and `process_in_place_f64`.
+    /// Adapters allocate no conversion storage and pass each valid callback
+    /// exactly once with its original context. Realtime implementations must
+    /// avoid heap activity, including f32-precision fallback when `supports_f64`
+    /// is false. Explicit offline inference may allocate. This capability must
+    /// remain fixed until reinitialization; it does not promise partition equivalence.
+    /// Input width must be at least the output width. Input is immutable, and
+    /// output contains only the declared output channels.
+    /// Lifecycle/rate/shape failures must precede output or signal-state mutation.
+    fn supports_direct_buffer_processing(&self) -> bool {
+        false
+    }
+
+    /// Process one complete f32 callback into separate output storage.
+    ///
+    /// # Errors
+    /// Returns an error when direct processing is unsupported or validation fails.
+    fn process_out_of_place(
+        &mut self,
+        _input: &[f32],
+        _output: &mut [f32],
+        _context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        Err("Direct out-of-place processing is unsupported".into())
+    }
+
+    /// Process one complete f64 callback, retaining the plugin's declared precision.
+    ///
+    /// Implementations without native f64 may convert samples while streaming,
+    /// without splitting the callback or allocating conversion storage.
+    ///
+    /// # Errors
+    /// Returns an error when direct processing is unsupported or validation fails.
+    fn process_out_of_place_f64(
+        &mut self,
+        _input: &[f64],
+        _output: &mut [f64],
+        _context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        Err("Direct out-of-place f64 processing is unsupported".into())
     }
 
     /// Guarantees identity frame geometry for every supported process block.
@@ -396,6 +441,28 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.supports_bounded_subdivision()
     }
 
+    fn supports_direct_buffer_processing(&self) -> bool {
+        self.plugin.supports_direct_buffer_processing()
+    }
+
+    fn process_out_of_place(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        self.plugin.process_out_of_place(input, output, context)
+    }
+
+    fn process_out_of_place_f64(
+        &mut self,
+        input: &[f64],
+        output: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        self.plugin.process_out_of_place_f64(input, output, context)
+    }
+
     fn parameters(&self) -> Vec<Parameter> {
         self.plugin.parametric_parameters()
     }
@@ -421,6 +488,7 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
+            self.plugin.supports_direct_buffer_processing(),
             [self.plugin.input_channels(), self.plugin.channels()],
             self.plugin.supports_f64(),
             sample_rate,
@@ -445,6 +513,12 @@ impl<T: ParametricInPlacePlugin> InPlacePlugin for ParametricInPlacePluginAdapte
         context: &ProcessContext,
     ) -> PluginResult<usize> {
         if self.plugin.supports_f64() {
+            return self.plugin.process_in_place_f64(buffer, context);
+        }
+        if self.plugin.supports_direct_buffer_processing() {
+            let channels = [self.plugin.input_channels(), self.plugin.channels()];
+            validate_process_block_f64(buffer, buffer, context, channels[0], channels[0])?;
+            self.bounded.validate(channels, context)?;
             return self.plugin.process_in_place_f64(buffer, context);
         }
         if self.plugin.supports_bounded_subdivision() {
@@ -583,6 +657,7 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
         self.plugin.initialize_with_mode(sample_rate, mode)?;
         self.bounded.prepare(
             self.plugin.supports_bounded_subdivision(),
+            self.plugin.supports_direct_buffer_processing(),
             [self.plugin.input_channels(), self.plugin.channels()],
             self.plugin.supports_f64(),
             sample_rate,
@@ -605,6 +680,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
     ) -> Result<usize, String> {
         let channels = [self.plugin.input_channels(), self.plugin.channels()];
         validate_process_block_f32(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_direct_buffer_processing() {
+            self.bounded.validate(channels, context)?;
+            return self.plugin.process_out_of_place(input, output, context);
+        }
         if self.plugin.supports_bounded_subdivision() || channels[0] != channels[1] {
             self.bounded.validate(channels, context)?;
         }
@@ -660,6 +739,10 @@ impl<T: ParametricInPlacePlugin> Plugin for ParametricInPlacePluginAdapter<T> {
     ) -> Result<usize, String> {
         let channels = [self.plugin.input_channels(), self.plugin.channels()];
         validate_process_block_f64(input, output, context, channels[0], channels[1])?;
+        if self.plugin.supports_direct_buffer_processing() {
+            self.bounded.validate(channels, context)?;
+            return self.plugin.process_out_of_place_f64(input, output, context);
+        }
         let subdivide = self.plugin.supports_bounded_subdivision();
         if subdivide || channels[0] != channels[1] {
             self.bounded.validate(channels, context)?;

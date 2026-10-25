@@ -1,0 +1,3 @@
+    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+    Checking sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)
+    Finished `release` profile [optimized] target(s) in 5.82s

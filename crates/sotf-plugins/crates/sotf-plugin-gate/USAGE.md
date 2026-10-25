@@ -166,6 +166,16 @@ lookahead latency. Confidence, source-age, warmup, and gain bounds still apply.
 Incomplete final analysis packets remain incomplete; future audio is never
 invented to protect an earlier onset.
 
+Realtime speech protection does not promise identical output under arbitrary
+block subdivision: worker observation timing can change learned decisions.
+The Gate adapter therefore uses a direct buffer path that passes one complete
+callback with its original context. Both external-key input and f64 key precision
+remain read-only. f64 buffers use the existing f32 DSP precision without growing
+conversion storage in a callback. Values whose conversion overflows f32 are
+rejected before output or signal state changes. Classical and synchronous offline
+Gate processing retain their partition-equivalence claim. Lookahead, EOS drain,
+reset, and source-age/gain policy are shared by every buffer path.
+
 Custom hosts select this mode before processing with
 `DawHost::new_with_processing_mode(channels, rate, ProcessingMode::Offline)`.
 Direct plugin callers use `initialize_with_mode(rate, ProcessingMode::Offline)`

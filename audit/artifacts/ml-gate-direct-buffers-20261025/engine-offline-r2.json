@@ -1,0 +1,22 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-engine",
+    "--features",
+    "sotf-plugins/qa,silero-speech",
+    "--lib",
+    "offline_renderer",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 220.77481484413147,
+  "source_manifest": "source-sha256-r2.json"
+}

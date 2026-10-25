@@ -1,0 +1,12 @@
+{
+  "crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs": "06d625757d4902c9d5ace4691933d9812b25e7a295aea92f69bf7c2f9286efe9",
+  "crates/sotf-plugins/crates/sotf-host/src/plugin/bounded_in_place.rs": "ae5ec6ddc615d1abf6c62c5916cc6bc2aac46fe48baa33714ec2f6cba08d0b8a",
+  "crates/sotf-plugins/crates/sotf-host/src/plugin/in_place_plugin.rs": "c9a198fddddf5785acea79e55d5916d75de90601e50c1784b3c6a099929e012e",
+  "crates/sotf-plugins/crates/sotf-host/src/plugin/in_place_plugin_adapter.rs": "4cdf1fc8840730d04e76cb15cbf17a537324325c2b4daf3ccc91fbf3480447ea",
+  "crates/sotf-plugins/crates/sotf-host/tests/bounded_in_place.rs": "3d6bdd9f2c2fda54192a81269e48c4397a52bce56467ad70ad806891aa7c5806",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib.rs": "4025d4f6ea3d31d492c3f6d3fa61ac92600e5571907ecef1511e3430d803fbf3",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/above_threshold.rs": "dffd65a02df361cacc7d409c1d7ff5e1ff53b9cb0c73129eb5c92db315653a2b",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/gate_plugin.rs": "0cb188a2ce32adb3ab2a6d1da1898076cbf7a35249a062d5f854095f853283fc",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/src/lib/buffer.rs": "fd1037629f7456db5d7958d6b1422077e3c44f574057abde745d0c4ecdfbd3b8",
+  "crates/sotf-plugins/crates/sotf-plugin-gate/tests/direct_buffers.rs": "437428db478e782d4cc78a7433f8590a28ba68f79806df0effff96b245c2ec9e"
+}

@@ -1,0 +1,24 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-host",
+    "--features",
+    "qa",
+    "--lib",
+    "--test",
+    "bounded_in_place",
+    "--test",
+    "processing_mode",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 67.5765073299408
+}

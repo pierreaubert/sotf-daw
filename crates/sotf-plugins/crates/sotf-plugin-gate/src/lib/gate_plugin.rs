@@ -1,3 +1,4 @@
+use super::buffer::{AudioBuffer, SeparateBuffer, validate_f32_range};
 use super::consts::DB_CONVERSION_FACTOR;
 use super::consts::EPSILON;
 use super::consts::MAX_LOOKAHEAD_MS;
@@ -18,7 +19,7 @@ use sotf_host::plugin::{
     PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
     ProcessContext, TailLength,
 };
-use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
+use sotf_host::simd::enable_ftz_daz;
 use sotf_host::smoothing::Smoother;
 use sotf_host::{DetectionMode, LevelDetector, LookaheadBuffer, ParametricInPlacePlugin};
 use std::any::Any;
@@ -32,6 +33,7 @@ pub struct GatePlugin {
     #[cfg(feature = "neural-speech")]
     speech: Option<crate::neural_speech::SpeechAssistant>,
     speech_mix: f32,
+    processing_mode: sotf_host::ProcessingMode,
     pub(super) channels: usize,
     pub(super) sample_rate: f64,
     pub(super) threshold_db: f32,
@@ -142,6 +144,7 @@ impl GatePlugin {
             #[cfg(feature = "neural-speech")]
             speech: None,
             speech_mix: 0.0,
+            processing_mode: sotf_host::ProcessingMode::Realtime,
             channels,
             sample_rate: sr,
             threshold_db,
@@ -701,7 +704,7 @@ impl GatePlugin {
         }
     }
 
-    fn advance_speech(&mut self, frame: &[f32]) {
+    fn advance_speech<B: AudioBuffer + ?Sized>(&mut self, buffer: &B, frame_start: usize) {
         #[cfg(feature = "neural-speech")]
         if let Some(speech) = &mut self.speech {
             let channel = self
@@ -709,7 +712,7 @@ impl GatePlugin {
                 .as_ref()
                 .expect("prepared speech policy")
                 .source_channel;
-            speech.push(frame[channel]);
+            speech.push(buffer.read(frame_start + channel));
             let target = if speech.usable() { 1.0 } else { 0.0 };
             let coefficient = if target > self.speech_mix {
                 self.attack_coeff
@@ -722,7 +725,7 @@ impl GatePlugin {
             }
         }
         #[cfg(not(feature = "neural-speech"))]
-        let _ = frame;
+        let _ = (buffer, frame_start);
     }
 
     fn speech_status(&self) -> Option<crate::SpeechProtectionData> {
@@ -738,10 +741,24 @@ impl GatePlugin {
         }
     }
 
-    // Per-sample DSP shared by ordinary input and zero continuation.
-    fn process_stream(
+    // Ordinary input shares EOS ownership across every buffer representation.
+    fn process_input<B: AudioBuffer + ?Sized>(
         &mut self,
-        buffer: &mut [f32],
+        buffer: &mut B,
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        if context.num_frames > 0 && self.drain_remaining.is_some() {
+            return Err("Gate requires reset before processing input after drain".into());
+        }
+        let frames = self.process_stream(buffer, context)?;
+        self.has_input |= frames > 0;
+        Ok(frames)
+    }
+
+    // Per-sample DSP shared by ordinary input and zero continuation.
+    fn process_stream<B: AudioBuffer + ?Sized>(
+        &mut self,
+        buffer: &mut B,
         context: &ProcessContext,
     ) -> PluginResult<usize> {
         enable_ftz_daz();
@@ -781,10 +798,10 @@ impl GatePlugin {
         let expected_len = num_frames
             .checked_mul(stride)
             .ok_or_else(|| "Gate buffer size overflow".to_string())?;
-        if buffer.len() != expected_len {
+        if buffer.input_len() != expected_len {
             return Err(format!(
                 "gate process buffer length {} does not match expected {} for {} channels (external_sidechain={})",
-                buffer.len(),
+                buffer.input_len(),
                 expected_len,
                 self.channels,
                 use_ext_sc
@@ -800,14 +817,14 @@ impl GatePlugin {
                 let mix = self.mix_smoother.advance();
                 let close_threshold_linear = threshold_linear * close_threshold_ratio;
                 let frame_start = frame * stride;
-                self.advance_speech(&buffer[frame_start..frame_start + self.channels]);
+                self.advance_speech(buffer, frame_start);
                 let sc_offset = if use_ext_sc { self.channels } else { 0 };
 
                 let mut det = 0.0f32;
                 for ch in 0..self.channels {
                     let sc_idx = frame_start + sc_offset + ch;
-                    let sidechain = if buffer[sc_idx].is_finite() {
-                        buffer[sc_idx]
+                    let sidechain = if buffer.read(sc_idx).is_finite() {
+                        buffer.read(sc_idx)
                     } else {
                         0.0
                     };
@@ -857,16 +874,16 @@ impl GatePlugin {
 
                 for ch in 0..self.channels {
                     let idx = frame_start + ch;
-                    let input = if buffer[idx].is_finite() {
-                        buffer[idx]
+                    let input = if buffer.read(idx).is_finite() {
+                        buffer.read(idx)
                     } else {
                         0.0
                     };
                     if use_lookahead {
                         let delayed = self.lookahead_buffers[ch].push(input);
-                        buffer[idx] = delayed * gain;
+                        buffer.write(frame, ch, stride, delayed * gain);
                     } else {
-                        buffer[idx] = input * gain;
+                        buffer.write(frame, ch, stride, input * gain);
                     }
                 }
             }
@@ -877,14 +894,14 @@ impl GatePlugin {
                 let mix = self.mix_smoother.advance();
                 let close_threshold_linear = threshold_linear * close_threshold_ratio;
                 let frame_start = frame * stride;
-                self.advance_speech(&buffer[frame_start..frame_start + self.channels]);
+                self.advance_speech(buffer, frame_start);
                 let sc_offset = if use_ext_sc { self.channels } else { 0 };
 
                 for ch in 0..self.channels {
                     let idx = frame_start + ch;
                     let sc_idx = frame_start + sc_offset + ch;
-                    let sidechain = if buffer[sc_idx].is_finite() {
-                        buffer[sc_idx]
+                    let sidechain = if buffer.read(sc_idx).is_finite() {
+                        buffer.read(sc_idx)
                     } else {
                         0.0
                     };
@@ -930,16 +947,16 @@ impl GatePlugin {
                     let wet = self
                         .protected_wet_gain(fast_pow10(-self.envelope[ch] / DB_CONVERSION_FACTOR));
                     let gain = (1.0 - mix) + mix * wet;
-                    let input = if buffer[idx].is_finite() {
-                        buffer[idx]
+                    let input = if buffer.read(idx).is_finite() {
+                        buffer.read(idx)
                     } else {
                         0.0
                     };
                     if use_lookahead {
                         let delayed = self.lookahead_buffers[ch].push(input);
-                        buffer[idx] = delayed * gain;
+                        buffer.write(frame, ch, stride, delayed * gain);
                     } else {
-                        buffer[idx] = input * gain;
+                        buffer.write(frame, ch, stride, input * gain);
                     }
                 }
             }
@@ -999,17 +1016,9 @@ impl GatePlugin {
             });
         }
 
-        // Only flush denormals in the audio output region.  When external sidechain
-        // is active the buffer is wider (stride = channels * 2): writing to the
-        // sidechain half is harmless but inconsistent with read-only sidechain usage.
-        if use_ext_sc {
-            for frame in 0..num_frames {
-                let audio_start = frame * stride;
-                flush_denormals_inplace(&mut buffer[audio_start..audio_start + self.channels]);
-            }
-        } else {
-            flush_denormals_inplace(buffer);
-        }
+        // Key samples retain their original precision and remain untouched.
+        buffer.flush(self.channels, stride);
+
         Ok(num_frames)
     }
 }
@@ -1045,7 +1054,69 @@ impl ParametricInPlacePlugin for GatePlugin {
         }
     }
     fn supports_bounded_subdivision(&self) -> bool {
+        self.speech_config.is_none() || self.processing_mode == sotf_host::ProcessingMode::Offline
+    }
+
+    fn supports_direct_buffer_processing(&self) -> bool {
         true
+    }
+
+    fn process_out_of_place(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        sotf_host::plugin::validate_process_block_f32(
+            input,
+            output,
+            context,
+            self.input_channels(),
+            self.channels,
+        )?;
+        self.process_input(
+            &mut SeparateBuffer {
+                input,
+                output,
+                channels: self.channels,
+            },
+            context,
+        )
+    }
+
+    fn process_out_of_place_f64(
+        &mut self,
+        input: &[f64],
+        output: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        sotf_host::plugin::validate_process_block_f64(
+            input,
+            output,
+            context,
+            self.input_channels(),
+            self.channels,
+        )?;
+        validate_f32_range(input)?;
+        self.process_input(
+            &mut SeparateBuffer {
+                input,
+                output,
+                channels: self.channels,
+            },
+            context,
+        )
+    }
+
+    fn process_in_place_f64(
+        &mut self,
+        buffer: &mut [f64],
+        context: &ProcessContext,
+    ) -> PluginResult<usize> {
+        let stride = self.input_channels();
+        sotf_host::plugin::validate_process_block_f64(buffer, buffer, context, stride, stride)?;
+        validate_f32_range(buffer)?;
+        self.process_input(buffer, context)
     }
     fn parameter_schema(&self) -> ParameterSchema {
         self.cached_parameters.clone()
@@ -1181,6 +1252,7 @@ impl ParametricInPlacePlugin for GatePlugin {
         {
             self.speech = speech;
         }
+        self.processing_mode = _processing_mode;
         self.initialized = true;
         self.reset();
         Ok(())
@@ -1227,12 +1299,7 @@ impl ParametricInPlacePlugin for GatePlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
-        if context.num_frames > 0 && self.drain_remaining.is_some() {
-            return Err("Gate requires reset before processing input after drain".into());
-        }
-        let frames = self.process_stream(buffer, context)?;
-        self.has_input |= frames > 0;
-        Ok(frames)
+        self.process_input(buffer, context)
     }
 
     fn drain_output_frames_max(&self) -> usize {

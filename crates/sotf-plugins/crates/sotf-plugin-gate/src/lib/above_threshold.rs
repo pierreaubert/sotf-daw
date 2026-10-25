@@ -1,6 +1,7 @@
 //! Above-threshold expansion and ducking with bounded, retained effect targets.
 
 // Rust guideline compliant 2026-02-21
+use super::buffer::AudioBuffer;
 use crate::{GateMode, GatePlugin};
 use math_audio_dsp::fast_math::{fast_log10, fast_pow10};
 
@@ -74,9 +75,9 @@ impl GatePlugin {
         fast_pow10(signed_db / 20.0)
     }
 
-    pub(super) fn process_above_threshold(
+    pub(super) fn process_above_threshold<B: AudioBuffer + ?Sized>(
         &mut self,
-        buffer: &mut [f32],
+        buffer: &mut B,
         frames: usize,
         stride: usize,
         external: bool,
@@ -98,7 +99,7 @@ impl GatePlugin {
             let sidechain = start + if external { self.channels } else { 0 };
             let mut maximum = 0.0_f32;
             for channel in 0..self.channels {
-                let sample = finite_input(buffer[sidechain + channel]);
+                let sample = finite_input(buffer.read(sidechain + channel));
                 let filtered = self.apply_sidechain_filter(channel, sample);
                 let level = self.detect_level(channel, filtered);
                 maximum = maximum.max(level);
@@ -109,26 +110,26 @@ impl GatePlugin {
                 if !linked {
                     let gain = (1.0 - mix)
                         + mix * self.advance_effect(channel, level, center, opening, closing);
-                    let input = finite_input(buffer[start + channel]);
+                    let input = finite_input(buffer.read(start + channel));
                     let input = if lookahead {
                         self.lookahead_buffers[channel].push(input)
                     } else {
                         input
                     };
-                    buffer[start + channel] = finite_output(input, gain);
+                    buffer.write(frame, channel, stride, finite_output(input, gain));
                 }
             }
             if linked {
                 let gain =
                     (1.0 - mix) + mix * self.advance_effect(0, maximum, center, opening, closing);
                 for channel in 0..self.channels {
-                    let input = finite_input(buffer[start + channel]);
+                    let input = finite_input(buffer.read(start + channel));
                     let input = if lookahead {
                         self.lookahead_buffers[channel].push(input)
                     } else {
                         input
                     };
-                    buffer[start + channel] = finite_output(input, gain);
+                    buffer.write(frame, channel, stride, finite_output(input, gain));
                 }
             }
         }

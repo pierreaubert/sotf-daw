@@ -1,4 +1,4 @@
-//! Prepared storage for explicitly partition-independent in-place processors.
+//! Prepared lifecycle validation and optional scratch for in-place adapters.
 
 // Rust guideline compliant 2026-02-21
 use super::{PluginResult, ProcessContext};
@@ -23,16 +23,17 @@ impl BoundedInPlace {
     pub(crate) fn prepare(
         &mut self,
         enabled: bool,
+        direct: bool,
         channels: [usize; 2],
         native_f64: bool,
         sample_rate: f64,
     ) -> PluginResult<()> {
         self.invalidate();
-        if !enabled {
+        if !enabled && !direct {
             return if channels[0] == channels[1] {
                 Ok(())
             } else {
-                Err("Asymmetric in-place adapter requires bounded subdivision support".into())
+                Err("Asymmetric in-place adapter requires bounded subdivision support or direct buffer processing".into())
             };
         }
         if !sample_rate.is_finite()
@@ -46,8 +47,10 @@ impl BoundedInPlace {
             .checked_mul(CHUNK_FRAMES)
             .filter(|n| *n <= isize::MAX as usize / std::mem::size_of::<f64>())
             .ok_or_else(|| "Bounded in-place scratch capacity overflow".to_string())?;
-        self.f32_samples.resize(samples, 0.0);
-        if native_f64 && channels[0] != channels[1] {
+        if enabled && !direct {
+            self.f32_samples.resize(samples, 0.0);
+        }
+        if enabled && !direct && native_f64 && channels[0] != channels[1] {
             self.f64_samples.resize(samples, 0.0);
         }
         self.channels = channels;

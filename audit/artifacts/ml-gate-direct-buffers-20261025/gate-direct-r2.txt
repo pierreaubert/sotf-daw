@@ -1,0 +1,12 @@
+   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)
+    Finished `release` profile [optimized] target(s) in 2m 48s
+     Running tests/direct_buffers.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/direct_buffers-737c7b6f6c1f33ef)
+
+running 5 tests
+test f64_range_errors_leave_output_and_following_signal_history_pristine ... ok
+test native_entry_points_retain_lookahead_until_eos_and_require_reset_for_new_input ... ok
+test speech_preparation_mode_controls_subdivision_claim_and_wide_f64_keys_stay_exact ... ok
+test direct_buffers_match_wide_in_place_for_every_classical_mode_and_f32_precision_f64 ... ok
+test realtime_speech_adapters_accept_large_cold_f32_and_f64_callbacks_without_heap_or_key_mutation ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s

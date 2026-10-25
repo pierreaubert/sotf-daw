@@ -1,0 +1,21 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-gate",
+    "--features",
+    "qa,silero-speech",
+    "--test",
+    "direct_buffers",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 101,
+  "elapsed_seconds": 176.2832589149475
+}
