@@ -168,8 +168,21 @@
       "requirements": [
         "If neural coloration is added, keep the ceiling mechanism explicit and deterministic; learned release suggestions must never replace the safety bound."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/src/candidate.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/tests/neural_candidate.rs",
+        "crates/sotf-plugins/models/analog-limiter-candidate",
+        "crates/sotf-plugins/models/analog-hardware",
+        "audit/artifacts/ml-analog-limiter-candidate-20261025",
+        "audit/ml-analog-limiter-candidate-20261025.md"
+      ],
+      "remaining": [
+        "Real measured hardware acceptance and independent alias, level, configuration and perceptual-artifact validation; the trained candidate remains synthetic and unadmitted.",
+        "Stereo/multichannel model domains and qualification; current candidate stream is mono.",
+        "Click-free transitions, complete heap memory accounting and cross-platform runtime deadlines before any production selection.",
+        "No learned release suggestions are activated; explicit native controls and the final deterministic clamp remain authoritative."
+      ]
     },
     {
       "plugin_id": 11,

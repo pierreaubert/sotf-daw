@@ -1,0 +1,14 @@
+
+running 4 tests
+test arbitrary_neural_gain_and_explicit_release_never_bypass_the_fully_wet_ceiling ... ok
+test rejected_geometry_and_controls_leave_histories_and_output_unchanged ... ok
+test trained_candidate_callbacks_and_resets_preserve_core_and_color_state ... ok
+test disabled_missing_and_rejected_candidates_match_production_for_every_fallback_model ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)
+    Finished `release` profile [optimized] target(s) in 14.59s
+     Running tests/neural_candidate.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/neural_candidate-444cdd058a59cf10)

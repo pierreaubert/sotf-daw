@@ -1,0 +1,34 @@
+{
+  "added_neural_lookahead_samples": 0,
+  "callback_frames": 193,
+  "candidate_hidden": 6,
+  "candidate_taps": 3,
+  "frames": 65537,
+  "latency_samples": 144,
+  "qualification_inline_bytes_excluding_heap_owned_storage": 19728,
+  "sample_rate": 48000,
+  "scope": "Local native QA stream measurement only; resets, copies and model loading excluded. Includes continuously running classical fallback. Not portable realtime deadline evidence or complete heap memory accounting.",
+  "timings": {
+    "disabled": {
+      "median_seconds": 0.006989167,
+      "minimum_seconds": 0.006507375,
+      "trials": 21
+    },
+    "enabled": {
+      "median_seconds": 0.010190125,
+      "minimum_seconds": 0.00954,
+      "trials": 21
+    },
+    "missing": {
+      "median_seconds": 0.00686,
+      "minimum_seconds": 0.006454041,
+      "trials": 21
+    },
+    "production": {
+      "median_seconds": 0.009118042,
+      "minimum_seconds": 0.008622917,
+      "trials": 21
+    }
+  },
+  "enabled_over_production_median_ratio": 1.117578203741549
+}

@@ -1,0 +1,3 @@
+    Checking sotf-plugin-limiter v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter)
+    Checking sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)
+    Finished `release` profile [optimized] target(s) in 2.00s

@@ -1,0 +1,28 @@
+{
+  "format": "sotf-analog-limiter-candidate-qualification-v1",
+  "deployment_admitted": false,
+  "factory_activation": false,
+  "runtime_scope": "qa feature only, mono",
+  "source_model": "../analog-hardware/candidate.synthetic.json",
+  "source_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+  "stress_fixture": {
+    "file": "candidate.overdrive.synthetic.json",
+    "sha256": "4a45728b5b426c6707536510d7f756a51ea0dc2c5389baaa9fd46c42759ab902",
+    "bytes": 5331,
+    "trained": false,
+    "purpose": "constant+2 output injection for deterministic final-clamp qualification",
+    "derivation": "zero linear/output weights, output bias/global bound2, explicit synthetic stress context"
+  },
+  "provenance": {
+    "origin": "project-generated synthetic fixture derivative",
+    "license": "GPL-3.0-or-later",
+    "external_training_audio": false
+  },
+  "safety_contract": "Native final emitted sample ceiling at fully wet mix; dry blend and output true peak carry no bound promise",
+  "remaining": [
+    "Real measured hardware acceptance and independent artifacts/alias/level/configuration shifts",
+    "Stereo/multichannel trained domains and qualification",
+    "Click-free transitions, full heap memory, cross-platform runtime deadline validation",
+    "No production selection is available"
+  ]
+}

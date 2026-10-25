@@ -30,6 +30,10 @@ use sotf_plugin_limiter::{LimiterPlugin, LimiterPluginParams};
 use std::any::Any;
 use std::sync::Arc;
 
+#[cfg(feature = "qa")]
+#[path = "candidate.rs"]
+pub mod candidate;
+
 /// Prepared block ceiling for the analog stage; larger host blocks are
 /// chunked by the stage itself.
 pub const MAX_BLOCK_FRAMES: usize = 8192;
