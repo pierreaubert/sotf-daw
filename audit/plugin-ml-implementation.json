@@ -889,8 +889,19 @@
       "requirements": [
         "A learned mask is reasonable for an explicit denoising mode; preserve the predictable dynamics mode as a baseline."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/denoising.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/denoising.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/spectral_finite_allocations.rs",
+        "audit/ml-expander-mask-20261025.md",
+        "audit/artifacts/ml-expander-mask-20261025"
+      ],
+      "remaining": [
+        "No trained model yet: train/freeze with disjoint sources and validate Python/native parity.",
+        "Actual native waveform renderer and independent WOLA, clean-damage/noise-leakage, artifact and attenuation-matched classical comparisons.",
+        "Distribution shifts, complete memory/local callback budgets, recorded music/noise and cross-platform DAW validation; production controls/activation require demonstrated benefit."
+      ]
     },
     {
       "plugin_id": 36,

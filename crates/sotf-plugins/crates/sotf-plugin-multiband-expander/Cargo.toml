@@ -13,7 +13,7 @@ name = "sotf_plugin_multiband_expander"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-multiband-expander"
@@ -27,3 +27,4 @@ math-iir-fir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 rustfft = { workspace = true }
+sha2 = { workspace = true, optional = true }

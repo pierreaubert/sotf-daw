@@ -1,0 +1,24 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-multiband-expander",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--features",
+    "qa",
+    "--test",
+    "denoising",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "seconds": 12.55136958300136
+}

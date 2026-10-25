@@ -1,5 +1,7 @@
 pub use sotf_host::lr4_crossover::CROSSOVER_PRESETS;
 
+#[cfg(feature = "qa")]
+pub mod denoising;
 pub mod params;
 
 mod response;

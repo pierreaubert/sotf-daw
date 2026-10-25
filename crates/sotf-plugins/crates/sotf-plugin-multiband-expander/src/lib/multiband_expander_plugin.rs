@@ -97,9 +97,50 @@ pub struct MultibandExpanderPlugin {
 
     /// State for spectral processing mode (None when in time_domain mode)
     pub(super) spectral: Option<SpectralState>,
+    #[cfg(feature = "qa")]
+    denoising: Option<Box<crate::denoising::DenoisingState>>,
 }
 
 impl MultibandExpanderPlugin {
+    /// Prepare an explicit experimental denoising mode before accepting audio.
+    ///
+    /// No model means exact classical fallback. Configuration allocates only on
+    /// the control thread. The ordinary dynamics mode remains the default.
+    ///
+    /// # Errors
+    /// Requires initialized mono/stereo spectral mode with no accepted input.
+    #[cfg(feature = "qa")]
+    pub fn configure_denoising(
+        &mut self,
+        model: Option<crate::denoising::DenoisingMask>,
+    ) -> PluginResult<()> {
+        if !self.initialized
+            || self.has_input
+            || self.spectral.is_none()
+            || !(1..=2).contains(&self.channels)
+        {
+            return Err(
+                "prepare denoising before input in initialized mono/stereo spectral mode".into(),
+            );
+        }
+        self.denoising = Some(Box::new(crate::denoising::DenoisingState::new(model)));
+        Ok(())
+    }
+
+    /// Read linked source-bin selection counters without allocation.
+    #[cfg(feature = "qa")]
+    pub fn denoising_counters(&self) -> Option<crate::denoising::DenoisingCounters> {
+        self.denoising.as_ref().map(|mode| mode.counters())
+    }
+
+    /// Inspect independent classical spectral attenuation histories for qualification.
+    #[cfg(feature = "qa")]
+    pub fn classical_spectral_envelopes(&self) -> Option<impl Iterator<Item = f32> + '_> {
+        self.spectral
+            .as_ref()
+            .map(|ss| ss.bin_states.iter().flatten().map(|s| s.envelope_db))
+    }
+
     pub fn new(channels: usize) -> Self {
         Self::with_params(channels, Default::default())
     }
@@ -258,6 +299,8 @@ impl MultibandExpanderPlugin {
             cache_update_counter: 0,
             cached_parameters: Vec::new(),
             spectral,
+            #[cfg(feature = "qa")]
+            denoising: None,
         };
         p.build_crossovers();
         p.update_coefficients();
@@ -778,6 +821,11 @@ impl MultibandExpanderPlugin {
             }
         }
 
+        #[cfg(feature = "qa")]
+        if let Some(denoising) = &mut self.denoising {
+            denoising.prepare(&ss.linked_bin_norms, window_sum, self.sample_rate);
+        }
+
         for ch in 0..channels {
             ss.freq_scratch
                 .copy_from_slice(&ss.fft_processors[ch].freq_buffer);
@@ -871,6 +919,11 @@ impl MultibandExpanderPlugin {
 
                 // Apply gain to the complex bin
                 let gain = fast_pow10(-state.envelope_db / 20.0);
+                #[cfg(feature = "qa")]
+                let gain = self
+                    .denoising
+                    .as_ref()
+                    .map_or(gain, |mode| mode.gain(k, gain));
                 ss.freq_scratch[k] *= gain;
             }
 
@@ -1522,7 +1575,15 @@ impl MultibandExpanderPlugin {
             drain_context.num_frames = frames;
             // Detector/gain histories continue normally. They multiply finite
             // windowed audio and do not create an additional recursive tail.
+            #[cfg(feature = "qa")]
+            if let Some(mode) = &mut self.denoising {
+                mode.draining = true;
+            }
             let result = self.process_stream(&mut cache[..samples], &drain_context);
+            #[cfg(feature = "qa")]
+            if let Some(mode) = &mut self.denoising {
+                mode.draining = false;
+            }
             let ss = self
                 .spectral
                 .as_mut()
@@ -2085,6 +2146,10 @@ impl ParametricInPlacePlugin for MultibandExpanderPlugin {
 
         if let Some(ss) = &mut self.spectral {
             ss.reset();
+        }
+        #[cfg(feature = "qa")]
+        if let Some(mode) = &mut self.denoising {
+            mode.reset();
         }
     }
 

@@ -60,6 +60,58 @@ fn without_heap<T>(operation: impl FnOnce() -> T) -> T {
 }
 
 #[test]
+#[cfg(feature = "qa")]
+fn explicit_denoising_process_reset_and_frozen_drain_retain_storage() {
+    use sha2::{Digest, Sha256};
+    use sotf_host::ParametricInPlacePlugin;
+    use sotf_plugin_multiband_expander::denoising::DenoisingMask;
+    for channels in [1, 2] {
+        let bytes = serde_json::to_vec(&serde_json::json!({
+            "format":"sotf-expander-denoising-mask-v1", "weights":vec![[0.0;8];6],
+            "bias":vec![0.0;8],"output_weights":vec![0.0;8],"output_bias":-8.0,
+            "provenance":"project-generated music/noise; GPL-3.0-or-later; no external audio",
+            "deployment_admitted":false
+        }))
+        .unwrap();
+        let sha: String = Sha256::digest(&bytes)
+            .iter()
+            .map(|v| format!("{v:02x}"))
+            .collect();
+        let model = DenoisingMask::from_json(&bytes, &sha).unwrap();
+        let mut plugin = MultibandExpanderPlugin::with_params(
+            channels,
+            MultibandExpanderPluginParams {
+                processing_mode: "spectral".into(),
+                ..Default::default()
+            },
+        );
+        plugin.initialize(48000.0).unwrap();
+        plugin.configure_denoising(Some(model)).unwrap();
+        let mut buffer = vec![0.01; 5101 * channels];
+        let mut tail = vec![0.0; 17 * channels];
+        without_heap(|| {
+            for _ in 0..2 {
+                buffer.fill(0.01);
+                plugin
+                    .process_in_place(&mut buffer, &ProcessContext::new(48000, 5101))
+                    .unwrap();
+                let counters = plugin.denoising_counters();
+                loop {
+                    let result = plugin
+                        .drain(&mut tail, &ProcessContext::new(48000, 0))
+                        .unwrap();
+                    if result.complete {
+                        break;
+                    }
+                }
+                assert_eq!(plugin.denoising_counters(), counters);
+                plugin.reset();
+            }
+        });
+    }
+}
+
+#[test]
 fn cold_native_and_oversampled_spectral_drain_has_zero_allocations_and_deallocations() {
     for channels in [1, 2] {
         for factor in [1, 2, 4] {
