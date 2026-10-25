@@ -289,6 +289,8 @@ def main():
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("xb") as output:
         wavfile.write(output, rate, result[:, 0] if data.ndim == 1 else result)
+    from ir_measured_metrics import decay_error
+
     report = {
         "format": FORMAT,
         "input_sha256": sha(args.input),
@@ -304,6 +306,8 @@ def main():
         "fallback_error": error,
         "used_learned_output": bool(checks and checks["accepted"]),
         "normalization": "none",
+        "observed_decay_change": decay_error(samples, result, rate, arrival),
+        "decay_scope": "Normalized observed finite-window energy shape; noise suppression itself can change it. This is not clean-room ground truth.",
         "adoption_recommended": False,
         "review": "Experimental offline export; review response and listening before choosing it as a convolution IR.",
     }

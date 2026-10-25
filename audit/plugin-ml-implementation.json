@@ -142,13 +142,19 @@
         "scripts/ml/analyze_ir_preservation.py",
         "scripts/ml/verify_ir_preservation.py",
         "scripts/ml/test_ir_preservation.py",
-        "audit/artifacts/ml-ir-preservation-20261025"
+        "audit/artifacts/ml-ir-preservation-20261025",
+        "scripts/ml/ir_measured_metrics.py",
+        "scripts/ml/evaluate_ir_measured.py",
+        "scripts/ml/analyze_ir_measured.py",
+        "scripts/ml/verify_ir_measured.py",
+        "scripts/ml/test_ir_measured.py",
+        "audit/artifacts/ml-ir-measured-20261025"
       ],
       "remaining": [
-        "Measured IR/noise or repeated-measurement validation of late structure: new 60-case development / 104-case fresh final-shift local-budget policy avoids synthetic SNR losses, but cannot establish unknown clean measured-response preservation.",
-        "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
-        "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration.",
-        "Unprotected model remains rejected. Optional guarded model beats the better independently calibrated classical method in only 12/104 fresh cases; measured/perceptual benefit and general adoption remain unproven."
+        "Weak measured decay preservation remains unproven: frozen six-room AIR added-noise probe improves median reconstruction SNR only 0.178 dB and changes conditional normalized decay regions by up to 2.411 dB. Develop using separate data and validate new independent physical measurements.",
+        "Independent clean/repeated acquisition-noise validation, calibration of prefix assumptions and explicit admissible decay distortion. AIR reference recordings retain their original noise/artifacts; no unknown clean-room truth is available.",
+        "Independent measured layouts/rates beyond six 48 kHz paired AIR responses, actual true-stereo paths, high channel counts, imperfect prefixes, listening and application review/import.",
+        "Unprotected model remains rejected. Guarded ML has zero median advantage over the better classical method across 36 unique measured-reference noisy groups (13 wins; differences within about +/-0.03 dB); no general ML adoption."
       ]
     },
     {

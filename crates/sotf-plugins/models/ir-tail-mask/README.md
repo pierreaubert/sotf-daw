@@ -151,6 +151,61 @@ and an explicit raw-byte identity. Missing, malformed or mismatched policy data
 exports original f32 samples with a report. Path and identity must be supplied
 together. No automatic loading or normalization is introduced.
 
+## Measured-reference added-noise probe
+
+A further frozen probe uses paired channels from six AIR rooms, with no external
+IR entering training. It adds controlled white/colored noise at 20/40/60 dB SNR
+to the original recorded vectors, cast to f32 and preceded by an artificial
+80 ms zero prefix to provide a known added-noise-only reference. There is no
+resampling, level normalization, trimming or denoising of the recorded reference.
+Original recording noise/artifacts remain in the target. The approximate prior
+arrival annotation is tested at +/-0.5 ms. Thirty-six unique noisy measurements
+produce 108 correlated arrival cases; they are not 108 independent recordings.
+The same six room selections previously served AAE evaluation, so they are not
+globally untouched data, but this IR model was trained on generated data only.
+
+All three guarded methods admit 72 cases and retain the 36 cases at 20 dB SNR
+unchanged. Learned median reconstruction improvement is 0.1780 dB versus 0.1755 dB
+for Wiener and 0.1534 dB for decay. No export loses reconstruction SNR in this
+probe. After grouping each noisy measurement's three arrival variants, the
+learned method beats the better classical result in 13/36 groups, with median
+advantage zero and differences from -0.02696 to +0.03010 dB. This does not support
+a general learned advantage.
+
+Conditional masks applied to the known recorded reference change weak normalized
+backward-energy profile regions by up to **2.4107 dB** (stairway, 40 dB white-noise
+case). Those profile points are within 40 dB of reference integrated energy. The
+profile is normalized independently at arrival to measure shape; waveform and
+complex-transfer metrics separately retain absolute level and phase. At that
+worst conditional case, output reconstruction and observed decay errors still
+improve versus added noise. That improvement does not establish identity of the
+underlying measured decay. The same maximum conditional loss occurs for all three
+methods because the deterministic floor often dominates their proposals.
+
+The CLI now reports `observed_decay_change` before/after normalized energy-profile
+RMSE, maximum change and point count. This needs no clean target and is a review
+diagnostic, not a new acceptance threshold. Noise removal itself can alter the
+observed profile. It neither estimates unknown clean-room ground truth nor changes
+the selected model/policy. Missing/invalid-model or policy fallback reports zero
+observed change. Automatic loading remains disabled.
+
+`audit/artifacts/ml-ir-measured-20261025` records all cases, source/member hashes,
+reference transformations, protocols and independent analysis. The independent
+SciPy reducer recreates source pairs and all 36 added-noise signals, checks every
+mask/response/budget, and recomputes waveform, phase, magnitude and decay metrics
+(maximum discrepancy 1.25e-13). It confirms that three arrival variants share each
+source. The final helper replays all 324 outputs/masks/decisions exactly. Twenty-four
+native UPC renders cover valid and invalid-policy exports from all six rooms,
+with maximum error 5.97e-8 after the usual 1024-sample delay.
+
+The archive is the pinned AIR v1.4 release from RWTH Aachen University (IND),
+associated with Marco Jeub. Its historical archive has no license file; reconcile
+redistribution terms before distributing its audio. The archive and every derived
+IR/WAV/float array remain outside the repository. Only code, source hashes,
+metadata and metric results are committed. No source IRs were trained on or
+redistributed. Acquisition-noise, independent clean/repeated measurements,
+perceptual suitability and general adoption remain open.
+
 ## Reproduction
 
 Install `scripts/ml/ir-denoise-requirements.txt`; add `torch==2.14.1` for training.

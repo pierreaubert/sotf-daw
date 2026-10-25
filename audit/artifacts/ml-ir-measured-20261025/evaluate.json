@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_ir_measured.py",
+    "--archive",
+    "/Volumes/home_tmp/tmp/ml-aae-air-20261025/air_database_release_1_4.zip",
+    "--model",
+    "crates/sotf-plugins/models/ir-tail-mask/model.json",
+    "--frozen-experiment",
+    "audit/artifacts/ml-ir-preservation-20261025/experiment",
+    "--output",
+    "audit/artifacts/ml-ir-measured-20261025/experiment",
+    "--temporary",
+    "/Volumes/home_tmp/tmp/ml-ir-measured-20261025"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 9.123686624923721
+}

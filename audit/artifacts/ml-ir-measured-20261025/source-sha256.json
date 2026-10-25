@@ -1,0 +1,17 @@
+{
+  ".gitattributes": "91d1d333897d16cbb823bb5e57490d8e51bdf9ab9e1dea2cf5037fffc2eef2e5",
+  "audit/plugin-ml-implementation.json": "4af89bf6b7dd121ee9c6779b82c1be484102521ca03a603cabab5f7c895d12a1",
+  "crates/sotf-plugins/crates/sotf-plugin-convolution/USAGE.md": "03160db81aa4fdabe2f60d4bbd3f5f113ee6c3660f886c81dd178d1fe9abfc9f",
+  "crates/sotf-plugins/models/ir-tail-mask/README.md": "39234422b9d08e3f048c91f3a8632f33a9ef560d5a191493ea2f8b29c2637dc2",
+  "crates/sotf-plugins/models/ir-tail-mask/manifest.json": "98f30901717972c247fcd722bc32b891154e2596a3280a53653a5a4da1342259",
+  "crates/sotf-plugins/models/ir-tail-mask/model.json": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+  "scripts/ml/analyze_ir_measured.py": "415bc12160e897e37c73638600245c9156c23dc8d92de52a8a18eb987244531f",
+  "scripts/ml/evaluate_ir_measured.py": "d7b246cdbb8d5e1b16593aa20ecfb48e36e1691f4b5b9e6cd59e1c8f309448c7",
+  "scripts/ml/ir_denoise.py": "6cf1ced47996bbd033099db3fd932bd739dd4dc587855b7d475430c8a280b463",
+  "scripts/ml/ir_measured_metrics.py": "33395b3dfd1b2852ad0047d84366e43f58617cd051b894dd69652035be75c4ab",
+  "scripts/ml/test_ir_denoise.py": "7c1271eb3d4d2243d1bb3e12359760640de7e392a8679075a5405fc8ddc143a6",
+  "scripts/ml/test_ir_measured.py": "16dc8ebf750db296c430396850629bedaf0e40aebed5bd22eea1fe7d45d3684b",
+  "scripts/ml/train_ir_denoise.py": "1a5d5a983c21bd7a8ec76d2e31267d5030242009c335182c2d272ae8f1afd7ce",
+  "scripts/ml/verify_ir_measured.py": "7ce8c77fa04ed258384e651ef77024036419944018183222be30276bcd474701"
+}

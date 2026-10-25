@@ -7,3 +7,4 @@ crates/sotf-plugins/models/ir-tail-mask/preservation-policy.json -text
 # Preserve exact bytes in this checksummed evidence bundle.
 audit/artifacts/ml-ir-denoise-20261025/** -text
 audit/artifacts/ml-ir-preservation-20261025/** -text
+audit/artifacts/ml-ir-measured-20261025/** -text

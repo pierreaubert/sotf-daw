@@ -101,6 +101,7 @@ class IrDenoiseTests(unittest.TestCase):
             np.testing.assert_array_equal(actual, samples)
             record = json.loads(report.read_text())
             self.assertFalse(record["used_learned_output"])
+            self.assertEqual(record["observed_decay_change"]["rmse_db"], 0.0)
             self.assertFalse(record["adoption_recommended"])
             self.assertIsNotNone(record["fallback_error"])
             # Re-running may not overwrite a previous reviewed export.

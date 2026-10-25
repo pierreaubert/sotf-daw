@@ -1,0 +1,38 @@
+{
+  "cases": 108,
+  "recorded_room_pairs": 6,
+  "unique_added_noise_measurements": 36,
+  "max_metric_error": 1.2434497875801753e-13,
+  "max_removed_noise_ratio": 0.9499783659545097,
+  "methods": {
+    "neural": {
+      "accepted": 72,
+      "median_improvement_db": 0.17800957319853022,
+      "worst_improvement_db": 0.0,
+      "max_conditional_decay_error_db": 2.410669514675469
+    },
+    "wiener": {
+      "accepted": 72,
+      "median_improvement_db": 0.1755286971250558,
+      "worst_improvement_db": 0.0,
+      "max_conditional_decay_error_db": 2.410669514675469
+    },
+    "decay": {
+      "accepted": 72,
+      "median_improvement_db": 0.1534188394874324,
+      "worst_improvement_db": 0.0,
+      "max_conditional_decay_error_db": 2.410669514675469
+    }
+  },
+  "neural_better_than_best_classical_cases": 40,
+  "worst_conditional_decay": {
+    "case": 80,
+    "room": "stairway_0_1_1_90",
+    "snr_db": 40,
+    "noise_type": "white",
+    "max_abs_db": 2.410669514675469
+  },
+  "adoption_recommended": false,
+  "scope": "Measured IR structure with synthetic added noise; not clean-room ground truth, acoustic calibration, acquisition-noise validation, independent arrival annotations or listening acceptance. Three arrival variants share each noisy source and are not independent measurements.",
+  "conclusion": "Small added-noise recovery gains do not prove measured decay preservation. Weak reference-profile regions change by up to 2.411 dB under conditional masks; actual clean-room/acquisition-noise and listening acceptance remain open."
+}

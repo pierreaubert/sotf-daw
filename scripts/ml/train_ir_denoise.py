@@ -130,7 +130,12 @@ def main():
         "epochs": args.epochs,
         "source_sha256": {
             name: sha(Path(__file__).parent / name)
-            for name in [Path(__file__).name, "ir_denoise.py", "ir_preservation.py"]
+            for name in [
+                Path(__file__).name,
+                "ir_denoise.py",
+                "ir_preservation.py",
+                "ir_measured_metrics.py",
+            ]
         },
         "selection": "Select weights on development loss only. Freeze weights/hash before generating final/shift arrays. No measured/external training data.",
         "acceptance": "All methods use the same early protection and response checks; compare exported fallback-inclusive output, not only accepted proposals.",

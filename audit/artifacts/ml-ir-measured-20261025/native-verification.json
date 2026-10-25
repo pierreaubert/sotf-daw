@@ -1,0 +1,401 @@
+{
+  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "policy_sha256": "1c29da25a280f3b82e2fd77e5a6d22c71bb80131e449378e7153ae3594f2d14b",
+  "renderer_sha256": "eae0669febefeed316522181f8aedbdfba4133207d8e15d0a58d2254a77c74a1",
+  "replayed_arrays_and_masks": 324,
+  "native_runs": 24,
+  "max_native_error": 5.960464477539063e-08,
+  "records": [
+    {
+      "case": 7,
+      "room": "booth_0_0_1",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 3.818422555923462e-08,
+      "outside_ir_max": 1.830358087318018e-11,
+      "wav_sha256": "084829156948635898448ec2b14b03e6d755ae04a23c62dc0fec527632682d67",
+      "native_sha256": "cb999cee6b16fa2521ff232ce2dfe8ee62985c76d1730a5d0395a3905f1c8e9a",
+      "observed_decay_change": {
+        "rmse_db": 0.8920678943219855,
+        "max_abs_db": 3.217537397103591,
+        "points": 47
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 7,
+      "room": "booth_0_0_1",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 3.818422555923462e-08,
+      "outside_ir_max": 1.830358087318018e-11,
+      "wav_sha256": "084829156948635898448ec2b14b03e6d755ae04a23c62dc0fec527632682d67",
+      "native_sha256": "064ae5145958f823947ade3ff9cc15f5576cac180b7ca630e72735fbe93d2583",
+      "observed_decay_change": {
+        "rmse_db": 0.8920678943219855,
+        "max_abs_db": 3.217537397103591,
+        "points": 47
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 7,
+      "room": "booth_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 3.818422555923462e-08,
+      "outside_ir_max": 2.9103830456733704e-11,
+      "wav_sha256": "00655d2402b22de7bcfa916e8d37e614b2bbbd79f7cca05c3e0964a2e1c93e51",
+      "native_sha256": "96cc6b2f86d4dfe879d77a0f5985106d159694f4c00a0acd64fc6006110de520",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 47
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 7,
+      "room": "booth_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 3.818422555923462e-08,
+      "outside_ir_max": 2.9103830456733704e-11,
+      "wav_sha256": "00655d2402b22de7bcfa916e8d37e614b2bbbd79f7cca05c3e0964a2e1c93e51",
+      "native_sha256": "8b8a58305ff3ec4c7d81a58108fc567c7f637e5a14594c0e3b8849c23be3c9df",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 47
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 25,
+      "room": "office_0_0_1",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 2.1373125491663814e-11,
+      "wav_sha256": "74a80b86e1890a58e2dce947a2233bc45410d7e6a08df099b3fdabf44e2b9228",
+      "native_sha256": "8202e5556ed8fc269b42798c0fdc6f7e59b3661ea477ac62193b5f7311dea046",
+      "observed_decay_change": {
+        "rmse_db": 0.33418885503265167,
+        "max_abs_db": 1.6456636401242264,
+        "points": 56
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 25,
+      "room": "office_0_0_1",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 2.1373125491663814e-11,
+      "wav_sha256": "74a80b86e1890a58e2dce947a2233bc45410d7e6a08df099b3fdabf44e2b9228",
+      "native_sha256": "19a8f36c9224a2098672c1114f0cd7ff9941bfbd292ed2795fc0a6ac2910f228",
+      "observed_decay_change": {
+        "rmse_db": 0.33418885503265167,
+        "max_abs_db": 1.6456636401242264,
+        "points": 56
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 25,
+      "room": "office_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 3.055333763768431e-11,
+      "wav_sha256": "89cc3b25aece5e16ec53343144dc809f6594e0bf02aeaf2ca16002ec0328076f",
+      "native_sha256": "448a180dcd9671dd70c41d02021f72c94c5a7308430faedcd3bb5ced4dbdd43e",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 56
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 25,
+      "room": "office_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 3.055333763768431e-11,
+      "wav_sha256": "89cc3b25aece5e16ec53343144dc809f6594e0bf02aeaf2ca16002ec0328076f",
+      "native_sha256": "93b99ac7d35f0f415913f0ed474f4f310b3ac5c20d3ad5357c90a6b09b9069b1",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 56
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 43,
+      "room": "meeting_0_0_1",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 2.9802322387695312e-08,
+      "outside_ir_max": 1.7280399333685637e-11,
+      "wav_sha256": "87dc82cc4f2851bc3c3440cc0a19b993d5543b63f458b5a441ead328b48e618e",
+      "native_sha256": "9ec35d46e0cee734e8d720ae5412e845d081e86d59bbbe78cc03bbb985d89af7",
+      "observed_decay_change": {
+        "rmse_db": 0.532853841578278,
+        "max_abs_db": 2.5285801479115477,
+        "points": 49
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 43,
+      "room": "meeting_0_0_1",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 2.9802322387695312e-08,
+      "outside_ir_max": 1.7280399333685637e-11,
+      "wav_sha256": "87dc82cc4f2851bc3c3440cc0a19b993d5543b63f458b5a441ead328b48e618e",
+      "native_sha256": "665deec079b94ce3905b43192a7b0c50ba1480753a077979c30251c215a02762",
+      "observed_decay_change": {
+        "rmse_db": 0.532853841578278,
+        "max_abs_db": 2.5285801479115477,
+        "points": 49
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 43,
+      "room": "meeting_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 2.9802322387695312e-08,
+      "outside_ir_max": 3.1604940886609256e-11,
+      "wav_sha256": "d4fc28883db7de9e42cb77119abd7186b6061236dee386ede5139eca0f98ef19",
+      "native_sha256": "488d98eb37db5ec05aa87141d888a477c4a5f16a026dbb980ce33f3dc2b0901f",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 49
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 43,
+      "room": "meeting_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 2.9802322387695312e-08,
+      "outside_ir_max": 3.1604940886609256e-11,
+      "wav_sha256": "d4fc28883db7de9e42cb77119abd7186b6061236dee386ede5139eca0f98ef19",
+      "native_sha256": "81fc59f9057e3bdf511ddca5e3aacd40ffe2766a2fea9d2b2bf8865fe7203926",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 49
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 61,
+      "room": "lecture_0_0_1",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 1.2732925824820995e-11,
+      "wav_sha256": "29938f8c067e54d7a69475e6d394d6d36e3d6abf49c231cfe638d71e5ad6222b",
+      "native_sha256": "93928ce10407cd9ab923e4313114a7d02762f35501560c211050bee35443ca17",
+      "observed_decay_change": {
+        "rmse_db": 0.454431552361686,
+        "max_abs_db": 2.40354562208325,
+        "points": 54
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 61,
+      "room": "lecture_0_0_1",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 1.2732925824820995e-11,
+      "wav_sha256": "29938f8c067e54d7a69475e6d394d6d36e3d6abf49c231cfe638d71e5ad6222b",
+      "native_sha256": "b3092fbff04ade71eb5a96b1e1d838219b7abc111836693461d6cd7a3de3a614",
+      "observed_decay_change": {
+        "rmse_db": 0.454431552361686,
+        "max_abs_db": 2.40354562208325,
+        "points": 54
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 61,
+      "room": "lecture_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 1.6370904631912708e-11,
+      "wav_sha256": "7b34690d024d47d780831e1e630e9c8f6e0c55228fc299306032f8f368149d13",
+      "native_sha256": "aedd07bb3605c909e054042330f98287970a18b197ed908f53ef81bec6b98d52",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 54
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 61,
+      "room": "lecture_0_0_1",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 5.960464477539063e-08,
+      "outside_ir_max": 1.6370904631912708e-11,
+      "wav_sha256": "7b34690d024d47d780831e1e630e9c8f6e0c55228fc299306032f8f368149d13",
+      "native_sha256": "c6ef7f4a7a794c3db5e2fa37539f72081e9ad058afebe515b23905ed6f76d8e5",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 54
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 79,
+      "room": "stairway_0_1_1_90",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 1.862645149230957e-09,
+      "outside_ir_max": 3.339550858072471e-13,
+      "wav_sha256": "bc40880c6e9bd4f9822ea0feeb045f21399184d88752455279120d253e246c71",
+      "native_sha256": "afc5882146482f3dd044fe9c8dc0a67ee6562a2e4212310dfa30a40dc9dc00df",
+      "observed_decay_change": {
+        "rmse_db": 0.5594296752651109,
+        "max_abs_db": 2.607192105482355,
+        "points": 51
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 79,
+      "room": "stairway_0_1_1_90",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 1.862645149230957e-09,
+      "outside_ir_max": 3.339550858072471e-13,
+      "wav_sha256": "bc40880c6e9bd4f9822ea0feeb045f21399184d88752455279120d253e246c71",
+      "native_sha256": "176aa6ac61bebd2137abf236fef544cd2175c381f984f58ea8afc16221824554",
+      "observed_decay_change": {
+        "rmse_db": 0.5594296752651109,
+        "max_abs_db": 2.607192105482355,
+        "points": 51
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 79,
+      "room": "stairway_0_1_1_90",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 1.862645149230957e-09,
+      "outside_ir_max": 6.181721801112872e-13,
+      "wav_sha256": "8cc458a27ae810b03dd73b16a69aedaf5bb967d3c2e6d8a06e466f01e9321dc7",
+      "native_sha256": "35a838c5ddb455b8e44ca609769081cc64494942422a3ff3dafcecc6b12076ff",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 51
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 79,
+      "room": "stairway_0_1_1_90",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 1.862645149230957e-09,
+      "outside_ir_max": 6.181721801112872e-13,
+      "wav_sha256": "8cc458a27ae810b03dd73b16a69aedaf5bb967d3c2e6d8a06e466f01e9321dc7",
+      "native_sha256": "b9ec6c9e7a577ef91bc8b8b5cd3efc1d1237444d3bf1d121a665ea82f0331605",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 51
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 97,
+      "room": "aula_carolina_0_1_1_90_3",
+      "mode": "guarded",
+      "block_frames": 193,
+      "max_error": 3.725290298461914e-09,
+      "outside_ir_max": 2.8066438062523957e-13,
+      "wav_sha256": "916ba5d36be45a69a2582c6c10267240eb45fb86da717a9e8a4b136c34644c39",
+      "native_sha256": "25bb41d4f40a23824f5d4cd8ef40fa27a411d2e777e98ff6c700871cb62248a3",
+      "observed_decay_change": {
+        "rmse_db": 0.6263989883421932,
+        "max_abs_db": 2.4010110882542293,
+        "points": 57
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 97,
+      "room": "aula_carolina_0_1_1_90_3",
+      "mode": "guarded",
+      "block_frames": 1024,
+      "max_error": 3.725290298461914e-09,
+      "outside_ir_max": 2.8066438062523957e-13,
+      "wav_sha256": "916ba5d36be45a69a2582c6c10267240eb45fb86da717a9e8a4b136c34644c39",
+      "native_sha256": "f64e77ca257fcc9ea69d410799f130171fcf59e4370c16a61c98627c4eab00da",
+      "observed_decay_change": {
+        "rmse_db": 0.6263989883421932,
+        "max_abs_db": 2.4010110882542293,
+        "points": 57
+      },
+      "used_learned_output": true
+    },
+    {
+      "case": 97,
+      "room": "aula_carolina_0_1_1_90_3",
+      "mode": "invalid_policy",
+      "block_frames": 193,
+      "max_error": 3.725290298461914e-09,
+      "outside_ir_max": 4.973799150320701e-13,
+      "wav_sha256": "48e77233336420baff5ead699492859f6ab90768889451e677e606be9a320515",
+      "native_sha256": "86ca7d7610a192754d440cbec770c1765a491fccf3798773d495fc476dcb4a55",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 57
+      },
+      "used_learned_output": false
+    },
+    {
+      "case": 97,
+      "room": "aula_carolina_0_1_1_90_3",
+      "mode": "invalid_policy",
+      "block_frames": 1024,
+      "max_error": 3.725290298461914e-09,
+      "outside_ir_max": 4.973799150320701e-13,
+      "wav_sha256": "48e77233336420baff5ead699492859f6ab90768889451e677e606be9a320515",
+      "native_sha256": "e361e0701e180c8cf97eba17c2ce47d38ed63845ca491fb4320a076a486de870",
+      "observed_decay_change": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 57
+      },
+      "used_learned_output": false
+    }
+  ],
+  "source_sha256": {
+    "verify_ir_measured.py": "7ce8c77fa04ed258384e651ef77024036419944018183222be30276bcd474701",
+    "ir_denoise.py": "6cf1ced47996bbd033099db3fd932bd739dd4dc587855b7d475430c8a280b463",
+    "ir_measured_metrics.py": "33395b3dfd1b2852ad0047d84366e43f58617cd051b894dd69652035be75c4ab",
+    "ir_preservation.py": "4badc44da1ab163855383c42899f25a63a8f11a2ed656c2769603d97a162f743"
+  },
+  "scope": "48 kHz paired recorded-reference plus controlled added-noise WAV, unchanged UPC/diagonal routing, guarded callback allocations. Artificial prefix retained in test IR; not acquisition-noise/clean-room validation."
+}

@@ -19,7 +19,7 @@
   "runtime": "Offline NumPy only. Separate reviewed float32 WAV export; no convolution audio-thread inference, automatic replacement, resampling, trimming, delay or normalization.",
   "model_identity": "Caller supplies expected raw-byte SHA-256; malformed/missing model retains original f32 samples.",
   "adoption_recommended": false,
-  "quality_gate": "Unprotected model failed; optional local-budget policy passes the fresh synthetic preservation probe, while measured-IR and broader model-adoption gates remain open.",
+  "quality_gate": "Unprotected model failed. Local-budget policy passes a fresh synthetic probe; measured-reference added-noise gains are small and conditional decay changes reach 2.411 dB. Full measured-preservation and ML-adoption gates remain open.",
   "evidence": "audit/artifacts/ml-ir-denoise-20261025",
   "quality": {
     "numpy_torch_max_error": 1.0330431265970219e-07,
@@ -30,9 +30,9 @@
     "worst_shift_classical_decay_improvement_db": -1.7671564703007343
   },
   "remaining": [
-    "Validate preservation of weak late structures using independent measured IR/noise or repeated measurements; local prefix-noise budgets pass a fresh synthetic probe but do not prove clean measured-response preservation.",
-    "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
-    "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration."
+    "Independent clean/repeated physical IR/noise acquisitions and explicit weak-decay preservation criteria; the six-room added-noise probe retains recording artifacts and does not identify unknown clean IRs.",
+    "Measured layouts/rates beyond the six paired 48 kHz AIR responses, actual true-stereo paths, imperfect prefix identification, listening and application review/import.",
+    "Resolve legacy AIR archive redistribution terms before distributing source/derived audio; only hashes, source code, metadata and metrics are committed."
   ],
   "preservation_policy": {
     "format": "sotf_ir_preservation_policy_v1",
@@ -49,5 +49,27 @@
     "neural_better_than_best_classical": 12,
     "worst_conditional_structure_projection_loss_db": 0.025137946403884733,
     "guarantee": "Removed energy per short channel/window bounded against stationary prefix-derived noise budget. This does not identify or guarantee the unknown clean IR."
+  },
+  "measured_reference_probe": {
+    "evidence": "audit/artifacts/ml-ir-measured-20261025",
+    "archive_sha256": "4baa3a0ea31dc72647ff61f53b0bf0b962876de31b6b0569ebc504987898aa02",
+    "room_pairs": 6,
+    "unique_added_noise_measurements": 36,
+    "correlated_arrival_variants": 108,
+    "sample_rate": 48000,
+    "noise_snr_db": [
+      20,
+      40,
+      60
+    ],
+    "reference": "Paired recorded AIR channels cast to float32, with artificial 80 ms zero prefix; original recording noise/artifacts remain in target. Added white/colored noise, not acquisition-noise ground truth. No training or source audio redistribution.",
+    "neural_accepted_cases": 72,
+    "neural_median_improvement_db": 0.17800957319853022,
+    "wiener_median_improvement_db": 0.1755286971250558,
+    "neural_worst_improvement_db": 0.0,
+    "neural_unique_measurement_wins": 13,
+    "neural_unique_measurement_median_delta_vs_best_classical_db": 0.0,
+    "max_conditional_decay_change_db": 2.410669514675469,
+    "adoption_recommended": false
   }
 }

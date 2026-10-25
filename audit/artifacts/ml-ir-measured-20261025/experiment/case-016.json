@@ -1,0 +1,244 @@
+{
+  "index": 16,
+  "room": "booth_0_0_1",
+  "room_index": 0,
+  "condition": 5,
+  "seed": 20283030,
+  "nominal_added_snr_db": 60,
+  "noise_type": "colored_ar_095",
+  "arrival_offset_samples": 0,
+  "arrival": 3908,
+  "noise_frames": 2880,
+  "frames": 36607,
+  "channels": 2,
+  "reference": {
+    "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/reference-00.f32le",
+    "sha256": "f0d3ba3c3d254284470ffb7f947f31e09178485694eb0d62b2be837f1ef74ceb",
+    "values": 73214,
+    "dtype": "<f4"
+  },
+  "source": {
+    "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/source-00-5.f32le",
+    "sha256": "d6f2343b773416c19674c6e3fda3702cbbbb8a36e8c2c04afa5e1135ac70decc",
+    "values": 73214,
+    "dtype": "<f4"
+  },
+  "arrays": {
+    "neural": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/neural.f32le",
+      "sha256": "d4de2a19b633e9cc1ee902b6e4e670a27738234bff7478c96c68cb946585c3ba",
+      "values": 73214,
+      "dtype": "<f4"
+    },
+    "neural_mask": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/neural_mask.f64le",
+      "sha256": "36c34809a2eb44e222aa7587feb621cb04861f028091d416e531edb011a14cd0",
+      "values": 36607,
+      "dtype": "<f8"
+    },
+    "wiener": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/wiener.f32le",
+      "sha256": "25732b7d60dc1780aa636ec674b6660f7264295c96133fb0a8246654064398f1",
+      "values": 73214,
+      "dtype": "<f4"
+    },
+    "wiener_mask": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/wiener_mask.f64le",
+      "sha256": "b3b151760f73e0449d4d3021b89986a8d7aac2539b197481a9371dabc43bdcff",
+      "values": 36607,
+      "dtype": "<f8"
+    },
+    "decay": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/decay.f32le",
+      "sha256": "171d08206b54235b2ad72b28fdf2ac57bb7ecf67a609e751943fb8050845ec3d",
+      "values": 73214,
+      "dtype": "<f4"
+    },
+    "decay_mask": {
+      "path": "/Volumes/home_tmp/tmp/ml-ir-measured-20261025/case-016/decay_mask.f64le",
+      "sha256": "e69d68f94218183978dd3baf0a8b39109b2d5b8a544729da20816324a943f407",
+      "values": 36607,
+      "dtype": "<f8"
+    }
+  },
+  "methods": {
+    "unchanged": {
+      "checks": {
+        "accepted": true
+      },
+      "waveform": {
+        "snr_db": 59.99999922155016,
+        "improvement_db": 0.0,
+        "projection_loss_db": 9.105175565130204e-05
+      },
+      "decay": {
+        "rmse_db": 0.003194901655102905,
+        "max_abs_db": 0.016727149162385047,
+        "points": 44
+      },
+      "transfer": {
+        "magnitude_rmse_db": 0.028134944359851182,
+        "phase_rmse_degrees": 0.22663356083034714,
+        "magnitude_max_abs_db": 0.23420895421348523,
+        "phase_max_abs_degrees": 1.6195424378340466,
+        "points": 361
+      },
+      "conditional_decay": {
+        "rmse_db": 0.0,
+        "max_abs_db": 0.0,
+        "points": 44
+      },
+      "conditional_projection_loss_db": -0.0
+    },
+    "neural": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.0001521033307953184,
+        "max_magnitude_change_db": 0.013350116858947192,
+        "max_phase_change_degrees": 0.16663806068374168,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.2416852387611283,
+          "windows": 127,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "waveform": {
+        "snr_db": 60.28359188595037,
+        "improvement_db": 0.28359266440021114,
+        "projection_loss_db": 9.42000131087369e-05
+      },
+      "decay": {
+        "rmse_db": 0.006024917073297105,
+        "max_abs_db": 0.020316659665446934,
+        "points": 44
+      },
+      "transfer": {
+        "magnitude_rmse_db": 0.026903132546999293,
+        "phase_rmse_degrees": 0.2157160354813832,
+        "magnitude_max_abs_db": 0.22590601884190542,
+        "phase_max_abs_degrees": 1.531633535943892,
+        "points": 361
+      },
+      "conditional_decay": {
+        "rmse_db": 0.007571876134052906,
+        "max_abs_db": 0.02655837429368546,
+        "points": 44
+      },
+      "conditional_projection_loss_db": 3.1682681700210638e-06
+    },
+    "wiener": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.00014001089602816042,
+        "max_magnitude_change_db": 0.014042724535057048,
+        "max_phase_change_degrees": 0.1473257517967194,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.2376702578935543,
+          "windows": 127,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "waveform": {
+        "snr_db": 60.264942844397495,
+        "improvement_db": 0.264943622847338,
+        "projection_loss_db": 9.393975457701163e-05
+      },
+      "decay": {
+        "rmse_db": 0.0054185842110474084,
+        "max_abs_db": 0.01874757994534093,
+        "points": 44
+      },
+      "transfer": {
+        "magnitude_rmse_db": 0.026879526357997813,
+        "phase_rmse_degrees": 0.21605814111996732,
+        "magnitude_max_abs_db": 0.22734376419377988,
+        "phase_max_abs_degrees": 1.5441523019161498,
+        "points": 361
+      },
+      "conditional_decay": {
+        "rmse_db": 0.007008177876182675,
+        "max_abs_db": 0.024746570077532226,
+        "points": 44
+      },
+      "conditional_projection_loss_db": 2.9061814111907555e-06
+    },
+    "decay": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.00010493680748134805,
+        "max_magnitude_change_db": 0.010050085362496342,
+        "max_phase_change_degrees": 0.09083822823990591,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls.",
+        "preservation": {
+          "policy": {
+            "format": "sotf_ir_preservation_policy_v1",
+            "window_ms": 5.0,
+            "noise_fraction": 0.5
+          },
+          "max_removed_noise_ratio": 0.2056267910319406,
+          "windows": 127,
+          "within_budget": true,
+          "scope": "Per-channel, nonoverlapping windows after protected early response; prefix noise must represent the IR noise. Not a clean-signal error bound."
+        }
+      },
+      "waveform": {
+        "snr_db": 60.18367725589553,
+        "improvement_db": 0.18367803434536895,
+        "projection_loss_db": 9.354494369165478e-05
+      },
+      "decay": {
+        "rmse_db": 0.004076082282389561,
+        "max_abs_db": 0.014549039455317825,
+        "points": 44
+      },
+      "transfer": {
+        "magnitude_rmse_db": 0.02728604137258815,
+        "phase_rmse_degrees": 0.221380334470386,
+        "magnitude_max_abs_db": 0.22690118644609544,
+        "phase_max_abs_degrees": 1.5667052122123315,
+        "points": 361
+      },
+      "conditional_decay": {
+        "rmse_db": 0.005829590640452584,
+        "max_abs_db": 0.02018678927199602,
+        "points": 44
+      },
+      "conditional_projection_loss_db": 2.502165954741576e-06
+    }
+  }
+}
