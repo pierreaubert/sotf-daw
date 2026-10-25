@@ -11,7 +11,12 @@ import unittest
 from pathlib import Path
 
 import numpy as np
-from fit_linear_phase_eq import convert, ideal_response, validate_target
+from fit_linear_phase_eq import (
+    convert,
+    ideal_response,
+    realize_candidates,
+    validate_target,
+)
 from scipy.io import wavfile
 
 
@@ -25,6 +30,18 @@ class ProposalTests(unittest.TestCase):
         converted = convert(proposal, "target", 0)
         self.assertTrue(converted["accuracy_mode"])
         self.assertFalse(converted["auto_gain"])
+        with self.assertRaises(ValueError):
+            realize_candidates(
+                {**proposal, "qualified_proposals": [proposal] * 4},
+                "target",
+                0,
+                48000,
+                None,
+                None,
+                Path("unused"),
+                Path("unused"),
+                193,
+            )
         with self.assertRaises(ValueError):
             convert(proposal, "different-target", 0)
         with self.assertRaises(ValueError):
@@ -77,7 +94,15 @@ class ProposalTests(unittest.TestCase):
     "set native QA exporter path for actual FIR integration",
 )
 class NativeExportTests(unittest.TestCase):
-    def run_export(self, root, rate=48000, peak=None, forged_flat=False, block=193):
+    def run_export(
+        self,
+        root,
+        rate=48000,
+        peak=None,
+        forged_flat=False,
+        block=193,
+        alternatives=None,
+    ):
         frequencies = np.unique(
             np.r_[np.geomspace(20, 20000, 512), peak[0] if peak else []]
         )
@@ -139,6 +164,11 @@ class NativeExportTests(unittest.TestCase):
                     "auto_gain": {"enabled": False},
                 },
             }
+            if alternatives is not None:
+                proposal["qualified_proposals"] = [
+                    {**proposal, "method": label, "parameters": controls}
+                    for label, controls in alternatives
+                ]
             path = root / "proposal.json"
             path.write_text(json.dumps(proposal))
             command += ["--proposal", str(path)]
@@ -186,6 +216,62 @@ class NativeExportTests(unittest.TestCase):
             self.assertIsNone(report["parameters"])
             self.assertFalse((root / "out/preset.json").exists())
             self.assertFalse((root / "out/fir.wav").exists())
+
+    def test_later_candidate_survives_earlier_native_tap_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            narrow = {
+                "filters": [
+                    {
+                        "filter_type": "peak",
+                        "freq": 30,
+                        "q": 8,
+                        "db_gain": 0.45,
+                        "order": 2,
+                    }
+                ],
+                "auto_gain": {"enabled": False},
+            }
+            identity = {"filters": [], "auto_gain": {"enabled": False}}
+            result, report = self.run_export(
+                root,
+                rate=96000,
+                peak=[1000, 1, 0],
+                alternatives=[("narrow", narrow), ("identity", identity)],
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(report["fit_method"], "identity")
+            self.assertFalse(report["native_candidates"][0]["accepted"])
+            self.assertEqual(
+                report["native_candidates"][0]["native"]["status"], "rejected"
+            )
+            self.assertTrue(report["native_candidates"][1]["accepted"])
+            self.assertEqual(report["selected_candidate_index"], 1)
+
+    def test_invalid_target_candidate_cannot_win_on_kernel_length(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            wrong = {"filters": [], "auto_gain": {"enabled": False}}
+            correct = {
+                "filters": [
+                    {
+                        "filter_type": "peak",
+                        "freq": 1000,
+                        "q": 1,
+                        "db_gain": 6,
+                        "order": 2,
+                    }
+                ],
+                "auto_gain": {"enabled": False},
+            }
+            result, report = self.run_export(
+                root,
+                peak=[1000, 1, 6],
+                alternatives=[("wrong-flat", wrong), ("correct", correct)],
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertFalse(report["native_candidates"][0]["checks"]["accepted"])
+            self.assertEqual(report["fit_method"], "correct")
 
     def test_unrealizable_sharp_bass_is_rejected_without_exports(self):
         with tempfile.TemporaryDirectory() as directory:

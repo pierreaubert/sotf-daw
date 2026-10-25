@@ -1,0 +1,49 @@
+{
+  "cases": 6,
+  "accepted": 5,
+  "candidate_realizations": 13,
+  "rows": [
+    {
+      "case": "peak-1800-48k",
+      "accepted": true,
+      "iir_method": "classical-constant",
+      "fir_method": "classical-edges",
+      "taps": 1024
+    },
+    {
+      "case": "bass-90-96k",
+      "accepted": true,
+      "iir_method": "neural",
+      "fir_method": "neural",
+      "taps": 4096
+    },
+    {
+      "case": "shelves-44100",
+      "accepted": true,
+      "iir_method": "classical-edges",
+      "fir_method": "classical-edges",
+      "taps": 1024
+    },
+    {
+      "case": "rate-shift-192k",
+      "accepted": true,
+      "iir_method": "classical-edges",
+      "fir_method": "classical-edges",
+      "taps": 2048
+    },
+    {
+      "case": "jagged-rejected",
+      "accepted": false,
+      "iir_method": null,
+      "fir_method": null,
+      "taps": null
+    },
+    {
+      "case": "native-failure-isolated",
+      "accepted": true,
+      "iir_method": "identity",
+      "fir_method": "identity",
+      "taps": 1024
+    }
+  ]
+}

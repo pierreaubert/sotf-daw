@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_linear_phase_candidates.py",
+    "--model",
+    "crates/sotf-plugins/models/eq-multiband",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-linear-phase-eq-export",
+    "--output",
+    "audit/artifacts/ml-linear-phase-candidates-20261025/experiment",
+    "--temporary",
+    "/Volumes/home_tmp/tmp/ml-linear-phase-candidates-20261025",
+    "--previous-evidence",
+    "audit/artifacts/ml-linear-phase-fit-20261025/experiment"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 12.255564792081714,
+  "native_binary_matches_prior_verified_build": true
+}

@@ -1,0 +1,6 @@
+{"case": "peak-1800-48k", "accepted": true, "iir_selected": "classical-constant", "fir_selected": "classical-edges", "candidate_count": 3, "taps": 1024}
+{"case": "bass-90-96k", "accepted": true, "iir_selected": "neural", "fir_selected": "neural", "candidate_count": 3, "taps": 4096}
+{"case": "shelves-44100", "accepted": true, "iir_selected": "classical-edges", "fir_selected": "classical-edges", "candidate_count": 2, "taps": 1024}
+{"case": "rate-shift-192k", "accepted": true, "iir_selected": "classical-edges", "fir_selected": "classical-edges", "candidate_count": 3, "taps": 2048}
+{"case": "jagged-rejected", "accepted": false, "iir_selected": null, "fir_selected": null, "candidate_count": 0, "taps": null}
+{"case": "native-failure-isolated", "accepted": true, "iir_selected": "identity", "fir_selected": "identity", "candidate_count": 2, "taps": 1024}

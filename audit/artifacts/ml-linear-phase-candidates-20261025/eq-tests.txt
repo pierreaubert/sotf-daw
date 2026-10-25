@@ -1,0 +1,12 @@
+test_differentiable_response_and_gradients_agree_with_numpy (test_eq_multiband.MultibandPhysicsTests.test_differentiable_response_and_gradients_agree_with_numpy) ... ok
+test_effective_parameter_identities_do_not_overlap (test_eq_multiband.MultibandPhysicsTests.test_effective_parameter_identities_do_not_overlap) ... ok
+test_flat_target_is_canonical_noop_without_weights (test_eq_multiband.MultibandPhysicsTests.test_flat_target_is_canonical_noop_without_weights) ... ok
+test_invalid_targets_fail_before_model_loading (test_eq_multiband.MultibandPhysicsTests.test_invalid_targets_fail_before_model_loading) ... ok
+test_native_conventions_match_independent_analog_bilinear_sections (test_eq_multiband.MultibandPhysicsTests.test_native_conventions_match_independent_analog_bilinear_sections) ... ok
+test_training_refuses_existing_artifacts (test_eq_multiband.MultibandPhysicsTests.test_training_refuses_existing_artifacts) ... ok
+test_zero_gain_is_identity_and_shelf_pair_can_represent_constant_gain (test_eq_multiband.MultibandPhysicsTests.test_zero_gain_is_identity_and_shelf_pair_can_represent_constant_gain) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.086s
+
+OK

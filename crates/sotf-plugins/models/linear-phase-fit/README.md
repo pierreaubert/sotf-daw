@@ -68,11 +68,14 @@ Rejected qualification returns exit 2, `accepted: false`, `parameters: null`,
 and no applicable preset/WAV. Successful exports return exit 0. Work files remain
 available for diagnostics. Existing output/work directories and source inputs
 are never overwritten. Review the report before importing; there is no automatic
-apply. This initial tool checks the already selected IIR proposal, rather than
-searching every refined candidate for the smallest realizable FIR latency.
+apply. The tool checks up to three individually qualified refined candidates and selects
+the shortest qualified native FIR, then final target RMS, target maximum and
+stable input order. A candidate failure does not discard later alternatives.
+The original IIR-selected method and every candidate result are reported.
 
 ## Verification
 
+The initial selected-proposal version in
 `audit/artifacts/ml-linear-phase-fit-20261025` freezes eight functional probes
 before evaluation. Five qualify: flat at 44.1 kHz, peak at 48 kHz, bass at 96 kHz,
 six-band response at 44.1 kHz and a 192 kHz rate shift. Two refined fits select
@@ -98,3 +101,31 @@ source snapshots and hashes are retained in the evidence bundle.
 Broader measured/noisy targets, corner cases, controlled refinement/cost
 comparisons, application review/import and real-host/platform acceptance remain
 open. The Linear-phase EQ proposal and complete ML audit remain in progress.
+
+## FIR-aware candidate selection
+
+The shared fitter's optional qualified-proposal payload leaves legacy EQ output
+unchanged. Every candidate is independently converted, prepared in native accuracy
+mode, streamed under allocation guards and checked against the original target.
+Only candidates passing every final check can be selected. Choosing by actual
+FIR support before error bounds the latency among these qualified proposals; it
+is not a global optimum over all possible filter settings. The report retains
+`iir_selected_method`, `fit_method`, `selected_candidate_index` and per-candidate
+native diagnostics. Work directories isolate each preparation. At most three
+candidates are accepted as input; old single-proposal files continue to work.
+
+Six additional fixed functional probes realize 13 candidates. Five targets export;
+the jagged target is rejected. In one 48 kHz peak case, final FIR validation picks
+a different classical seed from the original IIR ranking. In the explicit
+alternative fixture, a low-level narrow residue qualifies at IIR sample tolerances
+but fails the native FIR tap cap; the later identity candidate still exports.
+A shorter candidate that fails the original target cannot win. Independent
+DTFT/Tustin/FFT checks verify all accepted candidates and the selection ranking;
+selected presets reopen with identical kernels at 511-frame callbacks.
+
+Evidence is in `audit/artifacts/ml-linear-phase-candidates-20261025`. Sixteen EQ
+physics, output-contract and FIR integration tests pass. A real default-versus-
+opt-in shared-fitter comparison returns identical original controls, method and
+errors. The optional payload adds controls only for already-qualified candidates;
+no model weights or runtime DSP changes. These functional checks do not establish
+learned superiority, reduced total preparation time or measured-target acceptance.

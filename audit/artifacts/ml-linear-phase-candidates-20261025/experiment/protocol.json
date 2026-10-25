@@ -1,0 +1,152 @@
+{
+  "cases": [
+    {
+      "name": "peak-1800-48k",
+      "rate": 48000,
+      "source_parameters": [
+        7.495541943884256,
+        -0.2231435513142097,
+        5.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        6.907755278982137,
+        0.0,
+        6.907755278982137,
+        0.0
+      ],
+      "mode": "fit"
+    },
+    {
+      "name": "bass-90-96k",
+      "rate": 96000,
+      "source_parameters": [
+        4.499809670330265,
+        -0.10536051565782628,
+        5.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        6.907755278982137,
+        0.0,
+        6.907755278982137,
+        0.0
+      ],
+      "mode": "fit"
+    },
+    {
+      "name": "shelves-44100",
+      "rate": 44100,
+      "source_parameters": [
+        5.991464547107982,
+        0.0,
+        -2.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        5.075173815233827,
+        2.0,
+        9.047821442478408,
+        -3.0
+      ],
+      "mode": "fit"
+    },
+    {
+      "name": "rate-shift-192k",
+      "rate": 192000,
+      "source_parameters": [
+        8.34283980427146,
+        0.09531017980432493,
+        -4.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        5.393627546352362,
+        1.0,
+        6.907755278982137,
+        0.0
+      ],
+      "mode": "fit"
+    },
+    {
+      "name": "jagged-rejected",
+      "rate": 48000,
+      "source_parameters": [
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        6.907755278982137,
+        0.0,
+        6.907755278982137,
+        0.0
+      ],
+      "mode": "jagged"
+    },
+    {
+      "name": "native-failure-isolated",
+      "rate": 96000,
+      "source_parameters": [
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        9.903487552536127,
+        0.0,
+        0.0,
+        6.907755278982137,
+        0.0,
+        6.907755278982137,
+        0.0
+      ],
+      "mode": "alternatives"
+    }
+  ],
+  "model_sha256": "671fbe820883249c00c228d5497d4585a1836afba62f6e2f86d0e39ecbdf3015",
+  "renderer_sha256": "d7bac94af56f0dae075dd44d4cf9b7c5b69f313e4a512691cc21de472ac51b9d",
+  "selection_policy": "All individually qualified IIR seeds undergo native and original-target FIR checks. Choose shortest actual support, then final target RMS, target max, input order. No model/threshold tuning from this probe.",
+  "source_sha256": {
+    "evaluate_linear_phase_candidates.py": "17ca8f631af302297bb0d311480669078094a69140ebfa622215f96df4b483b5",
+    "eq_multiband.py": "bb87e4f261c15e59e7f2885eb8f1e7a8cf68162f7601a72997be30e6b5202ab4",
+    "fit_linear_phase_eq.py": "90608b7b0a2f6bc7cbc6f58743420566d6c21e52cf08adaeaa4f920422784b4e",
+    "evaluate_linear_phase_fit.py": "230ea8ce236f7b18d826d178f950817fe3aefa7a6b356533b14c2b104ae36d57"
+  },
+  "scope": "Fixed synthetic functional probes, not statistical quality or speed acceptance. Required alternative/failure fixture is explicit."
+}

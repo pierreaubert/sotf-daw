@@ -27,7 +27,20 @@
   "general_ml_adoption_recommended": false,
   "remaining": [
     "Broader independent measured/noisy targets, boundary and out-of-family qualification; current eight cases are functional probes, not population acceptance.",
-    "Controlled learned-versus-strongest-classical refinement/cost comparison and FIR-aware candidate selection; current tool validates the already selected IIR proposal. Prior multiband neural adoption result remains negative.",
+    "Controlled learned-versus-strongest-classical refinement/cost comparison including cold load and up to three native preparations; FIR-aware selection is implemented, while global filter co-design is not claimed.",
     "Application review/import and real-host/platform validation; no active preset is modified by the CLI."
-  ]
+  ],
+  "candidate_selection": {
+    "max_candidates": 3,
+    "source": "Individually qualified neural/classical proposals from optional shared-fitter payload; old single-proposal files remain supported.",
+    "policy": "Qualify actual native FIR and original target for every candidate; minimize resolved taps, target RMS, target maximum, stable input order.",
+    "failure_behavior": "Candidate conversion, native cap or final target failure does not prevent later qualified alternatives.",
+    "evidence": "audit/artifacts/ml-linear-phase-candidates-20261025",
+    "fixed_probe_cases": 6,
+    "candidate_realizations": 13,
+    "qualified_exports": 5,
+    "legacy_eq_default_output_unchanged": true,
+    "qualified_candidate_realizations": 10
+  },
+  "functional_probe_scope": "Initial selected-proposal version; the later FIR-aware study is recorded under candidate_selection."
 }

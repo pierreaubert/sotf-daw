@@ -73,7 +73,7 @@ def main():
     if digest(args.renderer) != protocol["renderer_sha256"]:
         raise ValueError("renderer identity mismatch")
     rows = []
-    for index in range(8):
+    for index in range(len(protocol["cases"])):
         case = json.loads((args.evidence / f"case-{index:03d}.json").read_text())
         report, directory = case["report"], Path(case["directory"])
         target_path = args.evidence / (case["case"] + "-target.json")

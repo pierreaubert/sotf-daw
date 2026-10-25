@@ -541,6 +541,22 @@ def fit(args):
     result.update(
         elapsed_seconds=time.monotonic() - start, target_sha256=sha(args.target)
     )
+    if getattr(args, "include_qualified_proposals", False):
+        if result["method"] == "canonical-flat":
+            result["qualified_proposals"] = [dict(result)]
+        else:
+            result["qualified_proposals"] = [
+                {
+                    "accepted": True,
+                    "target_sha256": result["target_sha256"],
+                    "method": row["method"],
+                    "parameters": proposal_parameters(row["parameters"]),
+                    "weights_sha256": result["weights_sha256"],
+                    "model_sample_rate_shift": result["model_sample_rate_shift"],
+                }
+                for row in candidates
+                if row["accepted"]
+            ]
     args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + "\n")
     print(json.dumps(result, indent=2, allow_nan=False))
     if not result["accepted"]:
@@ -564,6 +580,11 @@ def main():
     fitting.add_argument("--target", type=Path, required=True)
     fitting.add_argument("--output", type=Path, required=True)
     fitting.add_argument("--max-evaluations", type=int, default=200)
+    fitting.add_argument(
+        "--include-qualified-proposals",
+        action="store_true",
+        help="Include qualified candidate controls for downstream FIR realization",
+    )
     args = parser.parse_args()
     if args.command == "train":
         if (

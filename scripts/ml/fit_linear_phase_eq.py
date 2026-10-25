@@ -243,6 +243,95 @@ def check_fir(native, params, frequencies, target, rate):
     }
 
 
+def realize_candidates(
+    proposal,
+    target_sha,
+    manual_index,
+    rate,
+    frequencies,
+    target,
+    renderer,
+    work_dir,
+    callback_frames,
+):
+    """Qualify every bounded candidate, then minimize actual support before error."""
+    if (
+        not isinstance(proposal, dict)
+        or proposal.get("accepted") is not True
+        or proposal.get("target_sha256") != target_sha
+    ):
+        raise ValueError("proposal is unqualified or refers to a different target")
+    pool = proposal.get("qualified_proposals", [proposal])
+    if not isinstance(pool, list) or not 1 <= len(pool) <= 3:
+        raise ValueError("supply one to three qualified candidate proposals")
+    records, eligible = [], []
+    for index, item in enumerate(pool):
+        record = {
+            "index": index,
+            "method": item.get("method") if isinstance(item, dict) else None,
+            "accepted": False,
+        }
+        try:
+            params = convert(item, target_sha, manual_index)
+            request = {
+                "sample_rate": rate,
+                "params": params,
+                "output_dir": str((work_dir / f"native-{index}").resolve()),
+                "frequencies_hz": np.geomspace(20, 20000, 65).tolist(),
+                "callback_frames": callback_frames,
+            }
+            request_path = work_dir / f"native-request-{index}.json"
+            request_path.write_text(json.dumps(request))
+            native_run = subprocess.run(
+                [str(renderer.resolve()), str(request_path.resolve())],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            (work_dir / f"native-stdout-{index}.txt").write_text(native_run.stdout)
+            (work_dir / f"native-stderr-{index}.txt").write_text(native_run.stderr)
+            native = json.loads(native_run.stdout)
+            record.update(
+                native=native,
+                request_path=str(request_path.resolve()),
+                request_sha256=sha(request_path.read_bytes()),
+            )
+            if native_run.returncode != 0 or native.get("status") != "ok":
+                raise ValueError(
+                    "native FIR accuracy preparation rejected the proposal"
+                )
+            fir, checks = check_fir(native, params, frequencies, target, rate)
+            record["checks"] = checks
+            if not checks["accepted"]:
+                raise ValueError("end-to-end native FIR checks did not qualify")
+            record["accepted"] = True
+            eligible.append(
+                (
+                    native["selected_taps"],
+                    checks["target_rms_db"],
+                    checks["target_max_db"],
+                    index,
+                    params,
+                    fir,
+                )
+            )
+        except (
+            OSError,
+            ValueError,
+            KeyError,
+            TypeError,
+            subprocess.TimeoutExpired,
+        ) as error:
+            record["error"] = str(error)
+        records.append(record)
+    if not eligible:
+        return None, records
+    chosen = min(eligible, key=lambda row: row[:4])
+    _, _, _, index, params, fir = chosen
+    return {"params": params, "fir": fir, "record": records[index]}, records
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", type=Path, required=True)
@@ -330,6 +419,7 @@ def main():
                 str(fit_path),
                 "--max-evaluations",
                 str(args.max_evaluations),
+                "--include-qualified-proposals",
             ]
             result = subprocess.run(
                 command, check=False, capture_output=True, text=True, timeout=600
@@ -345,43 +435,55 @@ def main():
             report["fit_candidates"] = proposal.get("candidates", [])
             if result.returncode != 0:
                 raise ValueError("exact refined fit did not qualify")
-        params = convert(
-            proposal, identity, [1024, 2048, 4096, 8192].index(args.manual_fir_taps)
+        selected, records = realize_candidates(
+            proposal,
+            identity,
+            [1024, 2048, 4096, 8192].index(args.manual_fir_taps),
+            rate,
+            frequencies,
+            target,
+            args.renderer,
+            args.work_dir,
+            args.callback_frames,
         )
-        report["fit_method"] = proposal.get("method")
-        report["proposal_weights_sha256"] = proposal.get("weights_sha256")
-        report["model_sample_rate_shift"] = proposal.get(
-            "model_sample_rate_shift", False
+        report.update(
+            native_candidates=records,
+            renderer_sha256=sha(args.renderer.read_bytes()),
+            iir_selected_method=proposal.get("method")
+            if isinstance(proposal, dict)
+            else None,
+            selection_policy="Qualified candidates only; shortest actual FIR, then target RMS, target maximum, stable input order.",
         )
-        report["neural_candidate_evaluated"] = any(
-            row.get("method") == "neural" for row in proposal.get("candidates", [])
+        if selected is None:
+            if len(records) == 1:
+                report.update(
+                    {
+                        key: records[0][key]
+                        for key in ["native", "checks"]
+                        if key in records[0]
+                    }
+                )
+            raise ValueError(
+                "no candidate passed native FIR and final target qualification"
+            )
+        chosen = selected["record"]
+        params, fir, native, checks = (
+            selected["params"],
+            selected["fir"],
+            chosen["native"],
+            chosen["checks"],
         )
-        request = {
-            "sample_rate": rate,
-            "params": params,
-            "output_dir": str((args.work_dir / "native").resolve()),
-            "frequencies_hz": np.geomspace(20, 20000, 65).tolist(),
-            "callback_frames": args.callback_frames,
-        }
-        request_path = args.work_dir / "native-request.json"
-        request_path.write_text(json.dumps(request))
-        native_run = subprocess.run(
-            [str(args.renderer.resolve()), str(request_path.resolve())],
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=120,
+        report.update(
+            fit_method=chosen["method"],
+            native=native,
+            checks=checks,
+            selected_candidate_index=chosen["index"],
+            proposal_weights_sha256=proposal.get("weights_sha256"),
+            model_sample_rate_shift=proposal.get("model_sample_rate_shift", False),
+            neural_candidate_evaluated=any(
+                row.get("method") == "neural" for row in proposal.get("candidates", [])
+            ),
         )
-        (args.work_dir / "native-stdout.txt").write_text(native_run.stdout)
-        (args.work_dir / "native-stderr.txt").write_text(native_run.stderr)
-        native = json.loads(native_run.stdout)
-        report.update(native=native, renderer_sha256=sha(args.renderer.read_bytes()))
-        if native_run.returncode != 0 or native.get("status") != "ok":
-            raise ValueError("native FIR accuracy preparation rejected the proposal")
-        fir, checks = check_fir(native, params, frequencies, target, rate)
-        report["checks"] = checks
-        if not checks["accepted"]:
-            raise ValueError("end-to-end native FIR checks did not qualify")
         fir_path, preset_path = args.output / "fir.wav", args.output / "preset.json"
         file = fir_path.open("xb")
         exported.append(fir_path)

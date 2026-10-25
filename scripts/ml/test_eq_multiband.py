@@ -114,6 +114,20 @@ class MultibandPhysicsTests(unittest.TestCase):
             self.assertTrue(result["accepted"])
             self.assertEqual(result["parameters"]["filters"], [])
             self.assertFalse(result["parameters"]["auto_gain"]["enabled"])
+            self.assertNotIn("qualified_proposals", result)
+            args.include_qualified_proposals = True
+            args.output = root / "extended.json"
+            with contextlib.redirect_stdout(io.StringIO()):
+                eq.fit(args)
+            extended = json.loads(args.output.read_text())
+            self.assertEqual(len(extended["qualified_proposals"]), 1)
+            self.assertEqual(
+                extended["qualified_proposals"][0]["parameters"], result["parameters"]
+            )
+            self.assertEqual(
+                extended["qualified_proposals"][0]["target_sha256"],
+                result["target_sha256"],
+            )
 
     def test_zero_gain_is_identity_and_shelf_pair_can_represent_constant_gain(self):
         p = np.tile([np.log(1000), 0, 0], 4).tolist() + [np.log(1000), 0] * 2
