@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/propose_stereo_scene.py",
+    "--audio",
+    "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/held-0-centered-1.0.f32le",
+    "--frames",
+    "48143",
+    "--context",
+    "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/context.json",
+    "--model",
+    "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/cli-fit/model.json",
+    "--model-sha256",
+    "ce5eee04ac549ef193935d8599a3369c416308522a749bc1c45f303820e2ece6",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-stereo-imager-render",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/cli-proposal"
+  ],
+  "exit_code": 0,
+  "seconds": 0.1958913749549538
+}

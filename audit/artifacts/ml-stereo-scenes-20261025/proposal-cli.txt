@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/propose_stereo_scene.py", line 84, in <module>
+    main()
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/propose_stereo_scene.py", line 36, in main
+    raise ValueError("PCM byte length mismatch")
+ValueError: PCM byte length mismatch

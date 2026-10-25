@@ -806,14 +806,23 @@
         "scripts/ml/test_stereo_imager_native.py",
         "scripts/ml/evaluate_stereo_imager_native.py",
         "scripts/ml/analyze_stereo_imager_native.py",
-        "audit/artifacts/ml-stereo-imager-native-20261025"
+        "audit/artifacts/ml-stereo-imager-native-20261025",
+        "scripts/ml/stereo_scenes.py",
+        "scripts/ml/fit_stereo_scenes.py",
+        "scripts/ml/propose_stereo_scene.py",
+        "scripts/ml/stereo_scene_cases.py",
+        "scripts/ml/test_stereo_scenes.py",
+        "scripts/ml/evaluate_stereo_scenes.py",
+        "scripts/ml/analyze_stereo_scenes.py",
+        "crates/sotf-plugins/models/stereo-imager-scenes/manifest.json",
+        "audit/artifacts/ml-stereo-scenes-20261025"
       ],
       "remaining": [
-        "Implement explicit source-labelled offline scene classification and bounded suggested settings with model provenance, abstention and deterministic fallback. Native qualification infrastructure does not complete this proposal.",
-        "Train only from declared labels/source groups and validate on fresh independent sources; compare classical scene/setting baselines and listening outcomes. No model has been trained or installed at this checkpoint.",
-        "Qualify suggested settings through the actual native renderer, including peak/headroom, side energy, mono fold and preset reopen. Current widening probes reach2.054 peak; native width control does not supply a ceiling.",
-        "Use host registry low-crossover range80..1000Hz for suggestions; legacy constructor also accepts20..80Hz, but those values fail current host validation. No production range compatibility change was made.",
-        "Real-material scene desirability, level/rate/source shifts, listening and host/cross-platform acceptance remain open; realtime controls remain deterministic."
+        "Source-labelled offline RDA scene classification with whole-source uncertainty/support gates and user-declared native setting policies is now functional; fit and proposal CLIs export only explicitly qualified presets. No realtime inference or default model was added.",
+        "Collect adequate real source-labelled scenes and user policy/preference evidence; synthetic example is functional only. Both model and simpler one-feature centroid baseline get all72 procedural gain conditions right, with no demonstrated model advantage.",
+        "Strengthen/calibrate abstention and evaluate new independent source/rate/duration/channel-balance shifts plus listening. Identical PCM with different intended uses gets the same policy and reduces desired side energy3.374dB; scene classification does not establish preferred width.",
+        "Complete actual host/resource/cross-platform acceptance; current model explicitly binds the local native QA executable. Raw widening can exceed full scale; proposal path now checks native headroom, level, mono energy/error and fresh preset reopen before export.",
+        "Keep host registry low crossover80..1000Hz for suggestions; legacy constructor also accepts20..80Hz but host validation rejects it. No production compatibility range was changed."
       ]
     },
     {

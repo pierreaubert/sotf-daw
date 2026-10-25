@@ -1,0 +1,12 @@
+test_classification_scores_do_not_imply_preferred_width (test_stereo_scenes.StereoSceneTests.test_classification_scores_do_not_imply_preferred_width) ... ok
+test_features_gain_invariance_full_tail_and_excitation (test_stereo_scenes.StereoSceneTests.test_features_gain_invariance_full_tail_and_excitation) ... ok
+test_grouped_fit_and_weighted_normal_equations (test_stereo_scenes.StereoSceneTests.test_grouped_fit_and_weighted_normal_equations) ... ok
+test_identity_conflicts_and_group_shortage_refuse (test_stereo_scenes.StereoSceneTests.test_identity_conflicts_and_group_shortage_refuse) ... ok
+test_model_loader_and_successful_cli_only_export_files (test_stereo_scenes.StereoSceneTests.test_model_loader_and_successful_cli_only_export_files) ... ok
+test_model_schema_precision_policy_and_provenance_refuse (test_stereo_scenes.StereoSceneTests.test_model_schema_precision_policy_and_provenance_refuse) ... ok
+test_native_export_headroom_and_context_fallback (test_stereo_scenes.StereoSceneTests.test_native_export_headroom_and_context_fallback) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.663s
+
+OK

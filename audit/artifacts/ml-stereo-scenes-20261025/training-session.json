@@ -1,0 +1,239 @@
+{
+  "format": "sotf-stereo-scene-labels-v1",
+  "context": {
+    "sample_rate": 48000,
+    "channels": 2,
+    "scene_definition_id": "synthetic-spatial-scene-demonstration"
+  },
+  "data_origin": "synthetic_validation",
+  "renderer_sha256": "a5cb532aef4e33d15c5b7ead22c569258bfb9e9220a0f078079935857be7fd6b",
+  "settings_by_scene": {
+    "centered": {
+      "width": 1.4,
+      "low_mid_freq": 250.0,
+      "mid_high_freq": 4000.0,
+      "low_width": 0.8,
+      "mid_width": 1.0,
+      "high_width": 1.2,
+      "mono_bass": false,
+      "mix": 0.7
+    },
+    "diffuse": {
+      "width": 1.0,
+      "low_mid_freq": 250.0,
+      "mid_high_freq": 4000.0,
+      "low_width": 1.0,
+      "mid_width": 1.0,
+      "high_width": 1.0,
+      "mono_bass": false,
+      "mix": 1.0
+    },
+    "side_dominant": {
+      "width": 0.7,
+      "low_mid_freq": 250.0,
+      "mid_high_freq": 4000.0,
+      "low_width": 0.5,
+      "mid_width": 0.9,
+      "high_width": 1.0,
+      "mono_bass": true,
+      "mix": 1.0
+    }
+  },
+  "protocol": {
+    "whole_source_grouping": true
+  },
+  "records": [
+    {
+      "id": "source-0-centered",
+      "source_group": "source-0",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-0-centered.f32le",
+      "audio_sha256": "10016b3b567c3bde5194d8cc8169839305268383846d9dc0dfc1b99674d6f2c0"
+    },
+    {
+      "id": "source-0-diffuse",
+      "source_group": "source-0",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-0-diffuse.f32le",
+      "audio_sha256": "a622a5734cbbb22e77bddb99d88c0f715941aa9f317a510c219b1baa7038e166"
+    },
+    {
+      "id": "source-0-side_dominant",
+      "source_group": "source-0",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-0-side_dominant.f32le",
+      "audio_sha256": "ca98caa6de82359dfc167316443db939ed3eb622996759e17b890d23a49a3e36"
+    },
+    {
+      "id": "source-1-centered",
+      "source_group": "source-1",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-1-centered.f32le",
+      "audio_sha256": "360a6f9019e7e747ce812a99123c399fe005aa4dca4309ef9b344d0075803a36"
+    },
+    {
+      "id": "source-1-diffuse",
+      "source_group": "source-1",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-1-diffuse.f32le",
+      "audio_sha256": "8bbde69e8e821fb70fd2627c8badc2f725c6f019d091d8e5e0f4255c1f3e3730"
+    },
+    {
+      "id": "source-1-side_dominant",
+      "source_group": "source-1",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-1-side_dominant.f32le",
+      "audio_sha256": "1b29f47a02518bc1ea52b3b82bed45b2cfccf1eea5ce98320c9833e12b7ef9dd"
+    },
+    {
+      "id": "source-2-centered",
+      "source_group": "source-2",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-2-centered.f32le",
+      "audio_sha256": "c6d1cc9c9010f65ee75d4e4fddfbb15f01f13bc5afbf7d96e8bf6aba9cda28cb"
+    },
+    {
+      "id": "source-2-diffuse",
+      "source_group": "source-2",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-2-diffuse.f32le",
+      "audio_sha256": "0492d63716e1a9fd4924a316bddcd147d26d53f812cd9d53ba31698fa70efb23"
+    },
+    {
+      "id": "source-2-side_dominant",
+      "source_group": "source-2",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-2-side_dominant.f32le",
+      "audio_sha256": "78442e77d189a353727c86318a431e86ec79979bd3359fdd30b6ec779a47c6c8"
+    },
+    {
+      "id": "source-3-centered",
+      "source_group": "source-3",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-3-centered.f32le",
+      "audio_sha256": "367c3739a6c1b7c1e06580bb387fcf870a81be3be116d26151f5ae86d3b46486"
+    },
+    {
+      "id": "source-3-diffuse",
+      "source_group": "source-3",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-3-diffuse.f32le",
+      "audio_sha256": "0ee930d544caafefd999ae82517de05e46a51886fed6ab51d75eec9446f2392c"
+    },
+    {
+      "id": "source-3-side_dominant",
+      "source_group": "source-3",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-3-side_dominant.f32le",
+      "audio_sha256": "d9e7b4c8369804fbf6e78295f5f185204eedbf606881af6917b005e38fbefc10"
+    },
+    {
+      "id": "source-4-centered",
+      "source_group": "source-4",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-4-centered.f32le",
+      "audio_sha256": "07b03f5a0bf6163065cabf019752ee4dd13e63cb6c6654722ca0151d949c840c"
+    },
+    {
+      "id": "source-4-diffuse",
+      "source_group": "source-4",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-4-diffuse.f32le",
+      "audio_sha256": "4a5200fcd4fdacca00d8f10f4c9ade92a1df86ebd198f34bfb60f1b5259749fa"
+    },
+    {
+      "id": "source-4-side_dominant",
+      "source_group": "source-4",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-4-side_dominant.f32le",
+      "audio_sha256": "ab032ac8680c492a7ffcac02acdff730a4ca3afbd89e450f966ce071961f6e1d"
+    },
+    {
+      "id": "source-5-centered",
+      "source_group": "source-5",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-5-centered.f32le",
+      "audio_sha256": "ae0285e9746ed9c80203808249766077a2e35d9c39613c7cbc07b41e04ec389f"
+    },
+    {
+      "id": "source-5-diffuse",
+      "source_group": "source-5",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-5-diffuse.f32le",
+      "audio_sha256": "ea9813d00d561fb60b4b67ebbce64e0513c1a8e9553477e358cc46881e40e3b1"
+    },
+    {
+      "id": "source-5-side_dominant",
+      "source_group": "source-5",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-5-side_dominant.f32le",
+      "audio_sha256": "3fc5a440f44e2badba8fd69b0fe7ca3298f26b94fdf7063e493d8d49f0700f77"
+    },
+    {
+      "id": "source-6-centered",
+      "source_group": "source-6",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-6-centered.f32le",
+      "audio_sha256": "f4eb16332200e77dd32c2581286005b69976d8330bfaa6fbffa323a24da4761d"
+    },
+    {
+      "id": "source-6-diffuse",
+      "source_group": "source-6",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-6-diffuse.f32le",
+      "audio_sha256": "004ca171c8e99ca1eeb336f91290e47fe9186d806956b1143276a0f6120d5828"
+    },
+    {
+      "id": "source-6-side_dominant",
+      "source_group": "source-6",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-6-side_dominant.f32le",
+      "audio_sha256": "fe9dce91962629f4389595264c32f1750c4d30f6460e9df062d22f6511c38ed1"
+    },
+    {
+      "id": "source-7-centered",
+      "source_group": "source-7",
+      "scene": "centered",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-7-centered.f32le",
+      "audio_sha256": "274b38b3e1f7199d17e50ad9498ab91812872b2ec8a4ecf9fb7c153a80bba03f"
+    },
+    {
+      "id": "source-7-diffuse",
+      "source_group": "source-7",
+      "scene": "diffuse",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-7-diffuse.f32le",
+      "audio_sha256": "ca4b5a6bf159876dd6c0c7319af4029b029cf65d79ea154d6ad781e8624688a0"
+    },
+    {
+      "id": "source-7-side_dominant",
+      "source_group": "source-7",
+      "scene": "side_dominant",
+      "frames": 48000,
+      "audio_file": "/Volumes/home_tmp/tmp/ml-stereo-scenes-20261025/training/source-7-side_dominant.f32le",
+      "audio_sha256": "8d522dd46de6c77f1d9968360972c5572f3acfaaa6428267d757f5003e2dffb5"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/stereo_scenes.py",
+      "scripts/ml/stereo_scene_cases.py",
+      "scripts/ml/test_stereo_scenes.py",
+      "scripts/ml/fit_stereo_scenes.py",
+      "scripts/ml/propose_stereo_scene.py",
+      "scripts/ml/evaluate_stereo_scenes.py",
+      "scripts/ml/analyze_stereo_scenes.py"
+    ],
+    "exit_code": 0,
+    "output": "All checks passed!\n"
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/stereo_scenes.py",
+      "scripts/ml/stereo_scene_cases.py",
+      "scripts/ml/test_stereo_scenes.py",
+      "scripts/ml/fit_stereo_scenes.py",
+      "scripts/ml/propose_stereo_scene.py",
+      "scripts/ml/evaluate_stereo_scenes.py",
+      "scripts/ml/analyze_stereo_scenes.py"
+    ],
+    "exit_code": 0,
+    "output": "7 files already formatted\n"
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "output": ""
+  }
+]

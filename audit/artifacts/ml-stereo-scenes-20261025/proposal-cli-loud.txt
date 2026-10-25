@@ -1,0 +1,1 @@
+{"accepted": false, "reasons": ["insufficient_sample_headroom"], "automatic_apply": false}

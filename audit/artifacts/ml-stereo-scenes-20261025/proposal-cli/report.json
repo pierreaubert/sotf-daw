@@ -1,0 +1,89 @@
+{
+  "accepted": true,
+  "reasons": [],
+  "suggested_params": {
+    "high_width": 1.2000000476837158,
+    "low_mid_freq": 250.0,
+    "low_width": 0.800000011920929,
+    "mid_high_freq": 4000.0,
+    "mid_width": 1.0,
+    "mix": 0.699999988079071,
+    "mono_bass": false,
+    "width": 1.399999976158142
+  },
+  "classical_fallback": {
+    "width": 1.0,
+    "low_mid_freq": 250.0,
+    "mid_high_freq": 4000.0,
+    "low_width": 1.0,
+    "mid_width": 1.0,
+    "high_width": 1.0,
+    "mono_bass": false,
+    "mix": 1.0
+  },
+  "automatic_apply": false,
+  "qualification": "Offline scene suggestion only; user supplies class-to-settings policy. Scores/bootstrap are not calibrated probabilities or preference evidence. No realtime settings change or normalization.",
+  "class_index": 0,
+  "scene_scores": [
+    1.0,
+    1.345426284706618e-17,
+    2.366746150749996e-52
+  ],
+  "bootstrap_lower_score": 1.0,
+  "support_distance": 0.08860448819831819,
+  "confident": true,
+  "features": [
+    0.024865345673676605,
+    0.9502695710668775,
+    0.0007431649999164742,
+    0.025158052671052884,
+    0.949694441869395,
+    -0.004712926549002042,
+    0.024624952623370458,
+    0.9507644325347008,
+    -0.005491839989463736,
+    0.02496940691562836,
+    0.9500680361808841,
+    0.0037973666515249906,
+    0.018230265656427973,
+    0.3120887345703728,
+    0.6696809997731993,
+    0.046352231827762796
+  ],
+  "scene": "centered",
+  "native_metadata": {
+    "appended_zero_frames": 4096,
+    "callback_frames": 193,
+    "channels": 2,
+    "effective_params": {
+      "high_width": 1.2000000476837158,
+      "low_mid_freq": 250.0,
+      "low_width": 0.800000011920929,
+      "mid_high_freq": 4000.0,
+      "mid_width": 1.0,
+      "mix": 0.699999988079071,
+      "mono_bass": false,
+      "width": 1.399999976158142
+    },
+    "input_frames": 48143,
+    "latency_samples": 0,
+    "output_frames": 52239,
+    "sample_rate": 48000,
+    "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+    "status": "ok",
+    "input_sha256": "4ccc1f8fe0b12bb0932152714101aefd5ef18b09f7a2c2c43f1a56461f3cb21d",
+    "output_sha256": "3a24e24dc0920027f64efdcd1aa065c9a60a8383daed6a34454098288e0452c8"
+  },
+  "native_metrics": {
+    "input_sample_peak": 0.20788148045539856,
+    "output_sample_peak": 0.21186445653438568,
+    "rms_gain_db": 0.10375138225983174,
+    "mono_relative_rms_error": 2.758495237861929e-08,
+    "input_mono_energy_fraction": 0.9750960441730374
+  },
+  "native_reopen_error": 0.0,
+  "native_reopen_sha256": "3a24e24dc0920027f64efdcd1aa065c9a60a8383daed6a34454098288e0452c8",
+  "input_sha256": "4ccc1f8fe0b12bb0932152714101aefd5ef18b09f7a2c2c43f1a56461f3cb21d",
+  "model_sha256": "ce5eee04ac549ef193935d8599a3369c416308522a749bc1c45f303820e2ece6",
+  "model_error": null
+}

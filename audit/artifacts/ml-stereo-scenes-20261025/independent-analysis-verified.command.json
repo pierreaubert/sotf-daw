@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_stereo_scenes.py",
+    "--report",
+    "audit/artifacts/ml-stereo-scenes-20261025/evaluation.json",
+    "--output",
+    "audit/artifacts/ml-stereo-scenes-20261025/analysis-verified.json"
+  ],
+  "exit_code": 0,
+  "seconds": 1.273909666808322
+}

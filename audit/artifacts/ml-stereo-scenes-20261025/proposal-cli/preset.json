@@ -1,0 +1,13 @@
+{
+  "plugin_type": "stereo_imager",
+  "parameters": {
+    "high_width": 1.2000000476837158,
+    "low_mid_freq": 250.0,
+    "low_width": 0.800000011920929,
+    "mid_high_freq": 4000.0,
+    "mid_width": 1.0,
+    "mix": 0.699999988079071,
+    "mono_bass": false,
+    "width": 1.399999976158142
+  }
+}

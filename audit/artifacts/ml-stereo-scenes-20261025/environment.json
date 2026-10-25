@@ -1,0 +1,7 @@
+{
+  "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "base_commit": "bdb25f48",
+  "scope": "Local synthetic functional classifier evidence; no real-source or perceptual adoption"
+}

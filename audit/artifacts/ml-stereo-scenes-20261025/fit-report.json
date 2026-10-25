@@ -1,0 +1,375 @@
+{
+  "accepted": true,
+  "reasons": [],
+  "automatic_apply": false,
+  "cross_validation": [
+    {
+      "record_id": "source-0-centered",
+      "source_group": "source-0",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        2.36900733143089e-17,
+        2.4548339782950315e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.16038812701448404,
+      "confident": true
+    },
+    {
+      "record_id": "source-0-diffuse",
+      "source_group": "source-0",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        7.331994687343575e-17,
+        0.99999999993477,
+        6.523006694592194e-11
+      ],
+      "bootstrap_lower_score": 0.999999998570925,
+      "support_distance": 0.48648580533489144,
+      "confident": true
+    },
+    {
+      "record_id": "source-0-side_dominant",
+      "source_group": "source-0",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        1.9175303903283316e-51,
+        4.514773043273891e-10,
+        0.9999999995485227
+      ],
+      "bootstrap_lower_score": 0.9999999986108283,
+      "support_distance": 0.29695894003366935,
+      "confident": true
+    },
+    {
+      "record_id": "source-1-centered",
+      "source_group": "source-1",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        2.0561386934447558e-17,
+        2.3817766731024145e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.06295754686819298,
+      "confident": true
+    },
+    {
+      "record_id": "source-1-diffuse",
+      "source_group": "source-1",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        6.465566448287832e-17,
+        0.9999999998598359,
+        1.4016415564345052e-10
+      ],
+      "bootstrap_lower_score": 0.9999999993622891,
+      "support_distance": 0.1457241740250078,
+      "confident": true
+    },
+    {
+      "record_id": "source-1-side_dominant",
+      "source_group": "source-1",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        3.2086687200121803e-52,
+        1.752533621320012e-10,
+        0.9999999998247466
+      ],
+      "bootstrap_lower_score": 0.9999999994797608,
+      "support_distance": 0.2980559040856675,
+      "confident": true
+    },
+    {
+      "record_id": "source-2-centered",
+      "source_group": "source-2",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        2.5930847278498302e-17,
+        2.4873519433093994e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.06399984682760436,
+      "confident": true
+    },
+    {
+      "record_id": "source-2-diffuse",
+      "source_group": "source-2",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        1.2311695416405626e-17,
+        0.9999999999102238,
+        8.977617209407128e-11
+      ],
+      "bootstrap_lower_score": 0.9999999979201103,
+      "support_distance": 0.3475723885010016,
+      "confident": true
+    },
+    {
+      "record_id": "source-2-side_dominant",
+      "source_group": "source-2",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        2.301676214984882e-52,
+        3.866179235934119e-10,
+        0.9999999996133822
+      ],
+      "bootstrap_lower_score": 0.9999999954162002,
+      "support_distance": 0.2851677791871964,
+      "confident": true
+    },
+    {
+      "record_id": "source-3-centered",
+      "source_group": "source-3",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        1.6970462036204945e-17,
+        1.8009305395040346e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.06384617721839841,
+      "confident": true
+    },
+    {
+      "record_id": "source-3-diffuse",
+      "source_group": "source-3",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        8.462687254221591e-17,
+        0.9999999944330487,
+        5.566951418802193e-09
+      ],
+      "bootstrap_lower_score": 0.9999905595917687,
+      "support_distance": 0.14833286098206355,
+      "confident": true
+    },
+    {
+      "record_id": "source-3-side_dominant",
+      "source_group": "source-3",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        1.7011399116044628e-52,
+        1.509258110870696e-10,
+        0.9999999998490743
+      ],
+      "bootstrap_lower_score": 0.9999999996154421,
+      "support_distance": 0.18912946530311145,
+      "confident": true
+    },
+    {
+      "record_id": "source-4-centered",
+      "source_group": "source-4",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        1.863798307153807e-17,
+        1.4292492009973201e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.09040734057574322,
+      "confident": true
+    },
+    {
+      "record_id": "source-4-diffuse",
+      "source_group": "source-4",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        5.562919051543962e-18,
+        0.9999999996121278,
+        3.8787215583171135e-10
+      ],
+      "bootstrap_lower_score": 0.9999999979080929,
+      "support_distance": 0.1453856378532896,
+      "confident": true
+    },
+    {
+      "record_id": "source-4-side_dominant",
+      "source_group": "source-4",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        3.651516616448399e-52,
+        1.833877333955666e-10,
+        0.9999999998166123
+      ],
+      "bootstrap_lower_score": 0.9999999994639457,
+      "support_distance": 0.10964194711984876,
+      "confident": true
+    },
+    {
+      "record_id": "source-5-centered",
+      "source_group": "source-5",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        4.303829140425789e-17,
+        1.4931101640568812e-52
+      ],
+      "bootstrap_lower_score": 0.9999999999999998,
+      "support_distance": 0.16480787363315785,
+      "confident": true
+    },
+    {
+      "record_id": "source-5-diffuse",
+      "source_group": "source-5",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        1.3901041471825225e-16,
+        0.9999999855408814,
+        1.4459118254107737e-08
+      ],
+      "bootstrap_lower_score": 0.9999943858870167,
+      "support_distance": 0.7379567402901215,
+      "confident": true
+    },
+    {
+      "record_id": "source-5-side_dominant",
+      "source_group": "source-5",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        8.794318562653677e-53,
+        9.166800932016548e-11,
+        0.999999999908332
+      ],
+      "bootstrap_lower_score": 0.999999999776365,
+      "support_distance": 0.11027154850024787,
+      "confident": true
+    },
+    {
+      "record_id": "source-6-centered",
+      "source_group": "source-6",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        2.72604838901599e-17,
+        5.6749603154810026e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.2696307435855894,
+      "confident": true
+    },
+    {
+      "record_id": "source-6-diffuse",
+      "source_group": "source-6",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        6.277662637503694e-17,
+        0.9999999999618241,
+        3.817587370238577e-11
+      ],
+      "bootstrap_lower_score": 0.9999999990268215,
+      "support_distance": 0.31072651933065903,
+      "confident": true
+    },
+    {
+      "record_id": "source-6-side_dominant",
+      "source_group": "source-6",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        1.960073510371473e-52,
+        2.7402695085073504e-10,
+        0.999999999725973
+      ],
+      "bootstrap_lower_score": 0.9999999995800123,
+      "support_distance": 0.1910743285023598,
+      "confident": true
+    },
+    {
+      "record_id": "source-7-centered",
+      "source_group": "source-7",
+      "true_class": 0,
+      "baseline_class": 0,
+      "class_index": 0,
+      "scene_scores": [
+        1.0,
+        2.189479026714878e-17,
+        2.9650990149959353e-52
+      ],
+      "bootstrap_lower_score": 1.0,
+      "support_distance": 0.06262461558438047,
+      "confident": true
+    },
+    {
+      "record_id": "source-7-diffuse",
+      "source_group": "source-7",
+      "true_class": 1,
+      "baseline_class": 1,
+      "class_index": 1,
+      "scene_scores": [
+        2.4678036527872445e-16,
+        0.9999999985497496,
+        1.450250120733449e-09
+      ],
+      "bootstrap_lower_score": 0.9999997535527184,
+      "support_distance": 0.14646392551234888,
+      "confident": true
+    },
+    {
+      "record_id": "source-7-side_dominant",
+      "source_group": "source-7",
+      "true_class": 2,
+      "baseline_class": 2,
+      "class_index": 2,
+      "scene_scores": [
+        2.888372017242718e-52,
+        2.1721455561326004e-10,
+        0.9999999997827855
+      ],
+      "bootstrap_lower_score": 0.9999999990726249,
+      "support_distance": 0.25807565291985,
+      "confident": true
+    }
+  ],
+  "confident_errors": 0,
+  "coverage": 1.0,
+  "class_source_coverage": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "baseline_accuracy": 1.0
+}

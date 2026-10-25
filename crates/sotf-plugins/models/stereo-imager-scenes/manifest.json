@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "optional_offline_source_labelled_scene_setting_suggestions",
+  "default_model": null,
+  "example_model": {
+    "file": "model.synthetic.json",
+    "sha256": "ce5eee04ac549ef193935d8599a3369c416308522a749bc1c45f303820e2ece6",
+    "training_data_origin": "synthetic_validation",
+    "renderer_sha256": "a5cb532aef4e33d15c5b7ead22c569258bfb9e9220a0f078079935857be7fd6b"
+  },
+  "automatic_apply": false,
+  "method": "Regularized equal-prior Gaussian discriminant over16 gain-invariant spatial/band/envelope features, equal total source weight,50 whole-source bootstrap fits and leave-one-source-out gates.",
+  "settings_policy": "Caller supplies complete native controls for each scene class. The classifier does not learn preferred width or listener utility.",
+  "uncertainty": "Fifth-percentile bootstrap score>=0.95 and nearest same-class support RMS distance<=1.5. Heuristic abstention, not calibrated probability or preference confidence.",
+  "native_qualification": "Exact binary identity; current complete native schema; sample headroom<=0.999, RMS level change within+/-6dB, mono energy fraction>=0.01, mono relative RMS error<=1e-6, fresh JSON preset reopen<=1e-7. No normalization, true-peak guarantee or finite IIR tail claim.",
+  "finding": "All72 labelled procedural gain conditions classified correctly by both the full model and one-feature nearest-centroid baseline.50 native proposals admitted;24 loud variants plus silent, one-silent-channel and antiphase probes abstain. Identical PCM with different intended uses gets identical settings; desired effect side energy falls3.374dB. No learned superiority or perceptual adoption.",
+  "evidence": "audit/artifacts/ml-stereo-scenes-20261025",
+  "remaining": [
+    "Adequate real source-labelled scenes and user policy/preference evidence",
+    "Independent source/rate/duration/channel-balance shifts, stronger baselines and calibrated abstention",
+    "Listening and host/resource/cross-platform acceptance; local example binds a specific QA executable"
+  ],
+  "license": "GPL-3.0-or-later"
+}
