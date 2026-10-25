@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "status": "native_baseline_and_capture_contract_only",
+  "status": "offline_neural_candidate_only",
   "pretrained_weights": null,
   "hardware_model_admitted": false,
-  "purpose": "Supporting comparison and capture qualification for later identified-hardware learned coloration; does not train or replace the shared native stage.",
+  "purpose": "Target-specific offline causal neural candidate and Hammerstein comparison; no hardware model or native learned inference admitted.",
   "native_models": [
     "Harmonics",
     "Static",
@@ -17,10 +17,19 @@
   "bounds": "1MiB capture JSON;1..64 mono pairs;250ms..4M frames per pair,8M aggregate paired frames. Native QA covers44.1..192kHz,1..32 channels,4M samples including explicit zeros.",
   "data": "Generated functional probes only. Three synthetic tanh paired captures are not actual hardware observations. No external audio downloaded or used for training.",
   "license": "GPL-3.0-or-later for new project code and generated fixtures; external recording rights require independent provenance.",
-  "evidence": "audit/artifacts/ml-analog-hardware-native-20261025",
+  "evidence": [
+    "audit/artifacts/ml-analog-hardware-native-20261025",
+    "audit/artifacts/ml-analog-hardware-model-20261025"
+  ],
   "remaining": [
-    "Target-specific learned model and explicit optional native inference/fallback.",
+    "Optional native inference/fallback, independent parity/cost and measured-hardware deployment admission; offline candidate training is implemented.",
     "Measured target calibration/provenance and frozen independent quality/operating-level comparison against appropriate classical baselines.",
     "Alias/state/cost,host and cross-platform acceptance."
-  ]
+  ],
+  "synthetic_candidate": {
+    "path": "candidate.synthetic.json",
+    "bytes": 5496,
+    "sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+    "deployment_admitted": false
+  }
 }

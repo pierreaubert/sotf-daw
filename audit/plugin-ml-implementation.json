@@ -110,12 +110,20 @@
         "scripts/ml/test_analog_hardware.py",
         "scripts/ml/evaluate_analog_color_native.py",
         "crates/sotf-plugins/models/analog-hardware/README.md",
-        "audit/artifacts/ml-analog-hardware-native-20261025"
+        "audit/artifacts/ml-analog-hardware-native-20261025",
+        "scripts/ml/analog_hardware_model.py",
+        "scripts/ml/train_analog_hardware.py",
+        "scripts/ml/analog_hardware_cases.py",
+        "scripts/ml/test_analog_hardware_model.py",
+        "scripts/ml/evaluate_analog_hardware_model.py",
+        "scripts/ml/analyze_analog_hardware_model.py",
+        "crates/sotf-plugins/models/analog-hardware/candidate.synthetic.json",
+        "audit/artifacts/ml-analog-hardware-model-20261025"
       ],
       "remaining": [
-        "Implement a target-specific learned coloration model with explicit opt-in, missing/invalid/out-of-domain fallback and native inference parity; this checkpoint provides only native baseline rendering and paired-data qualification.",
+        "Integrate optional native learned inference with explicit missing/invalid/out-of-domain fallback, Python/native parity and reviewed activation. Offline neural candidate training and Hammerstein comparison are implemented; no hardware model is admitted.",
         "Identify measured hardware and establish recording rights, actual I/O calibration, impedances, operating controls and alignment evidence; public preamp captures were not admitted and no external audio was downloaded or trained on.",
-        "Compare learned quality/cost with native coloration and suitable WDF/state-space/Hammerstein baselines using frozen whole-source and operating-level holdouts; synthetic reader/control probes prove no hardware fidelity or learned advantage.",
+        "Establish a training-convergence protocol and compare quality/cost with native coloration and appropriate WDF/state-space/Hammerstein alternatives using frozen measured whole-source/operating-level holdouts. Both synthetic neural fits exhaust300 iterations; one generated classical baseline wins by about44dB.",
         "Validate nonlinear aliasing, memory/state/latency/resource bounds, multichannel applicability and actual host/Linux/Windows acceptance without automatically replacing coloration."
       ]
     },

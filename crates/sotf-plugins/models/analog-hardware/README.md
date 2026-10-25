@@ -1,9 +1,66 @@
 # Identified hardware coloration: native baseline and capture contract
 
 The audit permits learned coloration only with identified hardware and operating
-levels. This checkpoint provides the comparison renderer and paired-data reader;
-it does not train or admit a hardware model or replace any native coloration.
-There are no pretrained weights, default learned models or realtime inference.
+levels. The offline fitter now trains a target-specific causal neural candidate
+and a classical Hammerstein comparison from the calibrated paired-data contract.
+No hardware model has been admitted, no default learned model is selected, and
+no realtime neural processing or native coloration replacement is introduced.
+`candidate.synthetic.json` is a generated functional fixture, not measured
+hardware evidence or a pretrained production model.
+
+## Offline candidate training
+
+```sh
+python scripts/ml/train_analog_hardware.py --manifest paired-hardware.json \
+  --output hardware-candidate --taps 8 --hidden 12 --iterations 300
+```
+
+The neural candidate is `y = u*linear + tanh(u*W+b)*v+d`, with current-then-past
+causal input history `u`, scaled by the recorded training input RMS for numerical
+conditioning. Predictions remain in original recorded output units; targets
+are not gain-normalized, DC-centered or time-shifted. Architecture bounds are
+1..64 taps and2..32 hidden units. It has0 lookahead, finite input history and an
+optional constant quiescent response; finite excitation history does not imply
+that its zero-input output is zero. Global output magnitude is bounded by the
+linear L1 bound over the trained peak domain plus bounded tanh output weights
+and bias. The128 software bound is not a full-scale ceiling or limiter.
+
+The fitter needs eight whole-source training groups; each group has equal total
+weight even with repeated captures. It samples at most8192 frames per record and
+65536 total, with an additional architecture/iteration quota. Sampled causal
+history is formed before sample selection. Training excludes the first taps-1
+startup rows; held-source scoring includes every recorded sample, including
+startup. Input scale and peak domain come only from training sources. L-BFGS-B
+uses explicit seed, ridge and iteration limits, with full optimizer diagnostics.
+The parallel-Hammerstein baseline uses powers1..5 of the same input history and
+a constant, fitted with regularized weighted SVD on the same selected rows.
+
+Neural and classical parameters are frozen to `candidate.json` before either
+validation or test PCM is read. Each held split needs two source groups. Every
+held capture must be within the trained peak domain, have neural NMSE<=-25dB,
+at least1dB advantage over this declared Hammerstein baseline and sample
+peak<=0.999. These fixed numerical comparison gates are development policy,
+not calibrated hardware/listener acceptance. The report preserves optimizer
+success/failure independently of the held numerical gates. A candidate can meet
+the numerical gates after exhausting its optimizer budget, which does not prove
+convergence or deployment readiness. There is no automatic hyperparameter search
+against validation/test targets. Repeated user experiments still require a new
+untouched final test corpus.
+
+CLI exit0 means only that those offline numerical gates passed; exit2 means they
+did not. Both outcomes explicitly state `hardware_model_admitted: false` and
+`automatic_apply: false`, and neither emits a runtime preset. Loading requires
+an explicit file/SHA256 and exact hardware/calibration/rate context, validates
+parameter dimensions, finite bounds and the frozen policy, and rejects a changed
+deployment flag. Inference is currently an offline Python comparison path;
+native inference, fallback and deployment admission remain outstanding.
+
+Two retained generated controls exercise both outcomes: a cross-lag tanh target
+has neural held error near-55dB, while a Hammerstein target is approximated about
+44dB better by the classical baseline and rejects the neural choice. Both neural
+fits hit their300-iteration limit. These results establish implementation
+mechanics on known equations, not physical hardware fidelity or a general
+neural advantage. Evidence is in `audit/artifacts/ml-analog-hardware-model-20261025`.
 
 `qa-analog-color-render` runs the actual shared `AnalogColorStage` over explicit
 float32 little-endian interleaved PCM. It covers Harmonics, Static, Hammerstein,
@@ -76,15 +133,16 @@ The CLI refuses to overwrite existing evidence. Successful output always states
 trained model. `test_analog_hardware.py` contains an executable synthetic schema
 example with deliberately fictional hardware identity and calibration.
 
-Nine Python tests,21 existing native tests and a96-case procedural native probe
-matrix verify the current tools. Details and hashes are in
-`audit/artifacts/ml-analog-hardware-native-20261025`. Public physical preamp
+Seventeen Python tests cover the capture/native and model paths. The earlier
+21 native tests and96-case procedural probe matrix are retained in
+`audit/artifacts/ml-analog-hardware-native-20261025`; new model evidence is in
+`audit/artifacts/ml-analog-hardware-model-20261025`. Public physical preamp
 captures were found, but the I/O calibration and capture evidence needed by this
 workflow were not established. No external audio was downloaded or used for
 training. Linked source-code licensing is not treated as recording provenance.
 
-Next work is a target-specific learned coloration model, classical/native and
-WDF/state-space/Hammerstein comparisons as appropriate to that target, frozen
+Next work is optional native learned inference/fallback, classical/native and
+WDF/state-space comparisons as appropriate to the measured target, frozen
 whole-source/operating-level validation, explicit opt-in and fallback, alias and
 state behavior, actual native inference parity/cost and host/platform acceptance.
 The existing six models remain available independently. The Analog common ML

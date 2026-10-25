@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_analog_hardware.py",
+    "--manifest",
+    "/Volumes/home_tmp/tmp/ml-analog-hardware-model-20261025/cross-memory-captures/manifest.json",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-analog-hardware-model-20261025/cli-cross-memory",
+    "--taps",
+    "3",
+    "--hidden",
+    "6",
+    "--iterations",
+    "300"
+  ],
+  "exit_code": 0,
+  "expected_exit_code": 0,
+  "seconds": 3.6721186249051243
+}

@@ -24,10 +24,7 @@ def rms_to_dbu(rms, full_scale_sine_dbu):
     return float(full_scale_sine_dbu + 20 * math.log10(rms * math.sqrt(2)))
 
 
-def validate(data):
-    if not isinstance(data, dict) or data.get("format") != FORMAT:
-        raise ValueError("Unsupported paired hardware corpus")
-    ctx = data["context"]
+def validate_context(ctx):
     if ctx["data_origin"] not in {"measured_hardware", "synthetic_validation"}:
         raise ValueError("Declare measured hardware or synthetic validation")
     if (
@@ -80,10 +77,17 @@ def validate(data):
         identifier(rights[k])
     if rights["training_authorized"] is not True:
         raise ValueError("Declare rights to train on the paired captures")
+
+
+def validate(data):
+    if not isinstance(data, dict) or data.get("format") != FORMAT:
+        raise ValueError("Unsupported paired hardware corpus")
+    ctx = data["context"]
+    validate_context(ctx)
     records = data["captures"]
     if not isinstance(records, list) or not 1 <= len(records) <= 64:
         raise ValueError("Supply1..64 paired capture records")
-    ids, groups, pairs, total = set(), {}, set(), 0
+    ids, groups, pairs, dry_groups, total = set(), {}, set(), {}, 0
     for r in records:
         identity, group = identifier(r["id"]), identifier(r["source_group"])
         split = r["split"]
@@ -102,6 +106,9 @@ def validate(data):
             raise ValueError("Supply250ms..4M frames per aligned pair")
         total += r["frames"]
         pair = tuple(hash_value(r[k]) for k in ["dry_sha256", "wet_sha256"])
+        if pair[0] in dry_groups and dry_groups[pair[0]] != group:
+            raise ValueError("Identical declared dry PCM cannot cross source groups")
+        dry_groups[pair[0]] = group
         if pair in pairs:
             raise ValueError("Duplicate paired PCM bytes")
         pairs.add(pair)
