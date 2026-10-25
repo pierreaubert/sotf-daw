@@ -29,3 +29,8 @@ log = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+
+[[bin]]
+name = "qa-matrix-routing"
+path = "bin/qa_matrix_routing.rs"
+required-features = ["qa"]

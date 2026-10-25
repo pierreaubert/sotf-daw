@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_matrix_routing.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "seconds": 0.3057850000914186
+}

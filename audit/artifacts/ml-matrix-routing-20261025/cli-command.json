@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/verify_matrix_routing_cli.py",
+    "--sessions",
+    "audit/artifacts/ml-matrix-routing-20261025/sessions",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-matrix-routing",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-matrix-routing-20261025/cli",
+    "--output",
+    "audit/artifacts/ml-matrix-routing-20261025/cli-validation.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.5073165420908481
+}

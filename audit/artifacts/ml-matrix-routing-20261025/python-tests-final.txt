@@ -1,0 +1,11 @@
+test_identical_stereo_is_not_identified_by_ridge (test_matrix_routing.RoutingTests.test_identical_stereo_is_not_identified_by_ridge) ... ok
+test_insufficient_sources_and_false_independence_rejected (test_matrix_routing.RoutingTests.test_insufficient_sources_and_false_independence_rejected) ... ok
+test_nested_holdout_does_not_train_on_excluded_source (test_matrix_routing.RoutingTests.test_nested_holdout_does_not_train_on_excluded_source) ... ok
+test_noiseless_recovers_reviewable_bounded_matrix (test_matrix_routing.RoutingTests.test_noiseless_recovers_reviewable_bounded_matrix) ... ok
+test_nonfinite_maps_and_channel_labels_rejected (test_matrix_routing.RoutingTests.test_nonfinite_maps_and_channel_labels_rejected) ... ok
+test_source_repeats_do_not_inflate_support (test_matrix_routing.RoutingTests.test_source_repeats_do_not_inflate_support) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.131s
+
+OK

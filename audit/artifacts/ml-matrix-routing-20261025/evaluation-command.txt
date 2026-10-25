@@ -1,0 +1,15 @@
+{"name": "linear-1x1", "accepted": true, "expected": true, "reasons": []}
+{"name": "linear-2x2", "accepted": true, "expected": true, "reasons": []}
+{"name": "linear-3x2", "accepted": true, "expected": true, "reasons": []}
+{"name": "linear-2x5", "accepted": true, "expected": true, "reasons": []}
+{"name": "linear-6x4", "accepted": true, "expected": true, "reasons": []}
+{"name": "linear-16x8", "accepted": true, "expected": true, "reasons": []}
+{"name": "identity", "accepted": true, "expected": true, "reasons": []}
+{"name": "explicit-silent-output", "accepted": true, "expected": true, "reasons": []}
+{"name": "collinear", "accepted": false, "expected": false, "reasons": ["unregularized input design lacks identifiable independent excitation"]}
+{"name": "near-collinear", "accepted": false, "expected": false, "reasons": ["unregularized input design lacks identifiable independent excitation"]}
+{"name": "underexcited", "accepted": false, "expected": false, "reasons": ["unregularized input design lacks identifiable independent excitation"]}
+{"name": "fold-rank", "accepted": false, "expected": false, "reasons": ["unregularized input design lacks identifiable independent excitation"]}
+{"name": "contradictory", "accepted": false, "expected": false, "reasons": ["nested heldout reference mismatch", "exported matrix reference mismatch", "routing coefficient evidence is unstable"]}
+{"name": "nonlinear-clipping", "accepted": false, "expected": false, "reasons": ["nested heldout reference mismatch", "exported matrix reference mismatch"]}
+{"name": "coherent-overload", "accepted": false, "expected": false, "reasons": ["point or interval row-L1 exceeds coherent unit bound"]}

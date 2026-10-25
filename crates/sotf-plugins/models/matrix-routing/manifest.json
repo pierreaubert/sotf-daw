@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "kind": "per_session_supervised_linear_routing",
+  "pretrained_weights": null,
+  "implementation_license": "GPL-3.0-or-later",
+  "origin": "Fitted only from explicit user-provided paired input/output examples. Repository validation uses generated data; no recordings or external weights.",
+  "method": "Source-balanced weighted ridge regression with OLS candidate, nested source-group cross-validation and conditional source bootstrap. SVD fit; independent pivoted-QR verification.",
+  "input_format": "sotf-matrix-routing-examples-v1",
+  "limits": {
+    "logical_inputs_max": 16,
+    "logical_outputs_max": 16,
+    "physical_channel_index_max": 127,
+    "source_ids_min": 8,
+    "groups_min": 8,
+    "groups_max": 32,
+    "rows_per_group": [
+      32,
+      256
+    ],
+    "rows_per_aggregated_source_max": 2048,
+    "json_bytes_max": 8388608,
+    "sample_rates_hz": [
+      44100,
+      192000
+    ]
+  },
+  "qualification": "Explicit offline opt-in; report-only abstention on ambiguous designs/reference mismatch/unstable coefficients/coherent overload; native basis+headroom+unmapped probes, callback parity and nested-heldout replay before export. No automatic route changes.",
+  "uncertainty": "Conditional heuristic source bootstrap plus nested-fold extrema; no calibrated probability or proof that source IDs are independent.",
+  "runtime": "Native Matrix DSP and defaults unchanged; no trained inference or model state in callbacks; latency0 and no retained audio tail.",
+  "evidence": "audit/artifacts/ml-matrix-routing-20261025",
+  "status": "offline_routing_prototype",
+  "remaining": [
+    "Natural user calibration/example acceptance and source-independence protocol review",
+    "Independently calibrate heuristic uncertainty/rejection gates and broaden shifts/errors-in-inputs/misalignment coverage",
+    "Host/UI integration and cross-platform validation; explicit channel semantics stay a user review responsibility",
+    "Broaden logical routing beyond the prototype 16-by-16 limit toward native 128-channel layouts, with calibration payload, conditioning and offline cost validation."
+  ]
+}

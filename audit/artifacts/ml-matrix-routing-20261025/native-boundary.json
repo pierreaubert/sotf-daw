@@ -1,0 +1,30 @@
+{
+  "logical_dimensions": [
+    16,
+    16
+  ],
+  "physical_dimensions": [
+    128,
+    128
+  ],
+  "frames": 2048,
+  "sample_rate": 192000,
+  "callbacks": [
+    4096,
+    1
+  ],
+  "bit_identical": true,
+  "metadata": {
+    "drained_frames": 0,
+    "frames": 2048,
+    "latency_samples": 0,
+    "physical_input_channels": 128,
+    "physical_output_channels": 128,
+    "sample_peak": 1.0,
+    "sample_rate": 192000,
+    "scope": "Actual sparse-mapped native Matrix; cold process and drain allocation guards; unit row-L1 QA policy",
+    "status": "ok",
+    "max_reference_error": 0.0
+  },
+  "seconds": 0.2297485419549048
+}
