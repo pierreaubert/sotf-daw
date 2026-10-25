@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/analyze_matrix_routing.py"
+  ],
+  "exit_code": 1,
+  "seconds": 0.019477209076285362
+}

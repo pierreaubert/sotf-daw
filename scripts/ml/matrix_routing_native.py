@@ -114,25 +114,32 @@ def qualify(data, fit, renderer, work):
             257,
         )
         delta = actual[:, params["output_channel_map"]] - y
+        output_mse = np.mean(delta**2, axis=0)
         heldouts.append(
             {
                 "source_id": fold["source_id"],
                 "mse": float(np.mean(delta**2)),
                 "rms": float(np.sqrt(np.mean(delta**2))),
                 "max_error": float(np.max(np.abs(delta))),
+                "output_mse": output_mse.tolist(),
+                "worst_output_rms": float(np.sqrt(np.max(output_mse))),
                 "native": meta,
             }
         )
     rms = float(np.sqrt(np.mean([f["mse"] for f in heldouts])))
+    output_rms = np.sqrt(np.mean([f["output_mse"] for f in heldouts], axis=0))
     if (
         rms > MAX_RMS + 1e-6
+        or np.max(output_rms) > MAX_RMS + 1e-6
         or max(f["rms"] for f in heldouts) > MAX_GROUP_RMS + 1e-6
+        or max(f["worst_output_rms"] for f in heldouts) > MAX_GROUP_RMS + 1e-6
         or max(f["max_error"] for f in heldouts) > MAX_ERROR + 2e-6
     ):
         raise ValueError("Native nested-heldout reference mismatch")
     return {
         "probe": probe_meta,
         "nested_rms": rms,
+        "nested_output_rms": output_rms.tolist(),
         "heldouts": heldouts,
         "callback_parity": True,
         "latency_samples": 0,

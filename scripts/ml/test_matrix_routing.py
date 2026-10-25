@@ -1,10 +1,15 @@
 """Grouped-routing observability, weighting, uncertainty and export contracts."""
 
 import copy
+import hashlib
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import numpy as np
-from matrix_routing import fit, validate
+from fit_matrix_routing import read_examples
+from matrix_routing import MAX_ERROR, MAX_GROUP_RMS, MAX_RMS, fit, path, validate
 from matrix_routing_cases import example
 
 
@@ -76,6 +81,45 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(a["lambda"], b["lambda"])
         np.testing.assert_array_equal(a["matrix"], b["matrix"])
         self.assertNotEqual(a["errors"], b["errors"])
+
+    def test_one_bad_output_cannot_hide_in_large_output_average(self):
+        data, _ = example(20531026, inputs=2, outputs=128, sources=8, noise=0)
+        for group in data["groups"]:
+            y = np.array(group["desired_output"])
+            y[:, -1] = np.where(np.arange(len(y)) % 2, 0.02, -0.02)
+            group["desired_output"] = y.tolist()
+        result = fit(data)
+        # These are the former aggregate-only gates; all would have passed.
+        self.assertLess(result["nested_rms"], MAX_RMS)
+        self.assertLess(
+            max(f["errors"]["rms"] for f in result["nested_holdouts"]), MAX_GROUP_RMS
+        )
+        self.assertLess(
+            max(f["errors"]["max_error"] for f in result["nested_holdouts"]), MAX_ERROR
+        )
+        self.assertGreater(result["nested_output_rms"][-1], MAX_GROUP_RMS)
+        self.assertFalse(result["accepted"])
+        self.assertIsNone(result["parameters"])
+
+    def test_wide_under_determined_design_is_rejected(self):
+        rng = np.random.default_rng(20531027)
+        group = ("one", rng.uniform(-1, 1, (8, 16)), np.zeros((8, 1)))
+        with self.assertRaises(ValueError):
+            path([group])
+
+    def test_full_width_examples_larger_than_former_json_limit_load(self):
+        data, _ = example(20531028, inputs=128, outputs=128, sources=8, noise=0)
+        for group in data["groups"]:
+            group["input"] *= 4
+            group["desired_output"] *= 4
+        raw = (json.dumps(data) + "\n").encode()
+        self.assertGreater(len(raw), 8 * 1024 * 1024)
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary) / "examples.json"
+            source.write_bytes(raw)
+            loaded, digest = read_examples(source)
+        self.assertEqual(len(loaded["input_labels"]), 128)
+        self.assertEqual(digest, hashlib.sha256(raw).hexdigest())
 
 
 if __name__ == "__main__":

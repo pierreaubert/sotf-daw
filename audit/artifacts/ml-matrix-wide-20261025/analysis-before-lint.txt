@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+"""Check learned routing with independent pivoted QR and retained native responses."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+
+import numpy as np
+from scipy.linalg import lstsq
+
+
+def solve(groups, penalty):
+    x = np.vstack([a / np.sqrt(len(a) * len(groups)) for a, _ in groups])
+    y = np.vstack([b / np.sqrt(len(b) * len(groups)) for _, b in groups])
+    singular = np.linalg.svd(x, compute_uv=False)
+    if (
+        len(singular) != x.shape[1]
+        or singular[-1] < 0.02
+        or singular[0] / singular[-1] > 100
+    ):
+        raise ValueError("rank or excitation")
+    if penalty:
+        x = np.vstack([x, np.eye(x.shape[1]) * np.sqrt(penalty)])
+        y = np.vstack([y, np.zeros((x.shape[1], y.shape[1]))])
+    return lstsq(x, y, lapack_driver="gelsy")[0].T
+
+
+def group_mse(matrix, group):
+    return float(np.mean((group[0] @ matrix.T - group[1]) ** 2))
+
+
+def select(groups, penalties):
+    scores = []
+    for penalty in penalties:
+        scores.append(
+            float(
+                np.mean(
+                    [
+                        group_mse(solve(groups[:i] + groups[i + 1 :], penalty), group)
+                        for i, group in enumerate(groups)
+                    ]
+                )
+            )
+        )
+    return min(range(len(scores)), key=lambda i: (scores[i], penalties[i])), scores
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--evaluation", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    if args.output.exists():
+        raise ValueError("Use a new analysis output")
+    evaluation = json.loads(args.evaluation.read_text())
+    penalties = [0, 1e-6, 1e-4, 0.01, 0.1]
+    max_coefficient, max_interval, max_score, max_native = 0.0, 0.0, 0.0, 0.0
+    native_renders, native_samples, bootstrap_fits = 0, 0, 0
+    rows = []
+    for row in evaluation["rows"]:
+        path = args.evaluation.parent / (row["name"] + "-examples.json")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != row["examples_sha256"]:
+            raise ValueError("Example bytes changed")
+        data = json.loads(path.read_text())
+        source_pairs = {}
+        for group in data["groups"]:
+            source_pairs.setdefault(group["source_id"], []).append(
+                (np.array(group["input"]), np.array(group["desired_output"]))
+            )
+        ids = sorted(source_pairs)
+        groups = [
+            (
+                np.vstack([p[0] for p in source_pairs[key]]),
+                np.vstack([p[1] for p in source_pairs[key]]),
+            )
+            for key in ids
+        ]
+        result = row["result"]
+        if "matrix" not in result:
+            try:
+                solve(groups, 0)
+                select(groups, penalties)
+            except ValueError:
+                rows.append(
+                    {
+                        "name": row["name"],
+                        "rank_rejection_confirmed": True,
+                        "accepted": False,
+                    }
+                )
+                continue
+            raise ValueError("Unsupported rank rejection")
+        selected, scores = select(groups, penalties)
+        if penalties[selected] != result["selected_lambda"]:
+            raise ValueError("QR selected different regularization")
+        max_score = max(
+            max_score,
+            float(np.max(np.abs(np.array(scores) - result["regularization_cv_mse"]))),
+        )
+        matrix = solve(groups, result["selected_lambda"])
+        projected = matrix.copy()
+        projected[np.abs(projected) < 1e-7] = 0
+        projected = projected.astype(np.float32).astype(np.float64)
+        max_coefficient = max(
+            max_coefficient, float(np.max(np.abs(projected - result["matrix"])))
+        )
+        outer = []
+        outer_output_mse = []
+        for index, source in enumerate(ids):
+            train = groups[:index] + groups[index + 1 :]
+            choice, _ = select(train, penalties)
+            coefficient = solve(train, penalties[choice])
+            fold = next(
+                f for f in result["nested_holdouts"] if f["source_id"] == source
+            )
+            if penalties[choice] != fold["lambda"]:
+                raise ValueError("Nested QR penalty mismatch")
+            max_coefficient = max(
+                max_coefficient, float(np.max(np.abs(coefficient - fold["matrix"])))
+            )
+            max_score = max(
+                max_score,
+                abs(group_mse(coefficient, groups[index]) - fold["errors"]["mse"]),
+            )
+            outer.append(coefficient)
+            output_mse = np.mean(
+                (groups[index][0] @ coefficient.T - groups[index][1]) ** 2, axis=0
+            )
+            outer_output_mse.append(output_mse)
+            if "output_mse" in fold["errors"]:
+                max_score = max(
+                    max_score,
+                    float(np.max(np.abs(output_mse - fold["errors"]["output_mse"]))),
+                )
+        if "nested_output_rms" in result:
+            max_score = max(
+                max_score,
+                float(
+                    np.max(
+                        np.abs(
+                            np.sqrt(np.mean(outer_output_mse, axis=0))
+                            - result["nested_output_rms"]
+                        )
+                    )
+                ),
+            )
+        rng = np.random.default_rng(result["bootstrap_seed"])
+        bootstrap, deficient = [], 0
+        for _ in range(result["bootstrap_total"]):
+            sample = [groups[i] for i in rng.integers(0, len(groups), len(groups))]
+            try:
+                bootstrap.append(solve(sample, result["selected_lambda"]))
+                bootstrap_fits += 1
+            except ValueError:
+                deficient += 1
+        if deficient != result["bootstrap_deficient"]:
+            raise ValueError("QR bootstrap support mismatch")
+        lower, upper = np.quantile(bootstrap, [0.025, 0.975], axis=0)
+        lower = np.minimum(lower, np.min(outer, axis=0))
+        upper = np.maximum(upper, np.max(outer, axis=0))
+        max_interval = max(
+            max_interval,
+            float(np.max(np.abs(lower - result["interval_lower"]))),
+            float(np.max(np.abs(upper - result["interval_upper"]))),
+        )
+        native_output_mse = []
+        for request_path in sorted(Path(row["work"]).glob("*/request.json")):
+            request = json.loads(request_path.read_text())
+            response = json.loads(request_path.with_name("response.json").read_text())
+            params = request["params"]
+            ni = max(params["input_channel_map"]) + 1
+            no = max(params["output_channel_map"]) + 1
+            inputs = np.array(request["input"], dtype=np.float32).reshape(-1, ni)
+            actual = np.array(response["output"]).reshape(-1, no)
+            coeff = np.array(params["matrix"], dtype=np.float32).reshape(
+                len(params["output_channel_map"]), -1
+            )
+            expected = np.zeros_like(actual)
+            # Explicit source accumulation independently checks output-major order.
+            for output, physical in enumerate(params["output_channel_map"]):
+                for logical, channel in enumerate(params["input_channel_map"]):
+                    expected[:, physical] += inputs[:, channel].astype(
+                        np.float64
+                    ) * float(coeff[output, logical])
+            max_native = max(max_native, float(np.max(np.abs(expected - actual))))
+            if not np.isfinite(actual).all() or np.max(np.abs(actual)) > 1 + 2e-6:
+                raise ValueError("Native coherent amplitude bound failed")
+            native_renders += 1
+            native_samples += actual.size
+            folder = request_path.parent.name
+            if folder.startswith("heldout-"):
+                index = int(folder.removeprefix("heldout-"))
+                target = groups[index][1]
+                native_output_mse.append(
+                    np.mean(
+                        (actual[:, params["output_channel_map"]] - target) ** 2, axis=0
+                    )
+                )
+        if (
+            native_output_mse
+            and "native" in result
+            and "nested_output_rms" in result["native"]
+        ):
+            max_score = max(
+                max_score,
+                float(
+                    np.max(
+                        np.abs(
+                            np.sqrt(np.mean(native_output_mse, axis=0))
+                            - result["native"]["nested_output_rms"]
+                        )
+                    )
+                ),
+            )
+        if result.get(
+            "independent_native_gate_refused_after_statistical_gate_bypassed_for_test"
+        ):
+            if (
+                not native_output_mse
+                or np.sqrt(np.mean(native_output_mse)) >= 0.005
+                or np.sqrt(np.mean(native_output_mse, axis=0)).max() <= 0.01
+            ):
+                raise ValueError(
+                    "Native per-output rejection was not independently demonstrated"
+                )
+        rows.append(
+            {
+                "name": row["name"],
+                "accepted": result["accepted"],
+                "expected": row["expected_admission"],
+                "max_true_coefficient_error": float(
+                    np.max(np.abs(np.array(result["matrix"]) - row["truth"]))
+                ),
+                "nested_rms": result["nested_rms"],
+                "ols_nested_rms": float(
+                    np.sqrt(
+                        np.mean(
+                            [f["ols_errors"]["mse"] for f in result["nested_holdouts"]]
+                        )
+                    )
+                ),
+                "identity_nested_rms": float(
+                    np.sqrt(
+                        np.mean(
+                            [
+                                f["identity_errors"]["mse"]
+                                for f in result["nested_holdouts"]
+                            ]
+                        )
+                    )
+                ),
+                "fresh_native_max_rms": max(
+                    (
+                        f.get("native_rms", f.get("rms"))
+                        for f in row["fresh_validation"]
+                    ),
+                    default=None,
+                ),
+            }
+        )
+    if (
+        max_coefficient > 1e-7
+        or max_interval > 1e-10
+        or max_score > 1e-10
+        or max_native > 2e-6
+    ):
+        raise ValueError("Independent routing analysis disagrees")
+    summary = {
+        "max_pivoted_qr_coefficient_error": max_coefficient,
+        "max_qr_interval_error": max_interval,
+        "max_qr_score_error": max_score,
+        "max_native_product_error": max_native,
+        "native_renders_checked": native_renders,
+        "native_output_samples_checked": native_samples,
+        "bootstrap_fits_independently_checked": bootstrap_fits,
+        "admitted_positive": sum(
+            row["result"]["accepted"]
+            for row in evaluation["rows"]
+            if row["expected_admission"]
+        ),
+        "positive_total": sum(row["expected_admission"] for row in evaluation["rows"]),
+        "admitted_negative": sum(
+            row["result"]["accepted"]
+            for row in evaluation["rows"]
+            if not row["expected_admission"]
+        ),
+        "negative_total": sum(
+            not row["expected_admission"] for row in evaluation["rows"]
+        ),
+        "rows": rows,
+        "qualification": "Independent synthetic regression/native convention checks. No probability calibration, independent-source proof or semantic routing accuracy claim.",
+    }
+    args.output.write_text(json.dumps(summary, indent=2) + "\n")
+    print(json.dumps({k: v for k, v in summary.items() if k != "rows"}), flush=True)
+
+
+if __name__ == "__main__":
+    main()

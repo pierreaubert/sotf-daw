@@ -15,6 +15,8 @@ static ALLOCATOR: CountingAlloc = CountingAlloc;
 // Bounds cover sparse physical maps without accepting unbounded QA payloads.
 const MAX_REQUEST_BYTES: usize = 8 * 1024 * 1024;
 const MAX_FRAMES: usize = 2048;
+// Match the native Matrix and host channel limit for logical routing as well.
+const MAX_CHANNELS: usize = 128;
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -47,8 +49,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let request: Request = serde_json::from_slice(&bytes)?;
     let inputs = request.params.input_channel_map.len();
     let outputs = request.params.output_channel_map.len();
-    if !(1..=16).contains(&inputs)
-        || !(1..=16).contains(&outputs)
+    if !(1..=MAX_CHANNELS).contains(&inputs)
+        || !(1..=MAX_CHANNELS).contains(&outputs)
         || request.params.matrix.len() != inputs * outputs
         || !(44_100..=192_000).contains(&request.sample_rate)
         || !(1..=4096).contains(&request.callback_frames)

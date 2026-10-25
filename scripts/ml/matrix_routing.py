@@ -13,6 +13,8 @@ MAX_ERROR = 0.03
 MAX_INTERVAL_WIDTH = 0.03
 BOOTSTRAPS = 200
 BOOTSTRAP_SEED = 20491026
+MAX_CHANNELS = 128
+MAX_EXAMPLE_BYTES = 64 * 1024 * 1024
 
 
 def validate(data):
@@ -41,7 +43,7 @@ def validate(data):
         labels, mapping = data[name + "_labels"], data[name + "_channel_map"]
         if (
             not isinstance(labels, list)
-            or not 1 <= len(labels) <= 16
+            or not 1 <= len(labels) <= MAX_CHANNELS
             or any(
                 not isinstance(label, str) or not 1 <= len(label) <= 64
                 for label in labels
@@ -56,12 +58,12 @@ def validate(data):
             or len(set(mapping)) != len(mapping)
         ):
             raise ValueError(
-                "Supply distinct physical channel indices0..127 in logical order"
+                "Supply distinct physical channel indices 0..127 in logical order"
             )
         dimensions.append(len(labels))
     groups = data["groups"]
     if not isinstance(groups, list) or not 8 <= len(groups) <= 32:
-        raise ValueError("Supply8..32 groups, from at least8 independent sources")
+        raise ValueError("Supply 8..32 groups, from at least 8 independent sources")
     by_source, fingerprints = {}, {}
     for group in groups:
         if (
@@ -84,7 +86,7 @@ def validate(data):
                     for row in values
                 )
             ):
-                raise ValueError("Each group needs32..256 matching finite PCM rows")
+                raise ValueError("Each group needs 32..256 matching finite PCM rows")
             array = np.asarray(values, np.float64)
             if not np.isfinite(array).all() or np.max(np.abs(array)) > 1:
                 raise ValueError("Paired PCM rows must be finite within +/-1")
@@ -104,12 +106,12 @@ def validate(data):
         fingerprints[fingerprint] = group["source_id"]
         by_source.setdefault(group["source_id"], []).append(arrays)
     if not 8 <= len(by_source) <= 32:
-        raise ValueError("At least8 distinct underlying sources are required")
+        raise ValueError("At least 8 distinct underlying sources are required")
     result = []
     for source, pairs in sorted(by_source.items()):
         x, y = (np.concatenate([pair[i] for pair in pairs]) for i in [0, 1])
         if len(x) > 2048:
-            raise ValueError("Aggregated source exceeds2048 rows")
+            raise ValueError("Aggregated source exceeds 2048 rows")
         result.append((source, x, y))
     return result
 
@@ -119,7 +121,11 @@ def path(groups):
     y = np.concatenate([g[2] / np.sqrt(len(g[2]) * len(groups)) for g in groups])
     u, singular, vt = np.linalg.svd(x, full_matrices=False)
     condition = float(singular[0] / max(singular[-1], 1e-20))
-    if singular[-1] < MIN_SINGULAR or condition > MAX_CONDITION:
+    if (
+        len(singular) != x.shape[1]
+        or singular[-1] < MIN_SINGULAR
+        or condition > MAX_CONDITION
+    ):
         raise ValueError(
             "unregularized input design lacks identifiable independent excitation"
         )
@@ -133,10 +139,13 @@ def path(groups):
 
 def errors(matrix, group):
     delta = group[1] @ matrix.T - group[2]
+    output_mse = np.mean(delta**2, axis=0)
     return {
-        "mse": float(np.mean(delta**2)),
-        "rms": float(np.sqrt(np.mean(delta**2))),
+        "mse": float(np.mean(output_mse)),
+        "rms": float(np.sqrt(np.mean(output_mse))),
         "max_error": float(np.max(np.abs(delta))),
+        "output_mse": output_mse.tolist(),
+        "worst_output_rms": float(np.sqrt(np.max(output_mse))),
     }
 
 
@@ -211,17 +220,21 @@ def fit(data):
     else:
         lower, upper = np.full_like(matrix, -2), np.full_like(matrix, 2)
     rms = float(np.sqrt(np.mean([f["errors"]["mse"] for f in nested])))
+    output_rms = np.sqrt(np.mean([f["errors"]["output_mse"] for f in nested], axis=0))
     full_errors = [errors(matrix, group) for group in groups]
     row_l1 = np.sum(np.abs(matrix), axis=1)
     interval_row_bound = np.sum(np.maximum(np.abs(lower), np.abs(upper)), axis=1)
     if (
         rms > MAX_RMS
+        or np.max(output_rms) > MAX_RMS
         or max(f["errors"]["rms"] for f in nested) > MAX_GROUP_RMS
+        or max(f["errors"]["worst_output_rms"] for f in nested) > MAX_GROUP_RMS
         or max(f["errors"]["max_error"] for f in nested) > MAX_ERROR
     ):
         result["reasons"].append("nested heldout reference mismatch")
     if (
         max(e["rms"] for e in full_errors) > MAX_GROUP_RMS
+        or max(e["worst_output_rms"] for e in full_errors) > MAX_GROUP_RMS
         or max(e["max_error"] for e in full_errors) > MAX_ERROR
     ):
         result["reasons"].append("exported matrix reference mismatch")
@@ -236,6 +249,7 @@ def fit(data):
         worst_fold_condition=worst_condition,
         nested_holdouts=nested,
         nested_rms=rms,
+        nested_output_rms=output_rms.tolist(),
         matrix=matrix.tolist(),
         interval_lower=lower.tolist(),
         interval_upper=upper.tolist(),

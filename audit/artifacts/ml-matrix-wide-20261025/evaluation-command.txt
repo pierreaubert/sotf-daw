@@ -1,0 +1,7 @@
+{"name": "wide-32x32", "accepted": true, "expected": true, "seconds": 0.23492008307948709, "reasons": []}
+{"name": "wide-64x17", "accepted": true, "expected": true, "seconds": 0.37592270807363093, "reasons": []}
+{"name": "wide-17x64", "accepted": true, "expected": true, "seconds": 0.20086733321659267, "reasons": []}
+{"name": "wide-128x128", "accepted": true, "expected": true, "seconds": 1.2463687078561634, "reasons": []}
+{"name": "wide-128x1", "accepted": true, "expected": true, "seconds": 0.8676239170599729, "reasons": []}
+{"name": "wide-1x128", "accepted": true, "expected": true, "seconds": 0.17167112487368286, "reasons": []}
+{"name": "one-bad-output", "accepted": false, "expected": false, "seconds": 0.12732762494124472, "reasons": ["nested heldout reference mismatch", "exported matrix reference mismatch"]}

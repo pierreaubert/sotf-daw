@@ -1,0 +1,48 @@
+{
+  "all_estimator_sources_and_renderer_hashes_verified": true,
+  "lossless_session_archive_verified": true,
+  "checks": {
+    "native-tests": 0,
+    "clippy": 0,
+    "python-tests": 0,
+    "python-tests-final": 0,
+    "evaluation-command": 0,
+    "analysis-command": 0,
+    "verification-command": 0,
+    "runtime-profile": 0,
+    "ruff-final": 0,
+    "ruff-format-final": 0,
+    "rustfmt": 0
+  },
+  "native_test_totals": {
+    "passed": 99,
+    "failed": 0,
+    "ignored": 1
+  },
+  "ignored_scope": "Existing manual kernel crossover benchmark",
+  "python_tests": 9,
+  "wide_cli_checks": 4,
+  "prior_admissions_and_parameters_unchanged": 15,
+  "max_prior_metric_difference": 2.7755575615628914e-17,
+  "positive_admitted": [
+    6,
+    6
+  ],
+  "negative_admitted": [
+    0,
+    1
+  ],
+  "independently_checked_native_renders": 88,
+  "independently_checked_bootstrap_fits": 1400,
+  "max_independent_native_product_error": 3.57438693754375e-07,
+  "max_independent_qr_coefficient_error": 9.992007221626409e-16,
+  "local_full_width_cli_max_rss_bytes": 207765504,
+  "profile_scope": "128x128,10sources64rows, local offline process accounting with subprocess/I/O. Not a worst-case, process-tree or realtime host guarantee.",
+  "environment": {
+    "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "full_goal_status": "Active; recorded calibration, uncertainty calibration, stress and host integration plus other ML audit items remain open."
+}

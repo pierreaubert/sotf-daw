@@ -612,13 +612,16 @@
         "crates/sotf-plugins/crates/sotf-plugin-matrix/bin/qa_matrix_routing.rs",
         "crates/sotf-plugins/models/matrix-routing/manifest.json",
         "crates/sotf-plugins/models/matrix-routing/README.md",
-        "audit/artifacts/ml-matrix-routing-20261025"
+        "audit/artifacts/ml-matrix-routing-20261025",
+        "scripts/ml/evaluate_matrix_wide.py",
+        "scripts/ml/verify_matrix_wide_cli.py",
+        "audit/artifacts/ml-matrix-wide-20261025"
       ],
       "remaining": [
         "Natural user calibration/example acceptance and source-independence protocol review",
         "Independently calibrate heuristic uncertainty/rejection gates and broaden shifts/errors-in-inputs/misalignment coverage",
         "Host/UI integration and cross-platform validation; explicit channel semantics stay a user review responsibility",
-        "Broaden logical routing beyond the prototype 16-by-16 limit toward native 128-channel layouts, with calibration payload, conditioning and offline cost validation."
+        "Broader largest-payload/source-count and correlated/noisy-input stress validation; full 128x128 synthetic/native tests and per-output refusal are complete, but local timing is not a worst-case resource guarantee."
       ]
     },
     {

@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/verify_matrix_wide_cli.py",
+    "--prior-evaluation",
+    "audit/artifacts/ml-matrix-routing-20261025/sessions/evaluation.json",
+    "--sessions",
+    "audit/artifacts/ml-matrix-wide-20261025/sessions",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-matrix-routing",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-matrix-wide-20261025/cli",
+    "--output",
+    "audit/artifacts/ml-matrix-wide-20261025/cli-and-replay.json"
+  ],
+  "exit_code": 0,
+  "seconds": 2.217251833062619
+}

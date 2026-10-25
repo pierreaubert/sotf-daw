@@ -14,7 +14,11 @@ def solve(groups, penalty):
     x = np.vstack([a / np.sqrt(len(a) * len(groups)) for a, _ in groups])
     y = np.vstack([b / np.sqrt(len(b) * len(groups)) for _, b in groups])
     singular = np.linalg.svd(x, compute_uv=False)
-    if singular[-1] < 0.02 or singular[0] / singular[-1] > 100:
+    if (
+        len(singular) != x.shape[1]
+        or singular[-1] < 0.02
+        or singular[0] / singular[-1] > 100
+    ):
         raise ValueError("rank or excitation")
     if penalty:
         x = np.vstack([x, np.eye(x.shape[1]) * np.sqrt(penalty)])
@@ -102,6 +106,7 @@ def main():
             max_coefficient, float(np.max(np.abs(projected - result["matrix"])))
         )
         outer = []
+        outer_output_mse = []
         for index, source in enumerate(ids):
             train = groups[:index] + groups[index + 1 :]
             choice, _ = select(train, penalties)
@@ -119,6 +124,27 @@ def main():
                 abs(group_mse(coefficient, groups[index]) - fold["errors"]["mse"]),
             )
             outer.append(coefficient)
+            output_mse = np.mean(
+                (groups[index][0] @ coefficient.T - groups[index][1]) ** 2, axis=0
+            )
+            outer_output_mse.append(output_mse)
+            if "output_mse" in fold["errors"]:
+                max_score = max(
+                    max_score,
+                    float(np.max(np.abs(output_mse - fold["errors"]["output_mse"]))),
+                )
+        if "nested_output_rms" in result:
+            max_score = max(
+                max_score,
+                float(
+                    np.max(
+                        np.abs(
+                            np.sqrt(np.mean(outer_output_mse, axis=0))
+                            - result["nested_output_rms"]
+                        )
+                    )
+                ),
+            )
         rng = np.random.default_rng(result["bootstrap_seed"])
         bootstrap, deficient = [], 0
         for _ in range(result["bootstrap_total"]):
@@ -138,7 +164,8 @@ def main():
             float(np.max(np.abs(lower - result["interval_lower"]))),
             float(np.max(np.abs(upper - result["interval_upper"]))),
         )
-        for request_path in Path(row["work"]).glob("*/request.json"):
+        native_output_mse = []
+        for request_path in sorted(Path(row["work"]).glob("*/request.json")):
             request = json.loads(request_path.read_text())
             response = json.loads(request_path.with_name("response.json").read_text())
             params = request["params"]
@@ -161,6 +188,41 @@ def main():
                 raise ValueError("Native coherent amplitude bound failed")
             native_renders += 1
             native_samples += actual.size
+            folder = request_path.parent.name
+            if folder.startswith("heldout-"):
+                index = int(folder.removeprefix("heldout-"))
+                target = groups[index][1]
+                native_output_mse.append(
+                    np.mean(
+                        (actual[:, params["output_channel_map"]] - target) ** 2, axis=0
+                    )
+                )
+        if (
+            native_output_mse
+            and "native" in result
+            and "nested_output_rms" in result["native"]
+        ):
+            max_score = max(
+                max_score,
+                float(
+                    np.max(
+                        np.abs(
+                            np.sqrt(np.mean(native_output_mse, axis=0))
+                            - result["native"]["nested_output_rms"]
+                        )
+                    )
+                ),
+            )
+        if result.get(
+            "independent_native_gate_refused_after_statistical_gate_bypassed_for_test"
+        ) and (
+            not native_output_mse
+            or np.sqrt(np.mean(native_output_mse)) >= 0.005
+            or np.sqrt(np.mean(native_output_mse, axis=0)).max() <= 0.01
+        ):
+            raise ValueError(
+                "Native per-output rejection was not independently demonstrated"
+            )
         rows.append(
             {
                 "name": row["name"],
@@ -188,7 +250,11 @@ def main():
                     )
                 ),
                 "fresh_native_max_rms": max(
-                    (f["native_rms"] for f in row["fresh_validation"]), default=None
+                    (
+                        f.get("native_rms", f.get("rms"))
+                        for f in row["fresh_validation"]
+                    ),
+                    default=None,
                 ),
             }
         )

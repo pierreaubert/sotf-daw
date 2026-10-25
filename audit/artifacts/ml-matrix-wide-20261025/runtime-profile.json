@@ -1,0 +1,30 @@
+{
+  "command": [
+    "/usr/bin/time",
+    "-l",
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/fit_matrix_routing.py",
+    "--examples",
+    "audit/artifacts/ml-matrix-wide-20261025/sessions/wide-128x128-examples.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-matrix-routing",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-matrix-wide-20261025/profile-native",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-matrix-wide-20261025/profile-output"
+  ],
+  "exit_code": 0,
+  "seconds": 3.6566592091694474,
+  "logical_dimensions": [
+    128,
+    128
+  ],
+  "sources": 10,
+  "rows_per_source": 64,
+  "numeric_thread_environment": {
+    "OPENBLAS_NUM_THREADS": "2",
+    "VECLIB_MAXIMUM_THREADS": "2",
+    "OMP_NUM_THREADS": "2"
+  },
+  "scope": "Single local macOS offline CLI profile with subprocess/I/O, not worst-case, concurrent process-tree or realtime host performance."
+}

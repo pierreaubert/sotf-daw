@@ -22,7 +22,7 @@ intervals and host layout. Nothing is inserted into an active chain.
 
 Abstention writes `report.json` with null `parameters`, no preset and exit status
 2. Malformed input is rejected before output creation. Native failure also
-prevents export. Inputs are read once with an 8 MiB limit; the report records
+prevents export. Inputs are read once with a 64 MiB limit; the report records
 their hash and the native validator hash. Existing outputs are never overwritten.
 
 The example JSON has these fields:
@@ -49,7 +49,7 @@ sources. Segments, edits and gain variants of the same recording retain the same
 duplicate groups cannot claim different source IDs. Those guards do not prove
 that sources are independent.
 
-The schema admits 1–16 logical inputs and outputs, distinct physical indices
+The schema admits 1–128 logical inputs and outputs, distinct physical indices
 0–127, sample rates 44.1–192 kHz and up to 2,048 aggregated rows per source. Maps
 can be noncontiguous and permuted. Native physical width is the greatest mapped
 index plus one; unmapped outputs are zero. This tool learns only the supplied
@@ -71,8 +71,9 @@ This is a conditional sensitivity/abstention heuristic, not calibrated confidenc
 a simultaneous confidence region or a probability of correct routing. It omits
 full regularization reselection within each bootstrap.
 
-Admission requires nested RMS ≤0.005, each source RMS ≤0.01 and maximum absolute
-sample error ≤0.03. The exported full fit is also checked. Coefficient interval
+Admission requires nested RMS ≤0.005 for both the aggregate and every output,
+each source/output RMS ≤0.01, and maximum absolute sample error ≤0.03. The
+exported full fit is also checked. Coefficient interval
 width must be ≤0.03, at most 10% of bootstrap draws may lack excitation, and both
 the point row-L1 norm and conservative interval row bound must be ≤1. These are
 explicit prototype gates, not a listening standard. The row bound supplies
@@ -87,16 +88,27 @@ native plugin using the model fitted without it. Native processing/drain run
 under allocation guards, report zero latency and no retained tail. This does not
 imply that switching an active matrix skips the plugin's existing smoothing.
 
-Generated validation admitted eight linear sessions and rejected seven controls.
+The original validation admitted eight linear sessions and rejected seven controls.
 Independent pivoted QR verified selection, coefficients and 2,200 bootstrap fits;
 128 native renders matched the independent products. Four new generated sources
 per accepted session checked prediction outside the fitting rows. OLS already
 matches the linear task well; no neural or general regularization advantage is
 claimed. Evidence is in `audit/artifacts/ml-matrix-routing-20261025`.
 
+Full-width validation admitted six fresh layouts through 128x128 and rejected a
+control whose one bad output was hidden by the aggregate RMS. Native qualification
+also rejected that control when statistical admission was deliberately bypassed
+in a test. Independent QR verified 1,400 bootstrap fits and 88 native responses;
+the earlier 15 sessions retained identical admission and export parameters.
+Evidence is in `audit/artifacts/ml-matrix-wide-20261025`; its full examples and
+matrix reports are in `sessions.zip`. The measured 128x128/10-source CLI run took
+3.65 seconds and reported 207,765,504 bytes maximum resident size on one local
+macOS run. That includes subprocess/I/O, with numerical thread environment set
+to two; it is not a worst-case, process-tree or realtime/host guarantee.
+
 Natural calibration examples, source-independence and uncertainty calibration,
-broader mismatch/input-error shifts, logical layouts beyond this 16x16 prototype
-toward the native 128-channel limit, host/UI integration and cross-platform
+broader mismatch/input-error and largest-payload/source-count stress, host/UI
+integration and cross-platform
 validation remain open. Channel semantics and final application remain review
 decisions. Algorithm implementation is GPL-3.0-or-later; no user examples are
 bundled or treated as population training data.

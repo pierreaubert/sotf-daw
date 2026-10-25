@@ -1,0 +1,10 @@
+{
+  "scripts/ml/matrix_routing.py": "4c4682df393d7347387cdeca2ee02c23b017d422185ac285e2c406a5ee0bf588",
+  "scripts/ml/matrix_routing_native.py": "22c0de0c55e65fcc6f777ad66144d3825fe0daf6e936a2c4a6b374d1750765c6",
+  "scripts/ml/fit_matrix_routing.py": "6d324f8c42b02510cca005d04afc9524edf44b2c8e2e8e936935bd0cd37739a5",
+  "scripts/ml/test_matrix_routing.py": "644dcc6cc3f255eb7c7a1f8870f5f88e7832a6a588ad5925a552b359908f6625",
+  "scripts/ml/evaluate_matrix_wide.py": "8a96b72d75d6d15fecb59e900036321b2dc11e90c1145f7e2c08486fe1a34a54",
+  "scripts/ml/analyze_matrix_routing.py": "4e1b7675976fe73f183fabd487e351106e1db93ed7b650a7a0066da544e3c592",
+  "crates/sotf-plugins/crates/sotf-plugin-matrix/bin/qa_matrix_routing.rs": "237aae6468d6b7bc21530ec2b705fecf7e36bac19f197a13d0f9df5901552b93",
+  "scripts/ml/verify_matrix_wide_cli.py": "bc7a2e3c73a3ef2c1b93d24ee39e985543f001a9e6397f6869f0bb6043b2c4a8"
+}

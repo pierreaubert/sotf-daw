@@ -1,0 +1,42 @@
+SIM102 Use a single `if` statement instead of nested `if` statements
+   --> scripts/ml/analyze_matrix_routing.py:216:9
+    |
+214 |                   ),
+215 |               )
+216 | /         if result.get(
+217 | |             "independent_native_gate_refused_after_statistical_gate_bypassed_for_test"
+218 | |         ):
+219 | |             if (
+220 | |                 not native_output_mse
+221 | |                 or np.sqrt(np.mean(native_output_mse)) >= 0.005
+222 | |                 or np.sqrt(np.mean(native_output_mse, axis=0)).max() <= 0.01
+223 | |             ):
+    | |______________^
+224 |                   raise ValueError(
+225 |                       "Native per-output rejection was not independently demonstrated"
+    |
+help: Combine `if` statements using `and`
+    |
+217 |             "independent_native_gate_refused_after_statistical_gate_bypassed_for_test"
+218 +         ) and (
+219 +             not native_output_mse
+220 +             or np.sqrt(np.mean(native_output_mse)) >= 0.005
+221 +             or np.sqrt(np.mean(native_output_mse, axis=0)).max() <= 0.01
+222 |         ):
+    -             if (
+    -                 not native_output_mse
+    -                 or np.sqrt(np.mean(native_output_mse)) >= 0.005
+    -                 or np.sqrt(np.mean(native_output_mse, axis=0)).max() <= 0.01
+    -             ):
+    -                 raise ValueError(
+    -                     "Native per-output rejection was not independently demonstrated"
+    -                 )
+223 +             raise ValueError(
+224 +                 "Native per-output rejection was not independently demonstrated"
+225 +             )
+226 |         rows.append(
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+Found 1 error.
+1 unsafe fix available with `--fix --unsafe-fixes`.

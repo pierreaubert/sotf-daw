@@ -1,0 +1,69 @@
+{
+  "scope": "Extend offline source-group supervised routing to native128x128 logical channels and add independent per-output gates. No native DSP or ordinary Matrix preset behavior changes.",
+  "prior_checkpoint": "bf7f2a0b",
+  "method_change": "Same source-balanced SVD/ridge selection and nested source holdouts; same numeric thresholds, bootstrap count/seed, row-L1 and interval policy. Logical limit128; JSON limit64MiB. Rank check also requires one singular value per input. Aggregate and per-output RMS now both required before export.",
+  "per_output_gates": {
+    "nested_source_mean_output_rms_max": 0.005,
+    "worst_source_output_rms_max": 0.01,
+    "absolute_error_max": 0.03,
+    "native_extra_float_slack": [
+      1e-06,
+      2e-06
+    ]
+  },
+  "evaluation": {
+    "seed": 20541026,
+    "positive_dimensions": [
+      [
+        32,
+        32
+      ],
+      [
+        64,
+        17
+      ],
+      [
+        17,
+        64
+      ],
+      [
+        128,
+        128
+      ],
+      [
+        128,
+        1
+      ],
+      [
+        1,
+        128
+      ]
+    ],
+    "noise_std": 0.0001,
+    "sources_per_session": 10,
+    "rows_per_source": 64,
+    "negative_control": "2x128 one incompatible output. Deliberate bypass of statistical admission only in test verifies native per-output refusal; no export.",
+    "fresh_validation": "New127-row source per accepted session, wider+/-0.8 input range, separate SeedSequence."
+  },
+  "regression": "Replay previously frozen15 sessions with current code; compare admission, parameters and prior metrics. No source frames reused in new evaluation.",
+  "sources": {
+    "scripts/ml/matrix_routing.py": "4c4682df393d7347387cdeca2ee02c23b017d422185ac285e2c406a5ee0bf588",
+    "scripts/ml/matrix_routing_native.py": "22c0de0c55e65fcc6f777ad66144d3825fe0daf6e936a2c4a6b374d1750765c6",
+    "scripts/ml/fit_matrix_routing.py": "6d324f8c42b02510cca005d04afc9524edf44b2c8e2e8e936935bd0cd37739a5",
+    "scripts/ml/test_matrix_routing.py": "644dcc6cc3f255eb7c7a1f8870f5f88e7832a6a588ad5925a552b359908f6625",
+    "scripts/ml/evaluate_matrix_wide.py": "8a96b72d75d6d15fecb59e900036321b2dc11e90c1145f7e2c08486fe1a34a54",
+    "scripts/ml/analyze_matrix_routing.py": "4e1b7675976fe73f183fabd487e351106e1db93ed7b650a7a0066da544e3c592",
+    "crates/sotf-plugins/crates/sotf-plugin-matrix/bin/qa_matrix_routing.rs": "237aae6468d6b7bc21530ec2b705fecf7e36bac19f197a13d0f9df5901552b93"
+  },
+  "renderer_sha256": "4a847634efc5ec46b87754569c117b29d995ce735be8a9e1eb71c59cd376b65f",
+  "limitations": [
+    "Conditional bootstrap uncertainty remains heuristic, not calibrated probability.",
+    "No natural user calibration or semantic routing/host acceptance is established.",
+    "Offline cost measurements apply to the measured cases and include subprocess/I/O; not realtime or worst-case guarantees."
+  ],
+  "analysis_source_revision": {
+    "before_sha256": "1ce524b69d2fce9e466b6c8585b26dfe6ab099ced754abbc50653cf87f4918fb",
+    "after_sha256": "4e1b7675976fe73f183fabd487e351106e1db93ed7b650a7a0066da544e3c592",
+    "reason": "Resolve Ruff SIM102 by combining equivalent nested conditions before running independent analysis. Estimator, native validator, evaluation, gates and data unchanged. Initial source/protocol and failed lint preserved."
+  }
+}

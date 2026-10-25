@@ -7,15 +7,15 @@ import json
 import subprocess
 from pathlib import Path
 
-from matrix_routing import fit, validate
+from matrix_routing import MAX_EXAMPLE_BYTES, fit, validate
 from matrix_routing_native import qualify
 
 
 def read_examples(path):
     with Path(path).open("rb") as source:
-        raw = source.read(8 * 1024 * 1024 + 1)
-    if len(raw) > 8 * 1024 * 1024:
-        raise ValueError("Routing examples exceed8 MiB")
+        raw = source.read(MAX_EXAMPLE_BYTES + 1)
+    if len(raw) > MAX_EXAMPLE_BYTES:
+        raise ValueError("Routing examples exceed 64 MiB")
     data = json.loads(raw)
     validate(data)
     return data, hashlib.sha256(raw).hexdigest()
