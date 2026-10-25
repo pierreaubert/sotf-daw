@@ -1,0 +1,171 @@
+{
+  "cases": [
+    {
+      "case": "near",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/near-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/near-classical/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 2.353479676872518e-06,
+      "worst_validation_relative_rms": 0.001609701523648528,
+      "search_evaluations": 158,
+      "native_render_calls": 338
+    },
+    {
+      "case": "near",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/near-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/near-surrogate/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 2.615546969376438e-11,
+      "worst_validation_relative_rms": 4.827663183895674e-06,
+      "search_evaluations": 158,
+      "native_render_calls": 338
+    },
+    {
+      "case": "far",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/far-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/far-classical/report.json",
+      "accepted": false,
+      "reasons": [
+        "observed_parameter_ambiguity",
+        "validation_waveform_mismatch"
+      ],
+      "training_objective": 2.5477515443771625e-07,
+      "worst_validation_relative_rms": 0.004445754219098929,
+      "search_evaluations": 159,
+      "native_render_calls": 338
+    },
+    {
+      "case": "far",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/far-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/far-surrogate/report.json",
+      "accepted": false,
+      "reasons": [
+        "observed_parameter_ambiguity",
+        "validation_waveform_mismatch"
+      ],
+      "training_objective": 4.510224273816772e-07,
+      "worst_validation_relative_rms": 0.006775024781278528,
+      "search_evaluations": 159,
+      "native_render_calls": 338
+    },
+    {
+      "case": "two-band",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-classical/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 9.98100748297037e-08,
+      "worst_validation_relative_rms": 0.0003821694367392559,
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "two-band",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-surrogate/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 2.4584475333115644e-08,
+      "worst_validation_relative_rms": 0.00027495764065587464,
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "shifted",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/shifted-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/shifted-classical/report.json",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity",
+        "train_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "training_objective": 0.24404122450548948,
+      "worst_validation_relative_rms": 0.4791186504468622,
+      "search_evaluations": 63,
+      "native_render_calls": 140
+    },
+    {
+      "case": "shifted",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/shifted-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/shifted-surrogate/report.json",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity",
+        "train_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "training_objective": 0.24404122450548948,
+      "worst_validation_relative_rms": 0.4791186504468622,
+      "search_evaluations": 60,
+      "native_render_calls": 134
+    },
+    {
+      "case": "dry",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-classical/report.json",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity"
+      ],
+      "training_objective": 0.0,
+      "worst_validation_relative_rms": 0.0,
+      "search_evaluations": 114,
+      "native_render_calls": 248
+    },
+    {
+      "case": "dry",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-surrogate/report.json",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity"
+      ],
+      "training_objective": 0.0,
+      "worst_validation_relative_rms": 0.0,
+      "search_evaluations": 114,
+      "native_render_calls": 248
+    },
+    {
+      "case": "known-control",
+      "method": "classical",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/known-control-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/known-control-classical/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 0.0,
+      "worst_validation_relative_rms": 0.0,
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "known-control",
+      "method": "surrogate",
+      "target": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/known-control-case/target.json",
+      "report": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/known-control-surrogate/report.json",
+      "accepted": true,
+      "reasons": [],
+      "training_objective": 0.0,
+      "worst_validation_relative_rms": 0.0,
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    }
+  ],
+  "qualification": "Fresh fixed synthetic development signals, not listener/hardware data or a final generalization set. Known-control starts at truth and is only an export/admission control. No method-superiority assumption."
+}

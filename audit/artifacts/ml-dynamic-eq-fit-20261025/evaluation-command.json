@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_dynamic_eq_fit.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-dynamic-eq-render",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation",
+    "--output",
+    "audit/artifacts/ml-dynamic-eq-fit-20261025/evaluation.json"
+  ],
+  "exit_code": 0,
+  "seconds": 34.674223749898374
+}

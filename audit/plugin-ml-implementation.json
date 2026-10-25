@@ -277,13 +277,22 @@
         "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/bin/qa_dynamic_eq_render.rs",
         "scripts/ml/dynamic_eq_native.py",
         "scripts/ml/test_dynamic_eq_native.py",
-        "audit/artifacts/ml-dynamic-eq-native-20261025"
+        "audit/artifacts/ml-dynamic-eq-native-20261025",
+        "scripts/ml/dynamic_eq_fit.py",
+        "scripts/ml/fit_dynamic_eq.py",
+        "scripts/ml/dynamic_eq_fit_cases.py",
+        "scripts/ml/evaluate_dynamic_eq_fit.py",
+        "scripts/ml/analyze_dynamic_eq_fit.py",
+        "scripts/ml/test_fit_dynamic_eq.py",
+        "crates/sotf-plugins/models/dynamic-eq-fit/manifest.json",
+        "audit/artifacts/ml-dynamic-eq-fit-20261025"
       ],
       "remaining": [
-        "Implement learned offline setting proposals against explicit targets with native waveform qualification and transparent bounded runtime controls. The renderer is a foundation, not a learned fitter.",
-        "Compare learned initialization/surrogate proposals against strong bounded classical optimization at equal native evaluation budgets; retain ambiguity and out-of-domain refusal.",
-        "Validate selected presets across held-out programme/levels, transients, rates/layouts, filter shapes, per-band overrides and routings; do not infer dynamic response from static full-target magnitude.",
-        "Validate listener quality, host/preset UI integration, CPU/memory/deadline budgets and cross-platform operation separately."
+        "Extend learned proposals beyond shared global dynamics to explicit structural/per-band settings while preserving native filter/envelope/routing bounds. Current fitter copies those structural controls.",
+        "No general surrogate adoption: at the fixed 160-proposal allowance, both methods qualify near/two-band unknown-control cases and reject the harder case; surrogate improves two cases but worsens the harder validation result. Initial smoke also fails separate validation despite low training error. Compare stronger classical refinements and broader frozen material before promotion.",
+        "Validate real source-disjoint paired recordings, held-out rates/layouts and mixed filter/routing/level/transient shifts. Current synthetic 48 kHz mono experiments establish finite paired waveform fits, not perceptual/generalization quality.",
+        "Calibrate acceptance/ambiguity policy; observed +/-0.1 normalized-coordinate sensitivity and prior sampled competitors do not prove global identifiability or calibrated confidence.",
+        "Listener/host/UI, CPU/memory/deadline and cross-platform validation remain open; no learned inference was added to runtime dynamics."
       ]
     },
     {

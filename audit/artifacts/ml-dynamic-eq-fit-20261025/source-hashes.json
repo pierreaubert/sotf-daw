@@ -1,0 +1,14 @@
+{
+  "scripts/ml/dynamic_eq_fit.py": "270f8f88a2dfa181dc9f5aa2c71bcc61dbe8f003748423edc70edccd475c5d61",
+  "scripts/ml/fit_dynamic_eq.py": "8938330bf4ee08a03d08fbef1fcdb0d7994a8914f7adeae5ea4ded030aee13fd",
+  "scripts/ml/dynamic_eq_fit_cases.py": "fe5eb6ff90cb3ed88b0c8c7902a705d5dd92c7af6bb49d2ef2e312829303e43b",
+  "scripts/ml/test_fit_dynamic_eq.py": "90e08918aa7174d8a52450e33dbe96d49453d30b73b79abc321985e25883c832",
+  "scripts/ml/evaluate_dynamic_eq_fit.py": "1a5cdba88354a0b4e189f9e101117d5495875e156a08962e07ce8e7883940aef",
+  "scripts/ml/analyze_dynamic_eq_fit.py": "048579a0237048636afa054a161207686aa52c0758f0bd16fc9262383dc2dc53",
+  "scripts/ml/dynamic_eq_native.py": "0c2d70f2c82c4406e083d701553113b4ce277fabb805ceaa30a7b6ae75224158",
+  "crates/sotf-plugins/crates/sotf-plugin-dynamic-eq/bin/qa_dynamic_eq_render.rs": "842ca2b08db7c72a7d94a97d4a6c2ea72d4861691200cbee7d706045567a44d1",
+  "crates/sotf-plugins/models/dynamic-eq-fit/README.md": "37f82a0197fb595022632b15790d264ff5b67c5489103d9b0d76a442f24dbbd8",
+  "crates/sotf-plugins/models/dynamic-eq-fit/manifest.json": "d7a75509e13ffc08028dcfe3cfebaa33c8302e5ed6e4113d841b9a8ed225bd90",
+  "audit/plugin-ml-implementation.json": "ce824e55a2b521407661013f5d2649affebfc110fed091c3daf0102161147936",
+  "Cargo.lock": "518868fa329d7c1fc9816513b11f3b6631500acdf05a2a23945d28737bfebfd6"
+}

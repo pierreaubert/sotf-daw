@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "kind": "optional_offline_per_session_gaussian_process_setting_proposals",
+  "pretrained_weights": null,
+  "status": "synthetic_development_validation_only",
+  "learned_controls": [
+    "threshold",
+    "ratio",
+    "attack_ms",
+    "release_ms"
+  ],
+  "fixed_controls": "Explicit band frequencies, Q/gain/shape/slope/routing, active/solo, knee, mix, linking and stereo pairs. Per-band dynamics overrides are refused in this initial shared-dynamics fitter.",
+  "method": "Fixed Matern5/2 GP learned from native training losses, expected improvement over log10 loss, then bounded Nelder-Mead. Classical comparator uses the same initial Sobol design, additional Sobol proposals and the same refinement, under the same proposal allowance.",
+  "runtime_boundary": "Existing native Dynamic EQ processes every candidate. No learned inference or envelope replacement in audio processing.",
+  "data": "Two training sources and at least one separately identified validation source; whole-source grouping and sample alignment are declared. Current experiment is synthetic native reconstruction at 48 kHz mono.",
+  "admission": "Each train/validation clip relative RMS <=0.002 and max absolute error <=0.01; at least 0.001 relative-RMS and 50% improvement over dry; native preset reopening within 1e-7; refuse observed nearby-loss alternatives at normalized control distance >=0.099.",
+  "uncertainty": "Observed search history and coordinate sensitivity probes are not global identifiability or calibrated confidence.",
+  "default_method": "classical",
+  "surrogate_adoption": "Opt-in experiment only. Improves two unknown-control development cases, worsens the harder one; both methods reject the harder case. No general superiority claim.",
+  "evidence": "audit/artifacts/ml-dynamic-eq-fit-20261025",
+  "remaining": [
+    "Structural/per-band learned proposal coverage and broader classical comparisons",
+    "Real paired recordings, held-out levels/transients/rates/layouts/shapes/routes and listening",
+    "Calibrated ambiguity/admission policy and actual host/resource/cross-platform validation"
+  ],
+  "license": "GPL-3.0-or-later"
+}

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/dynamic_eq_fit.py",
+    "scripts/ml/fit_dynamic_eq.py",
+    "scripts/ml/dynamic_eq_fit_cases.py",
+    "scripts/ml/test_fit_dynamic_eq.py",
+    "scripts/ml/evaluate_dynamic_eq_fit.py",
+    "scripts/ml/analyze_dynamic_eq_fit.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.01174050010740757
+}

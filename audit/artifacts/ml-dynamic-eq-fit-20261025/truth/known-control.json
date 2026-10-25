@@ -1,0 +1,30 @@
+{
+  "kind": "known-control",
+  "hidden_parameters": {
+    "num_bands": 1,
+    "threshold": -23.0,
+    "ratio": 4.5,
+    "attack_ms": 3.5,
+    "release_ms": 80.0,
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 1.0,
+        "frequency": 1000,
+        "q": 0.7,
+        "gain": -6,
+        "band_threshold": -23.0,
+        "band_ratio": 4.5,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "seed": 20616026,
+  "scope": "Native synthetic reconstruction only; held validation signal has a separate seed. Hidden dynamics are not included in target input."
+}

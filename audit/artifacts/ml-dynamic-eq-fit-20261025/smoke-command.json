@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-c",
+    "import sys,json\nfrom pathlib import Path\nsys.path.insert(0,\"scripts/ml\")\nfrom dynamic_eq_fit_cases import case\nfrom fit_dynamic_eq import run\np=Path(\"/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025\");p.mkdir(exist_ok=False)\nr=\"/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-dynamic-eq-render\"\nd=case(p/\"smoke-case\",r)\nfor method in [\"classical\",\"surrogate\"]:\n result=run(d,r,p/(\"smoke-\"+method),budget=160,method=method)\n print(json.dumps({\"method\":method,\"accepted\":result[\"accepted\"],\"reasons\":result[\"reasons\"],\"best\":result[\"search\"][\"best\"],\"evaluations\":result[\"search\"][\"evaluations\"],\"quality\":result[\"qualification\"]}),flush=True)\n"
+  ],
+  "exit_code": 0,
+  "seconds": 5.10762466583401
+}

@@ -1,0 +1,61 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 48000,
+  "channels": 1,
+  "template": {
+    "num_bands": 1,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 1.0,
+        "frequency": 1000,
+        "q": 0.7,
+        "gain": -6,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "source-20615026",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/clip-0.f32le",
+      "input_sha256": "61c0199ae6b66ef4710a47c5897469a99d5ec177eee8521a5a2a701476fb1c0c",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/reference-0.f32le",
+      "reference_sha256": "61c0199ae6b66ef4710a47c5897469a99d5ec177eee8521a5a2a701476fb1c0c"
+    },
+    {
+      "id": "source-20615027",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/clip-1.f32le",
+      "input_sha256": "a8fbaed1a95dd630e0c731d4484e03330df57ae28a53668b3faf94eb29eb0316",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/reference-1.f32le",
+      "reference_sha256": "a8fbaed1a95dd630e0c731d4484e03330df57ae28a53668b3faf94eb29eb0316"
+    },
+    {
+      "id": "source-20615028",
+      "role": "validation",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/clip-2.f32le",
+      "input_sha256": "427ce4496065e3b868dfeacbfe21192679e29dfc0163c96dec79edd33990a46e",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/dry-case/reference-2.f32le",
+      "reference_sha256": "427ce4496065e3b868dfeacbfe21192679e29dfc0163c96dec79edd33990a46e"
+    }
+  ]
+}

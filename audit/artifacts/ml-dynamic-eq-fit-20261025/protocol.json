@@ -1,0 +1,23 @@
+{
+  "issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "scope": "Optional per-session GP over four shared global dynamics controls; structural/per-band proposals remain open",
+  "renderer_sha256": "b6b535ccda12e647483d54999c73228a18c930edd111a040c8df3029f0bf036d",
+  "environment": {
+    "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "environment_overrides": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1"
+  },
+  "default_method": "classical",
+  "surrogate_method": "explicit_opt_in",
+  "proposal_allowance": 160,
+  "extra_native_calls": "Up to eight training sensitivity objective calls plus every train/validation qualification/reopen. Actual counts recorded; early convergence may differ.",
+  "observation_sources": "2 distinct training inputs and 1 separate validation input per synthetic case; hidden controls stored separately except known-control wiring case",
+  "validation_use": "Scored after selection only; altered-validation regression proves search invariance",
+  "raw_external_root": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025",
+  "no_pretrained_weights": true,
+  "full_ml_audit_complete": false
+}

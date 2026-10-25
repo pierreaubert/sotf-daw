@@ -1,0 +1,73 @@
+{
+  "format": "sotf-dynamic-eq-paired-target-v1",
+  "data_origin": "synthetic_validation",
+  "alignment": "sample_aligned_zero_latency_fresh_state",
+  "sample_rate": 48000,
+  "channels": 1,
+  "template": {
+    "num_bands": 2,
+    "threshold": -24.0,
+    "ratio": 4.0,
+    "attack_ms": 2.0,
+    "release_ms": 50.0,
+    "knee": 0.0,
+    "link_channels": true,
+    "mix": 1.0,
+    "stereo_pairs": null,
+    "bands": [
+      {
+        "shape": "peak",
+        "placement": "stereo",
+        "shelf_slope": 1.0,
+        "frequency": 400,
+        "q": 1,
+        "gain": -4,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      },
+      {
+        "shape": "high_shelf",
+        "placement": "stereo",
+        "shelf_slope": 0.7,
+        "frequency": 4000,
+        "q": 0.7,
+        "gain": 3,
+        "band_threshold": -24.0,
+        "band_ratio": 4.0,
+        "active": true,
+        "solo": false
+      }
+    ]
+  },
+  "clips": [
+    {
+      "id": "source-20613026",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/clip-0.f32le",
+      "input_sha256": "f7161f9b46ec9763fbf8709d1bdc6e31daaf177d19338790f45fbc2ce023d4d3",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/reference-0.f32le",
+      "reference_sha256": "da06878c1eeae2fb4551d14b5ef71fe3fe153e2c5553f76b6125552237c25102"
+    },
+    {
+      "id": "source-20613027",
+      "role": "train",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/clip-1.f32le",
+      "input_sha256": "c9fd1ecd8b674a21ee67f26b5da7d616855e69fe95173fa70bca02bcc0d4ad99",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/reference-1.f32le",
+      "reference_sha256": "0227baee41b311aabdf301b97b202bbced3f85428bc8757759a068f4eaa6932b"
+    },
+    {
+      "id": "source-20613028",
+      "role": "validation",
+      "frames": 24001,
+      "input_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/clip-2.f32le",
+      "input_sha256": "3d96f346e7e7dabd17876258cad24b62082e06743f2aa96e29fb8526560844a1",
+      "reference_file": "/Volumes/home_tmp/tmp/ml-dynamic-eq-fit-20261025/evaluation/two-band-case/reference-2.f32le",
+      "reference_sha256": "a20413e010cec1bdb638bbd6bd6e2479af24ae577332199c41fcecf3ea8d2360"
+    }
+  ]
+}

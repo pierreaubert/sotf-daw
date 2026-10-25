@@ -1,0 +1,130 @@
+{
+  "runs": 12,
+  "raw_native_renders_verified": 3482,
+  "independent_gp_acquisition_decisions": 144,
+  "maximum_objective_difference": 1.1102230246251565e-16,
+  "maximum_relative_rms_or_max_metric_difference": 5.551115123125783e-17,
+  "max_reopen_error": 0.0,
+  "admission_decisions_reconstructed": 12,
+  "comparisons": [
+    {
+      "case": "near",
+      "method": "classical",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 158,
+      "native_render_calls": 338
+    },
+    {
+      "case": "near",
+      "method": "surrogate",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 158,
+      "native_render_calls": 338
+    },
+    {
+      "case": "far",
+      "method": "classical",
+      "accepted": false,
+      "reasons": [
+        "observed_parameter_ambiguity",
+        "validation_waveform_mismatch"
+      ],
+      "search_evaluations": 159,
+      "native_render_calls": 338
+    },
+    {
+      "case": "far",
+      "method": "surrogate",
+      "accepted": false,
+      "reasons": [
+        "observed_parameter_ambiguity",
+        "validation_waveform_mismatch"
+      ],
+      "search_evaluations": 159,
+      "native_render_calls": 338
+    },
+    {
+      "case": "two-band",
+      "method": "classical",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "two-band",
+      "method": "surrogate",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "shifted",
+      "method": "classical",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity",
+        "train_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "search_evaluations": 63,
+      "native_render_calls": 140
+    },
+    {
+      "case": "shifted",
+      "method": "surrogate",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity",
+        "train_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "search_evaluations": 60,
+      "native_render_calls": 134
+    },
+    {
+      "case": "dry",
+      "method": "classical",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity"
+      ],
+      "search_evaluations": 114,
+      "native_render_calls": 248
+    },
+    {
+      "case": "dry",
+      "method": "surrogate",
+      "accepted": false,
+      "reasons": [
+        "no_material_advantage_over_dry",
+        "observed_parameter_ambiguity"
+      ],
+      "search_evaluations": 114,
+      "native_render_calls": 248
+    },
+    {
+      "case": "known-control",
+      "method": "classical",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    },
+    {
+      "case": "known-control",
+      "method": "surrogate",
+      "accepted": true,
+      "reasons": [],
+      "search_evaluations": 159,
+      "native_render_calls": 340
+    }
+  ],
+  "qualification": "Reconstruction of bounded synthetic experiments; observed sensitivity screening is not global identifiability or calibrated confidence."
+}
