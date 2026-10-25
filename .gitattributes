@@ -1,3 +1,7 @@
 # These runtime assets are verified by raw-byte SHA-256 before inference.
 crates/sotf-plugins/models/aec-residual/model.json -text
 crates/sotf-plugins/models/aae-room-fit/model.json -text
+crates/sotf-plugins/models/ir-tail-mask/model.json -text
+
+# Preserve exact bytes in this checksummed evidence bundle.
+audit/artifacts/ml-ir-denoise-20261025/** -text

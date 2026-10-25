@@ -1,0 +1,68 @@
+{
+  "cases": 78,
+  "train_development_final_unique_sources": 382,
+  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "max_metric_error": 0.0,
+  "max_response_error": 2.1025501373284072e-06,
+  "worst_neural": {
+    "index": 52,
+    "family": "late_reflection",
+    "checks": {
+      "accepted": true,
+      "early_f32_exact": true,
+      "relative_ir_change": 0.030580657967250027,
+      "max_magnitude_change_db": 0.8970426462249801,
+      "max_phase_change_degrees": 5.078749328664815,
+      "sample_grid_points": 192,
+      "limits": {
+        "relative_ir_change": 0.05,
+        "magnitude_db": 1.0,
+        "phase_degrees": 10.0
+      },
+      "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+    },
+    "snr_db": 30.296004432281652,
+    "improvement_db": -9.073518076344754,
+    "projection_loss_db": 0.04787472200408275
+  },
+  "summary": {
+    "final/neural": {
+      "accepted": 36,
+      "count": 48,
+      "median_improvement_db": 3.2285100881185786,
+      "worst_improvement_db": 0.0
+    },
+    "final/wiener": {
+      "accepted": 34,
+      "count": 48,
+      "median_improvement_db": 3.436477737331453,
+      "worst_improvement_db": 0.0
+    },
+    "final/decay": {
+      "accepted": 34,
+      "count": 48,
+      "median_improvement_db": 3.4382295027323186,
+      "worst_improvement_db": 0.0
+    },
+    "shift/neural": {
+      "accepted": 16,
+      "count": 30,
+      "median_improvement_db": 0.0,
+      "worst_improvement_db": -9.073518076344754
+    },
+    "shift/wiener": {
+      "accepted": 15,
+      "count": 30,
+      "median_improvement_db": 0.27569761645641655,
+      "worst_improvement_db": 0.0
+    },
+    "shift/decay": {
+      "accepted": 17,
+      "count": 30,
+      "median_improvement_db": 0.3244237285060719,
+      "worst_improvement_db": -1.7671564703007343
+    }
+  },
+  "adoption_recommended": false,
+  "conclusion": "Response bounds can admit damage to late reflections. The neural mask fails the shift/structure-preservation gate; no general measured-IR acceptance."
+}

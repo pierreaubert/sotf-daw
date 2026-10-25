@@ -1,0 +1,110 @@
+{
+  "index": 8,
+  "split": "final",
+  "metadata": {
+    "seed": 20278033,
+    "rate": 16000,
+    "family": "training",
+    "frames": 24000,
+    "channels": 2,
+    "arrival": 1280,
+    "noise_frames": 960,
+    "rt60_parameter_seconds": 0.19314477357022644,
+    "nominal_snr_db": 36.01923055333483
+  },
+  "directory": "/Volumes/home_tmp/tmp/ml-ir-denoise-20261025/case-008",
+  "arrays": {
+    "clean": {
+      "sha256": "4aa41f61d764e94e684aa700cb5466d7b272a1c84fa8a917a0343a2ebcb8486c",
+      "floats": 48000
+    },
+    "noisy": {
+      "sha256": "cb5dd580d8f6a03f6f207dad4b58baa6dbdfebf3107cf426fa2105a2b0d642bc",
+      "floats": 48000
+    },
+    "neural": {
+      "sha256": "0f9520489f871d1af580c7826c555e814c049932010175ed139d66a358f52b04",
+      "floats": 48000
+    },
+    "wiener": {
+      "sha256": "1e3e0c074c09bba7b14ca59e58ea9a1f7ae2b61d6906dc05d2e11fc92ff1c7b8",
+      "floats": 48000
+    },
+    "decay": {
+      "sha256": "44e91f25f216352c44e234538631033bb1213d3b9a5195328d9c79928227e6f3",
+      "floats": 48000
+    }
+  },
+  "methods": {
+    "unchanged": {
+      "quality": {
+        "snr_db": 36.019230550539206,
+        "improvement_db": 0.0,
+        "projection_loss_db": 0.0012771855910794043
+      }
+    },
+    "neural": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.013163538736901986,
+        "max_magnitude_change_db": 0.6516324600830505,
+        "max_phase_change_degrees": 3.527745224950699,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 43.62394462750147,
+        "improvement_db": 7.604714076962268,
+        "projection_loss_db": 0.0019205996474048596
+      }
+    },
+    "wiener": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.013825874836452534,
+        "max_magnitude_change_db": 0.6423556506834476,
+        "max_phase_change_degrees": 3.9318111531956075,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 43.96325703502128,
+        "improvement_db": 7.9440264844820705,
+        "projection_loss_db": 0.001445072120916612
+      }
+    },
+    "decay": {
+      "checks": {
+        "accepted": true,
+        "early_f32_exact": true,
+        "relative_ir_change": 0.013927707466745971,
+        "max_magnitude_change_db": 0.6641275979699586,
+        "max_phase_change_degrees": 3.9079169487473715,
+        "sample_grid_points": 192,
+        "limits": {
+          "relative_ir_change": 0.05,
+          "magnitude_db": 1.0,
+          "phase_degrees": 10.0
+        },
+        "scope": "192 log-grid points above -20 dB per-channel peak; not a guarantee between points or at deep nulls."
+      },
+      "quality": {
+        "snr_db": 43.89777685210258,
+        "improvement_db": 7.8785463015633725,
+        "projection_loss_db": 0.0015746151404593635
+      }
+    }
+  }
+}

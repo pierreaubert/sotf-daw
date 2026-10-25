@@ -1,0 +1,37 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_ir_denoise.py",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-ir-denoise-reproduce-20261025/evidence",
+    "--temporary",
+    "/Volumes/home_tmp/tmp/ml-ir-denoise-reproduce-20261025/arrays",
+    "--epochs",
+    "250"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 3.502152082975954,
+  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "matching_export_arrays": 234,
+  "matching_source_arrays": 156,
+  "source_snapshots_verified": true,
+  "current_protocol": {
+    "format": "sotf_ir_tail_mask_v1",
+    "seed": 20276025,
+    "train_scenes": 256,
+    "development_scenes": 48,
+    "final_scenes": 48,
+    "shift_scenes": 30,
+    "rates": [
+      16000,
+      48000
+    ],
+    "epochs": 250,
+    "source_sha256": {
+      "train_ir_denoise.py": "b0e5e34ca5387d57b2fe9c610ad0817f6d56d5941291d144cbc0c21d84ed5cc7",
+      "ir_denoise.py": "d993b9414071ebd47588287dff4295338209e4384e195ae63aeb0d117d025c61"
+    },
+    "selection": "Select weights on development loss only. Freeze weights/hash before generating final/shift arrays. No measured/external training data.",
+    "acceptance": "All methods use the same early protection and response checks; compare exported fallback-inclusive output, not only accepted proposals."
+  }
+}

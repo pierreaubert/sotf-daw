@@ -127,8 +127,23 @@
       "requirements": [
         "ML belongs in optional offline IR denoising/estimation, with measured response preserved and model output validated."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/ir_denoise.py",
+        "scripts/ml/train_ir_denoise.py",
+        "scripts/ml/analyze_ir_denoise.py",
+        "scripts/ml/verify_ir_denoise.py",
+        "scripts/ml/test_ir_denoise.py",
+        "crates/sotf-plugins/models/ir-tail-mask",
+        "crates/sotf-plugins/crates/sotf-plugin-convolution/bin/qa_convolution_ir.rs",
+        "audit/artifacts/ml-ir-denoise-20261025"
+      ],
+      "remaining": [
+        "Develop protection of late reflections and multi-slope/coherent decays using separate development material; evaluate new final data.",
+        "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
+        "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration.",
+        "Current model fails general adoption: only 2/48 final cases beat the better classical baseline; one admitted late-reflection shift loses 9.074 dB reconstruction SNR despite response bounds. Keep optional offline experiment only."
+      ]
     },
     {
       "plugin_id": 15,
@@ -570,9 +585,10 @@
       "evidence": [
         "audit/artifacts/ml-aec-residual-20261025",
         "crates/sotf-plugins/models/aec-residual",
-        "audit/artifacts/ml-aec-worker-20261025"
+        "audit/artifacts/ml-aec-worker-20261025",
+        "audit/artifacts/ml-aec-recorded-20261025"
       ],
-      "remaining": "Bounded live worker, stale-result/reset/EOF and host serialization are implemented; natural/device/listening quality and platform runtime budgets remain open."
+      "remaining": "Recorded-source near-end gate FAILED: onset near-SNR loss up to 11.181 dB and conditional damage in all 18 sustained double-talk cases. Improve model/protection on separate development data, then validate new independent material; physical-device/listening quality and platform runtime budgets remain open."
     },
     {
       "candidate": "Hardware compressor emulation",

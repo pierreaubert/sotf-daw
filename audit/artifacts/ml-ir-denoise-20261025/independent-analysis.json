@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_ir_denoise.py",
+    "--evidence",
+    "audit/artifacts/ml-ir-denoise-20261025/experiment",
+    "--output",
+    "audit/artifacts/ml-ir-denoise-20261025/independent-quality-final.json"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.4284300000872463
+}

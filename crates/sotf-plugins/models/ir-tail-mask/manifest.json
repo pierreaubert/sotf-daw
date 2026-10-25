@@ -1,0 +1,37 @@
+{
+  "format": "sotf_ir_tail_mask_manifest_v1",
+  "license": "GPL-3.0-or-later",
+  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
+  "model_bytes": 4955,
+  "parameters": 241,
+  "float32_weight_bytes": 964,
+  "training_data": "Project-generated mono/stereo decaying diffuse tails, early reflections and independent noise. No measured IR, external recording or pretrained model.",
+  "training_scenes": 256,
+  "development_scenes": 48,
+  "final_scenes": 48,
+  "shift_scenes": 30,
+  "sample_rates_evaluated": [
+    16000,
+    48000
+  ],
+  "unique_source_hashes": 382,
+  "network": "8 inputs, 24 tanh units, sigmoid output mapped to [0.05,1]",
+  "runtime": "Offline NumPy only. Separate reviewed float32 WAV export; no convolution audio-thread inference, automatic replacement, resampling, trimming, delay or normalization.",
+  "model_identity": "Caller supplies expected raw-byte SHA-256; malformed/missing model retains original f32 samples.",
+  "adoption_recommended": false,
+  "quality_gate": "failed_late_structure_preservation_and_classical_comparison",
+  "evidence": "audit/artifacts/ml-ir-denoise-20261025",
+  "quality": {
+    "numpy_torch_max_error": 1.0330431265970219e-07,
+    "final_neural_better_than_best_classical": 2,
+    "final_neural_median_improvement_db": 3.2285100881185786,
+    "final_decay_median_improvement_db": 3.4382295027323186,
+    "worst_shift_neural_improvement_db": -9.073518076344754,
+    "worst_shift_classical_decay_improvement_db": -1.7671564703007343
+  },
+  "remaining": [
+    "Develop protection of late reflections and multi-slope/coherent decays using separate development material; evaluate new final data.",
+    "Measured IR/noise validation with trustworthy clean or repeated measurements; synthetic fixtures do not establish measurement preservation.",
+    "Validate channel layouts, rates and durations beyond the mono/stereo 16/48 kHz probe; listening and review/import integration."
+  ]
+}

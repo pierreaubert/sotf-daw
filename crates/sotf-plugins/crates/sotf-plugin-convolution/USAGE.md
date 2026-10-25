@@ -169,3 +169,10 @@ Input → Partition → FFT → Frequency Domain Line (ring buffer)
                                     ↓
                     Output = Dry × (1-mix) + Wet × mix × gain
 ```
+
+## Offline IR denoising experiment
+
+An optional [offline learned tail-mask experiment](../../models/ir-tail-mask/README.md)
+exports a separate IR for review. It does not modify loaded IRs or add inference
+to audio processing. The current model fails late-reflection preservation and is
+not recommended for general use; sampled response bounds alone proved insufficient.
