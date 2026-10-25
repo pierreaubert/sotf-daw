@@ -1,0 +1,25 @@
+{
+  "seed": 20274025,
+  "cases": 24,
+  "rates": [
+    16000,
+    44100,
+    48000
+  ],
+  "model_sha256": "2c39c23a5015cecbde5ea950381f80c18907558e897ce2a93ad4df8f72b42752",
+  "renderer_sha256": "0f56dd51ebdb52695264dbac56c031928e2373c121ec66d9b27d4ace05ad395f",
+  "structural_config": {
+    "model_path": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/models/aec-residual/model.json",
+    "sha256": "2c39c23a5015cecbde5ea950381f80c18907558e897ce2a93ad4df8f72b42752",
+    "max_age_ms": 40.0,
+    "max_extra_attenuation_db": 6.0
+  },
+  "processing_mode": "offline",
+  "selection": "Fixed policy developed after original prototype; new final scenes, no parameter/model tuning from these results.",
+  "source_hashes_disjoint_from_initial_64": true,
+  "extra_policy": "Keep classical post-filter; cap extra cut; near-end/ref-silent/missing/stale decisions retain classical.",
+  "source_sha256": {
+    "evaluate_aec_hybrid.py": "02920c56d8cc522007fe18b7ef65e84a91a6e46418c3527eec76454f0c6e931e",
+    "train_aec_residual.py": "f61f3f794eac6d4c15be6fd255ffe0ffb3d2c9ff163a4ea4289f828680af0269"
+  }
+}

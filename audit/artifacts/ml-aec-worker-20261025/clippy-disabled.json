@@ -1,0 +1,23 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-p",
+    "sotf-plugin-aec",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.8551621437072754
+}

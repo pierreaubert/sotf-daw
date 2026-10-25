@@ -6,7 +6,7 @@
 //! - Serializable state (Params struct with serde defaults)
 //! - Index<->field mapping (PluginParamDef impl)
 //!
-//! Adding a parameter: add to PARAMS, add field to Params, add match arms.
+//! Adding a scalar parameter: add to PARAMS, add field to Params, add match arms.
 //! Nothing else needs to change.
 
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
 
 /// AEC plugin parameters.
 ///
-/// All serde defaults are derived from PARAMS — adding a field here with
+/// Scalar serde defaults are derived from PARAMS — adding a field here with
 /// the correct default function is enough to support old presets that
 /// don't have the new field.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -78,6 +78,9 @@ pub struct Params {
     pub step_size: f64,
     #[serde(default = "d_post_filter_enabled")]
     pub post_filter_enabled: bool,
+    /// Structural learned proposal policy; omitted presets retain classical AEC.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub residual_suppression: Option<crate::residual_config::ResidualSuppressionConfig>,
 }
 
 fn d_echo_tail_ms() -> f64 {
@@ -96,6 +99,7 @@ impl Default for Params {
             echo_tail_ms: d_echo_tail_ms(),
             step_size: d_step_size(),
             post_filter_enabled: d_post_filter_enabled(),
+            residual_suppression: None,
         }
     }
 }

@@ -18,18 +18,34 @@
     1.0
   ],
   "input_contract": "16 bands x12 bounded causal features; native256-frame AEC blocks,512 FFT,16..48kHz;feature_version1",
-  "runtime_integration": "Not connected to live AecPlugin audio yet. Native immutable inference API and allocation-checked parity executable only. Enabling neural-residual feature alone leaves existing audio unchanged.",
+  "runtime_integration": "Explicit optional residual_suppression state in AecPluginParams, shared two-packet realtime worker or control-prepared deterministic offline mode; additional bounded cuts over classical post-filter with freshness/near-end guards. Default classical unchanged.",
   "adoption_recommended": false,
   "quality_evidence": "audit/artifacts/ml-aec-residual-20261025/independent-quality.json",
   "remaining": [
-    "Bounded live worker integration with stale endpoint/generation rejection, reset/drain and explicit host configuration.",
-    "Improve dev-only hybrid proposal selection before adopting; fresh final holdout for any new model.",
-    "Natural speech and nonlinear physical-device/domain validation, near-end listening and platform runtime budgets."
+    "Natural speech/nonlinear physical device and listening acceptance; offline synthetic scores do not establish realtime quality.",
+    "Cross-platform realtime host timing/memory budgets and calibration of guard/freshness policies."
   ],
   "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
   "versions": {
     "numpy": "2.5.4",
     "scipy": "1.18.1",
     "torch_training_only": "2.14.1"
+  },
+  "worker": {
+    "queue_capacity": 2,
+    "default_max_endpoint_age_ms": 40.0,
+    "default_max_extra_attenuation_db": 6.0,
+    "warmup_ms": 50.0,
+    "additional_gain_attack_ms": 10.0,
+    "additional_gain_release": "immediate classical fallback",
+    "artifacts": "audit/artifacts/ml-aec-worker-20261025",
+    "fresh_final_scenes": 24,
+    "fresh_final_rates": [
+      16000,
+      44100,
+      48000
+    ],
+    "fresh_final_steady_drift_improvements_above_1db": 3,
+    "fresh_final_worst_near_snr_delta_db": -0.122614820203788
   }
 }

@@ -8,6 +8,7 @@ static A: CountingAlloc = CountingAlloc;
 fn main() {
     let sample_rate = 48000;
     let params = AecPluginParams {
+        residual_suppression: None,
         echo_tail_ms: 100.0,
         step_size: 0.5,
         post_filter_enabled: true,

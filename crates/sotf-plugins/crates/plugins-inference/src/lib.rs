@@ -538,4 +538,72 @@ mod tests {
         }
         assert!(!dropped_on_caller.load(Ordering::Acquire));
     }
+
+    #[derive(Clone)]
+    struct ResetOutput {
+        value: u64,
+        dropped: std::sync::mpsc::Sender<u64>,
+    }
+
+    impl Drop for ResetOutput {
+        fn drop(&mut self) {
+            let _ = self.dropped.send(self.value);
+        }
+    }
+
+    struct PausedModel {
+        entered: std::sync::mpsc::Sender<()>,
+        resume: std::sync::mpsc::Receiver<()>,
+        dropped: std::sync::mpsc::Sender<u64>,
+    }
+
+    impl InferenceModel for PausedModel {
+        type Input = u64;
+        type Output = ResetOutput;
+        fn run(&mut self, input: &u64) -> Result<ResetOutput, String> {
+            if *input == 1 {
+                self.entered.send(()).unwrap();
+                self.resume.recv_timeout(Duration::from_secs(5)).unwrap();
+            }
+            Ok(ResetOutput {
+                value: *input,
+                dropped: self.dropped.clone(),
+            })
+        }
+    }
+
+    #[test]
+    fn reset_during_inflight_run_discards_old_result_before_publication() {
+        let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+        let (resume_tx, resume_rx) = std::sync::mpsc::channel();
+        let (dropped_tx, dropped_rx) = std::sync::mpsc::channel();
+        let mut worker = AsyncInference::spawn(
+            PausedModel {
+                entered: entered_tx,
+                resume: resume_rx,
+                dropped: dropped_tx,
+            },
+            2,
+            "inflight-reset",
+        )
+        .unwrap();
+        worker.try_send(1).unwrap();
+        entered_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        worker.reset();
+        resume_tx.send(()).unwrap();
+        // Result 1 can be dropped only by the worker after run finishes. If it
+        // were published in the new epoch, it would remain owned by the slot.
+        assert_eq!(dropped_rx.recv_timeout(Duration::from_secs(5)).unwrap(), 1);
+        assert!(worker.with_latest(|x| x.value).is_none());
+        worker.try_send(2).unwrap();
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if let Some(value) = worker.with_latest(|x| x.value) {
+                assert_eq!(value, 2);
+                break;
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
 }

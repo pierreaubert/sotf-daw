@@ -41,9 +41,15 @@ pub struct ResidualEchoSuppressor {
     /// Smoothed fraction of the cancelled echo expected to remain in error.
     residual_leakage: f32,
     leakage_alpha: f32,
+    /// Current instantaneous near-end protection decision, independent of ML.
+    near_end_protected: bool,
 }
 
 impl ResidualEchoSuppressor {
+    #[cfg(feature = "neural-residual")]
+    pub(crate) fn near_end_protected(&self) -> bool {
+        self.near_end_protected
+    }
     /// Apply the learned gains without updating them from synthetic EOF input.
     pub(crate) fn process_frozen(&mut self, error: &[Complex<f32>]) -> &[Complex<f32>] {
         for ((output, &sample), &gain) in self
@@ -107,6 +113,7 @@ impl ResidualEchoSuppressor {
             dtd_threshold: 1.2,
             residual_leakage: 0.1,
             leakage_alpha: coefficient(0.250),
+            near_end_protected: false,
         }
     }
 
@@ -172,6 +179,7 @@ impl ResidualEchoSuppressor {
                 || (residual_coherence < 0.1
                     && raw_mic_pwr > 4.0 * self.residual_leakage * (raw_echo_pwr + 1e-20)));
 
+        self.near_end_protected = double_talk;
         if echo_active && !double_talk {
             let observed = (raw_mic_pwr / (raw_echo_pwr + 1e-20)).clamp(0.001, 1.0);
             self.residual_leakage =
@@ -236,6 +244,7 @@ impl ResidualEchoSuppressor {
         self.dtd_mic_power = 0.0;
         self.dtd_echo_power = 0.0;
         self.residual_leakage = 0.1;
+        self.near_end_protected = false;
     }
 }
 

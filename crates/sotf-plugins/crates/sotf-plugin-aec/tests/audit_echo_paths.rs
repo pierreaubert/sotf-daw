@@ -93,6 +93,7 @@ fn render(rate: u32, input: &[f32], post_filter: bool, chunks: &[usize]) -> Vec<
     let mut plugin = AecPlugin::from_params(
         rate,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 50.0,
             step_size: 0.5,
             post_filter_enabled: post_filter,

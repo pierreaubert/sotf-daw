@@ -1,0 +1,11 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_config.rs": "1452adbe291001724d1469ac8452e8cc5f201e2d684e9e1eaaf764295378ff1c",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_model.rs": "dcf6d9194499869b16e92fbb1bcef70857b59e9b98e21afbdc500669e12c20a3",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_features.rs": "4ee4f749dce865bc40ab852911728adf676db448b26d97eeffee96b1673f7bcc",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_stage.rs": "4336a59e3f37512d409260657cf0ed7266f6c97f4b1c9381c731bd5a9d93573e",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/post_filter.rs": "72de127f077b1a41abe31cd244d7955e49e9e6957a0ed0c9c01ff52813a530f8",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/aec_plugin.rs": "d18d386c88ef68c55ee3feacc345f8b487395ede280f780d95f8b40c660e6c44",
+  "crates/sotf-plugins/crates/sotf-plugin-aec/bin/qa_aec_residual_corpus.rs": "1c409ec4b49ca435cf99636b2f8773ddd8ce6ce2cad2193fc51ba411c5929488",
+  "scripts/ml/evaluate_aec_hybrid.py": "02920c56d8cc522007fe18b7ef65e84a91a6e46418c3527eec76454f0c6e931e",
+  "scripts/ml/train_aec_residual.py": "f61f3f794eac6d4c15be6fd255ffe0ffb3d2c9ff163a4ea4289f828680af0269"
+}

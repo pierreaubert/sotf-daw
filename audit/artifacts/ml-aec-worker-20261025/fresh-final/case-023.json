@@ -1,0 +1,157 @@
+{
+  "index": 23,
+  "provenance": {
+    "scene": "drift",
+    "seed": 20274048,
+    "rate": 48000,
+    "frames": 288000,
+    "playback_drive": 0,
+    "tap_offsets": [
+      0.0,
+      718.8249065499489,
+      768.425694926015,
+      896.1764621986179,
+      919.1857460779283,
+      958.0278711747595,
+      1047.8379500893654,
+      1096.2169824637554
+    ],
+    "tap_gains": [
+      0.40556214061532014,
+      -0.053890765281838095,
+      0.011288318950663895,
+      0.021910568219212657,
+      0.019054505938307726,
+      -0.04821649109117687,
+      0.001615785449578475,
+      -0.012583270959586265
+    ],
+    "source": "generated voiced/noise envelopes; not recorded speech or a physical device capture",
+    "input_sha256": "c6f4473c1fcc765fb650f1e1d61e43f46a59e44969744f988354b5081f2547bf",
+    "near_sha256": "70363265401cdd88afe5600405cafdc3b295b0738050e46eee9f9b1d04511e30",
+    "echo_sha256": "01e20bbfa27dc8c9be3d160760a082421182025d53f44716741a96d531b093a5"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 288000,
+        "sha256": "f98fefc72fd4c6b00d7db25113433146218ecd89b27b6d12976699b8b3ec8258"
+      },
+      "blocks": 1125,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-worker-20261025/final/native/hybrid_023",
+      "error_spectra": {
+        "floats": 578250,
+        "sha256": "828efdd4d28b433be7661cf3ffa6c31575f7d8bfa9eda9103e5728554bc557e6"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 216000,
+        "sha256": "e479dd07abb059948abee69c9d2d957491cebf08f81bdc2860f78163186ab0e3"
+      },
+      "frames": 288000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 288000,
+        "sha256": "221ef0320dd08fd5f4ef691e99804e92712be65c02ff9151b2594a1c3dfb324e"
+      },
+      "id": "hybrid_023",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 1116,
+        "applied_blocks": 549,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 576,
+        "native_blocks": 1125,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 1125,
+        "warmup_complete": true
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 36000,
+        "sha256": "86449b004b7858b243ca25a0b8a5c99b8304dca3332434126beec4632376a094"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 288000,
+        "sha256": "f98fefc72fd4c6b00d7db25113433146218ecd89b27b6d12976699b8b3ec8258"
+      },
+      "blocks": 1125,
+      "classical": {
+        "floats": 288000,
+        "sha256": "55641eaf4b6796f8e3c8bc88002ac70ae7962fe507550dbd4af219a7282a7329"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-worker-20261025/final/native/classical_023",
+      "error_spectra": {
+        "floats": 578250,
+        "sha256": "828efdd4d28b433be7661cf3ffa6c31575f7d8bfa9eda9103e5728554bc557e6"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 216000,
+        "sha256": "e479dd07abb059948abee69c9d2d957491cebf08f81bdc2860f78163186ab0e3"
+      },
+      "frames": 288000,
+      "gain_floor": 0.25,
+      "id": "classical_023",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 36000,
+        "sha256": "86449b004b7858b243ca25a0b8a5c99b8304dca3332434126beec4632376a094"
+      }
+    }
+  },
+  "quality": {
+    "steady": {
+      "metric": "erle_db",
+      "hybrid": 20.840723141364293,
+      "classical": 15.957923949853189,
+      "hybrid_minus_classical_db": 4.882799191511104
+    },
+    "onset": {
+      "metric": "erle_db",
+      "hybrid": 21.160758584314113,
+      "classical": 16.064423581315886,
+      "hybrid_minus_classical_db": 5.096335002998227
+    }
+  },
+  "max_output_difference": 0.1809735745191574
+}

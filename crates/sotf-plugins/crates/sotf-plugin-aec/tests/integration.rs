@@ -42,6 +42,7 @@ fn new_and_from_params() {
     );
 
     let params = AecPluginParams {
+        residual_suppression: None,
         echo_tail_ms: 300.0,
         step_size: 0.7,
         post_filter_enabled: false,

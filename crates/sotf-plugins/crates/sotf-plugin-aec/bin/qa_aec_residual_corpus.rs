@@ -9,7 +9,8 @@ use rustfft::{FftPlanner, num_complex::Complex};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use sotf_host::{CountingAlloc, Plugin, ProcessContext, assert_no_allocs};
+use sotf_host::{CountingAlloc, Plugin, ProcessContext, ProcessingMode, assert_no_allocs};
+use sotf_plugin_aec::residual_config::ResidualSuppressionConfig;
 use sotf_plugin_aec::residual_features::{
     BANDS, BINS, FFT_SIZE, ResidualFeatureExtractor, band_range,
 };
@@ -30,6 +31,10 @@ struct Request {
     frames: usize,
     input: PathBuf,
     near: PathBuf,
+    #[serde(default)]
+    residual_suppression: Option<ResidualSuppressionConfig>,
+    #[serde(default)]
+    offline: bool,
 }
 
 struct Output {
@@ -108,17 +113,26 @@ fn export(root: &Path, request: &Request) -> Result<Value, Box<dyn std::error::E
     let mut features = Output::new(&path.join("features.f32le"))?;
     let mut targets = Output::new(&path.join("targets.f32le"))?;
     let mut error_spectra = Output::new(&path.join("error_spectra.f32le"))?;
-    let mut classical = Output::new(&path.join("classical.f32le"))?;
+    let output_stage = if request.residual_suppression.is_some() {
+        "hybrid"
+    } else {
+        "classical"
+    };
+    let mut classical = Output::new(&path.join(format!("{output_stage}.f32le")))?;
     let mut adaptive = Output::new(&path.join("adaptive.f32le"))?;
     let mut extractor = ResidualFeatureExtractor::new(f64::from(request.sample_rate))?;
     let mut plugin = AecPlugin::from_params(
         request.sample_rate,
         AecPluginParams {
+            residual_suppression: request.residual_suppression.clone(),
             echo_tail_ms: 50.0,
             step_size: 0.5,
             post_filter_enabled: true,
         },
     )?;
+    if request.offline {
+        plugin.initialize_with_mode(f64::from(request.sample_rate), ProcessingMode::Offline)?;
+    }
     let mut planner = FftPlanner::<f32>::new();
     let fft = planner.plan_fft_forward(FFT_SIZE);
     let mut fft_scratch = vec![Complex::default(); fft.get_inplace_scratch_len()];
@@ -202,14 +216,15 @@ fn export(root: &Path, request: &Request) -> Result<Value, Box<dyn std::error::E
         return Err("missing queued final AEC block".into());
     }
     classical.append(output)?;
-    Ok(
-        json!({"status":"ok", "id":request.id, "directory":path, "sample_rate":request.sample_rate,
+    let mut metadata = json!({"status":"ok", "id":request.id, "directory":path, "sample_rate":request.sample_rate,
         "frames":request.frames, "blocks":request.frames/256, "latency_samples":plugin.latency_samples(),
         "native_adaptation":"fresh two-path PBFDAF, 50 ms, step_size 0.5", "feature_version":1,
         "feature_shape":[BANDS,12], "target_shape":[2,BANDS], "gain_floor":0.25,
         "features":features.finish()?, "targets":targets.finish()?, "error_spectra":error_spectra.finish()?,
-        "classical":classical.finish()?, "adaptive":adaptive.finish()?}),
-    )
+        "output_stage":output_stage,"residual":plugin.residual_suppression_data(),
+        "adaptive":adaptive.finish()?});
+    metadata[output_stage] = classical.finish()?;
+    Ok(metadata)
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

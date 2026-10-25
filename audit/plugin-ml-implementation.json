@@ -48,12 +48,17 @@
         "scripts/ml/train_aec_residual.py",
         "scripts/ml/verify_aec_residual.py",
         "scripts/ml/analyze_aec_residual.py",
-        "audit/artifacts/ml-aec-residual-20261025"
+        "audit/artifacts/ml-aec-residual-20261025",
+        "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_config.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_stage.rs",
+        "scripts/ml/evaluate_aec_hybrid.py",
+        "scripts/ml/analyze_aec_hybrid.py",
+        "audit/artifacts/ml-aec-worker-20261025"
       ],
       "remaining": [
-        "Wire an explicit optional native worker into the plugin with bounded queues, source generation/endpoint freshness checks, fallback, reset/EOF and host serialization. This checkpoint exposes model/analysis APIs only; it does not alter live audio.",
-        "Improve or combine the prototype using development data; classical post-filter wins 10/12 steady echo comparisons, and 48 kHz double-talk onset residual echo remains unacceptable for adoption. New model selection requires a fresh final holdout.",
-        "Natural speech, nonlinear device, delay/drift and near-end listening validation beyond generated voiced/noise scenes; held-out user recordings and cross-platform hosts are still unavailable."
+        "Natural speech/nonlinear physical-device and near-end listening acceptance; fresh 24-case synthetic offline hybrid improves drift while worst near-target SNR changes -0.123 dB. This is not realtime/device quality acceptance.",
+        "Cross-platform host timing/memory budgets and calibrated guard/freshness policy; user recordings/CI hosts remain unavailable.",
+        "Any further learned model or hybrid policy choice must use development data and a fresh final holdout."
       ]
     },
     {
@@ -559,9 +564,10 @@
       "deployment_boundary": "Small bounded inference task with stale-result rejection; adaptive fallback stays active.",
       "evidence": [
         "audit/artifacts/ml-aec-residual-20261025",
-        "crates/sotf-plugins/models/aec-residual"
+        "crates/sotf-plugins/models/aec-residual",
+        "audit/artifacts/ml-aec-worker-20261025"
       ],
-      "remaining": "Bounded live worker/stale-result integration and stronger real-world quality acceptance; native prototype alone does not complete this candidate."
+      "remaining": "Bounded live worker, stale-result/reset/EOF and host serialization are implemented; natural/device/listening quality and platform runtime budgets remain open."
     },
     {
       "candidate": "Hardware compressor emulation",

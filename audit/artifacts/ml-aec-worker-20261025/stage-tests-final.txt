@@ -1,0 +1,12 @@
+   Compiling plugins-inference v0.1.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-inference)
+   Compiling sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)
+    Finished `release` profile [optimized] target(s) in 11.03s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aec-caa436d8fc3fa194)
+
+running 4 tests
+test residual_stage::tests::seek_to_zero_keeps_host_clock_tracking_across_repeated_loops ... ok
+test residual_stage::tests::rejects_future_old_invalid_observations_and_full_queue ... ok
+test residual_stage::tests::discontinuity_discards_mixed_block_and_reset_forgets_coefficients ... ok
+test residual_stage::tests::extra_cuts_are_bounded_and_protection_or_missing_result_restores_exact_classical ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 56 filtered out; finished in 0.00s

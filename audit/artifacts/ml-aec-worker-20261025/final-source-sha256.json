@@ -1,0 +1,30 @@
+{
+  "base_commit": "ca2141a1cf469073f4aec943b33f55f8468966e6",
+  "files": {
+    ".gitattributes": "2c250143f1009f58687cbd34939f2e206d4a58a6871fbbf25afbca938d7339fb",
+    "Cargo.lock": "518868fa329d7c1fc9816513b11f3b6631500acdf05a2a23945d28737bfebfd6",
+    "crates/sotf-plugins/Cargo.toml": "c2ff79d7992a508e62819d04227b17d67b6ccbb980f615970dfbb1a0c53783b0",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/Cargo.toml": "4ad2193355260babdd37d87753ee43835e3aebff9115000f648120b60b3ccab7",
+    "crates/sotf-plugins/crates/plugins-inference/src/lib.rs": "2f3f7ded854415502768afe6baa9bb4b55276b3171792e0fe705d1a1cd7f9af3",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_config.rs": "1452adbe291001724d1469ac8452e8cc5f201e2d684e9e1eaaf764295378ff1c",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib.rs": "50d5cd88ce44b5d3c043394a6fbcf321eb51d1ed8c1faf9c19a9d1cd5fa4a3be",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/params.rs": "c873fd3ed5255b3266cb652f23ffbca8f8d21402621fafffb28c26cbc88bd54c",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/pbfdaf.rs": "6fa2e21b8bc1cfc62a8fac59ed5551063dcec876a47236a1ef752c6244190746",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_model.rs": "dcf6d9194499869b16e92fbb1bcef70857b59e9b98e21afbdc500669e12c20a3",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_features.rs": "4ee4f749dce865bc40ab852911728adf676db448b26d97eeffee96b1673f7bcc",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/two_path.rs": "60cbcdabce2b0c40a5d67cc4b3bfd82e183a0e30003f2108f26983e4fa2d9f54",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/post_filter.rs": "72de127f077b1a41abe31cd244d7955e49e9e6957a0ed0c9c01ff52813a530f8",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_stage.rs": "0d1898d06eaf5327bedd11650cedd66e0917de88616c4a2e3fa0c56c1cd00049",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/misc.rs": "d0fe7dd50097f9d663fd0044b8ac99ca26b9dc033df379b437a54cc074b44751",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/tests.rs": "565dfdccadb914e98ef750098187f46653fe45d65e4fa3fa611ed6239e65c64f",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/aec_plugin.rs": "d18d386c88ef68c55ee3feacc345f8b487395ede280f780d95f8b40c660e6c44",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/constructor_tests.rs": "bb420de4b865d1552c60054fac6bf57d4cfb1c13db62973eeb7460c91723d275",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/src/lib/tests/drain.rs": "36330d298dd9b562c74f709ef539470c320b018394e2059fe493fac58cdb1eea",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/tests/neural_residual.rs": "8eef3a5d4b27eec86be808b611e4bb96d7a967016fceee95e29b81bbe864157f",
+    "crates/sotf-plugins/crates/sotf-plugin-aec/bin/qa_aec_residual_corpus.rs": "1c409ec4b49ca435cf99636b2f8773ddd8ce6ce2cad2193fc51ba411c5929488",
+    "scripts/ml/evaluate_aec_hybrid.py": "02920c56d8cc522007fe18b7ef65e84a91a6e46418c3527eec76454f0c6e931e",
+    "scripts/ml/analyze_aec_hybrid.py": "8e664720d1327f2bd04f0c95281517bcaf93a76f939d7f15cdcc1b304000e41c"
+  },
+  "native_binary_sha256": "acb60efbc7f3e4a7ef05cd432d8d3356ade244c29ccd785975c25f260166de1f",
+  "model_sha256": "2c39c23a5015cecbde5ea950381f80c18907558e897ce2a93ad4df8f72b42752"
+}

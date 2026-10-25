@@ -1,18 +1,23 @@
 # Experimental AEC residual-mask prototype
 
-This checkpoint contains a trained small model, native fixed-size inference,
-causal native feature analysis and independent replay validation. It is **not
-connected to live AEC audio**. Enabling the `neural-residual` crate feature makes
-the explicit model API available; it does not select a new post-filter or change
-existing presets, parameter IDs or adaptive cancellation.
+The pinned model now has an explicit opt-in native hybrid path. The existing
+adaptive canceller and classical post-filter remain active; a bounded worker
+proposes additional spectral attenuation. Default presets remain classical.
+Build the facade with `neural-aec` or the AEC crate with `neural-residual`.
 
-The prototype is not recommended for adoption. Against the current classical
-post-filter it improves only 2 of 12 steady far-end echo comparisons (the two
-drift cases). It also helps immediately after the two abrupt delay changes, but
-removes less steady echo in linear/nonlinear scenes and leaves more residual
-echo at a 48 kHz double-talk onset: near-target SNR 0.71 dB versus classical
-13.73 dB. These results were retained without selecting another checkpoint.
-The existing classical AEC remains the working audio path.
+This is still experimental. The fresh 24-scene synthetic offline comparison
+preserves the classical adaptive analysis hashes exactly, improves three steady
+drift cases by more than 1 dB (up to 4.88 dB), and leaves reference-silent near-only
+output bit-identical. Worst near-target SNR change is -0.123 dB. Natural speech,
+physical devices and realtime quality acceptance remain open; no automatic
+adoption is recommended.
+
+The earlier neural-only prototype won only 2/12 steady echo comparisons and had
+poor 48 kHz double-talk onset residual echo. Those negative results remain under
+`audit/artifacts/ml-aec-residual-20261025`. The hybrid consequently keeps classical
+cuts and near-end protection rather than substituting the neural-only mask.
+Its fresh final data (seed 20274025, 16/44.1/48 kHz) are disjoint from all initial
+64 scene inputs. No weights or policy were tuned from the new final results.
 
 ## Model and contract
 
@@ -111,12 +116,63 @@ python -m unittest discover -s scripts/ml -p 'test_aec_residual.py' -v
 Limit CPU math-library threads to one for comparable replay timings. The exact
 commands and environment are captured in the audit artifacts.
 
-## Remaining implementation
+## Native hybrid configuration
 
-Bounded live queues, source generation/endpoint freshness, stale-result fallback,
-reset/EOF handling, host configuration and serialization remain to be wired.
-The prototype needs a development-driven hybrid strategy rather than a blanket
-replacement of the stronger classical post-filter. Any new model/search choice
-needs fresh final evaluation data. Natural speech, physical nonlinear devices,
-near-end listening and cross-platform realtime budgets remain unverified. Neither
-the AEC proposal nor the full ML audit is complete at this checkpoint.
+```json
+{
+  "echo_tail_ms": 50.0,
+  "step_size": 0.5,
+  "post_filter_enabled": true,
+  "residual_suppression": {
+    "model_path": "/absolute/path/to/aec-residual/model.json",
+    "sha256": "2c39c23a5015cecbde5ea950381f80c18907558e897ce2a93ad4df8f72b42752",
+    "max_age_ms": 40.0,
+    "max_extra_attenuation_db": 6.0
+  }
+}
+```
+
+Omit `residual_suppression` for the original classical path. The structural field
+roundtrips through `AecPluginParams` and the existing facade factory; the three
+scalar parameter IDs and old preset defaults are unchanged. Unsupported builds,
+missing/corrupt files, unsupported device rates and preparation failures retain
+classical audio. Invalid structural policy/identity is rejected explicitly.
+Native callers can inspect `residual_suppression_data()` and
+`residual_suppression_error()` without executing inference.
+
+Realtime preparation creates the shared `plugins-inference` bridge with two
+queued fixed-size packets. Processing never waits, loads a file, creates a worker
+or runs the model on that thread. The current classical near-end protection
+and reference-silent guard veto learned cuts. A missing, contended, failed,
+future, stale or rejected-queue observation restores exact classical spectral
+output immediately. The learned absolute gain is compared with the current
+classical gain; it may add a cut, never relax a classical cut. Extra cut is capped
+at the configured 0..12 dB (default 6 dB), with a 10 ms attack and immediate
+release. This is a spectral bound, not a per-sample amplitude guarantee.
+
+Initialization via `Plugin::initialize_with_mode(..., ProcessingMode::Offline)`
+selects synchronous fixed-size inference and deterministic callback partitioning.
+Calling `initialize` directly selects realtime execution. Reset preserves the
+prepared mode. All loading, replacing and dropping workers must occur on a
+control thread. Both modes retain the native 256-sample I/O latency.
+
+Source-endpoint age is bounded separately from the 256-sample observation
+interval and the causal 50 ms EMA time constant. Warmup requires 50 ms of valid
+observations. Reset invalidates queued and in-flight work. Explicit host-position
+discontinuities also invalidate learned work; a mixed partial native block is
+skipped before new feature history accumulates. Callers that supply zero on every
+callback use a local monotonic clock and must call `reset` when their source
+changes. Nonadvancing nonzero positions invalidate learned history and retain
+classical audio; continuity hints must describe the input stream. Automatic learned invalidation does not reset the adaptive canceller;
+full source replacement still requires the ordinary plugin reset contract.
+
+The first valid EOF drain invalidates late worker publications and freezes the
+last extra gains. Synthetic EOF input does not update features, queue inference
+or change decisions. The finite native tail and drain bounds remain unchanged.
+Post-filter toggles invalidate learned work; the classical state continues.
+
+`audit/artifacts/ml-aec-worker-20261025` records worker/fallback/allocation tests,
+source-clock and in-flight reset regressions, enabled/disabled builds and the
+fresh independently reduced native comparison. Broader natural/device-domain,
+listening, cross-platform host and realtime timing/memory budgets remain open.
+The AEC proposal and full ML audit remain in progress.

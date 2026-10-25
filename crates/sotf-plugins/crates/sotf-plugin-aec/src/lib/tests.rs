@@ -33,18 +33,22 @@ fn test_aec_plugin_parameters() {
 fn constructor_rejects_invalid_configuration() {
     for params in [
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: f64::NAN,
             ..AecPluginParams::default()
         },
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 49.0,
             ..AecPluginParams::default()
         },
         AecPluginParams {
+            residual_suppression: None,
             step_size: f64::INFINITY,
             ..AecPluginParams::default()
         },
         AecPluginParams {
+            residual_suppression: None,
             step_size: 0.91,
             ..AecPluginParams::default()
         },
@@ -123,6 +127,7 @@ fn post_filter_toggle_is_ramped_and_keeps_suppressor_state_current() {
     let mut plugin = AecPlugin::from_params(
         48_000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 50.0,
             step_size: 0.7,
             post_filter_enabled: true,
@@ -197,6 +202,7 @@ fn reinitialize_matches_fresh_plugin_after_old_stream_was_queued() {
     let mut reinitialized = AecPlugin::from_params(
         48_000,
         AecPluginParams {
+            residual_suppression: None,
             post_filter_enabled: true,
             ..AecPluginParams::default()
         },
@@ -226,6 +232,7 @@ fn reinitialize_matches_fresh_plugin_after_old_stream_was_queued() {
     let mut fresh = AecPlugin::from_params(
         44_100,
         AecPluginParams {
+            residual_suppression: None,
             post_filter_enabled: true,
             ..AecPluginParams::default()
         },
@@ -270,6 +277,7 @@ fn latency_is_exactly_one_aec_block_for_every_callback_size() {
         let mut plugin = AecPlugin::from_params(
             48_000,
             AecPluginParams {
+                residual_suppression: None,
                 echo_tail_ms: 50.0,
                 step_size: 0.5,
                 post_filter_enabled: false,
@@ -332,6 +340,7 @@ fn test_aec_large_host_block_does_not_overwrite_output_queue() {
     let mut plugin = AecPlugin::from_params(
         sample_rate,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 100.0,
             step_size: 0.5,
             post_filter_enabled: false,
@@ -364,6 +373,7 @@ fn test_post_filter_ifft_buf_size_never_changes() {
     let mut plugin = AecPlugin::from_params(
         48000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 100.0,
             step_size: 0.5,
             post_filter_enabled: true,
@@ -393,6 +403,7 @@ fn test_output_buffer_no_alloc_on_large_host_blocks() {
     let mut plugin = AecPlugin::from_params(
         48000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 100.0,
             step_size: 0.5,
             post_filter_enabled: false,
@@ -418,6 +429,7 @@ fn test_two_path_transfer_threshold_not_too_aggressive() {
     let mut plugin = AecPlugin::from_params(
         48000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 100.0,
             step_size: 0.5,
             post_filter_enabled: false,
@@ -464,6 +476,7 @@ fn test_pbfdaf_leakage_factor_is_meaningful() {
     let mut plugin = AecPlugin::from_params(
         48000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 50.0,
             step_size: 0.7,
             post_filter_enabled: false,
@@ -509,6 +522,7 @@ fn test_post_filter_dtd_preserves_near_end_speech() {
     let mut plugin = AecPlugin::from_params(
         48000,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 50.0,
             step_size: 0.3,
             post_filter_enabled: true,
@@ -555,6 +569,7 @@ fn test_aec_echo_reduction() {
     let mut plugin = AecPlugin::from_params(
         sample_rate,
         AecPluginParams {
+            residual_suppression: None,
             echo_tail_ms: 100.0,
             step_size: 0.7,
             post_filter_enabled: false,

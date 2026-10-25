@@ -8974,6 +8974,7 @@ dependencies = [
 name = "sotf-plugin-aec"
 version = "0.5.7"
 dependencies = [
+ "plugins-inference",
  "realfft",
  "rustfft",
  "serde",

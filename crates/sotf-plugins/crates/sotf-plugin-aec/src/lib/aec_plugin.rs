@@ -2,6 +2,9 @@ use super::misc::DEFAULT_BLOCK_SIZE;
 use super::misc::DEFAULT_ECHO_TAIL_MS;
 use crate::params::Params as AecPluginParams;
 use crate::post_filter::ResidualEchoSuppressor;
+use crate::residual_config::{
+    ResidualAvailability, ResidualSuppressionConfig, ResidualSuppressionData,
+};
 use crate::two_path::TwoPathAec;
 use realfft::{ComplexToReal, RealFftPlanner};
 use rustfft::num_complex::Complex;
@@ -9,7 +12,7 @@ use sotf_host::param_specs::UpdateMode;
 use sotf_host::parameters::{Parameter, ParameterId, ParameterImportance, ParameterValue};
 use sotf_host::plugin::{
     Plugin, PluginCompileMetadata, PluginCostClass, PluginDrainResult, PluginInfo, PluginResult,
-    ProcessContext, TailLength,
+    ProcessContext, ProcessingMode, TailLength,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -23,6 +26,12 @@ struct StreamDrain {
 
 pub struct AecPlugin {
     drain_state: StreamDrain,
+    residual_config: Option<ResidualSuppressionConfig>,
+    residual_data: ResidualSuppressionData,
+    residual_load_error: Option<String>,
+    processing_mode: ProcessingMode,
+    #[cfg(feature = "neural-residual")]
+    residual_stage: Option<crate::residual_stage::ResidualStage>,
     pub(super) sample_rate: f64,
     pub(super) aec: TwoPathAec,
     pub(super) post_filter: ResidualEchoSuppressor,
@@ -70,6 +79,12 @@ impl AecPlugin {
         let scratch_len = fft_inverse.get_scratch_len();
 
         let mut p = Self {
+            residual_config: None,
+            residual_data: ResidualSuppressionData::default(),
+            residual_load_error: None,
+            processing_mode: ProcessingMode::Realtime,
+            #[cfg(feature = "neural-residual")]
+            residual_stage: None,
             drain_state: StreamDrain {
                 silence: vec![0.0; block_size * 2],
                 ..Default::default()
@@ -131,13 +146,18 @@ impl AecPlugin {
         plugin.post_filter_enabled = params.post_filter_enabled;
         plugin.post_filter_mix = if params.post_filter_enabled { 1.0 } else { 0.0 };
         plugin.post_filter_mix_target = plugin.post_filter_mix;
+        plugin.residual_config = params.residual_suppression;
         plugin.rebuild_aec();
+        plugin.prepare_residual();
         plugin.rebuild_cached_parameters();
         plugin.initialized = true;
         Ok(plugin)
     }
 
     fn validate_configuration(sample_rate: f64, params: &AecPluginParams) -> Result<(), String> {
+        if let Some(config) = &params.residual_suppression {
+            config.validate()?;
+        }
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("AEC sample rate must be finite and greater than zero".to_string());
         }
@@ -165,6 +185,39 @@ impl AecPlugin {
             self.step_size,
             self.sample_rate,
         );
+    }
+
+    fn prepare_residual(&mut self) {
+        // Control-thread only: replacing a worker joins it and may load a file.
+        #[cfg(feature = "neural-residual")]
+        {
+            self.residual_stage = None;
+        }
+        self.residual_load_error = None;
+        self.residual_data = ResidualSuppressionData {
+            offline: self.processing_mode == ProcessingMode::Offline,
+            ..Default::default()
+        };
+        let Some(config) = &self.residual_config else {
+            return;
+        };
+        #[cfg(feature = "neural-residual")]
+        match crate::residual_stage::ResidualStage::prepare(
+            config,
+            self.sample_rate,
+            self.processing_mode,
+        ) {
+            Ok(stage) => self.residual_stage = Some(stage),
+            Err(error) => {
+                self.residual_data.availability = ResidualAvailability::ModelUnavailable;
+                self.residual_load_error = Some(error);
+            }
+        }
+        #[cfg(not(feature = "neural-residual"))]
+        {
+            let _ = config;
+            self.residual_data.availability = ResidualAvailability::FeatureUnavailable;
+        }
     }
 
     fn rebuild_post_filter(&mut self) {
@@ -213,6 +266,10 @@ impl AecPlugin {
     }
 
     fn reset_streaming_state(&mut self) {
+        #[cfg(feature = "neural-residual")]
+        if let Some(stage) = &mut self.residual_stage {
+            stage.reset();
+        }
         self.drain_state.has_input = false;
         self.drain_state.remaining = None;
         self.input_fill = 0;
@@ -284,6 +341,10 @@ impl Plugin for AecPlugin {
             }
             self.post_filter_enabled = enabled;
             self.post_filter_mix_target = if enabled { 1.0 } else { 0.0 };
+            #[cfg(feature = "neural-residual")]
+            if let Some(stage) = &mut self.residual_stage {
+                stage.reset();
+            }
             if let Some(parameter) = self
                 .cached_parameters
                 .iter_mut()
@@ -310,12 +371,18 @@ impl Plugin for AecPlugin {
     }
 
     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+        self.initialize_with_mode(sample_rate, ProcessingMode::Realtime)
+    }
+
+    fn initialize_with_mode(&mut self, sample_rate: f64, mode: ProcessingMode) -> PluginResult<()> {
         if !sample_rate.is_finite() || sample_rate <= 0.0 {
             return Err("AEC sample rate must be finite and greater than zero".to_string());
         }
         self.sample_rate = sample_rate;
+        self.processing_mode = mode;
         self.rebuild_aec();
         self.rebuild_post_filter();
+        self.prepare_residual();
         self.reset_streaming_state();
         self.initialized = true;
         Ok(())
@@ -394,6 +461,12 @@ impl Plugin for AecPlugin {
         let frames = remaining
             .min(output.len())
             .min(self.drain_output_frames_max());
+        #[cfg(feature = "neural-residual")]
+        if self.drain_state.remaining.is_none()
+            && let Some(stage) = &mut self.residual_stage
+        {
+            stage.freeze();
+        }
         let mut drain_context = *context;
         drain_context.num_frames = frames;
         let silence = std::mem::take(&mut self.drain_state.silence);
@@ -429,6 +502,25 @@ impl Plugin for AecPlugin {
 }
 
 impl AecPlugin {
+    /// Return structural learned settings; scalar automation remains unchanged.
+    pub fn residual_suppression_config(&self) -> Option<&ResidualSuppressionConfig> {
+        self.residual_config.as_ref()
+    }
+
+    /// Copy current learned-stage diagnostics without allocation or model access.
+    pub fn residual_suppression_data(&self) -> ResidualSuppressionData {
+        #[cfg(feature = "neural-residual")]
+        if let Some(stage) = &self.residual_stage {
+            return stage.data;
+        }
+        self.residual_data
+    }
+
+    /// Explain control-time preparation failure while classical processing remains active.
+    pub fn residual_suppression_error(&self) -> Option<&str> {
+        self.residual_load_error.as_deref()
+    }
+
     /// Borrow the latest complete adaptive block for explicit QA collection.
     ///
     /// Returns `None` before input, after EOF, or within a partial native block.
@@ -492,6 +584,10 @@ impl AecPlugin {
                 output.len()
             ));
         }
+        #[cfg(feature = "neural-residual")]
+        if !frozen && let Some(stage) = &mut self.residual_stage {
+            stage.begin_callback(context.transport.sample_position, nf, self.input_fill != 0);
+        }
 
         // Deinterleave: input is [mic0, ref0, mic1, ref1, ...]
         for i in 0..nf {
@@ -517,6 +613,16 @@ impl AecPlugin {
             self.input_fill += 1;
 
             if self.input_fill == self.block_size {
+                #[cfg(feature = "neural-residual")]
+                let (mic_power, reference_power) = if self.residual_stage.is_some() && !frozen {
+                    let power = |x: &[f32]| {
+                        x.iter().map(|&v| f64::from(v).powi(2)).sum::<f64>()
+                            / self.block_size as f64
+                    };
+                    (power(&self.mic_buffer), power(&self.ref_buffer))
+                } else {
+                    (0.0, 0.0)
+                };
                 // Process one block — copy error output before push (avoids borrow conflict)
                 let error = if frozen {
                     self.aec.process_frozen(&self.mic_buffer, &self.ref_buffer)
@@ -554,6 +660,24 @@ impl AecPlugin {
                     );
                     let n_sup = self.post_filter_ifft_buf.len();
                     self.post_filter_ifft_buf[..n_sup].copy_from_slice(&suppressed[..n_sup]);
+                    #[cfg(feature = "neural-residual")]
+                    if let Some(stage) = &mut self.residual_stage {
+                        if frozen {
+                            stage.apply_frozen(&mut self.post_filter_ifft_buf);
+                        } else {
+                            stage.process_spectrum(
+                                &error_freq[..unique_bins],
+                                &mut self.post_filter_ifft_buf,
+                                &echo_est_freq[..unique_bins],
+                                crate::residual_stage::ResidualBlockContext {
+                                    mic_power,
+                                    reference_power,
+                                    protected: self.post_filter.near_end_protected(),
+                                    enabled: self.post_filter_enabled,
+                                },
+                            );
+                        }
+                    }
                     self.fft_inverse
                         .process_with_scratch(
                             &mut self.post_filter_ifft_buf[..n_sup],

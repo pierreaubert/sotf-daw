@@ -1,0 +1,79 @@
+{
+  "evaluation_binary_sha256": "0f56dd51ebdb52695264dbac56c031928e2373c121ec66d9b27d4ace05ad395f",
+  "final_binary_sha256": "acb60efbc7f3e4a7ef05cd432d8d3356ade244c29ccd785975c25f260166de1f",
+  "change": "Host-clock tracking preserved after a seek to zero; selected monotonic-clock final cases replay exactly. No weight or spectral-policy change. Shared inference addition is test-only.",
+  "replays": [
+    {
+      "index": 0,
+      "method": "classical",
+      "rate": 16000,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "classical": true
+      }
+    },
+    {
+      "index": 0,
+      "method": "hybrid",
+      "rate": 16000,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "hybrid": true
+      }
+    },
+    {
+      "index": 8,
+      "method": "classical",
+      "rate": 44100,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "classical": true
+      }
+    },
+    {
+      "index": 8,
+      "method": "hybrid",
+      "rate": 44100,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "hybrid": true
+      }
+    },
+    {
+      "index": 16,
+      "method": "classical",
+      "rate": 48000,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "classical": true
+      }
+    },
+    {
+      "index": 16,
+      "method": "hybrid",
+      "rate": 48000,
+      "array_hash_matches": {
+        "adaptive": true,
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "hybrid": true
+      }
+    }
+  ]
+}

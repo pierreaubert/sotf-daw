@@ -1,0 +1,559 @@
+{
+  "cases": 24,
+  "rates": [
+    16000,
+    44100,
+    48000
+  ],
+  "unchanged_near_only_cases": 3,
+  "steady_echo_cases": 18,
+  "steady_echo_delta_range_db": [
+    0.0,
+    4.882799191511106
+  ],
+  "steady_echo_improvements_above_1db": 3,
+  "worst_near_snr_delta_db": -0.122614820203788,
+  "comparisons": [
+    {
+      "case": 0,
+      "scene": "linear",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 54.914938550930884,
+      "hybrid": 54.95446740605217,
+      "delta_db": 0.0395288551212829
+    },
+    {
+      "case": 0,
+      "scene": "linear",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": -228.88711314026946,
+      "hybrid": -228.88711314026946,
+      "delta_db": 0.0
+    },
+    {
+      "case": 1,
+      "scene": "nonlinear",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 41.09204331208684,
+      "hybrid": 41.106730457892844,
+      "delta_db": 0.014687145806007607
+    },
+    {
+      "case": 1,
+      "scene": "nonlinear",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 38.00139310118634,
+      "hybrid": 38.02234838542591,
+      "delta_db": 0.020955284239569494
+    },
+    {
+      "case": 2,
+      "scene": "delay_jump",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 51.16671447532325,
+      "hybrid": 51.26565996168907,
+      "delta_db": 0.0989454863658139
+    },
+    {
+      "case": 2,
+      "scene": "delay_jump",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": -4.582587687754151,
+      "hybrid": 0.7971064627251767,
+      "delta_db": 5.379694150479327
+    },
+    {
+      "case": 3,
+      "scene": "near_only",
+      "rate": 16000,
+      "phase": "near_only",
+      "metric": "near_snr_db",
+      "classical": 139.0709657712846,
+      "hybrid": 139.0709657712846,
+      "delta_db": 0.0
+    },
+    {
+      "case": 4,
+      "scene": "double_talk",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 56.49584663886574,
+      "hybrid": 56.63650496803016,
+      "delta_db": 0.14065832916441678
+    },
+    {
+      "case": 4,
+      "scene": "double_talk",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 34.24970382404452,
+      "hybrid": 34.24970382404452,
+      "delta_db": 0.0
+    },
+    {
+      "case": 4,
+      "scene": "double_talk",
+      "rate": 16000,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 26.302019887604292,
+      "hybrid": 26.286937688896703,
+      "delta_db": -0.015082198707588645
+    },
+    {
+      "case": 5,
+      "scene": "quiet_double_talk",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 57.159118286026064,
+      "hybrid": 57.188635800225654,
+      "delta_db": 0.02951751419958981
+    },
+    {
+      "case": 5,
+      "scene": "quiet_double_talk",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 25.48974641801493,
+      "hybrid": 25.48974641801493,
+      "delta_db": 0.0
+    },
+    {
+      "case": 5,
+      "scene": "quiet_double_talk",
+      "rate": 16000,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 8.728986318232826,
+      "hybrid": 8.70829856861929,
+      "delta_db": -0.020687749613536255
+    },
+    {
+      "case": 6,
+      "scene": "near_after_echo",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "near_snr_db",
+      "classical": 138.9952475759854,
+      "hybrid": 138.9952475759854,
+      "delta_db": 0.0
+    },
+    {
+      "case": 6,
+      "scene": "near_after_echo",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 69.99450796582735,
+      "hybrid": 69.99450796582735,
+      "delta_db": 0.0
+    },
+    {
+      "case": 6,
+      "scene": "near_after_echo",
+      "rate": 16000,
+      "phase": "near_after_echo",
+      "metric": "near_snr_db",
+      "classical": 139.20133864697863,
+      "hybrid": 139.20133864697863,
+      "delta_db": 0.0
+    },
+    {
+      "case": 7,
+      "scene": "drift",
+      "rate": 16000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 16.411409071512225,
+      "hybrid": 20.79624154346447,
+      "delta_db": 4.384832471952244
+    },
+    {
+      "case": 7,
+      "scene": "drift",
+      "rate": 16000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 7.937093180428291,
+      "hybrid": 9.099513411284633,
+      "delta_db": 1.162420230856342
+    },
+    {
+      "case": 8,
+      "scene": "linear",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 49.58108884788199,
+      "hybrid": 49.58697086750348,
+      "delta_db": 0.005882019621488155
+    },
+    {
+      "case": 8,
+      "scene": "linear",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": -194.9910206962935,
+      "hybrid": -194.9910206962935,
+      "delta_db": 0.0
+    },
+    {
+      "case": 9,
+      "scene": "nonlinear",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 26.000439880743574,
+      "hybrid": 26.646393682489308,
+      "delta_db": 0.6459538017457334
+    },
+    {
+      "case": 9,
+      "scene": "nonlinear",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 26.69809391672618,
+      "hybrid": 27.44720497450219,
+      "delta_db": 0.749111057776009
+    },
+    {
+      "case": 10,
+      "scene": "delay_jump",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 45.49702506856705,
+      "hybrid": 45.96175617675526,
+      "delta_db": 0.46473110818821084
+    },
+    {
+      "case": 10,
+      "scene": "delay_jump",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": -2.372550072051828,
+      "hybrid": 3.268440311394241,
+      "delta_db": 5.640990383446069
+    },
+    {
+      "case": 11,
+      "scene": "near_only",
+      "rate": 44100,
+      "phase": "near_only",
+      "metric": "near_snr_db",
+      "classical": 139.03234799076813,
+      "hybrid": 139.03234799076813,
+      "delta_db": 0.0
+    },
+    {
+      "case": 12,
+      "scene": "double_talk",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 52.33550249725081,
+      "hybrid": 52.365694374805905,
+      "delta_db": 0.030191877555097335
+    },
+    {
+      "case": 12,
+      "scene": "double_talk",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 36.54136650115268,
+      "hybrid": 36.54136650115268,
+      "delta_db": 0.0
+    },
+    {
+      "case": 12,
+      "scene": "double_talk",
+      "rate": 44100,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 23.231161456923548,
+      "hybrid": 23.23056819547178,
+      "delta_db": -0.0005932614517689672
+    },
+    {
+      "case": 13,
+      "scene": "quiet_double_talk",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 51.51290454725878,
+      "hybrid": 51.55273841013344,
+      "delta_db": 0.039833862874665726
+    },
+    {
+      "case": 13,
+      "scene": "quiet_double_talk",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 14.392412533683602,
+      "hybrid": 14.27485694375094,
+      "delta_db": -0.11755558993266213
+    },
+    {
+      "case": 13,
+      "scene": "quiet_double_talk",
+      "rate": 44100,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 7.798303018059444,
+      "hybrid": 7.675688197855656,
+      "delta_db": -0.122614820203788
+    },
+    {
+      "case": 14,
+      "scene": "near_after_echo",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "near_snr_db",
+      "classical": 139.06340990759205,
+      "hybrid": 139.06340990759205,
+      "delta_db": 0.0
+    },
+    {
+      "case": 14,
+      "scene": "near_after_echo",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 22.771434602329983,
+      "hybrid": 22.76922541910445,
+      "delta_db": -0.0022091832255313193
+    },
+    {
+      "case": 14,
+      "scene": "near_after_echo",
+      "rate": 44100,
+      "phase": "near_after_echo",
+      "metric": "near_snr_db",
+      "classical": 138.95567394304518,
+      "hybrid": 138.95567394304518,
+      "delta_db": 0.0
+    },
+    {
+      "case": 15,
+      "scene": "drift",
+      "rate": 44100,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 13.183264158129957,
+      "hybrid": 17.675528522301576,
+      "delta_db": 4.49226436417162
+    },
+    {
+      "case": 15,
+      "scene": "drift",
+      "rate": 44100,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 14.910434550083437,
+      "hybrid": 18.946067524048644,
+      "delta_db": 4.035632973965207
+    },
+    {
+      "case": 16,
+      "scene": "linear",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 49.443730465252465,
+      "hybrid": 49.45229919044037,
+      "delta_db": 0.008568725187906523
+    },
+    {
+      "case": 16,
+      "scene": "linear",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 49.84617571116779,
+      "hybrid": 49.84617571116779,
+      "delta_db": 0.0
+    },
+    {
+      "case": 17,
+      "scene": "nonlinear",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 44.017746659406775,
+      "hybrid": 44.01776191449987,
+      "delta_db": 1.5255093096300243e-05
+    },
+    {
+      "case": 17,
+      "scene": "nonlinear",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 43.42759202101401,
+      "hybrid": 43.427595029766444,
+      "delta_db": 3.008752436528539e-06
+    },
+    {
+      "case": 18,
+      "scene": "delay_jump",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 45.25713082783743,
+      "hybrid": 45.37433791287973,
+      "delta_db": 0.1172070850423026
+    },
+    {
+      "case": 18,
+      "scene": "delay_jump",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": -4.179212872156935,
+      "hybrid": 1.2689380353994273,
+      "delta_db": 5.4481509075563626
+    },
+    {
+      "case": 19,
+      "scene": "near_only",
+      "rate": 48000,
+      "phase": "near_only",
+      "metric": "near_snr_db",
+      "classical": 139.0124443425352,
+      "hybrid": 139.0124443425352,
+      "delta_db": 0.0
+    },
+    {
+      "case": 20,
+      "scene": "double_talk",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 49.78048834022231,
+      "hybrid": 49.78248733746221,
+      "delta_db": 0.0019989972398946065
+    },
+    {
+      "case": 20,
+      "scene": "double_talk",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 62.16762491057086,
+      "hybrid": 62.16762491057086,
+      "delta_db": 0.0
+    },
+    {
+      "case": 20,
+      "scene": "double_talk",
+      "rate": 48000,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 20.528820643678905,
+      "hybrid": 20.528109385719688,
+      "delta_db": -0.0007112579592174484
+    },
+    {
+      "case": 21,
+      "scene": "quiet_double_talk",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 50.269484361090406,
+      "hybrid": 50.269484361090406,
+      "delta_db": 0.0
+    },
+    {
+      "case": 21,
+      "scene": "quiet_double_talk",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 138.65922242500693,
+      "hybrid": 138.65922242500693,
+      "delta_db": 0.0
+    },
+    {
+      "case": 21,
+      "scene": "quiet_double_talk",
+      "rate": 48000,
+      "phase": "double_talk",
+      "metric": "near_snr_db",
+      "classical": 5.566894303928393,
+      "hybrid": 5.510066683114452,
+      "delta_db": -0.05682762081394088
+    },
+    {
+      "case": 22,
+      "scene": "near_after_echo",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "near_snr_db",
+      "classical": 138.73455618521947,
+      "hybrid": 138.73455618521947,
+      "delta_db": 0.0
+    },
+    {
+      "case": 22,
+      "scene": "near_after_echo",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "near_snr_db",
+      "classical": 37.54569054231129,
+      "hybrid": 37.54569054231129,
+      "delta_db": 0.0
+    },
+    {
+      "case": 22,
+      "scene": "near_after_echo",
+      "rate": 48000,
+      "phase": "near_after_echo",
+      "metric": "near_snr_db",
+      "classical": 138.9217056703682,
+      "hybrid": 138.9217056703682,
+      "delta_db": 0.0
+    },
+    {
+      "case": 23,
+      "scene": "drift",
+      "rate": 48000,
+      "phase": "steady",
+      "metric": "erle_db",
+      "classical": 15.957923949853187,
+      "hybrid": 20.840723141364293,
+      "delta_db": 4.882799191511106
+    },
+    {
+      "case": 23,
+      "scene": "drift",
+      "rate": 48000,
+      "phase": "onset",
+      "metric": "erle_db",
+      "classical": 16.064423581315886,
+      "hybrid": 21.160758584314113,
+      "delta_db": 5.096335002998227
+    }
+  ],
+  "scope": "Synthetic offline pipeline only. Preserve all negative deltas; numerical-noise differences are not substantive improvements. Natural/device/realtime quality acceptance remains open."
+}
