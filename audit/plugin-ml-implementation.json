@@ -73,8 +73,20 @@
         "Classical regularized/layout-aware decoding is preferable to ML replacing the normative decoder.",
         "Learned personalization may choose an HRTF/layout correction offline, with explicit normalization and energy constraints."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-ambisonics/bin/qa_ambisonics_render.rs",
+        "scripts/ml/ambisonics_native.py",
+        "scripts/ml/test_ambisonics_native.py",
+        "scripts/ml/evaluate_ambisonics_native.py",
+        "audit/artifacts/ml-ambisonics-native-20261025"
+      ],
+      "remaining": [
+        "Implement offline learned listener/layout preference selection with exact context, grouped uncertainty/abstention and bounded candidates; current deterministic normalization and native renderer are supporting infrastructure only.",
+        "Validate reviewed decoder-plus-correction preset export through the actual factory and host, including headroom, channel roles and explicit apply behavior; custom layouts above16 outputs remain DSP-only.",
+        "Obtain independent source/level/rate/layout shift and actual spatial/listening quality evidence versus the uncorrected classical decoder; procedural functional probes establish no learned preference advantage.",
+        "Complete resource, host and Linux/Windows DAW/CI acceptance when user-provided recordings and hosts become available."
+      ]
     },
     {
       "plugin_id": 5,

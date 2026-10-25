@@ -1,0 +1,10 @@
+    Checking approx v0.5.1
+    Checking simba v0.10.2
+    Checking sotf-nalgebra v0.35.0 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+    Checking math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)
+    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+    Checking sotf-plugin-channel-mute-solo v0.5.66 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo)
+    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)
+    Checking sotf-plugin-matrix v0.5.93 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix)
+    Checking sotf-plugin-ambisonics v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)
+    Finished `release` profile [optimized] target(s) in 15.60s

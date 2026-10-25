@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_ambisonics_native.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-ambisonics-render",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-ambisonics-native-20261025-final",
+    "--report",
+    "audit/artifacts/ml-ambisonics-native-20261025/evaluation.json"
+  ],
+  "exit_code": 0,
+  "seconds": 5.994031707989052
+}

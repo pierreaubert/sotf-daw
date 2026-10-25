@@ -1,0 +1,11 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/ambisonics_native.py",
+    "scripts/ml/test_ambisonics_native.py",
+    "scripts/ml/evaluate_ambisonics_native.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.04570420808158815
+}

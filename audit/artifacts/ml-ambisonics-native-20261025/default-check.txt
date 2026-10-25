@@ -1,0 +1,3 @@
+    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)
+    Checking sotf-plugin-ambisonics v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)
+    Finished `release` profile [optimized] target(s) in 1.17s

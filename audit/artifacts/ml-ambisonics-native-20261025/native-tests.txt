@@ -1,0 +1,93 @@
+
+running 77 tests
+test ambisonics_decoder_plugin::tests::test_dual_band_reports_no_fixed_host_latency ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_silence ... ok
+test ambisonics_decoder_plugin::tests::test_get_data_stays_none_so_decoder_is_never_an_analyzer ... ok
+test ambisonics_decoder_plugin::tests::dual_band_is_finite_at_every_supported_rate_boundary ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_requires_initialize_and_accepts_large_block ... ok
+test ambisonics_decoder_plugin::tests::dual_band_has_no_fixed_block_limit_or_megabyte_scratch ... ok
+test ambisonics_decoder_plugin::tests::test_allrad_mode_selects_virtual_speaker_decoder ... ok
+test ambisonics_decoder_plugin::tests::test_channel_config_support ... ok
+test ambisonics_decoder_plugin::tests::subnormal_input_is_flushed_without_persistent_tail ... ok
+test ambisonics_decoder_plugin::tests::test_create_soa_7_1_4 ... ok
+test ambisonics_decoder_plugin::tests::test_custom_config_roundtrips_running_instance_bit_identically ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_parameter_toggle ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_rejects_invalid_sample_rate_without_mutation ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_large_block_no_alloc ... ok
+test ambisonics_decoder_plugin::tests::test_create_foa_5_1 ... ok
+test ambisonics_decoder_plugin::tests::test_dual_band_differs_from_single_band ... ok
+test ambisonics_decoder_plugin::tests::test_invalid_layout ... ok
+test ambisonics_decoder_plugin::tests::test_invalid_order_is_rejected ... ok
+test ambisonics_decoder_plugin::tests::test_latency ... ok
+test ambisonics_decoder_plugin::tests::test_new_custom_builds_user_geometry ... ok
+test ambisonics_decoder_plugin::tests::test_new_custom_rejects_named_target_and_bad_geometry ... ok
+test ambisonics_decoder_plugin::tests::test_new_rejects_bare_custom_target ... ok
+test ambisonics_decoder_plugin::tests::test_non_finite_input_does_not_poison_dual_band_state ... ok
+test ambisonics_decoder_plugin::tests::test_process_omni_signal ... ok
+test ambisonics_decoder_plugin::tests::test_process_rejects_short_buffers ... ok
+test ambisonics_decoder_plugin::tests::test_process_silence ... ok
+test ambisonics_decoder_plugin::tests::test_set_parameter_unknown_returns_error ... ok
+test ambisonics_decoder_plugin::tests::test_structural_parameters_require_host_rebuild ... ok
+test ambisonics_decoder_plugin::tests::test_target_layout_uses_choice_index ... ok
+test custom_layout::tests::all_lfe_is_rejected ... ok
+test custom_layout::tests::export_import_roundtrip_preserves_geometry ... ok
+test custom_layout::tests::import_rejects_malformed_and_invalid_payloads ... ok
+test custom_layout::tests::out_of_range_angles_are_rejected ... ok
+test custom_layout::tests::too_many_speakers_are_rejected ... ok
+test custom_layout::tests::valid_layout_passes ... ok
+test custom_layout::tests::duplicate_labels_are_rejected ... ok
+test custom_layout::tests::empty_name_is_rejected ... ok
+test custom_layout::tests::empty_speakers_are_rejected ... ok
+test custom_layout::tests::custom_decoder_config_roundtrip_serde ... ok
+test custom_layout::tests::cartesian_matches_sotf_convention ... ok
+test decode_matrix::aud133_tests::test_jacobi_reference_converges_and_applies_strict_cutoff_and_null_modes ... ok
+test decode_matrix::aud133_tests::independent_acn_sn3d_and_max_re_references_cover_orders_four_through_seven ... ok
+test decode_matrix::tests::allrad_contains_virtual_speaker_and_vbap_stages ... ok
+test decode_matrix::tests::allrad_front_direction_prefers_front_over_rear ... ok
+test decode_matrix::tests::allrad_dense_directional_sweep_is_finite_and_energy_bounded ... ok
+test decode_matrix::tests::allrad_handles_irregular_and_underdetermined_layouts ... ok
+test decode_matrix::tests::allrad_omnidirectional_signal_reaches_every_non_lfe_speaker ... ok
+test decode_matrix::tests::custom_builders_reject_order_zero_and_above_max ... ok
+test decode_matrix::tests::dense_directional_response_remains_finite_and_bounded ... ok
+test decode_matrix::tests::public_matrix_builder_rejects_unsupported_order_without_panicking ... ok
+test decode_matrix::tests::test_build_foa_5_1 ... ok
+test decode_matrix::tests::shipped_layouts_report_bounded_rank_revealing_quality ... ok
+test decode_matrix::tests::test_build_foa_7_1_4 ... ok
+test decode_matrix::tests::test_max_re_weights ... ok
+test decode_matrix::tests::test_build_soa_7_1_4 ... ok
+test decode_matrix::tests::test_energy_preservation_foa ... ok
+test decode_matrix::tests::test_omnidirectional_signal ... ok
+test decode_matrix::tests::test_underdetermined_layout_reports_rank_loss ... ok
+test decode_matrix::tests::underdetermined_toa_layout_uses_bounded_pseudoinverse ... ok
+test params::tests::custom_choice_is_appended_without_moving_named_indices ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test params::tests::order_parameter_advertises_full_supported_range ... ok
+test params::tests::param_index_coverage ... ok
+test params::tests::plugin_type_key_matches_factory_key ... ok
+test params::tests::roundtrip_serde ... ok
+test spherical_harmonics::tests::first_out_of_range_acn_is_rejected - should panic ... ok
+test spherical_harmonics::tests::test_acn_ordering ... ok
+test spherical_harmonics::tests::test_channel_count ... ok
+test spherical_harmonics::tests::test_acn_to_degree_index_all_valid ... ok
+test spherical_harmonics::tests::test_deg_to_rad ... ok
+test spherical_harmonics::tests::test_first_order_cardinal_directions ... ok
+test spherical_harmonics::tests::test_orthogonality_foa ... ok
+test spherical_harmonics::tests::test_second_order_values ... ok
+test spherical_harmonics::tests::test_sn3d_normalization_factors ... ok
+test spherical_harmonics::tests::test_zeroth_order_omnidirectional ... ok
+test decode_matrix::aud133_tests::allrad_grid_quadrature_and_virtual_solve_meet_order_specific_limits ... ok
+test decode_matrix::aud133_tests::mode_matching_and_allrad_match_independent_references_on_named_layouts ... ok
+
+test result: ok. 77 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.53s
+
+   Compiling approx v0.5.1
+   Compiling simba v0.10.2
+   Compiling sotf-nalgebra v0.35.0 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+   Compiling math-dsp v0.5.35 (/Volumes/home_tmp/src/all_of_sotf/math-audio/crates/math-dsp)
+   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+   Compiling sotf-plugin-channel-mute-solo v0.5.66 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-channel-mute-solo)
+   Compiling sotf-plugin-matrix v0.5.93 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-matrix)
+   Compiling plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)
+   Compiling sotf-plugin-ambisonics v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-ambisonics)
+    Finished `release` profile [optimized] target(s) in 39.40s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_ambisonics-45a840941f3a7758)

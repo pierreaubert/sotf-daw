@@ -14,7 +14,12 @@ name = "sotf_plugin_ambisonics"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sotf-plugin-matrix"]
+
+[[bin]]
+name = "qa-ambisonics-render"
+path = "bin/qa_ambisonics_render.rs"
+required-features = ["qa"]
 
 [[bin]]
 name = "qa-ambisonics"
@@ -36,6 +41,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 nalgebra = { workspace = true }
+sotf-plugin-matrix = { workspace = true, optional = true }
 
 [dev-dependencies]
 approx = { workspace = true }
