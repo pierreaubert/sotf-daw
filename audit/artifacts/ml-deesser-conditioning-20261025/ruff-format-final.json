@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/deesser_conditioning.py",
+    "scripts/ml/test_deesser_conditioning.py",
+    "scripts/ml/evaluate_deesser_conditioning.py",
+    "scripts/ml/analyze_deesser_conditioning.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.008235333021730185
+}

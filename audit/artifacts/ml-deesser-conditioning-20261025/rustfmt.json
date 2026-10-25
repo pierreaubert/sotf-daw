@@ -1,0 +1,12 @@
+{
+  "command": [
+    "rustfmt",
+    "--check",
+    "--edition",
+    "2024",
+    "crates/sotf-plugins/crates/sotf-plugin-de-esser/bin/qa_de_esser_render.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_speech_observe.rs"
+  ],
+  "exit_code": 0,
+  "seconds": 0.04864912503398955
+}

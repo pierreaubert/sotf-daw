@@ -183,8 +183,25 @@
       "plugin_id": 17,
       "plugin": "De-esser",
       "requirements": "A small speech-conditioned sibilance classifier could gate the existing detector. Measure false positives on music and use confidence-based fallback. Classical relative band-energy detection and hysteresis are alternatives to benchmark before model adoption. Current recorded-sound baseline: audit/artifacts/plugin-audit-20261018/de-esser-recorded.json. This five-recording, single-phoneme-speaker set establishes conditional attenuation, not adequate training data or population accuracy. At the fixed high-gain setting, Wideband attenuates violin by 5.691 dB and cymbal by 5.038 dB; the production detector is based on absolute band level rather than speech identity.",
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/deesser_conditioning.py",
+        "scripts/ml/evaluate_deesser_conditioning.py",
+        "scripts/ml/analyze_deesser_conditioning.py",
+        "scripts/ml/test_deesser_conditioning.py",
+        "crates/sotf-plugins/crates/sotf-plugin-de-esser/bin/qa_de_esser_render.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_speech_observe.rs",
+        "crates/sotf-plugins/models/deesser-conditioning/manifest.json",
+        "crates/sotf-plugins/models/deesser-conditioning/README.md",
+        "audit/artifacts/ml-deesser-conditioning-20261025"
+      ],
+      "remaining": [
+        "No adoption: relative key loses up to 4.779 dB of native target HF attenuation; RNNoise-conditioned key retains 4.213 dB unwanted cymbal reduction, Silero 4.160 dB and 3.032 dB violin reduction at documented gain-1 Wideband settings. This development tradeoff is not classifier accuracy.",
+        "Train/validate a dedicated speech-conditioned sibilance detector on adequate speaker/source-disjoint labels; do not train or claim population accuracy from the existing five clips.",
+        "Unseen conversational/multilingual, initial/final/whispered and voiced fricatives, legitimate music highs, noise/level/rate/layout shifts and listening acceptance.",
+        "Realtime worker/host lifecycle, discontinuity/reset, unavailable-model and staleness policy integration plus controlled CPU/memory/deadline budgets; current observer uses explicit Offline mode.",
+        "Perceptual validation of key modulation and boundary behavior; offline prefix and native Range tests do not establish phonetic correctness."
+      ]
     },
     {
       "plugin_id": 18,

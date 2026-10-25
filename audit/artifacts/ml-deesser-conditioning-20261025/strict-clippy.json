@@ -1,0 +1,28 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "--offline",
+    "--locked",
+    "--release",
+    "-p",
+    "sotf-plugin-de-esser",
+    "-p",
+    "sotf-plugin-gate",
+    "--features",
+    "sotf-plugin-de-esser/qa,sotf-plugin-gate/qa,sotf-plugin-gate/silero-speech",
+    "--bin",
+    "qa-de-esser-render",
+    "--bin",
+    "qa-speech-observe",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-j",
+    "2",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 2.9747605838347226
+}

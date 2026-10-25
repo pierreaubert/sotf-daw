@@ -1,0 +1,364 @@
+{
+  "comparisons": 120,
+  "real_model_prefix_checks": 4,
+  "unique_key_streams_checked": 30,
+  "max_independent_metric_error_db": 2.687133793350283e-06,
+  "max_independent_key_error": 0,
+  "max_independent_band_fraction_error": 3.3306690738754696e-16,
+  "maximum_used_score_age_through_packet_ms": 148.0416717529297,
+  "wideband_development_rows": [
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "absolute",
+      "attenuation_db": 5.888595812908376,
+      "high_band_attenuation_db": 5.89243617279704
+    },
+    {
+      "fixture": "s",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 3.43584963436077,
+      "high_band_attenuation_db": 2.632249672068325
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "absolute",
+      "attenuation_db": 5.862520900904885,
+      "high_band_attenuation_db": 5.862818289822056
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "relative",
+      "attenuation_db": 5.874281364275261,
+      "high_band_attenuation_db": 5.879065184534364
+    },
+    {
+      "fixture": "s",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 1.7435198256033417,
+      "high_band_attenuation_db": 1.1675647541947982
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "relative",
+      "attenuation_db": 5.838335982588205,
+      "high_band_attenuation_db": 5.838964365821004
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "rnnoise",
+      "attenuation_db": 5.885696639317398,
+      "high_band_attenuation_db": 5.889744784618472
+    },
+    {
+      "fixture": "s",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 1.7436312490792032,
+      "high_band_attenuation_db": 1.1686304704373915
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "rnnoise",
+      "attenuation_db": 5.666420198690808,
+      "high_band_attenuation_db": 5.662038450052959
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "silero",
+      "attenuation_db": 4.88257553987479,
+      "high_band_attenuation_db": 4.879449142818416
+    },
+    {
+      "fixture": "s",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 2.0359733399048534,
+      "high_band_attenuation_db": 1.5872250885101333
+    },
+    {
+      "fixture": "s",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "silero",
+      "attenuation_db": 5.839005759772817,
+      "high_band_attenuation_db": 5.839625464941591
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "absolute",
+      "attenuation_db": 5.949307302910606,
+      "high_band_attenuation_db": 5.950206236827875
+    },
+    {
+      "fixture": "sh",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 3.6280663233570136,
+      "high_band_attenuation_db": 2.7477080006974504
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "absolute",
+      "attenuation_db": 5.918249361335416,
+      "high_band_attenuation_db": 5.912925190995212
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "relative",
+      "attenuation_db": 1.2363505172234606,
+      "high_band_attenuation_db": 1.1708899119768983
+    },
+    {
+      "fixture": "sh",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 0.6724036826411353,
+      "high_band_attenuation_db": 0.40149588962966787
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "relative",
+      "attenuation_db": 1.7109030783030095,
+      "high_band_attenuation_db": 1.6172959696847724
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "rnnoise",
+      "attenuation_db": 5.948471489066725,
+      "high_band_attenuation_db": 5.949827558556466
+    },
+    {
+      "fixture": "sh",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 1.5761300386754824,
+      "high_band_attenuation_db": 0.9311378237176109
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "rnnoise",
+      "attenuation_db": 5.217698435612007,
+      "high_band_attenuation_db": 5.318283099724081
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "silero",
+      "attenuation_db": 5.014473043551524,
+      "high_band_attenuation_db": 5.038756500775383
+    },
+    {
+      "fixture": "sh",
+      "region": "vowel_after_fricative",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 2.2335112163111654,
+      "high_band_attenuation_db": 1.6250357430669395
+    },
+    {
+      "fixture": "sh",
+      "region": "fricative",
+      "target_sibilance": true,
+      "method": "silero",
+      "attenuation_db": 3.513456368638874,
+      "high_band_attenuation_db": 3.345527950038323
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_speech",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 2.8746985284285858,
+      "high_band_attenuation_db": 1.598530232512923
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 3.0377696243669803,
+      "high_band_attenuation_db": 1.3883064562963319
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 3.301365976481448,
+      "high_band_attenuation_db": 0.5786963061747009
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_speech",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 0.043668243447660696,
+      "high_band_attenuation_db": 0.02128634000000172
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 9.213775919085787e-05,
+      "high_band_attenuation_db": 0.00011445295940029702
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 7.663241964721377e-07,
+      "high_band_attenuation_db": 7.819242435161253e-07
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_speech",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 1.7180305872079618,
+      "high_band_attenuation_db": 0.5163340531217335
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 0.003741765188625651,
+      "high_band_attenuation_db": 0.004638793179474885
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 2.374145155015438,
+      "high_band_attenuation_db": 0.20380467676403152
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_speech",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 1.2567765700829163,
+      "high_band_attenuation_db": 0.9786409671569012
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 2.7784857499976297,
+      "high_band_attenuation_db": 1.1247758853454268
+    },
+    {
+      "fixture": "p",
+      "region": "plosive_burst",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 0.045838520542015704,
+      "high_band_attenuation_db": 0.06688677422068226
+    },
+    {
+      "fixture": "violin",
+      "region": "bright_bowed_string",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 5.691054225599536,
+      "high_band_attenuation_db": 5.695520727348782
+    },
+    {
+      "fixture": "violin",
+      "region": "bright_bowed_string",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 0.0,
+      "high_band_attenuation_db": 0.0
+    },
+    {
+      "fixture": "violin",
+      "region": "bright_bowed_string",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 0.0,
+      "high_band_attenuation_db": 0.0
+    },
+    {
+      "fixture": "violin",
+      "region": "bright_bowed_string",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 3.0323331119244905,
+      "high_band_attenuation_db": 2.975458772014572
+    },
+    {
+      "fixture": "cymbal",
+      "region": "cymbal_hit_and_decay",
+      "target_sibilance": false,
+      "method": "absolute",
+      "attenuation_db": 5.037850870023986,
+      "high_band_attenuation_db": 4.906637759161874
+    },
+    {
+      "fixture": "cymbal",
+      "region": "cymbal_hit_and_decay",
+      "target_sibilance": false,
+      "method": "relative",
+      "attenuation_db": 0.39373814064816914,
+      "high_band_attenuation_db": 0.8483698576101131
+    },
+    {
+      "fixture": "cymbal",
+      "region": "cymbal_hit_and_decay",
+      "target_sibilance": false,
+      "method": "rnnoise",
+      "attenuation_db": 4.212936276876977,
+      "high_band_attenuation_db": 3.7081608520571585
+    },
+    {
+      "fixture": "cymbal",
+      "region": "cymbal_hit_and_decay",
+      "target_sibilance": false,
+      "method": "silero",
+      "attenuation_db": 4.159926296330091,
+      "high_band_attenuation_db": 3.8702206780706963
+    }
+  ],
+  "qualification": "Development-only source/label coverage. Raw one-sided bin-power feature is not Parseval-normalized PCM energy. VAD is not sibilance classification; no population or realtime adoption claim."
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "experimental_offline_vad_conditioned_sidechain",
+  "dedicated_sibilance_classifier_weights": null,
+  "models": {
+    "rnnoise": {
+      "provenance": "audit/artifacts/ml-gate-20261025/model-provenance.json",
+      "source_commit": "9b7c2134cb5831391c7863f584cd631c63719fd5",
+      "license": "BSD-3-Clause"
+    },
+    "silero": {
+      "provenance": "crates/sotf-plugins/models/silero-vad/manifest.json",
+      "sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+      "license": "MIT"
+    }
+  },
+  "training": "No new weights trained. These VAD models do not establish sibilance identity; upstream overlap with the development recordings is unknown.",
+  "implementation_license": "GPL-3.0-or-later",
+  "decision_policy": "Causal 10 ms key packets, trailing 20 ms raw one-sided FFT bin-power fraction and hysteresis, raw VAD score thresholds 0.2/0.8; missing/unwarmed/uncertain/stale context selects the classical key with a smoothed return after prior protection. A score must remain within the 150 ms age budget through the whole nominal packet.",
+  "native_contract": "Existing native de-esser, explicit external key and bounded Range; no additional programme buffering. Native public delay/FIR drain retained; recursive minimum-phase ringing is truncated by existing drain contract. Key modulation can create detector transients, so no pointwise reduction-below-classical claim.",
+  "scope": "Offline 48 kHz mono score/key analysis and linked stereo native development evaluation. Native renderer supports bounded 1..8 channels at 44.1..192 kHz; this is not learned quality acceptance across that domain.",
+  "status": "development_experiment_no_production_adoption",
+  "evidence": "audit/artifacts/ml-deesser-conditioning-20261025",
+  "remaining": [
+    "Train/validate a dedicated speech-conditioned sibilance detector on adequate speaker/source-disjoint labels; do not train or claim population accuracy from the existing five clips.",
+    "Unseen conversational/multilingual, initial/final/whispered and voiced fricatives, legitimate music highs, noise/level/rate/layout shifts and listening acceptance.",
+    "Realtime worker/host lifecycle, discontinuity/reset, unavailable-model and staleness policy integration plus controlled CPU/memory/deadline budgets; current observer uses explicit Offline mode.",
+    "Perceptual validation of key modulation and boundary behavior; offline prefix and native Range tests do not establish phonetic correctness."
+  ]
+}

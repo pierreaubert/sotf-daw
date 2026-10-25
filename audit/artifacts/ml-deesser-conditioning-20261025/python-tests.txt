@@ -1,0 +1,12 @@
+test_future_and_stale_scores_do_not_backdate_decisions (test_deesser_conditioning.KeyPolicyTests.test_future_and_stale_scores_do_not_backdate_decisions) ... ok
+test_invalid_observation_clock_rejected (test_deesser_conditioning.KeyPolicyTests.test_invalid_observation_clock_rejected) ... ok
+test_key_prefix_invariance_and_no_gain_boost (test_deesser_conditioning.KeyPolicyTests.test_key_prefix_invariance_and_no_gain_boost) ... ok
+test_unavailable_model_is_exact_classical_key (test_deesser_conditioning.KeyPolicyTests.test_unavailable_model_is_exact_classical_key) ... ok
+test_matching_key_is_exact_internal_detector_and_callbacks_match (test_deesser_conditioning.NativeDeesserTests.test_matching_key_is_exact_internal_detector_and_callbacks_match) ... ok
+test_native_finalized_prefix_does_not_depend_on_future_input (test_deesser_conditioning.NativeDeesserTests.test_native_finalized_prefix_does_not_depend_on_future_input) ... ok
+test_zero_key_and_delay_marker_oracle (test_deesser_conditioning.NativeDeesserTests.test_zero_key_and_delay_marker_oracle) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.154s
+
+OK

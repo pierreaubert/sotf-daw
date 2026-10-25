@@ -1,0 +1,30 @@
+{
+  "status": "development_experiment_no_production_adoption",
+  "protocol_sources_and_binaries_match": true,
+  "existing_model_identity_verified": true,
+  "passed_commands": [
+    "evaluation-command",
+    "analysis-command",
+    "native-deesser-tests",
+    "strict-clippy",
+    "python-tests-final",
+    "ruff-final",
+    "ruff-format-final",
+    "rustfmt"
+  ],
+  "native_tests_passed": 112,
+  "python_tests_passed": 7,
+  "independent_checks": {
+    "comparisons": 120,
+    "real_model_prefix_checks": 4,
+    "unique_key_streams_checked": 30,
+    "max_independent_metric_error_db": 2.687133793350283e-06,
+    "max_independent_key_error": 0,
+    "max_independent_band_fraction_error": 3.3306690738754696e-16,
+    "maximum_used_score_age_through_packet_ms": 148.0416717529297
+  },
+  "initial_deadline_regression_preserved_exit_code": 1,
+  "decision": "VAD is not a phonetic classifier. Observed target/music tradeoffs do not justify production adoption. Dedicated classifier, new speaker/source-disjoint labels, listening and host/resource validation remain open.",
+  "external_raw_evidence": "/Volumes/home_tmp/tmp/ml-deesser-conditioning-20261025",
+  "full_ml_audit_complete": false
+}

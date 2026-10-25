@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_deesser_conditioning.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-de-esser-render",
+    "--observer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-speech-observe",
+    "--silero",
+    "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-deesser-conditioning-20261025/development",
+    "--output",
+    "audit/artifacts/ml-deesser-conditioning-20261025/evaluation.json"
+  ],
+  "exit_code": 0,
+  "seconds": 16.08872383297421
+}
