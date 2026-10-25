@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "model_error": null,
+  "input_sha256": "7857c0fab70b6480109a9b1844afeff0ca885c1eb79df2b47e99e61a5d835b75",
+  "model_sha256": "91dbe0e86f545c61ad714539510e6afe4f13ee45c61982f76adbc6cd2b7d4e9f",
+  "sample_rate": 48000,
+  "channels": 1,
+  "frames": 9600,
+  "native_latency_samples": 8,
+  "export_latency_samples": 0,
+  "alignment": "Native latency prefix removed after exact drain; original frame count preserved",
+  "native_groups": 0,
+  "accepted_groups": 0,
+  "decisions": [],
+  "qualification": "Experimental synthetic-trained repair utility score; no semantic click identity or listening safety guarantee"
+}

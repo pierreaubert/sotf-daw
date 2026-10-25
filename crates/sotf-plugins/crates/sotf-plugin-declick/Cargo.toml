@@ -20,6 +20,11 @@ name = "qa-declick"
 path = "bin/qa_declick.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-declick-render"
+path = "bin/qa_declick_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 plugins-denoiser = { workspace = true }
 sotf-host = { workspace = true }

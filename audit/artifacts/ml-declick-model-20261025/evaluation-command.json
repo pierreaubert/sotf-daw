@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_declick_model.py",
+    "--model",
+    "crates/sotf-plugins/models/declick-discriminator/model.json",
+    "--protocol",
+    "audit/artifacts/ml-declick-model-20261025/protocol.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-declick-render",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-declick-20261025/final",
+    "--output",
+    "audit/artifacts/ml-declick-model-20261025/final"
+  ],
+  "exit_code": 0,
+  "seconds": 1.12632566713728,
+  "output": "{\"cases\": 99, \"strata\": {\"click\": {\"dry\": {\"total_sse\": 51.9693310949413, \"worst_peak_error\": 1.911850641015917}, \"native\": {\"total_sse\": 5.126952154460764, \"worst_peak_error\": 1.0279223285615444}, \"learned\": {\"total_sse\": 37.39375515003801, \"worst_peak_error\": 1.911850641015917}, \"classical\": {\"total_sse\": 45.71328611852951, \"worst_peak_error\": 1.911850641015917}}, \"percussion\": {\"dry\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"native\": {\"total_sse\": 42.83320433308731, \"worst_peak_error\": 1.6524266004562378}, \"learned\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"classical\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}}, \"ambiguous-programme\": {\"dry\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"native\": {\"total_sse\": 47.29455894495012, \"worst_peak_error\": 1.904702067375183}, \"learned\": {\"total_sse\": 14.791976716618311, \"worst_peak_error\": 1.8083255290985107}, \"classical\": {\"total_sse\": 6.719294050512237, \"worst_peak_error\": 1.050925612449646}}, \"attack\": {\"dry\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"native\": {\"total_sse\": 7.4459280677122575, \"worst_peak_error\": 1.8983813524246216}, \"learned\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"classical\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}}, \"step\": {\"dry\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"native\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"learned\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"classical\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}}, \"clean\": {\"dry\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"native\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"learned\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}, \"classical\": {\"total_sse\": 0.0, \"worst_peak_error\": 0.0}}}}\n"
+}

@@ -1,0 +1,64 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_declick_model.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.780777458101511,
+    "output": ".......\n----------------------------------------------------------------------\nRan 7 tests in 0.583s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/declick_native.py",
+      "scripts/ml/declick_cases.py",
+      "scripts/ml/declick_model.py",
+      "scripts/ml/declick_qualify.py",
+      "scripts/ml/train_declick_model.py",
+      "scripts/ml/evaluate_declick_model.py",
+      "scripts/ml/analyze_declick_model.py",
+      "scripts/ml/test_declick_model.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.010161708109080791,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/declick_native.py",
+      "scripts/ml/declick_cases.py",
+      "scripts/ml/declick_model.py",
+      "scripts/ml/declick_qualify.py",
+      "scripts/ml/train_declick_model.py",
+      "scripts/ml/evaluate_declick_model.py",
+      "scripts/ml/analyze_declick_model.py",
+      "scripts/ml/test_declick_model.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.009103124961256981,
+    "output": "8 files already formatted\n"
+  },
+  {
+    "command": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-declick/bin/qa_declick_render.rs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.04657854186370969,
+    "output": ""
+  }
+]

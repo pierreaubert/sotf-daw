@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_declick_model.py"
+  ],
+  "renderer": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-declick-render",
+  "exit_code": 0,
+  "seconds": 0.8237057079095393,
+  "output": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.642s\n\nOK\n"
+}

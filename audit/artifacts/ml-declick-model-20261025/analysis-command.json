@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_declick_model.py",
+    "--model",
+    "crates/sotf-plugins/models/declick-discriminator/model.json",
+    "--artifacts",
+    "audit/artifacts/ml-declick-model-20261025",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-declick-20261025/final"
+  ],
+  "exit_code": 0,
+  "seconds": 0.7141783330589533,
+  "output": "{\"cases\": 99, \"scored_native_groups\": 52, \"accepted_beneficial_groups\": 2, \"accepted_harmful_groups\": 2, \"identical_observation_opposite_reference_pairs\": 16, \"max_probability_discrepancy\": 2.220446049250313e-16, \"max_sse_discrepancy\": 1.7763568394002505e-15, \"qualification\": \"Synthetic reconstruction error only; harmful accepted legitimate impulses preclude general adoption\"}\n"
+}

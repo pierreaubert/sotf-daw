@@ -1,0 +1,18 @@
+{
+  "format": "sotf-declick-assistant-manifest-v1",
+  "model_format": "sotf-declick-repair-discriminator-v1",
+  "weights_sha256": "91dbe0e86f545c61ad714539510e6afe4f13ee45c61982f76adbc6cd2b7d4e9f",
+  "parameters": 289,
+  "architecture": "16 -> 16 tanh -> 1 sigmoid",
+  "execution": "optional offline NumPy/SciPy only",
+  "domain": {
+    "sample_rate": 48000,
+    "channels": 1,
+    "native_params": "legacy-sensitivity5-linked-v1"
+  },
+  "status": "experimental_rejected_for_general_adoption",
+  "license": "GPL-3.0-or-later",
+  "provenance": "project-generated synthetic mathematical clean/corrupt pairs, native repair utility labels; no external audio/weights",
+  "validation": "audit/artifacts/ml-declick-model-20261025",
+  "known_failure": "Two harmful accepted legitimate-impulse groups in frozen final synthetic comparison; semantic reference intent is not identifiable from observed audio alone"
+}

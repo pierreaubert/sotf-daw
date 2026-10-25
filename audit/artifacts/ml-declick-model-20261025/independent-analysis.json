@@ -1,0 +1,10 @@
+{
+  "cases": 99,
+  "scored_native_groups": 52,
+  "accepted_beneficial_groups": 2,
+  "accepted_harmful_groups": 2,
+  "identical_observation_opposite_reference_pairs": 16,
+  "max_probability_discrepancy": 2.220446049250313e-16,
+  "max_sse_discrepancy": 1.7763568394002505e-15,
+  "qualification": "Synthetic reconstruction error only; harmful accepted legitimate impulses preclude general adoption"
+}

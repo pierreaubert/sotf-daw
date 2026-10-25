@@ -14,3 +14,6 @@ audit/artifacts/ml-linear-phase-candidates-20261025/** -text
 audit/artifacts/ml-eq-refinement-20261025/** -text
 audit/artifacts/ml-crossfeed-preferences-20261025/** -text
 crates/sotf-plugins/crates/sotf-plugin-crossfeed/tests/data/ml-preferences-*.json -text
+crates/sotf-plugins/models/declick-discriminator/model.json -text
+audit/artifacts/ml-declick-native-20261025/** -text
+audit/artifacts/ml-declick-model-20261025/** -text

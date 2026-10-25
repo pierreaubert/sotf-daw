@@ -1,0 +1,45 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-declick",
+      "--bin",
+      "qa-declick-render",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2"
+    ],
+    "exit_code": 0,
+    "seconds": 5.753051541978493,
+    "output": "   Compiling sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n    Finished `release` profile [optimized] target(s) in 5.71s\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-declick",
+      "--bin",
+      "qa-declick-render",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 101,
+    "seconds": 0.8696389999240637,
+    "output": "    Checking sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\nerror: using `chunks_exact` with a constant chunk size\n  --> crates/sotf-plugins/crates/sotf-plugin-declick/bin/qa_declick_render.rs:97:10\n   |\n97 |         .chunks_exact(4)\n   |          ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`\n   |\n   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks\n   = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`\n   = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`\n\nerror: could not compile `sotf-plugin-declick` (bin \"qa-declick-render\") due to 1 previous error\n"
+  }
+]

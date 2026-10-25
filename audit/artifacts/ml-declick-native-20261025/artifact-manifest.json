@@ -1,0 +1,20 @@
+{
+  "README.md": "85c630c18121fdb8f0e4c5d460b56c0d0452c8369e967c0bacf315b5f1d79e49",
+  "build-initial.json": "a1f0d1357883fd91516ecadef0758396e4275f84c411c0da43733094a5a33a60",
+  "build-initial.stdout.txt": "7bc9310a7b1fa9d22d3714b47cdaf1f7d06ab6a958919b09dcee2e5dad422384",
+  "build-r1.json": "7805d0c54d78db7fdb40d88ce91e4cf96cd8c85df3d743863ffb81aa13c9e011",
+  "build.json": "1cd8caa3a010a0c3317c1633b28a74e273aaade51113b7ac4ce78d5dcfb79ee0",
+  "candidate-probe.json": "8f8a2b0bfee9a93684069f49d8114f7af8acd23185b3e1cf58db3460b8e6cdb9",
+  "methodlog.md": "9a1e3f7e8decdc84eba85a31d5c41dce654e16407d00369b4d9103295c3981dc",
+  "native-tests.json": "023d171dcff7d2dc67e2f908a29c5c4cde08254efd69d816b2b0caf80b2e3ac2",
+  "native-tests.stdout.txt": "cce89e8ff06c0a713468a792316495273689c2093094f251da99264c98d2dbdd",
+  "percussion-probe.json": "9954cde73323ea6af97d0ced9f1cd3b9a7a6268b00af3bc58d6c5f1ed769e417",
+  "python-native-tests.json": "76653a5706a46627442d9aac91e3294002784741f6292753658026be3de8d6c4",
+  "smoke-command.json": "0b41ed73fe5a6ade6075747e2bf1ed85bf5b1ae42b5cfd153f162c9e6a18a621",
+  "smoke-data-manifest.json": "fe815d7fe98a1a3370b6a21f4f1889ecf8a4fd03a78363787e1142cdfee7c068",
+  "smoke-model.json": "def7769ea96c67cf15a21811c1f39721e91123d779ca4327dd79aade77b090cd",
+  "smoke-training-report.json": "b7109785ab6a886a2bd46c54c5be7b87b6d262c5abd8c2b410d17e471e209640",
+  "smoke-verification.json": "a51cf7c253d3ba18053b2eb94a9b8671145b681af3971b02e3a246a4eb8f2e7b",
+  "source/qa_declick_render.rs": "9c6287cf971291d17def1cacfd242437204d873020fdc048af8656562d75d108",
+  "source-manifest.json": "d1c1ed8c2e2939f906622ad9981c2c5a6906f87331c894659c019ba52afb8bcc"
+}

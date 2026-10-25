@@ -1,0 +1,45 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-declick",
+      "--bin",
+      "qa-declick-render",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2"
+    ],
+    "exit_code": 0,
+    "seconds": 5.736663917079568,
+    "output": "   Compiling sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n    Finished `release` profile [optimized] target(s) in 5.69s\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-declick",
+      "--bin",
+      "qa-declick-render",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 0.49573841597884893,
+    "output": "    Checking sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)\n    Finished `release` profile [optimized] target(s) in 0.41s\n"
+  }
+]

@@ -1,0 +1,3823 @@
+{
+  "model_sha256": "91dbe0e86f545c61ad714539510e6afe4f13ee45c61982f76adbc6cd2b7d4e9f",
+  "cases": 99,
+  "rows": [
+    {
+      "seed": 20331026,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.6183172555313421,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.11802535874829191,
+        "peak_error": 0.3435481898486614,
+        "changed_frames": 1
+      },
+      "native": {
+        "sse": 1.2097213512168858e-06,
+        "peak_error": 0.0010998733341693878,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.11802535874829191,
+        "peak_error": 0.3435481898486614,
+        "changed_frames": 1
+      },
+      "classical": {
+        "sse": 1.2097213512168858e-06,
+        "peak_error": 0.0010998733341693878,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.6164279196944787,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 8.939731778516375,
+        "peak_error": 1.4985666275024414,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.6183172555313421,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.11878228745567654,
+        "peak_error": 0.3446480631828308,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.11878228745567654,
+        "peak_error": 0.3446480631828308,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.05933236585188173,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        },
+        {
+          "start": 4802,
+          "stop": 4803,
+          "probability": 0.09103379978397169,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.22120213947960932,
+        "peak_error": 0.44480976462364197,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4801,
+          "stop": 4802,
+          "probability": 0.6242195307032815,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.27693483572815036,
+        "peak_error": 0.30382827296853065,
+        "changed_frames": 3
+      },
+      "native": {
+        "sse": 0.18571588106879766,
+        "peak_error": 0.30382826179265976,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.27693483572815036,
+        "peak_error": 0.30382827296853065,
+        "changed_frames": 3
+      },
+      "classical": {
+        "sse": 0.18571588106879766,
+        "peak_error": 0.30382826179265976,
+        "changed_frames": 3
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.6790797536100035,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 2.4410802986571554,
+        "peak_error": 1.1061166524887085,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4801,
+          "stop": 4802,
+          "probability": 0.6242195307032815,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.11349066339794067,
+        "peak_error": 0.3368837535381317,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.11349066339794067,
+        "peak_error": 0.3368837535381317,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331027,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "08f0ee21ee6489da6d20efbffba03a942ce16d5228a849dea8d13a11f2231794",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "1-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4803,
+          "stop": 4804,
+          "probability": 0.4752668241010988,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 1.7717430063024489,
+        "peak_error": 0.6655342034064233,
+        "changed_frames": 4
+      },
+      "native": {
+        "sse": 1.3339102603898418,
+        "peak_error": 0.6655342034064233,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 1.7717430063024489,
+        "peak_error": 0.6655342034064233,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 1.3339102603898418,
+        "peak_error": 0.6655342034064233,
+        "changed_frames": 4
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4803,
+          "stop": 4804,
+          "probability": 0.4752668241010988,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.5431240890068842,
+        "peak_error": 0.736969530582428,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.5431240890068842,
+        "peak_error": 0.736969530582428,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.1114118052781592,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.1565325825477544,
+        "peak_error": 1.0754220485687256,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331028,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "441e7ff3619d4e9e77ee1f80393bea6646fb18d0d3bf8d1d75b56b714afe9162",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "2-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.5300820586279761,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.9392443993768049,
+        "peak_error": 0.9691462218761444,
+        "changed_frames": 1
+      },
+      "native": {
+        "sse": 0.008904331522360032,
+        "peak_error": 0.0943627655506134,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.9392443993768049,
+        "peak_error": 0.9691462218761444,
+        "changed_frames": 1
+      },
+      "classical": {
+        "sse": 0.9392443993768049,
+        "peak_error": 0.9691462218761444,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.4704417712830889,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.6674054276491148,
+        "peak_error": 0.5780930519104004,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.5300820586279761,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.1310513663374877,
+        "peak_error": 1.0635089874267578,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331029,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "6a97367ea6bef4c2c8b8f568e69ca5ecfcf2011597a95895e488c71dd053128c",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "3-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9987862010999484,
+          "accepted": true,
+          "reason": "accepted_native_group"
+        }
+      ],
+      "dry": {
+        "sse": 1.7218980152300234,
+        "peak_error": 0.9278734000399709,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.0004388804990455653,
+        "peak_error": 0.018910303711891174,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0004388804990455653,
+        "peak_error": 0.018910303711891174,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 0.0004388804990455653,
+        "peak_error": 0.018910303711891174,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.000285972366247006,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.7838952360512508,
+        "peak_error": 1.335625410079956,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9987862010999484,
+          "accepted": true,
+          "reason": "accepted_native_group"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.7741602871359312,
+        "peak_error": 0.9467836618423462,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 1.7741602871359312,
+        "peak_error": 0.9467836618423462,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 1.7741602871359312,
+        "peak_error": 0.9467836618423462,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331030,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "35d8ba6cac1a2f8189e967e6ce15ac8111704e2e5a543cb7e5132b2ed39575d9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "4-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9900309603545057,
+          "accepted": true,
+          "reason": "accepted_native_group"
+        }
+      ],
+      "dry": {
+        "sse": 12.854659781779414,
+        "peak_error": 1.7926698233932257,
+        "changed_frames": 4
+      },
+      "native": {
+        "sse": 0.0005429716071051888,
+        "peak_error": 0.015655705705285072,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 0.0005429716071051888,
+        "peak_error": 0.015655705705285072,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 12.854659781779414,
+        "peak_error": 1.7926698233932257,
+        "changed_frames": 4
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.004640696115764134,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.844803952142982,
+        "peak_error": 0.5333307981491089,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9900309603545057,
+          "accepted": true,
+          "reason": "accepted_native_group"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 13.01781642948238,
+        "peak_error": 1.8083255290985107,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 13.01781642948238,
+        "peak_error": 1.8083255290985107,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.20769510517232612,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 3.6038517592335353,
+        "peak_error": 1.8983813524246216,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331031,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "61d93ce4891c59a787913962e23d713b7b5a586cfdfcb1895b43f02df860d3d4",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "5-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.6796179029947734,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 3.1703785173911188,
+        "peak_error": 1.259043037891388,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.02592617921536533,
+        "peak_error": 0.12327200174331665,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 3.1703785173911188,
+        "peak_error": 1.259043037891388,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 3.1703785173911188,
+        "peak_error": 1.259043037891388,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.6796179029947734,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 2.6250551182776007,
+        "peak_error": 1.155456304550171,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331032,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "2536c24178d300fe9d411c023ed9ed35b3d45e89a0a7663bc7c4605ebd4ec0fc",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "6-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.8144499465123592,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 6.186785084608464,
+        "peak_error": 1.7588043324649334,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.006717083004817506,
+        "peak_error": 0.0649845078587532,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 6.186785084608464,
+        "peak_error": 1.7588043324649334,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 6.186785084608464,
+        "peak_error": 1.7588043324649334,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.0004231350173218494,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 3.485299059948943,
+        "peak_error": 1.3216211795806885,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.8144499465123592,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 6.597764882420535,
+        "peak_error": 1.8237887620925903,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.1993296577553811,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.5711369928709615,
+        "peak_error": 1.2534500360488892,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331033,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "be13d42ffce476539329e336dc6052a9b3f3c6673d33854ca2397d5b964c58f1",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "7-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9718976396543357,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 3.5201311226696665,
+        "peak_error": 0.9381006360054016,
+        "changed_frames": 4
+      },
+      "native": {
+        "sse": 0.0009615967005057193,
+        "peak_error": 0.023657217621803284,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 3.5201311226696665,
+        "peak_error": 0.9381006360054016,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 3.5201311226696665,
+        "peak_error": 0.9381006360054016,
+        "changed_frames": 4
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.0005143839635253572,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 5.625916222208815,
+        "peak_error": 1.3843063116073608,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9718976396543357,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 3.5578706673937504,
+        "peak_error": 0.9617578387260437,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4802,
+          "stop": 4803,
+          "probability": 0.24572898735635718,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.8226085720747314,
+        "peak_error": 0.9069777131080627,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331034,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "fe0162827bff505bffa53a08979e0b50db0e3757b3f7cac7619540ea925010c9",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "8-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4803,
+          "stop": 4804,
+          "probability": 0.7196526524590198,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 4.226497154659517,
+        "peak_error": 1.027922336012125,
+        "changed_frames": 4
+      },
+      "native": {
+        "sse": 3.1704019765137543,
+        "peak_error": 1.0279223285615444,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 4.226497154659517,
+        "peak_error": 1.027922336012125,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 3.1704019765137543,
+        "peak_error": 1.0279223285615444,
+        "changed_frames": 4
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.6219233745662152,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 6.191126608093171,
+        "peak_error": 1.4518041610717773,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4803,
+          "stop": 4804,
+          "probability": 0.7196526524590198,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.1044446429026635,
+        "peak_error": 1.050925612449646,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 1.1044446429026635,
+        "peak_error": 1.050925612449646,
+        "changed_frames": 1
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331035,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e98575795d816d51025862522e4109829b25232f3a0e5916b9450bc818e661b0",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "9-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.7039336382409427,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 2.064203573146174,
+        "peak_error": 0.8294985704123974,
+        "changed_frames": 3
+      },
+      "native": {
+        "sse": 0.006754373417568391,
+        "peak_error": 0.05755714699625969,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 2.064203573146174,
+        "peak_error": 0.8294985704123974,
+        "changed_frames": 3
+      },
+      "classical": {
+        "sse": 0.006754373417568391,
+        "peak_error": 0.05755714699625969,
+        "changed_frames": 3
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.4885307891111228,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.3919257085899659,
+        "peak_error": 0.45017290115356445,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.7039336382409427,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 2.299912181395488,
+        "peak_error": 0.8870556950569153,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 2.299912181395488,
+        "peak_error": 0.8870556950569153,
+        "changed_frames": 3
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331036,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "7b986a7346f0b67c1fb0221b67d9726b0c739b26791eb1cca10eca6442065156",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "10-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9788604911412875,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.7744505650439693,
+        "peak_error": 0.622274287045002,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.00048495083642869155,
+        "peak_error": 0.018929965794086456,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.7744505650439693,
+        "peak_error": 0.622274287045002,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 0.00048495083642869155,
+        "peak_error": 0.018929965794086456,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.1777191253086626,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 2.4269767942107094,
+        "peak_error": 0.7887135148048401,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9788604911412875,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.7653798992176526,
+        "peak_error": 0.6335262656211853,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.7653798992176526,
+        "peak_error": 0.6335262656211853,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.28225418706286654,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0705960215056658,
+        "peak_error": 0.2656991183757782,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331037,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "bc97ca32e9bb6d90dd727b3a5ce0780a6abb8140d71e2f6e59e2ece8f58c65f6",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "11-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.8063922520619805,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 1.9176717145103264,
+        "peak_error": 0.9792016558349133,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.011676353860368263,
+        "peak_error": 0.08050300180912018,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 1.9176717145103264,
+        "peak_error": 0.9792016558349133,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 1.9176717145103264,
+        "peak_error": 0.9792016558349133,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.1987797245396123,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.2086896842952548,
+        "peak_error": 0.7815959453582764,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.8063922520619805,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 1.630527737369455,
+        "peak_error": 0.9071210026741028,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331038,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b35aa10db79a623316ea77b5e01b8f2229aed3bc0b0a7d04f73f1f3e58d26bd2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "12-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9683932592198309,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 4.374998891990913,
+        "peak_error": 1.0458249263465405,
+        "changed_frames": 4
+      },
+      "native": {
+        "sse": 0.0017377032019489265,
+        "peak_error": 0.02704611048102379,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 4.374998891990913,
+        "peak_error": 1.0458249263465405,
+        "changed_frames": 4
+      },
+      "classical": {
+        "sse": 4.374998891990913,
+        "peak_error": 1.0458249263465405,
+        "changed_frames": 4
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.0002048050218905408,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.876213366341986,
+        "peak_error": 0.9360626935958862,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4804,
+          "probability": 0.9683932592198309,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 4.536981931173386,
+        "peak_error": 1.0728709697723389,
+        "changed_frames": 4
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331039,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "8a73a7caf053926199af623ed79ed71511681289cde8796a1c4b37e7ecd3b5a3",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "13-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9654566847846048,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 7.3103456669812115,
+        "peak_error": 1.911850641015917,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.0015986023403369838,
+        "peak_error": 0.03933827951550484,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 7.3103456669812115,
+        "peak_error": 1.911850641015917,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 7.3103456669812115,
+        "peak_error": 1.911850641015917,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4803,
+          "probability": 0.00010481931589631667,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 7.950140196381582,
+        "peak_error": 1.6524266004562378,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4802,
+          "probability": 0.9654566847846048,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 7.134192430959061,
+        "peak_error": 1.904702067375183,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331040,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "b146b2cc117b72e14e7efdf077e991707bb313efa44151eae20e89a9608f11c2",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "14-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-click-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.8699951332492142,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.7413634067748058,
+        "peak_error": 0.6088363733142614,
+        "changed_frames": 2
+      },
+      "native": {
+        "sse": 0.37117980056116845,
+        "peak_error": 0.6088363733142614,
+        "changed_frames": 2
+      },
+      "learned": {
+        "sse": 0.7413634067748058,
+        "peak_error": 0.6088363733142614,
+        "changed_frames": 2
+      },
+      "classical": {
+        "sse": 0.7413634067748058,
+        "peak_error": 0.6088363733142614,
+        "changed_frames": 2
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "percussion",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-percussion-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "ambiguous-programme",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-ambiguous-programme-48000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": 0.8699951332492142,
+          "accepted": false,
+          "reason": "insufficient_model_score"
+        }
+      ],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.3440043310242267,
+        "peak_error": 0.5865188241004944,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "attack",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-attack-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "step",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-step-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331041,
+      "kind": "clean",
+      "sample_rate": 48000,
+      "channels": 1,
+      "signal_identity": "e6e969321f17332637392385075053c4bbc89cfadbd822c9ea072b6d8aac5c57",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "15-clean-48000-1",
+      "native_latency": 8,
+      "decisions": [],
+      "dry": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "native": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "learned": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      },
+      "classical": {
+        "sse": 0.0,
+        "peak_error": 0.0,
+        "changed_frames": 0
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "click",
+      "sample_rate": 44100,
+      "channels": 1,
+      "signal_identity": "fd96cbc212f881b71d1b1ca8324a6db6fc943c2eac8a2670be687b7395e524b3",
+      "centre_frame": 4410,
+      "frames": 8820,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-click-44100-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4410,
+          "stop": 4413,
+          "probability": null,
+          "accepted": false,
+          "reason": "unsupported_domain"
+        }
+      ],
+      "dry": {
+        "sse": 2.0983404638713763,
+        "peak_error": 0.836329388897866,
+        "changed_frames": 3
+      },
+      "native": {
+        "sse": 6.439652882818934e-05,
+        "peak_error": 0.0068170735612511635,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 2.0983404638713763,
+        "peak_error": 0.836329388897866,
+        "changed_frames": 3
+      },
+      "classical": {
+        "sse": 2.0983404638713763,
+        "peak_error": 0.836329388897866,
+        "changed_frames": 3
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "click",
+      "sample_rate": 96000,
+      "channels": 1,
+      "signal_identity": "2e281132c22d0a38bcb2faffff92d8fc4eb82f84ae1808ac0f3b7abea40e15ad",
+      "centre_frame": 9600,
+      "frames": 19200,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-click-96000-1",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 9600,
+          "stop": 9603,
+          "probability": null,
+          "accepted": false,
+          "reason": "unsupported_domain"
+        }
+      ],
+      "dry": {
+        "sse": 2.004972832754544,
+        "peak_error": 0.8175110328011215,
+        "changed_frames": 3
+      },
+      "native": {
+        "sse": 3.997764937511733e-05,
+        "peak_error": 0.006112937815487385,
+        "changed_frames": 3
+      },
+      "learned": {
+        "sse": 2.004972832754544,
+        "peak_error": 0.8175110328011215,
+        "changed_frames": 3
+      },
+      "classical": {
+        "sse": 2.004972832754544,
+        "peak_error": 0.8175110328011215,
+        "changed_frames": 3
+      }
+    },
+    {
+      "seed": 20331026,
+      "kind": "click",
+      "sample_rate": 48000,
+      "channels": 2,
+      "signal_identity": "ce1df56d61fdc288a5686e1575f7fd45e4d4927eefbff5037c13fd88bc9c1be5",
+      "centre_frame": 4800,
+      "frames": 9600,
+      "qualification": "Synthetic mathematical signal; no recording or perceptual annotation",
+      "case": "0-click-48000-2",
+      "native_latency": 8,
+      "decisions": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "probability": null,
+          "accepted": false,
+          "reason": "unsupported_domain"
+        }
+      ],
+      "dry": {
+        "sse": 0.1758577816233719,
+        "peak_error": 0.3435481898486614,
+        "changed_frames": 1
+      },
+      "native": {
+        "sse": 1.8024711897111304e-06,
+        "peak_error": 0.0010998733341693878,
+        "changed_frames": 1
+      },
+      "learned": {
+        "sse": 0.1758577816233719,
+        "peak_error": 0.3435481898486614,
+        "changed_frames": 1
+      },
+      "classical": {
+        "sse": 0.1758577816233719,
+        "peak_error": 0.3435481898486614,
+        "changed_frames": 1
+      }
+    }
+  ],
+  "strata": {
+    "click": {
+      "dry": {
+        "total_sse": 51.9693310949413,
+        "worst_peak_error": 1.911850641015917
+      },
+      "native": {
+        "total_sse": 5.126952154460764,
+        "worst_peak_error": 1.0279223285615444
+      },
+      "learned": {
+        "total_sse": 37.39375515003801,
+        "worst_peak_error": 1.911850641015917
+      },
+      "classical": {
+        "total_sse": 45.71328611852951,
+        "worst_peak_error": 1.911850641015917
+      }
+    },
+    "percussion": {
+      "dry": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "native": {
+        "total_sse": 42.83320433308731,
+        "worst_peak_error": 1.6524266004562378
+      },
+      "learned": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "classical": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      }
+    },
+    "ambiguous-programme": {
+      "dry": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "native": {
+        "total_sse": 47.29455894495012,
+        "worst_peak_error": 1.904702067375183
+      },
+      "learned": {
+        "total_sse": 14.791976716618311,
+        "worst_peak_error": 1.8083255290985107
+      },
+      "classical": {
+        "total_sse": 6.719294050512237,
+        "worst_peak_error": 1.050925612449646
+      }
+    },
+    "attack": {
+      "dry": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "native": {
+        "total_sse": 7.4459280677122575,
+        "worst_peak_error": 1.8983813524246216
+      },
+      "learned": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "classical": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      }
+    },
+    "step": {
+      "dry": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "native": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "learned": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "classical": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      }
+    },
+    "clean": {
+      "dry": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "native": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "learned": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      },
+      "classical": {
+        "total_sse": 0.0,
+        "worst_peak_error": 0.0
+      }
+    }
+  },
+  "qualification": "Synthetic waveform-error comparison only; ambiguous-programme and click can be observationally identical, so no semantic or perceptual safety guarantee"
+}

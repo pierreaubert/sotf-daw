@@ -1,0 +1,16 @@
+{
+  "model_sha256": "def7769ea96c67cf15a21811c1f39721e91123d779ca4327dd79aade77b090cd",
+  "fresh_signal": {
+    "seed": 20293026,
+    "kind": "click",
+    "sample_rate": 48000,
+    "channels": 1,
+    "signal_identity": "b1f79fec7ecf58cfae78ce8d7506a40654a0e4f8545f658179161acf69db2659",
+    "centre_frame": 4800,
+    "frames": 9600,
+    "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+  },
+  "numpy_probability": 0.45264188530838223,
+  "torch_probability": 0.45264188530838223,
+  "error": 0.0
+}

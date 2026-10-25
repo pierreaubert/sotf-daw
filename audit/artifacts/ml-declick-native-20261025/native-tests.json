@@ -1,0 +1,17 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-declick",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2"
+  ],
+  "exit_code": 0,
+  "seconds": 74.11087608314119
+}

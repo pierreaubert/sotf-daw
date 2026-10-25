@@ -1,0 +1,12 @@
+{
+  "prior_identity_count": 171,
+  "final_observed_identity_count": 18,
+  "overlap": [],
+  "source_sha256": {
+    "crates/sotf-plugins/models/declick-discriminator/data-manifest.json": "d49b44f83bab718287447581410ef9ac9ae4b3a9604585442e9c66a52315b4d2",
+    "audit/artifacts/ml-declick-native-20261025/smoke-data-manifest.json": "fe815d7fe98a1a3370b6a21f4f1889ecf8a4fd03a78363787e1142cdfee7c068",
+    "audit/artifacts/ml-declick-native-20261025/smoke-verification.json": "a51cf7c253d3ba18053b2eb94a9b8671145b681af3971b02e3a246a4eb8f2e7b",
+    "audit/artifacts/ml-declick-native-20261025/candidate-probe.json": "8f8a2b0bfee9a93684069f49d8114f7af8acd23185b3e1cf58db3460b8e6cdb9"
+  },
+  "qualification": "Rate/channel variants and counterfactual event pairs are correlated; background identities are exclusion keys, not independent physical recordings"
+}

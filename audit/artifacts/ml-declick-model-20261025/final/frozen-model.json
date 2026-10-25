@@ -1,0 +1,10 @@
+{
+  "weights_sha256": "91dbe0e86f545c61ad714539510e6afe4f13ee45c61982f76adbc6cd2b7d4e9f",
+  "threshold": 0.99,
+  "selected_epoch": 138,
+  "classical_threshold": {
+    "threshold": 1.0,
+    "false_accepts": 4,
+    "true_accepts": 8
+  }
+}

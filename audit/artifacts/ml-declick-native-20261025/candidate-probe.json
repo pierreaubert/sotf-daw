@@ -1,0 +1,245 @@
+{
+  "renderer_sha256": "408f3742800308d90d290aabd85cfee14b8d3ce513f441d1dacc303731c4e231",
+  "rows": [
+    {
+      "kind": "click",
+      "native_groups": 1,
+      "supported_groups": 1,
+      "events": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "before_error": 0.7340534595870492,
+          "after_error": 0.0009078046006157116,
+          "features": [
+            0.03125,
+            0.0,
+            0.6910582184791565,
+            0.6952231526374817,
+            2.955747365951538,
+            1.0649491548538208,
+            0.6926589608192444,
+            0.6936346888542175,
+            2.959066152572632,
+            0.6960384845733643,
+            0.6931488513946533,
+            0.6931455135345459,
+            2.960184335708618,
+            0.5431532859802246,
+            4.649972438812256,
+            6.1634135246276855
+          ]
+        }
+      ],
+      "metadata": {
+        "callback_frames": 193,
+        "channels": 1,
+        "drained_frames": 8,
+        "input_frames": 9600,
+        "latency_samples": 8,
+        "output_frames": 9608,
+        "requested_params": {
+          "audition_residual": false,
+          "bands": 0,
+          "crossover_hz": 4000.0,
+          "enabled": true,
+          "frequency_skew": 0.0,
+          "link_channels": true,
+          "mode": 0,
+          "repair_width": 0,
+          "sensitivity": 5.0
+        },
+        "sample_rate": 48000,
+        "scope": "native public Declick, untrimmed latency prefix and exact drain; no learned processing",
+        "status": "ok"
+      },
+      "identity": {
+        "seed": 20271026,
+        "kind": "click",
+        "sample_rate": 48000,
+        "channels": 1,
+        "signal_identity": "ac641811caf1328fcc56562986a80657ad9bc9323a8c9958686fbdb5cbea9457",
+        "centre_frame": 4800,
+        "frames": 9600,
+        "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+      }
+    },
+    {
+      "kind": "ambiguous-programme",
+      "native_groups": 1,
+      "supported_groups": 1,
+      "events": [
+        {
+          "start": 4800,
+          "stop": 4801,
+          "before_error": 0.0,
+          "after_error": 0.7865898263489726,
+          "features": [
+            0.03125,
+            0.0,
+            0.6910582184791565,
+            0.6952231526374817,
+            2.955747365951538,
+            1.0649491548538208,
+            0.6926589608192444,
+            0.6936346888542175,
+            2.959066152572632,
+            0.6960384845733643,
+            0.6931488513946533,
+            0.6931455135345459,
+            2.960184335708618,
+            0.5431532859802246,
+            4.649972438812256,
+            6.1634135246276855
+          ]
+        }
+      ],
+      "metadata": {
+        "callback_frames": 193,
+        "channels": 1,
+        "drained_frames": 8,
+        "input_frames": 9600,
+        "latency_samples": 8,
+        "output_frames": 9608,
+        "requested_params": {
+          "audition_residual": false,
+          "bands": 0,
+          "crossover_hz": 4000.0,
+          "enabled": true,
+          "frequency_skew": 0.0,
+          "link_channels": true,
+          "mode": 0,
+          "repair_width": 0,
+          "sensitivity": 5.0
+        },
+        "sample_rate": 48000,
+        "scope": "native public Declick, untrimmed latency prefix and exact drain; no learned processing",
+        "status": "ok"
+      },
+      "identity": {
+        "seed": 20271026,
+        "kind": "ambiguous-programme",
+        "sample_rate": 48000,
+        "channels": 1,
+        "signal_identity": "ac641811caf1328fcc56562986a80657ad9bc9323a8c9958686fbdb5cbea9457",
+        "centre_frame": 4800,
+        "frames": 9600,
+        "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+      }
+    },
+    {
+      "kind": "attack",
+      "native_groups": 0,
+      "supported_groups": 0,
+      "events": [],
+      "metadata": {
+        "callback_frames": 193,
+        "channels": 1,
+        "drained_frames": 8,
+        "input_frames": 9600,
+        "latency_samples": 8,
+        "output_frames": 9608,
+        "requested_params": {
+          "audition_residual": false,
+          "bands": 0,
+          "crossover_hz": 4000.0,
+          "enabled": true,
+          "frequency_skew": 0.0,
+          "link_channels": true,
+          "mode": 0,
+          "repair_width": 0,
+          "sensitivity": 5.0
+        },
+        "sample_rate": 48000,
+        "scope": "native public Declick, untrimmed latency prefix and exact drain; no learned processing",
+        "status": "ok"
+      },
+      "identity": {
+        "seed": 20271026,
+        "kind": "attack",
+        "sample_rate": 48000,
+        "channels": 1,
+        "signal_identity": "ac641811caf1328fcc56562986a80657ad9bc9323a8c9958686fbdb5cbea9457",
+        "centre_frame": 4800,
+        "frames": 9600,
+        "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+      }
+    },
+    {
+      "kind": "step",
+      "native_groups": 0,
+      "supported_groups": 0,
+      "events": [],
+      "metadata": {
+        "callback_frames": 193,
+        "channels": 1,
+        "drained_frames": 8,
+        "input_frames": 9600,
+        "latency_samples": 8,
+        "output_frames": 9608,
+        "requested_params": {
+          "audition_residual": false,
+          "bands": 0,
+          "crossover_hz": 4000.0,
+          "enabled": true,
+          "frequency_skew": 0.0,
+          "link_channels": true,
+          "mode": 0,
+          "repair_width": 0,
+          "sensitivity": 5.0
+        },
+        "sample_rate": 48000,
+        "scope": "native public Declick, untrimmed latency prefix and exact drain; no learned processing",
+        "status": "ok"
+      },
+      "identity": {
+        "seed": 20271026,
+        "kind": "step",
+        "sample_rate": 48000,
+        "channels": 1,
+        "signal_identity": "ac641811caf1328fcc56562986a80657ad9bc9323a8c9958686fbdb5cbea9457",
+        "centre_frame": 4800,
+        "frames": 9600,
+        "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+      }
+    },
+    {
+      "kind": "clean",
+      "native_groups": 0,
+      "supported_groups": 0,
+      "events": [],
+      "metadata": {
+        "callback_frames": 193,
+        "channels": 1,
+        "drained_frames": 8,
+        "input_frames": 9600,
+        "latency_samples": 8,
+        "output_frames": 9608,
+        "requested_params": {
+          "audition_residual": false,
+          "bands": 0,
+          "crossover_hz": 4000.0,
+          "enabled": true,
+          "frequency_skew": 0.0,
+          "link_channels": true,
+          "mode": 0,
+          "repair_width": 0,
+          "sensitivity": 5.0
+        },
+        "sample_rate": 48000,
+        "scope": "native public Declick, untrimmed latency prefix and exact drain; no learned processing",
+        "status": "ok"
+      },
+      "identity": {
+        "seed": 20271026,
+        "kind": "clean",
+        "sample_rate": 48000,
+        "channels": 1,
+        "signal_identity": "ac641811caf1328fcc56562986a80657ad9bc9323a8c9958686fbdb5cbea9457",
+        "centre_frame": 4800,
+        "frames": 9600,
+        "qualification": "Synthetic mathematical signal; no recording or perceptual annotation"
+      }
+    }
+  ]
+}

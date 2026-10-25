@@ -1,0 +1,30 @@
+{
+  "training_seed": 20311026,
+  "development_seed": 20321026,
+  "final_seed": 20331026,
+  "final_base_signals": 16,
+  "final_kinds": [
+    "click",
+    "percussion",
+    "ambiguous-programme",
+    "attack",
+    "step",
+    "clean"
+  ],
+  "shift_rates": [
+    44100,
+    96000
+  ],
+  "channel_shift": 2,
+  "selection": "development BCE checkpoint then zero-false-accept threshold with maximum repair retention; final set never scored during training",
+  "scope": "Synthetic native repair utility; no semantic/perceptual claims",
+  "source_sha256": {
+    "train_declick_model.py": "f4c7a2a992a23099cccdc7a2c14fa69781309998f5d4f3a8456b674f882d4ada",
+    "declick_native.py": "892d3e5ba5328631267a1bf7c45602cf3a9f0e064074ac54685a57f19abe404f",
+    "declick_model.py": "a14034433d4f11fae4c24272e5b26c15ec012b267d59b44e5fab9c2ee423dc4e",
+    "declick_cases.py": "eed53c88e0b0fcf9a0f1566241867996e0406beeb88e35d9a615f353edcaf55e",
+    "declick_qualify.py": "06000ced1b99fea497e5a543a49062e9a97b96d58d53e422f5bb09e0b93834b3"
+  },
+  "renderer_sha256": "408f3742800308d90d290aabd85cfee14b8d3ce513f441d1dacc303731c4e231",
+  "evaluation_source_sha256": "fe536d572af33cbf5d60cbad853fda6736dfc40af7cec63826a9452d6fa6d1ee"
+}
