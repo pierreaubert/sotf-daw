@@ -799,8 +799,22 @@
       "requirements": [
         "ML scene classification could suggest settings offline, but real-time width decisions should remain predictable."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-stereo-imager/bin/qa_stereo_imager_render.rs",
+        "scripts/ml/stereo_imager_native.py",
+        "scripts/ml/test_stereo_imager_native.py",
+        "scripts/ml/evaluate_stereo_imager_native.py",
+        "scripts/ml/analyze_stereo_imager_native.py",
+        "audit/artifacts/ml-stereo-imager-native-20261025"
+      ],
+      "remaining": [
+        "Implement explicit source-labelled offline scene classification and bounded suggested settings with model provenance, abstention and deterministic fallback. Native qualification infrastructure does not complete this proposal.",
+        "Train only from declared labels/source groups and validate on fresh independent sources; compare classical scene/setting baselines and listening outcomes. No model has been trained or installed at this checkpoint.",
+        "Qualify suggested settings through the actual native renderer, including peak/headroom, side energy, mono fold and preset reopen. Current widening probes reach2.054 peak; native width control does not supply a ceiling.",
+        "Use host registry low-crossover range80..1000Hz for suggestions; legacy constructor also accepts20..80Hz, but those values fail current host validation. No production range compatibility change was made.",
+        "Real-material scene desirability, level/rate/source shifts, listening and host/cross-platform acceptance remain open; realtime controls remain deterministic."
+      ]
     },
     {
       "plugin_id": 42,

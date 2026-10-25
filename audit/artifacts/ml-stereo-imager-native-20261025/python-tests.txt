@@ -1,0 +1,10 @@
+test_callback_and_json_preset_reconstruction_agree (test_stereo_imager_native.StereoImagerNativeTests.test_callback_and_json_preset_reconstruction_agree) ... ok
+test_complex_impulse_response_and_explicit_zero_extension (test_stereo_imager_native.StereoImagerNativeTests.test_complex_impulse_response_and_explicit_zero_extension) ... ok
+test_exact_neutral_dry_and_mono_routes (test_stereo_imager_native.StereoImagerNativeTests.test_exact_neutral_dry_and_mono_routes) ... ok
+test_invalid_schema_geometry_and_native_ranges_refuse (test_stereo_imager_native.StereoImagerNativeTests.test_invalid_schema_geometry_and_native_ranges_refuse) ... ok
+test_native_response_matches_independent_bilinear_oracle_and_keeps_mid (test_stereo_imager_native.StereoImagerNativeTests.test_native_response_matches_independent_bilinear_oracle_and_keeps_mid) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.617s
+
+OK

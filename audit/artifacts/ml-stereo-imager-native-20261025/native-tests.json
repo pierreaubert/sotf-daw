@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-stereo-imager",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 35.33869650005363
+}

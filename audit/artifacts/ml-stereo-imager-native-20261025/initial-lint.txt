@@ -1,0 +1,1 @@
+Initial Python lint found an immediately evaluated local closure over loop variables and an implicit subprocess check default. Bound closure defaults and explicit check=False before tests/build validation.

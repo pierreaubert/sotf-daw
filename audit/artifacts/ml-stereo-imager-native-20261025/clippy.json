@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-stereo-imager",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa",
+    "--all-targets",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 1.0771561251021922
+}

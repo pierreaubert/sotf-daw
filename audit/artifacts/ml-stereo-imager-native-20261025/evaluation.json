@@ -1,0 +1,2791 @@
+{
+  "renderer_sha256": "a5cb532aef4e33d15c5b7ead22c569258bfb9e9220a0f078079935857be7fd6b",
+  "seed": 20861026,
+  "qualification": "Native functional reference probes only; no trained scene model or perceptual quality assessment.",
+  "cases": [
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "3f3b5ff5bbc249e8b7b01247821d1ec319557c29b1f7b56437103b3f00b0a403"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "3f3b5ff5bbc249e8b7b01247821d1ec319557c29b1f7b56437103b3f00b0a403"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "01f2fdcfce786d1eb2fc24c56d56ec09b0a056cd117c4570a405f921201a1ef3"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "35c3c763eb9d493ace0fefa183b6eaf4cbd844be933d9119bc81fb757259d150"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "dda160450de174123225acaa5418218e9ba1f7351ef5558d2e3b905648ebc762"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "correlated",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-correlated-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "3a927a64209e895f0baaf066f61fa69bc9c6342bfd48628fbdb407706a43c95f",
+        "output_sha256": "a82aa2a5757a320e3fd06e4badc6f6e949b867a4fc54482476f1b3ec030e51ec"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "dual_mono",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-dual_mono-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "18c06c48f2d56c808d9bcc83230641f9dafef055f413298c8bdeab0a8eb489db",
+        "output_sha256": "d8e49d9835d3963181991a56a624a21deaac2705d7218b546c086aa6c077f74d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "90dc31cd033da2790ca6b9578344eb06836ba091d80b81aff688b571be92c54a"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "90dc31cd033da2790ca6b9578344eb06836ba091d80b81aff688b571be92c54a"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "89282fb2567ddb24700e0f6ec41afb459c37137e45fff972bec2ef0a49702671"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "0a94bc9238ef7716f941f09b7af9b52797fba208cb49f83f2655aec6b64e6785"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "2a417be48d23eb0367478aada18d2c3d4d48251988e159b9e8b57f072e1a9dbf"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "antiphase",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-antiphase-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "2b3375ccb29da0dba13792c7726e29e9819da58ec650a219bc0a520ebdcf0cb2",
+        "output_sha256": "7c49265b976cf4db0f605ad4b8bda67da64d0c0290ffb2cfffa7833dc28dde3d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "0884e215fcf5b21c8bcee967a07afcf9ce968f7724527a2dc8de7d520e120c50"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "0884e215fcf5b21c8bcee967a07afcf9ce968f7724527a2dc8de7d520e120c50"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "7e16e6f78c20a3ccb77e265bae070f42c8ab82faf73789c341b0e15cd686c61d"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "356e0a72d8b797037db05cfd88fd975dca4b1ac9ea73764a0ecad581450b9b1e"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "cddc7966e37185035d00fc9ee868fa79b411ca0baafe7c0f40d3c010edc8fd95"
+      }
+    },
+    {
+      "rate": 44100,
+      "source": "one_silent",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/44100-one_silent-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 44100,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec5def0dac1bbd8b519ce6226382aa20c6cd08820114b96dbde73382fda47a8a",
+        "output_sha256": "94a15941794fde67f9bb0040c0e9eff44950147f02496042b24e86ef7d580710"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "6c04b5ab531b450be66b5a90cfc5150c6befc38cf53c2c7daa82525fe8f2438d"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "6c04b5ab531b450be66b5a90cfc5150c6befc38cf53c2c7daa82525fe8f2438d"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "8941cf8efc0d830a26c50ed14cf3812dff3870db0d6e5eaf6bb8a2143593ffa7"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "2b0bb4a795bd5b92855a2e52380637faf32f6059d3d1aa942773c01d5b59cba5"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "517f1c7bf003c823d24b948df7a0cfe713e46d49655b5f485c1bf52bd68bc309"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "correlated",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-correlated-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ca1b3a097cd613614b2f2fee3f80aee3c6b4a9e15be420669363bc1a8badb48b",
+        "output_sha256": "1620aef29e6e100619ab112f73c2e3e8c7e6aad06a8a756516d8039675e0c676"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "dual_mono",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-dual_mono-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "991d4ac61fc8de3b9cde0234a5300ced54ba40c0a3020d16f2a0e82e84428e93",
+        "output_sha256": "c22e9351d4601e6f0c67fc0de2075e0c0ed0e8ad0d4d779212426218281acccf"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "6d9fde56214ebf49963fa641f8fd3ce823509645658cd7859516db101f041722"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "6d9fde56214ebf49963fa641f8fd3ce823509645658cd7859516db101f041722"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "89282fb2567ddb24700e0f6ec41afb459c37137e45fff972bec2ef0a49702671"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "807ae0090169e7869830a45af68b5fd3234fed1c679113f3cfb4062148a1d482"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "314650269f133734c109710b13c906582c12da145225c0f6d4ba8e9b4cc7f04c"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "antiphase",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-antiphase-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "37feb90e99e90fd8fe8ec123435ad3895061721e9f3391cd6a69eb9498729afe",
+        "output_sha256": "0706f2437d0942dc645c212bafaf7c8d82afc4f2ea4283604a539db76c53106c"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "75dcd6c6fe8a3a6488687fd3c221e4e90858ff8c0f2110d3cf6f29a959d99c93"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "75dcd6c6fe8a3a6488687fd3c221e4e90858ff8c0f2110d3cf6f29a959d99c93"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "b45857bf8d1fedaafd09286c464b06d5595b9c7823ca76e41f13535cd6145135"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "5c4febb35b9ced41db76a0a80fd9f3db077aaa5da50afc25c8cbb5074a494dc2"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "3a32b814ba76cad0f61df5ad2bc3e2ed9f1a080db2f8b5bcb73f4ef09596cc1d"
+      }
+    },
+    {
+      "rate": 48000,
+      "source": "one_silent",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/48000-one_silent-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 48000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e8046014c372b7cca522df8aa5b5eb1ecdea623d04b40f65d3ad2767f4b950c1",
+        "output_sha256": "f8da0da670c30c86e84e489819f1f4c2dd3e2eb2db419e13b9568d2ee4022fbc"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "ba05a2b08f4c4b72f95231969e4602ec35225920221fbabcbfba9352aac8191b"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "ba05a2b08f4c4b72f95231969e4602ec35225920221fbabcbfba9352aac8191b"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "824cdc86a4b47cbb40eb346b71fd328a171f493fffa688aa447e759eeeb2081d"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "bdf3924786da1e6bfd1b015620aa8e3f6ec3e798d886bf69b1a233811d4321c1"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "27b3a81c2393211b9d49f8c5a7a1d0a7681253855c866ef0a92981806843ee50"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "correlated",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-correlated-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "ec3a7bec6f36e317721be05be2c758d9581a0df213ffef23010c162751c2a674",
+        "output_sha256": "0d070d1415d0551056cfe6c01340bd2b29e7974bed6ca085e88c3d82c8dbf6e5"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "dual_mono",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-dual_mono-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "e2b4833d2832ed985882e89d7fc930e2874e0c613c581b84f9184e3aae3f1697",
+        "output_sha256": "256d616111a21c28a8d043913758800414e8c742fc1697167c3e117ccffb9b98"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "f850858fc34ed4d40747f564d2a91ddf9b5997151ff4693f0698760387303dcf"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "f850858fc34ed4d40747f564d2a91ddf9b5997151ff4693f0698760387303dcf"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "89282fb2567ddb24700e0f6ec41afb459c37137e45fff972bec2ef0a49702671"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "9661e9cbc78d0889e7130ac221974f5a72680e5a9774ed49681ec98ef92bdd41"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "a3d1e84e19822258cd02abddcd00d37451ccd9c7fb0c3d7f96d6cfeb37300835"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "antiphase",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-antiphase-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "d629c0fcbcafb1ba5d45f131b4981c92a06117b133d9a83c2e3d53dde23b48a8",
+        "output_sha256": "faf87cbf3a22fba631fdd89856963cda37c032d5a467b3a25bc499d201b58548"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "63f060a0e2e24f2b068a7219f399cfa828ec8a57aff1479695e7ef840fba17de"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "63f060a0e2e24f2b068a7219f399cfa828ec8a57aff1479695e7ef840fba17de"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "7e1850aac18c28289229da0f868bb7eee632f4994b4e9ed080f4d073415dbb38"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "1e1a4fda7fdbdc6496dff05ca4dcb654c1a3689b95263c9d507e1551ca7de3e1"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "cd2f289f46ef55ffedaf4351b589186d290e86a92696cbc494eaa26060b67c3d"
+      }
+    },
+    {
+      "rate": 96000,
+      "source": "one_silent",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/96000-one_silent-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 96000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "645818d1c1fe72eba729224f548219f3c88f67d83da178f42bee627d3ef452a8",
+        "output_sha256": "78186c9717e37901d0f0733d5dab4dd52bfe76b1979e853531b71c67e8fa7db6"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "7785744d64e6f86ef2ec77d76f8d3d48749e486da2986a269234264ec8a3ce8c"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "7785744d64e6f86ef2ec77d76f8d3d48749e486da2986a269234264ec8a3ce8c"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "15f921a9d2bee2aab7510280e9ed3db15a3d571be5f78d9ed1e561721b74729a"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "0df9b5e009c9e60c0bc2220b1f700912ac512165e928e641b7be4cff34d7e2e7"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "bcf02c27be107129b3a73f5c20109f67db7e929fda9181601e06406fd8d565ce"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "correlated",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-correlated-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "0e001a2fcdbef55a93086022737f4addd31f00c2dd5e2b2a55040e2aa3237fc4",
+        "output_sha256": "b5323ae4cbd134444676c06a22034bc3a9daf003c3989bf94b6958b34b713f7e"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "dual_mono",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-dual_mono-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "877b89863909e39172ae184320a10d204a7bec81fe3c400bb712a88c32977f94",
+        "output_sha256": "6e1775432d4db75bcaff9540ac58cc122738ac414537dd798983f58f4ade5d66"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "6278b4869a245bed91d2537c5772e944212d4414705c584802d6107942d44e7c"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "6278b4869a245bed91d2537c5772e944212d4414705c584802d6107942d44e7c"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "89282fb2567ddb24700e0f6ec41afb459c37137e45fff972bec2ef0a49702671"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "b808e9763caefee0feae09a973c0e1595fba0fa9ca6e7a4347cd867e239609ae"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "7556fb28031ded9cb245d650ea22a64e58a545c0c333873bbdc644fc085f9929"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "antiphase",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-antiphase-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "356faf19fdcbfc76bee49746ca4a79fcc011d15e21210bab79a83bd1aa74f936",
+        "output_sha256": "d21fff5c2cc080980b9b152f326ee203e7528feceee6f0807c0265ecc663be51"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "neutral",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-neutral",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 1.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "e5583cc5a4f199c01aed987d429f9bb184c6b35c1e42af6c1c7c4e2fe282f3ec"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "dry",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-dry",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 0.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "e5583cc5a4f199c01aed987d429f9bb184c6b35c1e42af6c1c7c4e2fe282f3ec"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.0,
+          "low_mid_freq": 250.0,
+          "low_width": 1.0,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 0.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "d29383ff225c575c6ce919383522610cfcec2e3f0ea6941c4cd71a4552d5a231"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "shaped",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-shaped",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": false,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "edc1bae51457e5d2cf7190b8ff61d15917d6af795788b362c6147e005ee995aa"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "bass_mono",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-bass_mono",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 1.7999999523162842,
+          "low_mid_freq": 250.0,
+          "low_width": 0.30000001192092896,
+          "mid_high_freq": 4000.0,
+          "mid_width": 1.100000023841858,
+          "mix": 0.75,
+          "mono_bass": true,
+          "width": 1.5
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "d2e224854b0adc0a4d4e1c34161bdd3b933779901e221f404a758f13c6cf5582"
+      }
+    },
+    {
+      "rate": 192000,
+      "source": "one_silent",
+      "setting": "extreme",
+      "work": "/Volumes/home_tmp/tmp/ml-stereo-imager-native-20261025/192000-one_silent-extreme",
+      "metadata": {
+        "appended_zero_frames": 4096,
+        "callback_frames": 193,
+        "channels": 2,
+        "effective_params": {
+          "high_width": 2.0,
+          "low_mid_freq": 80.0,
+          "low_width": 0.0,
+          "mid_high_freq": 10000.0,
+          "mid_width": 2.0,
+          "mix": 1.0,
+          "mono_bass": false,
+          "width": 2.0
+        },
+        "input_frames": 8193,
+        "latency_samples": 0,
+        "output_frames": 12289,
+        "sample_rate": 192000,
+        "scope": "Native fresh static controls; explicit zeros are processed input, not a finite IIR drain claim. No learned inference, gain normalization, limiting or automatic setting changes.",
+        "status": "ok",
+        "input_sha256": "5c1e09b3ab1010977072cd2b537f078bf9e4a316ba203747750c3ef1e2753e67",
+        "output_sha256": "39bbc76770c3cfc4b2b41c19a9c0ff4f36e79a2d93ab3b13e14d91bd26bb86b5"
+      }
+    }
+  ]
+}
