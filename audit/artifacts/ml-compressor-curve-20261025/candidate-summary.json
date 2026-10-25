@@ -1,0 +1,28 @@
+{
+  "native_tests_passed": 173,
+  "raw_mse_db2": 0.08356091890466893,
+  "identity_mse_db2": 158.11007335881874,
+  "methods": {
+    "neural": {
+      "accepted": 64,
+      "median_residual_calls": 40.0
+    },
+    "segmented-knee-0": {
+      "accepted": 59,
+      "median_residual_calls": 56.0
+    },
+    "segmented-knee-6": {
+      "accepted": 64,
+      "median_residual_calls": 35.0
+    },
+    "segmented-knee-16": {
+      "accepted": 64,
+      "median_residual_calls": 35.0
+    },
+    "fixed": {
+      "accepted": 64,
+      "median_residual_calls": 55.0
+    }
+  },
+  "qualification": "Observed solver counts and synthetic static accuracy; no controlled cold/warm or hardware/audio claim"
+}

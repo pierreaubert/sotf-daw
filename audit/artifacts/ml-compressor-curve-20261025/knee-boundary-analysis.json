@@ -1,0 +1,16 @@
+{
+  "native_levels_dbfs": [
+    -18.000000436554874,
+    -18.015566411952282,
+    -18.015566411952282
+  ],
+  "observed_hard_soft_jump_db": 0.015565975397407783,
+  "ideal_centre_jump_db": 0.009375000000000001,
+  "approximation_error_budget_db": 0.009193547304971808,
+  "accepted_jump_interval_db": [
+    0.00018145269502819333,
+    0.01856854730497181
+  ],
+  "upstream_fast_math_sha256": "65c6a495799187a29e6781f9e1b749bbd9653ed1b46f6517b3c443d42e4ef175",
+  "explanation": "Corrected a test-only ideal-gain jump bound. Truncated positive Taylor exponential underestimates gains; near zero gain reduction its fractional-part boundary adds about0.0065dB. Log error and float rounding are budgeted. Native fit/export accuracy thresholds and model remain frozen."
+}

@@ -1,0 +1,45 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-multiband-compressor",
+      "--bin",
+      "qa-compressor-curve",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2"
+    ],
+    "exit_code": 0,
+    "seconds": 9.818591667106375,
+    "output": "   Compiling sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)\n    Finished `release` profile [optimized] target(s) in 9.76s\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-multiband-compressor",
+      "--bin",
+      "qa-compressor-curve",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 1.0603538749273866,
+    "output": "    Checking sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)\n    Finished `release` profile [optimized] target(s) in 0.97s\n"
+  }
+]

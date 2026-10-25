@@ -1,0 +1,10 @@
+{
+  "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "torch": "2.14.1",
+  "training_device": "CPU",
+  "training_threads": 2,
+  "trainable_parameters": 12676
+}

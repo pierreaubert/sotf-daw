@@ -565,8 +565,25 @@
       "requirements": [
         "ML is suitable for offline parameter assistance or optional measured-hardware emulation, not opaque automatic loudness changes."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/compressor_curve.py",
+        "scripts/ml/train_compressor_curve.py",
+        "scripts/ml/fit_compressor_curve.py",
+        "scripts/ml/evaluate_compressor_curve.py",
+        "scripts/ml/analyze_compressor_curve.py",
+        "scripts/ml/test_compressor_curve.py",
+        "crates/sotf-plugins/crates/sotf-plugin-multiband-compressor/bin/qa_compressor_curve.rs",
+        "crates/sotf-plugins/models/compressor-static-fit",
+        "audit/artifacts/ml-compressor-curve-20261025"
+      ],
+      "remaining": [
+        "Temporal parameter/hardware matching from paired audio or identified hardware at known operating levels; static curves cannot infer attack/release or memory.",
+        "Broader independent measured/noisy/sparse/boundary target validation; current fixed synthetic static gates do not prove parameter identity, continuous response or listening benefit.",
+        "Full mixed-band temporal/phase/peak/headroom qualification; current native checks isolate each band and validate full preset construction, not recombined programme equivalence.",
+        "Controlled total cold/warm fitting and multistart cost versus strongest classical seeds; current neural median40 residual calls versus35 classical is not a speed advantage.",
+        "Application review/import and real DAW/platform acceptance. Runtime gain envelopes and defaults remain unchanged."
+      ]
     },
     {
       "plugin_id": 35,

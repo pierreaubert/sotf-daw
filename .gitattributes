@@ -17,3 +17,5 @@ crates/sotf-plugins/crates/sotf-plugin-crossfeed/tests/data/ml-preferences-*.jso
 crates/sotf-plugins/models/declick-discriminator/model.json -text
 audit/artifacts/ml-declick-native-20261025/** -text
 audit/artifacts/ml-declick-model-20261025/** -text
+crates/sotf-plugins/models/compressor-static-fit/model.json -text
+audit/artifacts/ml-compressor-curve-20261025/** -text

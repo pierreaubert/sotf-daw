@@ -1,0 +1,253 @@
+
+running 118 tests
+test params::tests::band_template_non_empty ... ok
+test params::tests::band_template_has_unique_engine_keys ... ok
+test params::shared_key_contract_tests::shared_keys_agree_across_arrays ... ok
+test params::tests::global_params_have_unique_engine_keys ... ok
+test params::tests::global_params_non_empty ... ok
+test params::tests::single_band_primary_controls_include_envelope_and_output ... ok
+test params::tests::global_dynamics_group_is_pinned_visible ... ok
+test tests::rebuilt_band_range_and_hold_inheritance_follows_later_global_edits ... ok
+test tests::explicit_unsupported_legacy_sidechain_is_rejected ... ok
+test tests::broadband_mode_matches_static_transfer_after_settling ... ok
+test tests::broadband_mode_has_single_band_identity_and_no_crossover_schema ... ok
+test tests::automation_values_are_independent_of_host_block_partitioning ... ok
+test tests::test_band_compressor_params_default ... ok
+test tests::test_auto_makeup_boosts_output ... ok
+test tests::test_band_levels_db_initial_silence_floor ... ok
+test tests::test_band_threshold_ignores_nan ... ok
+test tests::test_build_crossovers_matches_num_bands ... ok
+test tests::test_bypassed_band_no_gain_reduction ... ok
+test tests::test_calculate_gain_reduction_at_threshold ... ok
+test tests::test_calculate_gain_reduction_hard_knee ... ok
+test tests::test_calculate_gain_reduction_ratio_one_always_zero ... ok
+test tests::test_calculate_gain_reduction_soft_knee ... ok
+test tests::fractional_link_amount_is_canonical_and_monotonic ... ok
+test tests::test_default_active ... ok
+test tests::test_default_link_amount ... ok
+test tests::test_from_params_alias ... ok
+test tests::test_get_data_returns_some ... ok
+test tests::test_get_parameter_band_defaults ... ok
+test tests::test_cache_publishes_non_default_meter_values ... ok
+test tests::test_get_parameter_out_of_range_band_returns_none ... ok
+test tests::test_get_parameter_stub_params_return_none ... ok
+test tests::test_get_parameter_unknown_band_field_returns_none ... ok
+test tests::test_global_param_value_roundtrip ... ok
+test tests::test_initial_threshold_automation_seeds_smoother_current_value ... ok
+test tests::test_initialize_allocates_buffers ... ok
+test tests::test_crossover_frequency_change_no_discontinuity ... ok
+test tests::legacy_hpf_frequency_without_enabled_keeps_legacy_audio ... ok
+test tests::test_initialize_with_lookahead_rebuilds_buffers ... ok
+test tests::test_initialize_with_tilt_rebuilds_biquads ... ok
+test tests::test_legacy_sidechain_keys_rejected_with_message ... ok
+test tests::test_link_amount_parameter_roundtrip ... ok
+test tests::test_initialize_updates_coefficients_for_sample_rate ... ok
+test tests::test_link_channels_parameter_roundtrip ... ok
+test tests::test_lookahead_buffers_initialized_with_zero_ms ... ok
+test tests::test_lookahead_clamp_in_setter ... ok
+test tests::test_lookahead_latency_matches_configured_delay ... ok
+test tests::test_mb_comp_basic ... ok
+test tests::test_mb_comp_compiled_op_declines_lookahead ... ok
+test tests::test_mix_wet_only_affects_signal ... ok
+test tests::test_ms_mode_dry_mix_is_exact_passthrough ... ok
+test tests::test_mb_comp_compiled_op_matches_process_in_place_without_lookahead ... ok
+test tests::test_makeup_gain_applied ... ok
+test tests::test_mix_dry_only_preserves_input ... ok
+test tests::test_ms_mode_parameter_roundtrip ... ok
+test tests::test_multiband_compressor_data_default ... ok
+test tests::test_multiband_compressor_data_new ... ok
+test tests::test_multiband_compressor_data_update ... ok
+test tests::test_measured_makeup_update_rate ... ok
+test tests::test_muted_band_meter_uses_silence_floor ... ok
+test tests::test_negative_sidechain_tilt_rebuilds_biquads ... ok
+test tests::test_num_bands_is_structural_after_initialization ... ok
+test tests::test_num_bands_rounds_not_truncates ... ok
+test tests::test_param_value_all_indices ... ok
+test tests::test_param_value_out_of_range_returns_none ... ok
+test tests::test_passive_band_no_gain_reduction ... ok
+test tests::test_per_band_knee_param_roundtrip ... ok
+test tests::test_mb_comp_crossover_reconstruction ... ok
+test tests::test_per_band_settings_affect_output ... ok
+test tests::test_no_resize_within_prealloc_limit ... ok
+test tests::test_process_bypassed_band_updates_level_meter ... ok
+test tests::test_mb_comp_reduces_loud_signal ... ok
+test tests::test_process_get_data_returns_compressor_data ... ok
+test tests::test_process_inactive_band_updates_level_meter ... ok
+test tests::test_process_link_amount_half ... ok
+test tests::test_process_measured_auto_makeup_no_nan ... ok
+test tests::test_process_lookahead_no_panic ... ok
+test tests::test_process_auto_makeup_boosts_gain ... ok
+test tests::test_process_ms_mode_finite ... ok
+test tests::test_process_silence_stereo_finite ... ok
+test tests::test_process_zero_frames ... ok
+test tests::test_rebuild_cached_parameters_includes_aliases ... ok
+test tests::test_rebuild_cached_parameters_band_count ... ok
+test tests::test_process_with_tilt_no_nan ... ok
+test tests::test_reset_clears_compressor_envelopes ... ok
+test tests::test_set_crossover_freq_updates_smoother ... ok
+test tests::test_set_attack_updates_coefficients ... ok
+test tests::test_set_num_bands_rebuilds_crossovers_and_biquads ... ok
+test tests::test_set_lookahead_ms_updates_buffers ... ok
+test tests::test_set_param_value_out_of_range_is_noop ... ok
+test tests::test_set_parameter_alias_roundtrips ... ok
+test tests::test_set_parameter_attack_release_updates_coefficients ... ok
+test tests::test_set_parameter_band_attack_release_updates_coefficients ... ok
+test tests::test_set_parameter_band_fields_roundtrip ... ok
+test tests::test_process_link_channels_no_nan ... ok
+test tests::test_set_parameter_band_nan_ignored ... ok
+test tests::test_set_parameter_band_out_of_range_returns_error ... ok
+test tests::test_set_parameter_crossover_freqs_update_smoothers ... ok
+test tests::test_set_parameter_global_float_nan_returns_error ... ok
+test tests::test_set_parameter_band_unknown_field_returns_error ... ok
+test tests::test_set_parameter_global_roundtrips ... ok
+test tests::test_set_parameter_mix_and_threshold_update_smoothers ... ok
+test tests::test_set_parameter_per_band_lookahead_updates_buffers ... ok
+test tests::test_set_parameter_type_mismatch_errors ... ok
+test tests::crossover_and_dynamics_automation_are_block_partition_invariant_and_bounded ... ok
+test tests::test_set_parameter_unknown_returns_error ... ok
+test tests::test_set_release_updates_coefficients ... ok
+test tests::test_set_threshold_updates_smoother ... ok
+test tests::test_set_sidechain_tilt_rebuilds_biquads ... ok
+test tests::test_stub_params_not_exposed ... ok
+test tests::try_from_params_rejects_invalid_crossover_configuration ... ok
+test tests::try_from_params_rejects_invalid_global_values ... ok
+test types::tests::deserialize_empty_json_uses_param_specs_defaults ... ok
+test tests::test_process_mix_dry_only ... ok
+test tests::test_tilt_biquad_reset_and_rebuild ... ok
+test tests::oversized_block_is_chunked_without_changing_state_or_output ... ok
+test tests::test_sidechain_tilt_is_true_tilt ... ok
+test tests::test_sidechain_tilt_zero_keeps_preallocated_biquads ... ok
+test tests::cascaded_lr4_reconstruction_sweep_has_bounded_transfer_and_deep_fitted_null ... ok
+
+test result: ok. 118 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test linked_multiband_transients_match_per_band_independent_gain_trajectories ... ok
+test near_threshold_modulation_separates_detector_knee_attack_release_and_link ... ok
+test no_reduction_impulses_reconstruct_cascade_and_preserve_interband_timing ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.80s
+
+
+running 12 tests
+test broadband_preset_matches_explicit_core_config ... ok
+test legacy_parameter_ids_and_defaults_are_preserved ... ok
+test eos_drain_accounts_with_new_stages_active ... ok
+test lookahead_dry_alignment_is_sample_exact ... ok
+test adjacent_multitone_matches_lr4_prototype_phase_and_sum ... ok
+test linked_and_unlinked_stereo_image ... ok
+test rms_detector_matches_windowed_energy_oracle ... ok
+test new_detector_controls_allocate_nothing_on_cold_thread ... ok
+test dense_automation_with_new_stages_is_partition_invariant ... ok
+test sidechain_hpf_filters_detector_not_audio ... ok
+test attack_hold_release_follow_absolute_sample_clock ... ok
+test static_knee_ratio_range_law_matches_f64_oracle ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+
+running 5 tests
+test supplemental_rms_without_enable_contract_lock ... ok
+test requested_legacy_default_bit_exact_mixed_program ... ok
+test requested_enabled_120hz_4th_rms_lf_separation ... ok
+test supplemental_pure_tone_rms_hpf_isolation_ratio20 ... ok
+test requested_enabled_zero_hz_matches_disabled ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 7 tests
+test errors_are_retryable_and_supported_eos_requires_reset ... ok
+test supported_bulk_snapshots_and_zero_delay_keep_the_eos_contract ... ok
+test recursive_wet_keeps_legacy_eos_until_mix_is_actually_dry ... ok
+test one_band_wet_tail_equals_zero_continuation_and_then_stays_silent ... ok
+test drain_call_bound_tracks_full_capacity_partial_empty_and_reset ... ok
+test dry_output_preserves_first_and_final_samples_through_eos ... ok
+test cold_finite_process_drain_query_and_reset_allocate_and_free_nothing ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+
+running 9 tests
+test dry_mix_passthrough ... ok
+test changing_num_bands_requires_rebuild ... ok
+test invalid_parameter_value_is_rejected ... ok
+test plugin_info_and_channels ... ok
+test parameter_roundtrip ... ok
+test unknown_parameter_is_rejected ... ok
+test plugin_processes_stereo_sine ... ok
+test reset_then_process_is_stable ... ok
+test compression_reduces_level ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 1 test
+test reported_lookahead_matches_dry_audio_at_every_supported_test_rate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 9 tests
+test old_presets_keep_unlimited_zero_hold_and_new_fields_roundtrip ... ok
+test scalar_validation_keeps_schema_errors_transactional ... ok
+test per_band_overrides_inherit_and_new_peaks_retrigger_hold ... ok
+test cap_is_enforced_immediately_when_automated_during_reduction ... ok
+test scalar_controls_reach_the_independent_static_gain_curve ... ok
+test hold_duration_and_release_match_sample_clock_and_partitioning ... ok
+test multiband_controls_processing_and_reset_allocate_nothing_on_cold_thread ... ok
+test range_caps_static_curve_before_makeup_and_parallel_mix ... ok
+test scalar_automation_preserves_running_audio_without_callback_heap_operations ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 6 tests
+test adapter_forwards_bounded_render_while_mathematical_tail_is_infinite ... ok
+test rejected_drain_does_not_start_eos_or_freeze_policy ... ok
+test exact_finite_paths_take_precedence_over_recursive_render_policy ... ok
+test daw_host_renders_explicit_cutoff_without_claiming_finite_iir_support ... ok
+test chosen_extent_stays_frozen_when_mix_settles_dry_during_render ... ok
+test chosen_recursive_extent_matches_uninterrupted_zero_continuation ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+
+running 3 tests
+test test_multiband_compressor_instantiation ... ok
+test test_multiband_compressor_processing ... ok
+test test_multiband_compressor_ms_mode_roundtrip ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling sotf-plugin-multiband-compressor v0.5.16 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-compressor)
+    Finished `release` profile [optimized] target(s) in 1m 24s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_multiband_compressor-5faa6ac2fdd626ef)
+     Running unittests bin/qa_compressor_curve.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_compressor_curve-2661eb5bad7477b1)
+     Running unittests bin/qa_multiband_compressor.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_multiband_compressor-c1b40cec22a4fd27)
+     Running tests/audit_signal_paths.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_signal_paths-f495b366c541e9c6)
+     Running tests/compressor_accuracy.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/compressor_accuracy-9449f183fa4c4509)
+     Running tests/detector_scenarios.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/detector_scenarios-d6489cc0e2576f1e)
+     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/finite_stream-54835faa59ed6b00)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-452dd0d617ae2ebe)
+     Running tests/lookahead_latency.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/lookahead_latency-a0d532d7c2b5b469)
+     Running tests/range_hold.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/range_hold-ef193fe775d912b0)
+     Running tests/recursive_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/recursive_render-f8caf5b8ff4af8a7)
+     Running tests/test_multiband.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/test_multiband-9fcffb024a63d11e)
+   Doc-tests sotf_plugin_multiband_compressor

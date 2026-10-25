@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_compressor_curve.py"
+  ],
+  "renderer": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-compressor-curve",
+  "exit_code": 1,
+  "seconds": 3.568697749869898,
+  "output": ".......F.\n======================================================================\nFAIL: test_native_hard_knee_switch_at_point_one_db_is_observable (test_compressor_curve.NativeCompressorCurveTests.test_native_hard_knee_switch_at_point_one_db_is_observable)\n----------------------------------------------------------------------\nTraceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/test_compressor_curve.py\", line 149, in test_native_hard_knee_switch_at_point_one_db_is_observable\n    self.assertLess(results[0] - results[1], 0.013)\nAssertionError: 0.015565975397407783 not less than 0.013\n\n----------------------------------------------------------------------\nRan 9 tests in 2.613s\n\nFAILED (failures=1)\n"
+}

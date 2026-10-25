@@ -1,0 +1,36 @@
+{
+  "split_ids": {
+    "train": [
+      "8c054db5aab02d2ae2340db1adde424345fcb730f47a946f28546ab91d4d0814",
+      "6cb8afb41def3401987d82948522de85f4f57c944570595720cc20a8868ffb9d",
+      "37e1a0835283ef29aab9843c7894c23fe37cd602dbb083790e851f8b8707ae9b",
+      "6f3024255f36569cd133b4766d5c721f5cfd7d73b1eb34acb7da5f632ed7f09f",
+      "69221b413d35576f221e7b7376ff4e8b2ab62b65c0d94b9c67a4bc9448fc3c8a",
+      "20def68b9ae4e8114c4dde69682430461ee676a4bc9e3639652b8bde128af222",
+      "bbd2eea748f3b4f239cffc1a20d6ef054f2b876a75c430b292528bddaf565213",
+      "1d0c7dc541787f4fcede827c6b1ba4352d2365a2020ff5492c1fedd2b5a27236",
+      "10b52b9a7c7ca763b0a21e07646b942fed04fa388fcfee565f8a42874b924235",
+      "9e261ba3bcd7ebf39b1b9d3eda032b5ef7cc53b0d72d56bc3dc97a8f968f943e"
+    ],
+    "development": [
+      "83d6c574762d2a9e5fc312be04d4906244e22e95ef5adfe6b397b1344db75456",
+      "bf44443136e798bb84b5c9ae8bd7d8a24231b850d7d97733d5d2abffadfb68e1",
+      "302f2046847aa6554ccaafb2f2f23a2476abc7b856b5dfab636d0ba9d3367fe3",
+      "2649ba5d7167939388ab544b0276bffe2b5dae10360d56b685e13623d9541b6f",
+      "a5089e8db8ec1ee811bb47e5060253aad3943abfebab8fc350b2155ce215d127",
+      "70b6f9de5035428c329ee34b4651f1fe3f853af686fecf60e48adc5cd764fa3a",
+      "324a3efb0f3ca9e463c55130dc11895ab06072888da9c678fade5f9fcafdfead",
+      "603f87b226f5b30c6e7a095acbeaa4e4c1aa874082ddc5d164dd7fdd6f6f5471"
+    ]
+  },
+  "seed": 20361026,
+  "data": "Synthetic static gain-computer curves; no hardware/audio or timing labels",
+  "license": "GPL-3.0-or-later",
+  "arguments": {
+    "output": "/Volumes/home_tmp/tmp/ml-compressor-curve-20261025/smoke",
+    "examples": 10,
+    "development": 8,
+    "epochs": 5,
+    "seed": 20361026
+  }
+}

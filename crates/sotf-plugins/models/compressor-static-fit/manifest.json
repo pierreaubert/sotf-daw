@@ -1,0 +1,20 @@
+{
+  "format": "sotf-compressor-static-assistant-manifest-v1",
+  "model_format": "sotf-compressor-static-initializer-v1",
+  "weights_sha256": "30c80f93df4e25bbb80133099654329eca5ebe9779396a10fbd22f88b87fb06a",
+  "architecture": "128 -> 64 SiLU -> 64 SiLU -> 4 tanh",
+  "trainable_parameters": 12676,
+  "license": "GPL-3.0-or-later",
+  "provenance": "Synthetic constant-amplitude static compressor curves generated in project; no external audio/hardware/weights",
+  "execution": "optional offline NumPy/SciPy, native static validation; no audio-thread inference",
+  "status": "experimental_static_assistance_validated_no_ml_advantage_claim",
+  "validation": "audit/artifacts/ml-compressor-curve-20261025",
+  "not_inferred": [
+    "attack",
+    "release",
+    "hold",
+    "crossovers",
+    "hardware memory",
+    "mixed-band transient/peak behavior"
+  ]
+}

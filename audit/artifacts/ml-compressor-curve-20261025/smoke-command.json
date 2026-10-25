@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_compressor_curve.py",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-compressor-curve-20261025/smoke",
+    "--examples",
+    "10",
+    "--development",
+    "8",
+    "--epochs",
+    "5",
+    "--seed",
+    "20361026"
+  ],
+  "exit_code": 0,
+  "seconds": 4.758457874879241,
+  "output": "{\"weights_sha256\": \"5e63609558dc6116e06b86fbf7247e6236fde8ad27170c9e1954acb999a2448a\", \"selected_epoch\": 5, \"development_mse_db2\": 85.58464813232422, \"qualification\": \"Initializer only; bounded refinement, classical comparison and actual native validation required\"}\n"
+}
