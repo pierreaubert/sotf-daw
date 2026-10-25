@@ -1,0 +1,9 @@
+{
+  "scripts/ml/aae_room_features.py": "b69cfd506e0f83714ab5484f287d64801af5d5657f46ff9c62cf2c76d98ff2a7",
+  "scripts/ml/aae_room_model.py": "ed85257dde6e188bdaa555e17220b71cb61341e9c0e94ea0e0ec51540efb0d80",
+  "scripts/ml/evaluate_aae_room.py": "a96b7681cd20beb097c03cc6b08f48edf7b02accadfb7178c0eb49f8f4d4a547",
+  "scripts/ml/fit_aae_room.py": "86a102b5d62a9f31d0a0e76bce30baa30c19f2d7c570e3312ce1f011043221bf",
+  "scripts/ml/test_aae_room_features.py": "61aadbe21c216afb743d74d6e8451a8900bc31ed1d31d66336c643b0dec4753c",
+  "scripts/ml/test_aae_room_model.py": "0f9f379402679f7cd72f5cda2638c0abf7d556ecb08a05c831527433e36ff053",
+  "scripts/ml/train_aae_room.py": "efbd6455fd4a7094f525aa8e5a79965bab2e20326524c4820d4f4832e5ee0942"
+}

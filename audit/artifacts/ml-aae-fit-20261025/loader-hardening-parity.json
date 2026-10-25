@@ -1,0 +1,9 @@
+{
+  "cases": 256,
+  "exact_arrays_equal": true,
+  "max_error_db": 0.0,
+  "model_sha256": "f13de094177d7d8270d34bb8e1bc4a49fcd6f43d9a04536220169721df97c2d8",
+  "preimage_sha256": "6ea43afda3f13402ad1faebc63a354b5fbd285eb0d0ca9b37ef1e4951cd263de",
+  "current_source_sha256": "ed85257dde6e188bdaa555e17220b71cb61341e9c0e94ea0e0ec51540efb0d80",
+  "change": "Only reject malformed parsed model structures and normalize array conversion errors. Prediction equations and weights unchanged; no holdout-driven tuning."
+}

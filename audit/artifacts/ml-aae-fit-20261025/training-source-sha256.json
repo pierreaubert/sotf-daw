@@ -1,0 +1,5 @@
+{
+  "scripts/ml/aae_room_features.py": "ed7dca5cc3f166a552abd1731e9986a7c4d9b8c7b7f90d46a0ff13e0b0a39578",
+  "scripts/ml/aae_room_model.py": "903444e4a5c86979dd2e103dacfdedf5aec3bc22f63fb32b3ac3e811ac9e7ae0",
+  "scripts/ml/train_aae_room.py": "8ca14f92bb429365dc0b020ea3c77ee47910125a66750f14962b0e7547627789"
+}

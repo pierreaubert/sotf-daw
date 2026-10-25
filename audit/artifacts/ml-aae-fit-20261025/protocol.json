@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "proposal": "AAE offline learned forward surrogate with exact native verification and classical fallback",
+  "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "training_source": "Only generated native AAE impulse responses; no measured/private recording used for training",
+  "controls": [
+    "room_size",
+    "rt60",
+    "bass_ratio",
+    "treble_ratio",
+    "pre_delay_ms",
+    "early_late_fraction"
+  ],
+  "layouts": 9,
+  "presets": 4,
+  "profile": "wet-only, unmodulated, non-adaptive, input diffusion/envelopment/height fixed to 0.7/0.7/0.5",
+  "splits": {
+    "train": {
+      "seed": 20261025,
+      "count": 1536
+    },
+    "development": {
+      "seed": 20262025,
+      "count": 192
+    },
+    "final_holdout": {
+      "seed": 20263025,
+      "count": 256
+    }
+  },
+  "training_seed": 20264025,
+  "feature_domain": "16 kHz analysis, 8-second finite observation, seven normalized reverse-energy curves at 32 times, clipped below -40 dB; explicit 2 ms direct exclusion",
+  "quality_gate": "Native profile RMSE <= 3 dB is an engineering match proxy, not perceptual or calibrated room quality",
+  "selection": "Development loss only; freeze weights and hash before reading/scoring final holdout",
+  "baseline": "Physics-derived, default and native dictionary seeds; identical native evaluation budgets for neural/classical comparisons",
+  "measured_data": "Local L/R WAVs inspected but not established as deconvolved IRs; excluded. Public dataset provenance still being checked.",
+  "scope": "AAE remains implementation in progress until model/native fit, measured-domain and other quality/host requirements have evidence; full 31-plugin/5-program audit unchanged.",
+  "control_coordinates": "Logarithmic room_size/rt60/bass_ratio/treble_ratio, linear predelay and ER fraction; early/late levels sum to one during identification.",
+  "measurement_admission": "At least 25 dB observed decay coverage in three curves; missing future observations are masked and not fabricated silence."
+}

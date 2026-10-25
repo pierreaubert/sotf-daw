@@ -1,0 +1,1006 @@
+{
+  "input_sha256": "f7789f3a1204ec594c1e8a8300a05ec94f8551ed8a4f3952cc1e05e879b5a8da",
+  "input_rate": 16000,
+  "direct_sample": 0,
+  "feature_spec": {
+    "version": 1,
+    "sample_rate": 16000,
+    "observation_seconds": 8.0,
+    "time_frames": [
+      16,
+      21,
+      28,
+      37,
+      49,
+      65,
+      86,
+      114,
+      151,
+      200,
+      265,
+      351,
+      464,
+      614,
+      814,
+      1077,
+      1426,
+      1888,
+      2500,
+      3309,
+      4382,
+      5801,
+      7680,
+      10169,
+      13463,
+      17824,
+      23599,
+      31244,
+      41366,
+      54767,
+      72510,
+      96000
+    ],
+    "centers_hz": [
+      125.0,
+      250.0,
+      500.0,
+      1000.0,
+      2000.0,
+      4000.0
+    ],
+    "band_q": 1.4142135623730951,
+    "floor_db": -40.0,
+    "direct_mask_frames": 32,
+    "curve_order": [
+      "wide",
+      "125.0",
+      "250.0",
+      "500.0",
+      "1000.0",
+      "2000.0",
+      "4000.0"
+    ],
+    "channel_combination": "sum of per-channel squared filtered pressure",
+    "edc": "reverse cumulative energy over the observed window, normalized per band",
+    "resampling": "scipy resample_poly Kaiser beta=8.6, constant zero boundary",
+    "time_origin": "caller supplied; no peak alignment or geometry inference"
+  },
+  "renderer_sha256": "aad8786bc11a4d3d3a02ef530d04309d5d202b9b0d94a50f00b58d8c195f0d8c",
+  "model_sha256": null,
+  "model_error": null,
+  "neural_fit_error": null,
+  "classical": {
+    "method": "classical_native",
+    "qualified_profile_proxy": true,
+    "best": {
+      "evaluation": 7,
+      "mse_db2": 0.4905644032225166,
+      "preset": "cathedral",
+      "unit": [
+        0.9992441607705318,
+        0.24491106860265496,
+        0.9362346658455825,
+        0.5405388335022558,
+        0.12945306777954102,
+        0.00045166269410401583
+      ],
+      "params": {
+        "auto_gain_enabled": false,
+        "auto_gain_max_db": 12.0,
+        "auto_gain_smoothing_ms": 100.0,
+        "bass_ratio": 1.8864930868148804,
+        "bypass": false,
+        "content_aware": false,
+        "dialogue_attenuation_db": 6.0,
+        "dry_level": 0.0,
+        "envelopment": 0.699999988079071,
+        "er_level": 0.00045166269410401583,
+        "er_mod_depth": 0.0,
+        "height_amount": 0.5,
+        "input_diffusion": 0.699999988079071,
+        "late_level": 0.9995483160018921,
+        "lfe_level": 0.0,
+        "mod_depth": 0.0,
+        "pre_delay_ms": 12.945306777954102,
+        "room_preset": "cathedral",
+        "room_size": 2.993865728378296,
+        "rt60": 0.6248242855072021,
+        "safety_limit_db": 6.0,
+        "solo_early": false,
+        "solo_late": false,
+        "speaker_config": "5.0",
+        "treble_ratio": 0.47736483812332153
+      },
+      "native_sha256": "fb3211049db8aa849d8b6d3fa97aca022e44ed014d03e14e044cdf69ce49821a",
+      "native_tail": "Infinite",
+      "native_t20_fits": [
+        {
+          "rt60_seconds": 1.029736773441725,
+          "r_squared": 0.9989410230473532,
+          "points": 5407,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 1.182856988229177,
+          "r_squared": 0.9973763627655238,
+          "points": 6123,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 1.150121590810955,
+          "r_squared": 0.9986765312266808,
+          "points": 6085,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 1.0988058253119939,
+          "r_squared": 0.9991297949167621,
+          "points": 5784,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 1.0050755928351853,
+          "r_squared": 0.9992819575096707,
+          "points": 5336,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 0.8149498269835325,
+          "r_squared": 0.9991844296034768,
+          "points": 4353,
+          "method": "observed -5..-25 dB extrapolation"
+        },
+        {
+          "rt60_seconds": 0.604667410275598,
+          "r_squared": 0.997900471276981,
+          "points": 3205,
+          "method": "observed -5..-25 dB extrapolation"
+        }
+      ],
+      "per_curve_rmse_db": [
+        0.6678989846289057,
+        0.5280514961008633,
+        0.49888125744832806,
+        0.4554280041999548,
+        0.530724554596936,
+        0.7843706621094233,
+        1.1643969777881007
+      ],
+      "seconds": 0.26416179118677974
+    },
+    "profile_rmse_db": 0.7004030291357374,
+    "native_evaluations": 8,
+    "max_native_evaluations": 8,
+    "first_qualified_evaluation": 1,
+    "fit_seconds": 0.3017410410102457,
+    "proposal_cost": {
+      "seconds": 0.0,
+      "surrogate_evaluations": 0
+    },
+    "trace": [
+      {
+        "evaluation": 1,
+        "mse_db2": 2.7267484281964314,
+        "preset": "small",
+        "unit": [
+          0.9463882386830597,
+          0.31622695998744554,
+          0.28853729038781445,
+          0.7204654757086274,
+          0.4723100280761719,
+          0.24576325714588165
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.0421026945114136,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.24576325714588165,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.7542367577552795,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 47.23100280761719,
+          "room_preset": "small",
+          "room_size": 2.5945911407470703,
+          "rt60": 0.7736455202102661,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.6376960873603821
+        },
+        "native_sha256": "87a9aff96853f570faed9c259134489fa192d73bd19fa74dc585e1d41294456d",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 0.7042114264050177,
+            "r_squared": 0.9994230255477228,
+            "points": 3730,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8354914090634346,
+            "r_squared": 0.9962146954867259,
+            "points": 4252,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7987330920623676,
+            "r_squared": 0.9977738013207174,
+            "points": 4307,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7902969533207674,
+            "r_squared": 0.9994095335634929,
+            "points": 4189,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7813538106393966,
+            "r_squared": 0.9991866900300239,
+            "points": 4144,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7281121135469988,
+            "r_squared": 0.9994837994326932,
+            "points": 3878,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.6259692121311822,
+            "r_squared": 0.9995882367238355,
+            "points": 3351,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          1.523149884914862,
+          2.155880395564526,
+          2.1022044986864725,
+          1.9717038949817374,
+          1.3355826073474735,
+          0.3932530271008124,
+          1.368986595012011
+        ],
+        "seconds": 0.040221708128228784
+      },
+      {
+        "evaluation": 2,
+        "mse_db2": 2.3615521071907604,
+        "preset": "medium",
+        "unit": [
+          0.05587186430161239,
+          0.3116952728244085,
+          0.4290942172684399,
+          0.49038265896589156,
+          0.6676611328125,
+          0.5514990091323853
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.1853421926498413,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.5514990091323853,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.44850099086761475,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 66.76611328125,
+          "room_preset": "medium",
+          "room_size": 0.23267000913619995,
+          "rt60": 0.7632136940956116,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.4403446912765503
+        },
+        "native_sha256": "0d31a864735147dd735195bbe5283d662e6f71bda6030e4fca483e704c9aae20",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 0.7243270842227614,
+            "r_squared": 0.9951762561229462,
+            "points": 3704,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.890326876340206,
+            "r_squared": 0.9986354192288862,
+            "points": 4566,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8691835420843624,
+            "r_squared": 0.9980061949401683,
+            "points": 4436,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8520908392582666,
+            "r_squared": 0.9990436718743286,
+            "points": 4441,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7992255935689961,
+            "r_squared": 0.9990949536087586,
+            "points": 4184,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.6869489258687563,
+            "r_squared": 0.998240123531284,
+            "points": 3548,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.5057597571439535,
+            "r_squared": 0.9951100818298112,
+            "points": 2703,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          1.7491244406275992,
+          1.556407260530108,
+          1.945667503137664,
+          1.9093924496250863,
+          1.456807904107712,
+          1.0153363331437395,
+          0.6814882116221502
+        ],
+        "seconds": 0.07584637519903481
+      },
+      {
+        "evaluation": 3,
+        "mse_db2": 0.9831452480270553,
+        "preset": "large",
+        "unit": [
+          0.984954131056731,
+          0.4483341308582686,
+          0.35637675782449935,
+          0.009983391815163485,
+          0.49505950927734377,
+          0.17185688018798828
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.1089361906051636,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.17185688018798828,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.8281431198120117,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 49.505950927734375,
+          "room_preset": "large",
+          "room_size": 2.8802218437194824,
+          "rt60": 1.1492576599121094,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.20323948562145233
+        },
+        "native_sha256": "2161e33a768f6adbccb1a412e3c0e68179521bd07e9ac3335f788fb43ff0f45e",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.1054843270254007,
+            "r_squared": 0.9991894782153017,
+            "points": 5844,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2543237110603564,
+            "r_squared": 0.9989449244090711,
+            "points": 6829,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2326732509530225,
+            "r_squared": 0.9990157708409511,
+            "points": 6770,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.176321208826176,
+            "r_squared": 0.9991273043413826,
+            "points": 6297,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0133937231624162,
+            "r_squared": 0.9993448594939659,
+            "points": 5472,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.791472357407296,
+            "r_squared": 0.9991951582209422,
+            "points": 4163,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.5766728710197992,
+            "r_squared": 0.9928222668799698,
+            "points": 3057,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          1.2684024873326571,
+          1.3788533657032849,
+          1.2322956465468498,
+          0.9864912999337584,
+          0.8015555737356901,
+          0.27867961790921186,
+          0.4000799290621163
+        ],
+        "seconds": 0.11190929100848734
+      },
+      {
+        "evaluation": 4,
+        "mse_db2": 0.5661447943054331,
+        "preset": "cathedral",
+        "unit": [
+          0.9992441607705318,
+          0.24491106860265496,
+          0.9862346586387336,
+          0.5405388335022558,
+          0.12945306777954102,
+          0.00045166269410401583
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.974932312965393,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.00045166269410401583,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.9995483160018921,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 12.945306777954102,
+          "room_preset": "cathedral",
+          "room_size": 2.993865728378296,
+          "rt60": 0.6248242855072021,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.47736483812332153
+        },
+        "native_sha256": "6d6e25e4a224f64b6d0c93e833a8b2a7776619627ea2986579b40c91883203a4",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.076980741902899,
+            "r_squared": 0.9990628056242524,
+            "points": 5628,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2319944483835994,
+            "r_squared": 0.9976047292481915,
+            "points": 6485,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.1981132293035417,
+            "r_squared": 0.9987795124292662,
+            "points": 6364,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.1430532563676954,
+            "r_squared": 0.9991364591491625,
+            "points": 5953,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0426676178554681,
+            "r_squared": 0.999343127916689,
+            "points": 5503,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8408118119736375,
+            "r_squared": 0.9991559322552868,
+            "points": 4487,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.6206607019995419,
+            "r_squared": 0.9975510755214437,
+            "points": 3279,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          0.7877724837281069,
+          0.761326665938962,
+          0.6430064270392706,
+          0.5474833655296429,
+          0.5830589390591931,
+          0.7027097065474113,
+          1.102658525070609
+        ],
+        "seconds": 0.14948100014589727
+      },
+      {
+        "evaluation": 5,
+        "mse_db2": 0.5661447943054331,
+        "preset": "cathedral",
+        "unit": [
+          0.9492441480213643,
+          0.24491106860265496,
+          0.9862346586387336,
+          0.5405388335022558,
+          0.12945306777954102,
+          0.00045166269410401583
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.974932312965393,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.00045166269410401583,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.9995483160018921,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 12.945306777954102,
+          "room_preset": "cathedral",
+          "room_size": 2.6147353649139404,
+          "rt60": 0.6248242855072021,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.47736483812332153
+        },
+        "native_sha256": "6d6e25e4a224f64b6d0c93e833a8b2a7776619627ea2986579b40c91883203a4",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.076980741902899,
+            "r_squared": 0.9990628056242524,
+            "points": 5628,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2319944483835994,
+            "r_squared": 0.9976047292481915,
+            "points": 6485,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.1981132293035417,
+            "r_squared": 0.9987795124292662,
+            "points": 6364,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.1430532563676954,
+            "r_squared": 0.9991364591491625,
+            "points": 5953,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0426676178554681,
+            "r_squared": 0.999343127916689,
+            "points": 5503,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8408118119736375,
+            "r_squared": 0.9991559322552868,
+            "points": 4487,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.6206607019995419,
+            "r_squared": 0.9975510755214437,
+            "points": 3279,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          0.7877724837281069,
+          0.761326665938962,
+          0.6430064270392706,
+          0.5474833655296429,
+          0.5830589390591931,
+          0.7027097065474113,
+          1.102658525070609
+        ],
+        "seconds": 0.1880279160104692
+      },
+      {
+        "evaluation": 6,
+        "mse_db2": 2.7023401274600203,
+        "preset": "cathedral",
+        "unit": [
+          0.9992441607705318,
+          0.29491105969159603,
+          0.9862346586387336,
+          0.5405388335022558,
+          0.12945306777954102,
+          0.00045166269410401583
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.974932312965393,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.00045166269410401583,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.9995483160018921,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 12.945306777954102,
+          "room_preset": "cathedral",
+          "room_size": 2.993865728378296,
+          "rt60": 0.725787341594696,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.47736483812332153
+        },
+        "native_sha256": "a3631171de2e1a9bb879cab1694cf1a4f9c2b78ef813cff159db4c479c2274dc",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.243649573980574,
+            "r_squared": 0.999268417877541,
+            "points": 6514,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.4211834948175823,
+            "r_squared": 0.9977982465592639,
+            "points": 7526,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.3961442334858196,
+            "r_squared": 0.9989342889086307,
+            "points": 7449,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.3183751400700776,
+            "r_squared": 0.9993118908653562,
+            "points": 6905,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2041369054184865,
+            "r_squared": 0.9997238008083855,
+            "points": 6376,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.970969491963021,
+            "r_squared": 0.9995996767496964,
+            "points": 5163,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.7143060457698431,
+            "r_squared": 0.9975420996133767,
+            "points": 3816,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          1.6865080833928514,
+          2.058650023057144,
+          1.8755909793197996,
+          1.5915759496283306,
+          1.550740486660745,
+          1.3402768764612292,
+          1.2577510770223719
+        ],
+        "seconds": 0.22634050017222762
+      },
+      {
+        "evaluation": 7,
+        "mse_db2": 0.4905644032225166,
+        "preset": "cathedral",
+        "unit": [
+          0.9992441607705318,
+          0.24491106860265496,
+          0.9362346658455825,
+          0.5405388335022558,
+          0.12945306777954102,
+          0.00045166269410401583
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.8864930868148804,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.00045166269410401583,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.9995483160018921,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 12.945306777954102,
+          "room_preset": "cathedral",
+          "room_size": 2.993865728378296,
+          "rt60": 0.6248242855072021,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.47736483812332153
+        },
+        "native_sha256": "fb3211049db8aa849d8b6d3fa97aca022e44ed014d03e14e044cdf69ce49821a",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.029736773441725,
+            "r_squared": 0.9989410230473532,
+            "points": 5407,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.182856988229177,
+            "r_squared": 0.9973763627655238,
+            "points": 6123,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.150121590810955,
+            "r_squared": 0.9986765312266808,
+            "points": 6085,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0988058253119939,
+            "r_squared": 0.9991297949167621,
+            "points": 5784,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0050755928351853,
+            "r_squared": 0.9992819575096707,
+            "points": 5336,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8149498269835325,
+            "r_squared": 0.9991844296034768,
+            "points": 4353,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.604667410275598,
+            "r_squared": 0.997900471276981,
+            "points": 3205,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          0.6678989846289057,
+          0.5280514961008633,
+          0.49888125744832806,
+          0.4554280041999548,
+          0.530724554596936,
+          0.7843706621094233,
+          1.1643969777881007
+        ],
+        "seconds": 0.26416179118677974
+      },
+      {
+        "evaluation": 8,
+        "mse_db2": 0.5229244253727987,
+        "preset": "cathedral",
+        "unit": [
+          0.9992441607705318,
+          0.24491106860265496,
+          0.9862346586387336,
+          0.5905388362944962,
+          0.12945306777954102,
+          0.00045166269410401583
+        ],
+        "params": {
+          "auto_gain_enabled": false,
+          "auto_gain_max_db": 12.0,
+          "auto_gain_smoothing_ms": 100.0,
+          "bass_ratio": 1.974932312965393,
+          "bypass": false,
+          "content_aware": false,
+          "dialogue_attenuation_db": 6.0,
+          "dry_level": 0.0,
+          "envelopment": 0.699999988079071,
+          "er_level": 0.00045166269410401583,
+          "er_mod_depth": 0.0,
+          "height_amount": 0.5,
+          "input_diffusion": 0.699999988079071,
+          "late_level": 0.9995483160018921,
+          "lfe_level": 0.0,
+          "mod_depth": 0.0,
+          "pre_delay_ms": 12.945306777954102,
+          "room_preset": "cathedral",
+          "room_size": 2.993865728378296,
+          "rt60": 0.6248242855072021,
+          "safety_limit_db": 6.0,
+          "solo_early": false,
+          "solo_late": false,
+          "speaker_config": "5.0",
+          "treble_ratio": 0.5173672437667847
+        },
+        "native_sha256": "a74b6d0c6d2e7d6d417d1c87f544e4d8f9506c12d9510bab6057606c36156ba0",
+        "native_tail": "Infinite",
+        "native_t20_fits": [
+          {
+            "rt60_seconds": 1.0746747336992615,
+            "r_squared": 0.9992157150680956,
+            "points": 5739,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.233929806223253,
+            "r_squared": 0.9973158462996001,
+            "points": 6508,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.2071243137426235,
+            "r_squared": 0.9990243428155916,
+            "points": 6342,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.1538211035056352,
+            "r_squared": 0.9992996103710344,
+            "points": 6116,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 1.0489270964720967,
+            "r_squared": 0.9993636330737051,
+            "points": 5660,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.8776029479279848,
+            "r_squared": 0.9994521608087149,
+            "points": 4679,
+            "method": "observed -5..-25 dB extrapolation"
+          },
+          {
+            "rt60_seconds": 0.6430432084887255,
+            "r_squared": 0.9981126035205186,
+            "points": 3440,
+            "method": "observed -5..-25 dB extrapolation"
+          }
+        ],
+        "per_curve_rmse_db": [
+          0.7944158846606654,
+          0.7484269417377668,
+          0.6238910906849152,
+          0.6403549753926213,
+          0.6730470595486667,
+          0.6551516241353394,
+          0.8875364275166843
+        ],
+        "seconds": 0.30164100020192564
+      }
+    ],
+    "observed_feature_count": 224,
+    "informative_decay_curves": 7,
+    "match_rmse_limit_db": 3.0,
+    "measurement_observed_seconds": 8.0,
+    "measurement_tail_energy_fraction": 0.0,
+    "status": "profile_match_requires_review",
+    "scope": "Finite-window energy profile only; no sound-field, geometry, absolute gain or perceptual match claim."
+  },
+  "neural": null,
+  "selected_method": "classical_native",
+  "qualified_profile_proxy": true,
+  "automatic_apply": false,
+  "measurement_t20_fits": [
+    {
+      "rt60_seconds": 0.9449939244918333,
+      "r_squared": 0.9990731843040546,
+      "points": 4999,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 1.0843940937633396,
+      "r_squared": 0.9972050283002225,
+      "points": 5727,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 1.0623102827224828,
+      "r_squared": 0.9985783463258091,
+      "points": 5580,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 1.0187171986470132,
+      "r_squared": 0.9993640494610385,
+      "points": 5478,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 0.9417387612132165,
+      "r_squared": 0.9992521819940959,
+      "points": 4954,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 0.7754342137644005,
+      "r_squared": 0.9987993622897536,
+      "points": 4188,
+      "method": "observed -5..-25 dB extrapolation"
+    },
+    {
+      "rt60_seconds": 0.570200152942023,
+      "r_squared": 0.9991705168384227,
+      "points": 3066,
+      "method": "observed -5..-25 dB extrapolation"
+    }
+  ]
+}

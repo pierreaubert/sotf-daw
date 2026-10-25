@@ -1,0 +1,6 @@
+{
+  "scripts/ml/aae_room_features.py": "ed7dca5cc3f166a552abd1731e9986a7c4d9b8c7b7f90d46a0ff13e0b0a39578",
+  "scripts/ml/train_aae_room.py": "8ca14f92bb429365dc0b020ea3c77ee47910125a66750f14962b0e7547627789",
+  "scripts/ml/aae_room_model.py": "811b811a6533e5cad227ae7882b87b49b2e622fc5940a072eb9df89d0fb4a73d",
+  "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_fit_render.rs": "39b625d5d3a41e0483f5cc8577d6ec29f62031c4a3bd2900927c38d38ec308da"
+}

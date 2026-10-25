@@ -14,8 +14,21 @@
       "requirements": [
         "ML is most sensible as offline fitting of these parameters to a measured room; retain a bounded deterministic renderer."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/fit_aae_room.py",
+        "scripts/ml/aae_room_model.py",
+        "scripts/ml/train_aae_room.py",
+        "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_fit_render.rs",
+        "crates/sotf-plugins/models/aae-room-fit/manifest.json",
+        "crates/sotf-plugins/models/aae-room-fit/README.md",
+        "audit/artifacts/ml-aae-fit-20261025"
+      ],
+      "remaining": [
+        "Independent measured deconvolved-room IR evaluation with reliable direct-arrival provenance; no identified local recording admitted yet.",
+        "Cross-rate, noise/truncation/arrival-error shift validation and calibrated admission/quality criteria.",
+        "Perceptual and spatial suitability review; finite-window normalized decay fit alone does not establish a room match."
+      ]
     },
     {
       "plugin_id": 3,

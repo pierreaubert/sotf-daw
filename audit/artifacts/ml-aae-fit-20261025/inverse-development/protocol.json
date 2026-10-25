@@ -1,0 +1,19 @@
+{
+  "seed": 20266025,
+  "count": 9,
+  "native_budget_per_method": 64,
+  "rate": 16000,
+  "observation_seconds": 8,
+  "model_sha256": "f13de094177d7d8270d34bb8e1bc4a49fcd6f43d9a04536220169721df97c2d8",
+  "model_load_seconds": 0.007506667170673609,
+  "dictionary_sha256": "81dde34a8e1f961ef2c3cc664de9f421224b87d710208ded99d89ace46795ce4",
+  "selection": "fixed controls; no retuning from these results",
+  "scope": "synthetic inverse recovery only; measured-room validation pending",
+  "source_sha256": {
+    "aae_room_features.py": "b69cfd506e0f83714ab5484f287d64801af5d5657f46ff9c62cf2c76d98ff2a7",
+    "aae_room_model.py": "6ea43afda3f13402ad1faebc63a354b5fbd285eb0d0ca9b37ef1e4951cd263de",
+    "fit_aae_room.py": "27ab859ac2ee1f9c8ddde76386edf414ad911e0caf4a1d779c13346e6ea5655b",
+    "evaluate_aae_room.py": "3194e10705a53cd963565e534f4922a88190b40f4e61dd1332530db7aebb56ea"
+  },
+  "renderer_sha256": "aad8786bc11a4d3d3a02ef530d04309d5d202b9b0d94a50f00b58d8c195f0d8c"
+}

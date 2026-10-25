@@ -40,6 +40,11 @@ name = "qa-aae-timing"
 path = "bin/qa_aae_timing.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-aae-fit-render"
+path = "bin/qa_aae_fit_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 log = { workspace = true }

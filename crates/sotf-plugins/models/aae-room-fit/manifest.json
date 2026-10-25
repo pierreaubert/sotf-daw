@@ -1,0 +1,50 @@
+{
+  "model_sha256": "f13de094177d7d8270d34bb8e1bc4a49fcd6f43d9a04536220169721df97c2d8",
+  "license": "GPL-3.0-or-later",
+  "license_basis": "Native AAE synthetic responses and project-authored model/training code; same license as this workspace. No external recordings or pretrained weights.",
+  "native_renderer_source": "crates/sotf-plugins/crates/sotf-plugin-aae/bin/qa_aae_fit_render.rs",
+  "native_renderer_sha256": "aad8786bc11a4d3d3a02ef530d04309d5d202b9b0d94a50f00b58d8c195f0d8c",
+  "training_artifacts": "audit/artifacts/ml-aae-fit-20261025",
+  "model_bytes": 979273,
+  "numpy_weight_array_bytes": 191872,
+  "dictionary_bytes": 497537,
+  "record_count": 1984,
+  "unique_request_count": 1984,
+  "unique_audio_hash_count": 1984,
+  "split_overlap": false,
+  "runtime": "Offline NumPy/SciPy only; no audio callback inference, added plugin latency zero; normal renderer unaffected. Full process RSS measured separately.",
+  "dependencies": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "training_only_torch": "2.14.1"
+  },
+  "inverse_final": {
+    "cases": 36,
+    "layout_preset_pairs": 36,
+    "target_corpus_audio_overlap": 0,
+    "methods": {
+      "classical": {
+        "qualified": 36,
+        "median_rmse_db": 0.3564855622405324,
+        "worst_rmse_db": 1.236393073204216,
+        "median_fit_seconds": 3.7161932709859684,
+        "total_native_renders": 2304
+      },
+      "neural": {
+        "qualified": 36,
+        "median_rmse_db": 0.09228715653289107,
+        "worst_rmse_db": 0.5624403210041861,
+        "median_fit_seconds": 3.9708545830799267,
+        "total_native_renders": 2304
+      }
+    },
+    "selected_classical_cases": [
+      6,
+      33
+    ],
+    "neural_lower_error_cases": 34,
+    "inference_or_quality_tuning_from_final": false
+  },
+  "process_memory_evidence": "audit/artifacts/ml-aae-fit-20261025/cli-*/time-stderr.txt (macOS whole offline command; includes Python/SciPy/native worker, not audio-callback budget)",
+  "loader_hardening_parity": "audit/artifacts/ml-aae-fit-20261025/loader-hardening-parity.json"
+}

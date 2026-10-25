@@ -1,0 +1,3 @@
+# Offline fitting and validation. Torch is required only to retrain weights.
+numpy==2.5.4
+scipy==1.18.1
