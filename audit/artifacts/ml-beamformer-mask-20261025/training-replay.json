@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_beamformer_noise_mask.py",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-beamformer-mask-replay-20261025"
+  ],
+  "exit_code": 0,
+  "seconds": 0.6332001248374581,
+  "model_sha256": "5ed1fe74a6aa11d702c20469a87a209198cb742f3233903f32d12b11729998f7",
+  "exact_model_reproduction": true
+}

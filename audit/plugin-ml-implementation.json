@@ -190,8 +190,28 @@
       "requirements": [
         "Neural speech/noise masks can estimate covariances, but require a confidence fallback and a strict latency budget rather than replacing the bounded beamformer."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/beamformer_noise_mask.py",
+        "scripts/ml/train_beamformer_noise_mask.py",
+        "scripts/ml/beamformer_mask_native.py",
+        "scripts/ml/evaluate_beamformer_noise_mask.py",
+        "scripts/ml/analyze_beamformer_noise_mask.py",
+        "scripts/ml/test_beamformer_noise_mask.py",
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/noise_mask.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/masked.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/neural_mask.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-beamformer/bin/qa_beamformer_mask_render.rs",
+        "crates/sotf-plugins/models/beamformer-noise-mask",
+        "audit/ml-beamformer-mask-20261025.md",
+        "audit/artifacts/ml-beamformer-mask-20261025"
+      ],
+      "remaining": [
+        "Real multilingual speech and measured microphone/room validation; the current network estimates spatial noise-energy fractions and does not recognize speech identity.",
+        "Confidence calibration, unseen geometry/source motion and frequency-edge validation; generated holdout mask errors and confident mistakes worsen under shift.",
+        "Demonstrated waveform/perceptual benefit over classical MVDR; nine generated native probes show mixed gains and regressions, so deployment stays unadmitted.",
+        "Full heap memory, cross-platform host deadlines and click-free activation; the fixed local callback budget passed but is not portable admission."
+      ]
     },
     {
       "plugin_id": 12,

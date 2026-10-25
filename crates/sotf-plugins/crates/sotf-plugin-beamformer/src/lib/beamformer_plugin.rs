@@ -27,6 +27,8 @@ struct StreamDrain {
 /// Beamformer plugin — M-channel input to 1-channel output.
 pub struct BeamformerPlugin {
     drain_state: StreamDrain,
+    #[cfg(feature = "qa")]
+    qa_mask: Option<crate::mvdr::masked::MaskPath>,
     pub(super) num_mics: usize,
     pub(super) sample_rate: f64,
     pub(super) mic_spacing_cm: f32,
@@ -68,6 +70,54 @@ pub struct BeamformerPlugin {
 }
 
 impl BeamformerPlugin {
+    /// Install an unadmitted QA mask on a fresh MVDR stream, initially disabled.
+    ///
+    /// Allocation and model replacement belong on the control thread. No factory
+    /// parameter selects this path. `None` explicitly qualifies missing-model fallback.
+    ///
+    /// # Errors
+    /// Rejects non-MVDR or a stream that has consumed input or entered drain.
+    #[cfg(feature = "qa")]
+    pub fn install_qa_noise_mask(
+        &mut self,
+        model: Option<crate::noise_mask::NoiseMask>,
+    ) -> PluginResult<()> {
+        if self.beamformer_type != BeamformerType::Mvdr
+            || self.drain_state.has_input
+            || self.drain_state.remaining.is_some()
+        {
+            return Err("install the QA mask on a fresh MVDR stream".into());
+        }
+        self.qa_mask = Some(crate::mvdr::masked::MaskPath::new(
+            model,
+            self.num_mics,
+            FFT_SIZE / 2 + 1,
+        ));
+        Ok(())
+    }
+
+    /// Toggle the prepared QA selection; native fallback covariance stays current.
+    ///
+    /// # Errors
+    /// Rejects absent QA state or selection changes after drain begins.
+    #[cfg(feature = "qa")]
+    pub fn set_qa_noise_mask_enabled(&mut self, enabled: bool) -> PluginResult<()> {
+        if self.drain_state.remaining.is_some() {
+            return Err("reset before changing QA selection after drain".into());
+        }
+        self.qa_mask
+            .as_mut()
+            .ok_or("prepare the QA mask before selecting it")?
+            .set_enabled(enabled);
+        Ok(())
+    }
+
+    /// Copy QA decision counters without allocations.
+    #[cfg(feature = "qa")]
+    pub fn qa_noise_mask_counters(&self) -> Option<crate::mvdr::masked::MaskCounters> {
+        self.qa_mask.as_ref().map(|mask| mask.counters())
+    }
+
     pub fn new(num_mics: usize, sample_rate: impl Into<f64>) -> PluginResult<Self> {
         let sample_rate = sample_rate.into();
         // A zero rate is the legitimate unclocked state (TailLength::Unknown
@@ -96,6 +146,8 @@ impl BeamformerPlugin {
         let window = math_audio_dsp::stft::generate_sqrt_hann_window(FFT_SIZE);
 
         let mut p = Self {
+            #[cfg(feature = "qa")]
+            qa_mask: None,
             drain_state: StreamDrain {
                 silence: vec![0.0; num_mics * (FFT_SIZE / 2)],
                 ..Default::default()
@@ -319,6 +371,10 @@ impl Plugin for BeamformerPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        if let Some(mask) = &mut self.qa_mask {
+            mask.reset();
+        }
         self.drain_state.has_input = false;
         self.drain_state.remaining = None;
         self.mvdr.reset();
@@ -558,6 +614,31 @@ impl BeamformerPlugin {
                                 if covariance_dirty || self.mvdr.weights_dirty() {
                                     self.mvdr.compute_weights(&self.steering_vectors);
                                 }
+                                #[cfg(feature = "qa")]
+                                let beamformed = if let Some(mask) = &mut self.qa_mask {
+                                    if !frozen && self.stft_filled {
+                                        let supported =
+                                            crate::noise_mask::NoiseMask::supports_context(
+                                                self.sample_rate,
+                                                self.num_mics,
+                                                self.mic_spacing_cm,
+                                                self.steer_angle_deg,
+                                            );
+                                        mask.apply(
+                                            &self.mvdr,
+                                            &self.stft_channels,
+                                            &self.steering_vectors,
+                                            supported,
+                                        )
+                                    } else if frozen && mask.ready() {
+                                        mask.apply_frozen(&self.stft_channels)
+                                    } else {
+                                        self.mvdr.apply_weights_into(&self.stft_channels)
+                                    }
+                                } else {
+                                    self.mvdr.apply_weights_into(&self.stft_channels)
+                                };
+                                #[cfg(not(feature = "qa"))]
                                 let beamformed = self.mvdr.apply_weights_into(&self.stft_channels);
                                 self.fft.freq_buffer[..spectrum_size].copy_from_slice(beamformed);
                             }

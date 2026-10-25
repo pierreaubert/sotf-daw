@@ -14,11 +14,16 @@ name = "sotf_plugin_beamformer"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-beamformer"
 path = "bin/qa_beamformer.rs"
+required-features = ["qa"]
+
+[[bin]]
+name = "qa-beamformer-mask-render"
+path = "bin/qa_beamformer_mask_render.rs"
 required-features = ["qa"]
 
 [dependencies]
@@ -30,3 +35,4 @@ rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 math-dsp = { workspace = true }
+sha2 = { workspace = true, optional = true }

@@ -1,0 +1,20 @@
+{
+  "scripts/ml/beamformer_noise_mask.py": "8fddca5f78a304706ddc496e5e1f6b66abc90930430bdbd5434649fd9ff7d68a",
+  "scripts/ml/train_beamformer_noise_mask.py": "5cbce299a46174a52fefb765022b1867f1203707c8e81ab006784d2fd68d3aee",
+  "scripts/ml/test_beamformer_noise_mask.py": "4190d701b9e22a97a1950fdc81a08ea8332943c064e6967a5e8825d729ff04b7",
+  "scripts/ml/beamformer_mask_native.py": "a3756b32952a8c00f84a3868d41231ffb2e806bd8849f2c6572f162b2ec1d0d9",
+  "scripts/ml/evaluate_beamformer_noise_mask.py": "7e526d4700485ba682ec4c9f6564be80a8125cefa3505d123057a6848f75e6f7",
+  "scripts/ml/analyze_beamformer_noise_mask.py": "f4241ea3518ab799c7bafdb08477c88eaa94ca13d1076c04287458d84c3ecf9e",
+  "Cargo.lock": "e739e3174f5a0edc1deaeb1aeef673600d6dd19d7706ad9c8e3911c234459d7d",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/Cargo.toml": "081350235a38cfdcc44391912824b812854dd5e69aff9aaa306067656527da3d",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib.rs": "a9cbb0b8933b39a78ba4c64005747242abefa48841c16e7dced9e637d28848ef",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/lib/beamformer_plugin.rs": "b72079ef4b5c778f45ed84a31d9747e8b31ac9f674de7b50a89a1fe2fc784e7e",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr.rs": "4fd71355a0a337b501d08e7960d3518a3b7c0725f8e20cfea9081bfadf3d1d9e",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/mvdr/masked.rs": "3a962a775e9d4af7728798135418c9aab1f45b8a9724add6719387e999dacc24",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/src/noise_mask.rs": "124be8c66d5c236f631ee3aa733af9e0729d08dff23bdf7813b7dba4374ce6f1",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/neural_mask.rs": "574865a1b03d4f365f8f711c8a4dd8ca3cf8131ba52593196839682ffc7a7a8e",
+  "crates/sotf-plugins/crates/sotf-plugin-beamformer/bin/qa_beamformer_mask_render.rs": "7dcaa49c2d6214d508b06d9096b178fe850276f1cb6902f61b8474efa0a9e0cf",
+  "crates/sotf-plugins/models/beamformer-noise-mask/model.synthetic.json": "5ed1fe74a6aa11d702c20469a87a209198cb742f3233903f32d12b11729998f7",
+  "crates/sotf-plugins/models/beamformer-noise-mask/parity.synthetic.json": "bd8c69d790b44b345ab7bb8467679ab2f83089a667b9d9a9325912b30fab4e53",
+  "scripts/ml/train_aec_residual.py": "f61f3f794eac6d4c15be6fd255ffe0ffb3d2c9ff163a4ea4289f828680af0269"
+}

@@ -1,0 +1,27 @@
+   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)
+error: no rules expected `;`
+   --> crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/neural_mask.rs:247:51
+    |
+247 |     value["weights"] = serde_json::json!([[0.0; 8]; 6]);
+    |                                                   ^ no rules expected this token in macro call
+    |
+    = note: while trying to match end of macro
+
+error: no rules expected `0.0`
+   --> crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/neural_mask.rs:248:40
+    |
+248 |     value["bias"] = serde_json::json!([0.0; 8]);
+    |                                        ^^^ no rules expected this token in macro call
+    |
+    = note: while trying to match end of macro
+
+error: no rules expected `0.0`
+   --> crates/sotf-plugins/crates/sotf-plugin-beamformer/tests/neural_mask.rs:249:50
+    |
+249 |     value["output_weights"] = serde_json::json!([0.0; 8]);
+    |                                                  ^^^ no rules expected this token in macro call
+    |
+    = note: while trying to match end of macro
+
+error: could not compile `sotf-plugin-beamformer` (test "neural_mask") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...

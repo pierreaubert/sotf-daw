@@ -1,0 +1,1070 @@
+{
+  "model_sha256": "5ed1fe74a6aa11d702c20469a87a209198cb742f3233903f32d12b11729998f7",
+  "renderer_sha256": "9bff986993de97ba7ff002104ad08df0766d2a887f33fd9aa07f6e952c5e50f1",
+  "cases": [
+    {
+      "case": "0-matched-16000-2",
+      "kind": "matched",
+      "sample_rate": 16000,
+      "microphones": 2,
+      "seed": 20264120,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/0-matched-16000-2-target.f32le",
+      "target_sha256": "7016508a275c1f4a7b83fc06a86b2e4d0ade338ee8dad876d6091f55b58f8b18",
+      "input_reference": {
+        "snr_db": -3.7563807090068964,
+        "relative_rms": 1.5410581813537567,
+        "max_abs_error": 0.20889173448085785,
+        "projection_gain": 0.9799879243455628
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": -2.1768593088199535,
+            "relative_rms": 1.2848220030196886,
+            "max_abs_error": 0.17503410577774048,
+            "projection_gain": 0.9819618906505861
+          },
+          "steady_after_one_second": {
+            "snr_db": -1.3531937484515468,
+            "relative_rms": 1.1685833318134153,
+            "max_abs_error": 0.1518645128235221,
+            "projection_gain": 0.9688129089934515
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 132,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 2,
+            "input_frames": 32017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 34065,
+            "qa_process_seconds": 0.001288625,
+            "sample_peak": 0.21309414505958557,
+            "sample_rate": 16000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "631a0df94cd1449a56485c277bb7c3d7d25d129da2bf99c4b0b5cd826d8f5b12",
+            "output_sha256": "de33373b71782e3034715c579adc853ca515aeac3deb0ee6bc9e499a6aad4eda"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/0-matched-16000-2-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": -1.9385850919717877,
+            "relative_rms": 1.2500553829762817,
+            "max_abs_error": 0.16946062445640564,
+            "projection_gain": 0.9813237827222263
+          },
+          "steady_after_one_second": {
+            "snr_db": -1.0463596671869044,
+            "relative_rms": 1.128023074043234,
+            "max_abs_error": 0.1454736813902855,
+            "projection_gain": 0.9676010933718476
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 10280,
+              "noise_bins": 7411,
+              "target_bins": 6668,
+              "unavailable_frames": 0,
+              "uncertain_bins": 9565
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 2,
+            "input_frames": 32017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 34065,
+            "qa_process_seconds": 0.003907375,
+            "sample_peak": 0.20834508538246155,
+            "sample_rate": 16000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "631a0df94cd1449a56485c277bb7c3d7d25d129da2bf99c4b0b5cd826d8f5b12",
+            "output_sha256": "63e7fd91e5b27143f146c7211d3b074701956dd3802022f5edc6941574fa17b3"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/0-matched-16000-2-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": 0.3068340812646424
+    },
+    {
+      "case": "1-matched-48000-2",
+      "kind": "matched",
+      "sample_rate": 48000,
+      "microphones": 2,
+      "seed": 20264121,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/1-matched-48000-2-target.f32le",
+      "target_sha256": "43e8269b85520a7a4cfdd4874ad10e022722da6e7cec0601d02794c832706b32",
+      "input_reference": {
+        "snr_db": -4.459463194635496,
+        "relative_rms": 1.670987340757332,
+        "max_abs_error": 0.23166096210479736,
+        "projection_gain": 1.007355953222906
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 1.7003410005416075,
+            "relative_rms": 0.8222103700428955,
+            "max_abs_error": 0.11775963753461838,
+            "projection_gain": 1.0049942028065582
+          },
+          "steady_after_one_second": {
+            "snr_db": 4.834603076563495,
+            "relative_rms": 0.5731520448247159,
+            "max_abs_error": 0.10811791941523552,
+            "projection_gain": 1.0068121205203628
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 2,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.005451625,
+            "sample_peak": 0.168237566947937,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "d7e60526ba56e9df6755f81cd4ee3bc34eff69b19c1972a10f9b694027569b45",
+            "output_sha256": "79ec84f88103a413c46a6f98683b8743755533ad8b0563e7eb6dab355b2a52db"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/1-matched-48000-2-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 1.6943072384126088,
+            "relative_rms": 0.8227817272114396,
+            "max_abs_error": 0.11775002628564835,
+            "projection_gain": 1.0027807652443832
+          },
+          "steady_after_one_second": {
+            "snr_db": 4.834693326383689,
+            "relative_rms": 0.5731460895797825,
+            "max_abs_error": 0.10673507675528526,
+            "projection_gain": 1.003887421920944
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 26471,
+              "noise_bins": 21210,
+              "target_bins": 23828,
+              "unavailable_frames": 0,
+              "uncertain_bins": 26665
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 2,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.0137215,
+            "sample_peak": 0.1652873456478119,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "d7e60526ba56e9df6755f81cd4ee3bc34eff69b19c1972a10f9b694027569b45",
+            "output_sha256": "569ed57c48d4c7fb309effe9c339409722039a470f88407cd91fcfcb1805d8d1"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/1-matched-48000-2-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": 9.024982019401051e-05
+    },
+    {
+      "case": "2-matched-96000-2",
+      "kind": "matched",
+      "sample_rate": 96000,
+      "microphones": 2,
+      "seed": 20264122,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/2-matched-96000-2-target.f32le",
+      "target_sha256": "037a68d0b0103c2f043aea8dabd58d9695351daa9e2d2ab0e429701d8b90af19",
+      "input_reference": {
+        "snr_db": -4.132464211993109,
+        "relative_rms": 1.6092488616857443,
+        "max_abs_error": 0.23866961989551783,
+        "projection_gain": 1.0042673319772035
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 3.1899809394619782,
+            "relative_rms": 0.692629449359446,
+            "max_abs_error": 0.10516778379678726,
+            "projection_gain": 0.9977603693436071
+          },
+          "steady_after_one_second": {
+            "snr_db": 3.1236771600748083,
+            "relative_rms": 0.6979368708587724,
+            "max_abs_error": 0.09433150291442871,
+            "projection_gain": 0.9957753754875108
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 757,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 2,
+            "input_frames": 192017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 194065,
+            "qa_process_seconds": 0.010961042,
+            "sample_peak": 0.17725476622581482,
+            "sample_rate": 96000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "601bb10dfa82b12a87eec82b73c5b1a3a5b7f378be06594fb76fc0ae72914b10",
+            "output_sha256": "b94946834ffd76993ce2094d7e88ded6cedbdb52225e1e2c49006416a2294c40"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/2-matched-96000-2-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 3.1981533529907784,
+            "relative_rms": 0.6919780719602359,
+            "max_abs_error": 0.10469003766775131,
+            "projection_gain": 0.9925650782913494
+          },
+          "steady_after_one_second": {
+            "snr_db": 3.1206865706277154,
+            "relative_rms": 0.6981772149216494,
+            "max_abs_error": 0.09390050172805786,
+            "projection_gain": 0.9920249435353179
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 56283,
+              "noise_bins": 27652,
+              "target_bins": 48553,
+              "unavailable_frames": 0,
+              "uncertain_bins": 62061
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 2,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 2,
+            "input_frames": 192017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 194065,
+            "qa_process_seconds": 0.027173125,
+            "sample_peak": 0.17756041884422302,
+            "sample_rate": 96000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "601bb10dfa82b12a87eec82b73c5b1a3a5b7f378be06594fb76fc0ae72914b10",
+            "output_sha256": "75140914f6f22424a2130dd41860d9cc7ec0f5e747e093872954958a1b10e426"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/2-matched-96000-2-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": -0.0029905894470929617
+    },
+    {
+      "case": "3-matched-48000-8",
+      "kind": "matched",
+      "sample_rate": 48000,
+      "microphones": 8,
+      "seed": 20264123,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/3-matched-48000-8-target.f32le",
+      "target_sha256": "5f2431ac6272feae5008718652862c4b01d449cbd753170b26ee3bd045519181",
+      "input_reference": {
+        "snr_db": -4.285341458823238,
+        "relative_rms": 1.6378234046892768,
+        "max_abs_error": 0.2986811138689518,
+        "projection_gain": 0.9904550279582442
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 12.185032013376592,
+            "relative_rms": 0.24589426473885345,
+            "max_abs_error": 0.04224728234112263,
+            "projection_gain": 0.9490048949616182
+          },
+          "steady_after_one_second": {
+            "snr_db": 12.863330097411367,
+            "relative_rms": 0.22742253446390676,
+            "max_abs_error": 0.04224728234112263,
+            "projection_gain": 0.9565773426408382
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 8,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 8,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.043235542,
+            "sample_peak": 0.14831218123435974,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "891eeb4bbe8540576905a7b19e4b6f7a622b3c7ff2da3fbbb4935fa4975ee993",
+            "output_sha256": "c6535160f2f0207655f28a32319410c9e9d4c1815172c65641b66811f8e6474a"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/3-matched-48000-8-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 12.043124163599563,
+            "relative_rms": 0.24994461926267159,
+            "max_abs_error": 0.041590992361307144,
+            "projection_gain": 0.9515015778499157
+          },
+          "steady_after_one_second": {
+            "snr_db": 12.77391692920913,
+            "relative_rms": 0.2297757294726534,
+            "max_abs_error": 0.041590992361307144,
+            "projection_gain": 0.9592110844860041
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 33667,
+              "noise_bins": 31423,
+              "target_bins": 22685,
+              "unavailable_frames": 0,
+              "uncertain_bins": 10399
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 8,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 8,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.077994667,
+            "sample_peak": 0.14831218123435974,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "891eeb4bbe8540576905a7b19e4b6f7a622b3c7ff2da3fbbb4935fa4975ee993",
+            "output_sha256": "ec4f9f57b1e62053736b80d0639f8b3575a34122ea3369c1faec93b49117c61a"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/3-matched-48000-8-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": -0.08941316820223655
+    },
+    {
+      "case": "4-matched-96000-8",
+      "kind": "matched",
+      "sample_rate": 96000,
+      "microphones": 8,
+      "seed": 20264124,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/4-matched-96000-8-target.f32le",
+      "target_sha256": "f59ce196b2b470a14d928194f6c51414fdee9636eb29079c55ba0b7fd82a0e59",
+      "input_reference": {
+        "snr_db": -5.2859968892440135,
+        "relative_rms": 1.8378067591737248,
+        "max_abs_error": 0.22659902274608612,
+        "projection_gain": 1.0024910928404933
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 11.286791542334642,
+            "relative_rms": 0.2726844814868163,
+            "max_abs_error": 0.03476337715983391,
+            "projection_gain": 0.9832531908333545
+          },
+          "steady_after_one_second": {
+            "snr_db": 11.988392865437866,
+            "relative_rms": 0.2515245361275473,
+            "max_abs_error": 0.026317128911614418,
+            "projection_gain": 0.999856198826458
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 757,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 8,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 8,
+            "input_frames": 192017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 194065,
+            "qa_process_seconds": 0.082217958,
+            "sample_peak": 0.1608007848262787,
+            "sample_rate": 96000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "afbd62e181b5717dae81a94c256eca5e46659f83bb2188da3c38805b911fc960",
+            "output_sha256": "f7e5bf34467bc2108168edd1ad6cfbf387fe9f3bfe181d2e5d060e666449917b"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/4-matched-96000-8-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 11.13344558881723,
+            "relative_rms": 0.27754136542126223,
+            "max_abs_error": 0.034050676971673965,
+            "projection_gain": 0.9841792527035047
+          },
+          "steady_after_one_second": {
+            "snr_db": 11.82717726748174,
+            "relative_rms": 0.25623658441176506,
+            "max_abs_error": 0.028454452753067017,
+            "projection_gain": 0.9998657601743003
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 52942,
+              "noise_bins": 75859,
+              "target_bins": 46393,
+              "unavailable_frames": 0,
+              "uncertain_bins": 19355
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 8,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 8,
+            "input_frames": 192017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 194065,
+            "qa_process_seconds": 0.167263959,
+            "sample_peak": 0.1608007848262787,
+            "sample_rate": 96000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "afbd62e181b5717dae81a94c256eca5e46659f83bb2188da3c38805b911fc960",
+            "output_sha256": "3b341f9a96a3baca26a6425721c170277ddb3384df14f4e04116261ded4d4823"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/4-matched-96000-8-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": -0.16121559795612583
+    },
+    {
+      "case": "5-target_only-48000-4",
+      "kind": "target_only",
+      "sample_rate": 48000,
+      "microphones": 4,
+      "seed": 20264125,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/5-target_only-48000-4-target.f32le",
+      "target_sha256": "68ed56880303b138fcd8a7d80a5d98af219571a248b62e945e30c42cab9f91ab",
+      "input_reference": {
+        "snr_db": 315.84408123788756,
+        "relative_rms": 1.613600196550776e-16,
+        "max_abs_error": 0.0,
+        "projection_gain": 1.0
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 136.44218845586448,
+            "relative_rms": 1.50622751637948e-07,
+            "max_abs_error": 3.725290298461914e-08,
+            "projection_gain": 0.9999999258122834
+          },
+          "steady_after_one_second": {
+            "snr_db": 136.6276373863212,
+            "relative_rms": 1.4744095346039114e-07,
+            "max_abs_error": 2.9802322387695312e-08,
+            "projection_gain": 0.9999999299357585
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.009374084,
+            "sample_peak": 0.140212744474411,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "9f9cd45d75932758a9e37a15a96dc0b22a64045f918749495b4ea560e0a01b23",
+            "output_sha256": "443ca1ccc518de50b79053df93288609ab25e107a835ec32bb586aba1cb02415"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/5-target_only-48000-4-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 136.44218845586448,
+            "relative_rms": 1.50622751637948e-07,
+            "max_abs_error": 3.725290298461914e-08,
+            "projection_gain": 0.9999999258122834
+          },
+          "steady_after_one_second": {
+            "snr_db": 136.6276373863212,
+            "relative_rms": 1.4744095346039114e-07,
+            "max_abs_error": 2.9802322387695312e-08,
+            "projection_gain": 0.9999999299357585
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 47031,
+              "noise_bins": 0,
+              "target_bins": 51143,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.017615292,
+            "sample_peak": 0.140212744474411,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "9f9cd45d75932758a9e37a15a96dc0b22a64045f918749495b4ea560e0a01b23",
+            "output_sha256": "443ca1ccc518de50b79053df93288609ab25e107a835ec32bb586aba1cb02415"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/5-target_only-48000-4-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": 0.0
+    },
+    {
+      "case": "6-near_interference-48000-4",
+      "kind": "near_interference",
+      "sample_rate": 48000,
+      "microphones": 4,
+      "seed": 20264126,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/6-near_interference-48000-4-target.f32le",
+      "target_sha256": "8db2c4d8a7284716a69f65d7eb4f67b0ed12c032891308b01d2248bd1dee4882",
+      "input_reference": {
+        "snr_db": -4.9873493448538655,
+        "relative_rms": 1.7756913015205598,
+        "max_abs_error": 0.23484580079093575,
+        "projection_gain": 0.9782644833260015
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": -4.445743853952681,
+            "relative_rms": 1.6683501037878945,
+            "max_abs_error": 0.22591553069651127,
+            "projection_gain": 0.9741601025894558
+          },
+          "steady_after_one_second": {
+            "snr_db": -2.127085248498447,
+            "relative_rms": 1.277480449468808,
+            "max_abs_error": 0.1914857029914856,
+            "projection_gain": 0.9721212405771447
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.007314042,
+            "sample_peak": 0.22800755500793457,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "aee7deedd75266f39604ef911f8b800920d744f7fba48101bb1a4651bcafe94e",
+            "output_sha256": "f7b1f8d94f7e3006f4d4c750dd5659f43416bc40f6f49dc0ac5bab0c90b2844a"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/6-near_interference-48000-4-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": -4.4061340192597305,
+            "relative_rms": 1.6607593300547,
+            "max_abs_error": 0.22747873701155186,
+            "projection_gain": 0.9740953908940085
+          },
+          "steady_after_one_second": {
+            "snr_db": -2.0793746571901788,
+            "relative_rms": 1.2704826331989816,
+            "max_abs_error": 0.19247437361627817,
+            "projection_gain": 0.9719730372624514
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 29298,
+              "noise_bins": 23638,
+              "target_bins": 28355,
+              "unavailable_frames": 0,
+              "uncertain_bins": 16883
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.019387625,
+            "sample_peak": 0.22957076132297516,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "aee7deedd75266f39604ef911f8b800920d744f7fba48101bb1a4651bcafe94e",
+            "output_sha256": "31612f4b1034baa49596638dd913149502c78928cb0444217818d0a65a8773ae"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/6-near_interference-48000-4-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": 0.04771059130826805
+    },
+    {
+      "case": "7-sensor_gain-48000-4",
+      "kind": "sensor_gain",
+      "sample_rate": 48000,
+      "microphones": 4,
+      "seed": 20264127,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/7-sensor_gain-48000-4-target.f32le",
+      "target_sha256": "df295fc721df2286443972a304a210db2da48181dc5dca4807648b488e27dc3d",
+      "input_reference": {
+        "snr_db": -1.5484472671088503,
+        "relative_rms": 1.1951498556353761,
+        "max_abs_error": 0.17756451666355133,
+        "projection_gain": 0.7755499601378042
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 8.136996983247077,
+            "relative_rms": 0.39187733943287595,
+            "max_abs_error": 0.05083641782402992,
+            "projection_gain": 0.9374606326801631
+          },
+          "steady_after_one_second": {
+            "snr_db": 8.492345555003581,
+            "relative_rms": 0.37616875718764736,
+            "max_abs_error": 0.04482626914978027,
+            "projection_gain": 0.9338722878482542
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.010030583,
+            "sample_peak": 0.16112427413463593,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "e78a981963508e159c5a77f17d19587c09b2e228a82b52d009d9755674f58adf",
+            "output_sha256": "8da592389343f2451e4cb57abc4b5d13e7c3eed9f8122ffea50d4b7abcbde54e"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/7-sensor_gain-48000-4-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 8.098427174181245,
+            "relative_rms": 0.39362134527283227,
+            "max_abs_error": 0.051282305270433426,
+            "projection_gain": 0.9375432140764751
+          },
+          "steady_after_one_second": {
+            "snr_db": 8.491822193856093,
+            "relative_rms": 0.37619142361007707,
+            "max_abs_error": 0.04483406990766525,
+            "projection_gain": 0.93386923140927
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 7967,
+              "noise_bins": 32983,
+              "target_bins": 41292,
+              "unavailable_frames": 0,
+              "uncertain_bins": 15932
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.025951625,
+            "sample_peak": 0.1611185371875763,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "e78a981963508e159c5a77f17d19587c09b2e228a82b52d009d9755674f58adf",
+            "output_sha256": "ee09551c9a59ff1fa87422749f257399aff463b8aa65c4b3d80aae6abea7a5c6"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/7-sensor_gain-48000-4-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": -0.0005233611474881883
+    },
+    {
+      "case": "8-reverberant_target-48000-4",
+      "kind": "reverberant_target",
+      "sample_rate": 48000,
+      "microphones": 4,
+      "seed": 20264128,
+      "target_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/8-reverberant_target-48000-4-target.f32le",
+      "target_sha256": "01fb9b584d0c897b528f6cbd369754a2c4e3250010ad997f143edfc0ab84a355",
+      "input_reference": {
+        "snr_db": -4.7619800553837,
+        "relative_rms": 1.7302107370817092,
+        "max_abs_error": 0.24053071066737175,
+        "projection_gain": 1.0112900631982933
+      },
+      "methods": {
+        "classical": {
+          "full": {
+            "snr_db": 4.439252517733366,
+            "relative_rms": 0.5998426947429119,
+            "max_abs_error": 0.0863807057030499,
+            "projection_gain": 0.9712757682985992
+          },
+          "steady_after_one_second": {
+            "snr_db": 5.379616346855305,
+            "relative_rms": 0.5382935582564999,
+            "max_abs_error": 0.0863807057030499,
+            "projection_gain": 0.9691249071099135
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 382,
+              "invalid_bins": 0,
+              "noise_bins": 0,
+              "target_bins": 0,
+              "unavailable_frames": 0,
+              "uncertain_bins": 0
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": false,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.011750833,
+            "sample_peak": 0.17246383428573608,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "d660a41c0589b41d2ae507adacd3adfe6eafbab0a5e9e9365fc2ec561e25ccfd",
+            "output_sha256": "b0a8d1645c6566a04a875dbbaea95c41ba1a22248fbda12bcd82dd1e0d06fde6"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/8-reverberant_target-48000-4-classical/output.f32le"
+        },
+        "neural": {
+          "full": {
+            "snr_db": 4.413119705384117,
+            "relative_rms": 0.6016501297982874,
+            "max_abs_error": 0.08513201214373112,
+            "projection_gain": 0.9683645796618936
+          },
+          "steady_after_one_second": {
+            "snr_db": 5.389327092724309,
+            "relative_rms": 0.5376920872207743,
+            "max_abs_error": 0.08513201214373112,
+            "projection_gain": 0.9660723531971033
+          },
+          "metadata": {
+            "added_model_lookahead_samples": 0,
+            "appended_zero_frames": 2048,
+            "callback_frames": 193,
+            "candidate_loaded": true,
+            "counts": {
+              "disabled_frames": 0,
+              "invalid_bins": 26214,
+              "noise_bins": 28031,
+              "target_bins": 8661,
+              "unavailable_frames": 0,
+              "uncertain_bins": 35268
+            },
+            "deployment_admitted": false,
+            "effective_parameters": {
+              "beamformer_type": "MVDR",
+              "mic_spacing_cm": 5.0,
+              "num_mics": 4,
+              "steer_angle_deg": 0.0
+            },
+            "enabled": true,
+            "input_channels": 4,
+            "input_frames": 96017,
+            "latency_samples": 512,
+            "load_error": null,
+            "output_channels": 1,
+            "output_frames": 98065,
+            "qa_process_seconds": 0.026695041,
+            "sample_peak": 0.16394644975662231,
+            "sample_rate": 48000,
+            "scope": "Actual native MVDR stream with independently running classical fallback. Generated unadmitted mask; no normalization, gain/delay fitting, extra output limiter or finite-zero-tail claim.",
+            "status": "ok",
+            "input_sha256": "d660a41c0589b41d2ae507adacd3adfe6eafbab0a5e9e9365fc2ec561e25ccfd",
+            "output_sha256": "eb1b4df1543ed6d6375a1d559458553544403fd057d18dd6aa0203faa8e5ccca"
+          },
+          "output_file": "/Volumes/home_tmp/tmp/ml-beamformer-mask-native-20261025/8-reverberant_target-48000-4-neural/output.f32le"
+        }
+      },
+      "steady_neural_minus_classical_snr_db": 0.009710745869004
+    }
+  ],
+  "deployment_admitted": false,
+  "scope": "Nine generated waveform probes; voiced/noise envelopes are not recorded speech. Correlated two-second sources, linearly interpolated physical delays, fixed broadside target, no gain/delay fitting or normalization. Output offset is the native512-sample latency. Reverberant/sensor-gain errors include desired transfer mismatch; mixture projection gain is not isolated target distortion. No general model advantage or host deadline claim."
+}

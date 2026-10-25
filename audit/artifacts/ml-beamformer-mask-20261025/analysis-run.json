@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_beamformer_noise_mask.py",
+    "--model",
+    "crates/sotf-plugins/models/beamformer-noise-mask/model.synthetic.json",
+    "--training",
+    "audit/artifacts/ml-beamformer-mask-20261025/training-report.json",
+    "--waveform",
+    "audit/artifacts/ml-beamformer-mask-20261025/waveform-evaluation.json",
+    "--report",
+    "audit/artifacts/ml-beamformer-mask-20261025/independent-analysis.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.34686258411966264
+}

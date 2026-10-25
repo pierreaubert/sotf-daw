@@ -16,6 +16,10 @@
 use crate::steering::bound_white_noise_gain;
 use nalgebra::Complex;
 
+#[cfg(feature = "qa")]
+#[path = "mvdr/masked.rs"]
+pub mod masked;
+
 /// Maximum number of microphones supported.
 pub const MAX_MICS: usize = 8;
 
@@ -370,7 +374,7 @@ impl MvdrBeamformer {
 
     /// Read-only view of the noise covariance flat buffer.
     /// Exposed for testing only.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "qa"))]
     pub fn noise_cov_snapshot(&self) -> &[Complex<f32>] {
         &self.noise_cov
     }

@@ -1,0 +1,47 @@
+{
+  "format": "sotf-beamformer-mask-manifest-v1",
+  "status": "synthetic_qualification_only",
+  "deployment_admitted": false,
+  "automatic_activation": false,
+  "model": {
+    "file": "model.synthetic.json",
+    "bytes": 2453,
+    "sha256": "5ed1fe74a6aa11d702c20469a87a209198cb742f3233903f32d12b11729998f7",
+    "architecture": "6 features,8 tanh hidden units,1 sigmoid noise-energy fraction",
+    "coefficients": 65
+  },
+  "provenance": {
+    "origin": "project-generated complex plane-wave mixtures",
+    "license": "GPL-3.0-or-later",
+    "recorded_speech": false,
+    "external_training_audio": false
+  },
+  "splits": {
+    "train_scene_seeds": 64,
+    "validation_scene_seeds": 16,
+    "final_scene_seeds": 32,
+    "examples_per_scene": 256,
+    "shift_variants_reuse_final_seeds": true
+  },
+  "latency": {
+    "native_mvdr_samples": 512,
+    "added_model_lookahead_samples": 0
+  },
+  "fallback": "Independent native covariance and weights; uncertain or invalid bins copied exactly",
+  "native_qualification": {
+    "python_tests": 6,
+    "native_tests": 103,
+    "parity_cases": 35,
+    "waveform_probes": 9,
+    "waveform_outputs": 18,
+    "local_budget_probes": 9,
+    "local_budget_fraction_of_callback": 0.8
+  },
+  "remaining": [
+    "Real multilingual speech, measured room/microphone and independent perceptual validation",
+    "Confidence calibration, broader geometry/motion and frequency-edge behavior",
+    "Complete heap memory and cross-platform host deadline evidence",
+    "Click-free activation and a demonstrated audio-quality reason to prefer the learned route"
+  ],
+  "evidence": "audit/artifacts/ml-beamformer-mask-20261025"
+}

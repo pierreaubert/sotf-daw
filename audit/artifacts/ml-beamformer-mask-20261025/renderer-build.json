@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "build",
+    "-p",
+    "sotf-plugin-beamformer",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-beamformer-mask-render",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 7.841727541992441
+}

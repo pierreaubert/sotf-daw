@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/beamformer_noise_mask.py",
+    "scripts/ml/train_beamformer_noise_mask.py",
+    "scripts/ml/test_beamformer_noise_mask.py",
+    "scripts/ml/beamformer_mask_native.py",
+    "scripts/ml/evaluate_beamformer_noise_mask.py",
+    "scripts/ml/analyze_beamformer_noise_mask.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.01055299979634583
+}

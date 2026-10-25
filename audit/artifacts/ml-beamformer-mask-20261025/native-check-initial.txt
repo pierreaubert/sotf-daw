@@ -1,0 +1,25 @@
+    Checking plugins-spatial v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-spatial)
+    Checking sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)
+error[E0277]: the trait bound `Array<u8, UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>>: LowerHex` is not satisfied
+  --> crates/sotf-plugins/crates/sotf-plugin-beamformer/src/noise_mask.rs:49:32
+   |
+49 |             || format!("{:x}", Sha256::digest(bytes)) != expected_sha256
+   |                         ----   ^^^^^^^^^^^^^^^^^^^^^ the trait `LowerHex` is not implemented for `Array<u8, UInt<UInt<UInt<UInt<UInt<_, B0>, B0>, B0>, B0>, B0>>`
+   |                         |
+   |                         required by this formatting parameter
+   |
+   = help: the following other types implement trait `LowerHex`:
+             &T
+             &mut T
+             Matrix<T, R, C, S>
+             Saturating<T>
+             Wrapping<T>
+             compiler_builtins::math::libm_math::support::big::i256
+             compiler_builtins::math::libm_math::support::big::u256
+             compiler_builtins::math::libm_math::support::hex_float::hex_fmt::Hex<T>
+           and 66 others
+   = note: the full name for the type has been written to '/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_beamformer-e794111b10509be2.long-type-10703246145416771657.txt'
+   = note: consider using `--verbose` to print the full type name to the console
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `sotf-plugin-beamformer` (lib) due to 1 previous error

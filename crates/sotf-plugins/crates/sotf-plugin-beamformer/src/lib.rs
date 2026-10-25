@@ -1,5 +1,7 @@
 pub mod gsc;
 pub mod mvdr;
+#[cfg(feature = "qa")]
+pub mod noise_mask;
 pub mod params;
 pub mod steering;
 pub mod superdirective;

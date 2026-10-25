@@ -1,0 +1,39 @@
+{
+  "model_sha256": "5ed1fe74a6aa11d702c20469a87a209198cb742f3233903f32d12b11729998f7",
+  "held_mask_recomputation": [
+    {
+      "shift": "matched",
+      "groups": 32,
+      "rows": 8192,
+      "mask_mse_recomputed": 0.037271730149515764
+    },
+    {
+      "shift": "near_interference",
+      "groups": 32,
+      "rows": 8192,
+      "mask_mse_recomputed": 0.06411984607190746
+    },
+    {
+      "shift": "sensor_gain",
+      "groups": 32,
+      "rows": 8192,
+      "mask_mse_recomputed": 0.05184214959961992
+    },
+    {
+      "shift": "reverberant_target",
+      "groups": 32,
+      "rows": 8192,
+      "mask_mse_recomputed": 0.1257086824379372
+    }
+  ],
+  "native_waveform_cases": 9,
+  "waveform_metric_max_error": 2.220446049250313e-15,
+  "native_latency_samples": 512,
+  "added_mask_lookahead_samples": 0,
+  "steady_snr_delta_range_db": [
+    -0.16121559795612583,
+    0.3068340812646424
+  ],
+  "deployment_admitted": false,
+  "scope": "Independent arithmetic and hashes on generated held scenes and native PCM, with prefix/frame-counter accounting. No real-recording, perceptual or platform admission."
+}

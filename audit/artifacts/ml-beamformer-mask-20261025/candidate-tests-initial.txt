@@ -1,0 +1,13 @@
+
+running 4 tests
+test weighted_covariance_matches_independent_recurrence_and_retains_native_weight_bounds ... ok
+native mask parity: feature=0.00000000000000033306690738754696, probability=0.000000027814565095596322
+test native_features_and_network_match_frozen_numpy_reference ... ok
+test enabled_callbacks_reset_disable_and_drain_preserve_native_contracts ... ok
+test missing_disabled_and_unsupported_context_use_exact_native_streams ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)
+    Finished `release` profile [optimized] target(s) in 16.08s
+     Running tests/neural_mask.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/neural_mask-dc48ab44820ec477)

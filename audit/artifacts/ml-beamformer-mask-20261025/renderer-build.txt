@@ -1,0 +1,2 @@
+   Compiling sotf-plugin-beamformer v0.5.4 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-beamformer)
+    Finished `release` profile [optimized] target(s) in 7.79s
