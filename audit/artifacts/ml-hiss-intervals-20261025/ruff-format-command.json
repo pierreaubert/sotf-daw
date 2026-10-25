@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/hiss_intervals.py",
+    "scripts/ml/hiss_interval_cases.py",
+    "scripts/ml/fit_hiss_intervals.py",
+    "scripts/ml/propose_hiss_intervals.py",
+    "scripts/ml/test_hiss_intervals.py",
+    "scripts/ml/evaluate_hiss_intervals.py",
+    "scripts/ml/analyze_hiss_intervals.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.009773125173524022
+}

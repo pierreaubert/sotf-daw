@@ -1,0 +1,30 @@
+{
+  "training_records": 16,
+  "evaluation_records": 35,
+  "unique_audio_identities": 50,
+  "independent_bfgs_fits": 459,
+  "max_feature_error": 5.329070518200751e-15,
+  "max_model_parameter_error": 4.7323395091503073e-07,
+  "max_score_or_support_error": 2.1819251960764063e-09,
+  "held_source_decisions_verified": 16,
+  "counterfactual_identical_score_verified": true,
+  "counterfactual_review_candidate": true,
+  "explicit_native_desired_noise_effect_attenuation_db": 9.593266707722925,
+  "proposal_cli_writes_only_review_json": true,
+  "scope": "Source-labelled synthetic review model and one recorded development clip; no automatic capture, semantic safety or population confidence guarantee.",
+  "status": "experimental_offline_review_only_classifier",
+  "tests_passed": 6,
+  "model_sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+  "passed_commands": [
+    "smoke-command",
+    "python-tests",
+    "evaluation-command",
+    "analysis-command",
+    "ruff-command",
+    "ruff-format-command"
+  ],
+  "learned_advantage_over_classical_baseline": false,
+  "automatic_capture": false,
+  "worker_integration": false,
+  "full_ml_audit_complete": false
+}

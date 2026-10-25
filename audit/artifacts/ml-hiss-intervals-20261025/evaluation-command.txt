@@ -1,0 +1,30 @@
+{
+  "scope": "Synthetic functional source-labelled model; existing recorded s is development only. Identical noise PCM with opposing intended-use labels proves semantic ambiguity; no automatic-capture or population-safety claim.",
+  "training_session": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/session.json",
+  "fit_report": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/fit/report.json",
+  "model": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/fit/model.json",
+  "model_sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+  "fresh_counts": {
+    "learned": {
+      "noise_only": 16,
+      "programme": 0
+    },
+    "classical": {
+      "noise_only": 16,
+      "programme": 0
+    }
+  },
+  "semantic_counterfactual_identical_decisions": true,
+  "counterfactual_review_candidate": true,
+  "explicit_native_diagnostic": {
+    "metadata": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/explicit-counterfactual-native/metadata.json",
+    "capture_sha256": "3ac0c358241e21b8a8c0a601d4bdb395146b77fef6ebfc5664a539b4b6c29bb5",
+    "full_band_attenuation_db": 9.593266707722925,
+    "region_frames": [
+      57600,
+      134400
+    ],
+    "qualification": "Manual diagnostic capture of identical desired noise effect; not an automatic action by the classifier."
+  },
+  "successful_proposal_cli": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/proposal-cli/proposals.json"
+}

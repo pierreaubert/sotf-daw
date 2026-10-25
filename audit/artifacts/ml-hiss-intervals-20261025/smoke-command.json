@@ -1,0 +1,9 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-c",
+    "import sys,json\nfrom pathlib import Path\nsys.path.insert(0,\"scripts/ml\")\nfrom hiss_interval_cases import session\nfrom hiss_intervals import fit\np=Path(\"/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025\");p.mkdir(exist_ok=False)\ndata=session(p/\"smoke\")\nr=fit(data)\n(p/\"smoke-report.json\").write_text(json.dumps(r,indent=2))\nprint(json.dumps({k:v for k,v in r.items() if k not in [\"model\",\"cross_validation\"]},indent=2))\n"
+  ],
+  "exit_code": 0,
+  "seconds": 1.0185194169171154
+}

@@ -32,3 +32,5 @@ audit/artifacts/ml-dynamic-eq-native-20261025/** -text
 audit/artifacts/ml-dynamic-eq-fit-20261025/** -text
 audit/artifacts/ml-dynamic-eq-shifts-20261025/** -text
 audit/artifacts/ml-hiss-native-20261025/** -text
+audit/artifacts/ml-hiss-intervals-20261025/** -text
+crates/sotf-plugins/models/hiss-intervals/model.synthetic.json -text

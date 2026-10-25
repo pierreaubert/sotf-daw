@@ -1,0 +1,14 @@
+{
+  "scripts/ml/hiss_intervals.py": "164ac7a876ea30139f921b4d86f121c23a2b79afb19248a5edd2e6fb4381208a",
+  "scripts/ml/hiss_interval_cases.py": "4e12f7b98aa6c7b344f381f84b49875bab042b19c4c977044380c2337342e646",
+  "scripts/ml/fit_hiss_intervals.py": "01a11cd0dfe898999623e3b81d8fa0557ef7ced0864a9134bd1a7da3e2ac4ee1",
+  "scripts/ml/propose_hiss_intervals.py": "835742bc7723673b0967fd29aeec7e04ce2177309a450627e25685abd232ae18",
+  "scripts/ml/test_hiss_intervals.py": "e7287a7d01ac38247036a061501a314e84f3aeb70f65cc70deee4d7e391d461b",
+  "scripts/ml/evaluate_hiss_intervals.py": "8cfca0cffa4bfe0e4c5f4bd7ab847f2a4619346f9fcd6f048667bbb1c75880ee",
+  "scripts/ml/analyze_hiss_intervals.py": "203fd5f10dcfa7be7314fb5154a9e995bf2a9c1ac28e511c6bbdc46a77c24856",
+  "scripts/ml/hiss_native.py": "de123d9739f91f6444dce622889e9272e712cab9c71ea505e6f019775ee29e7a",
+  "crates/sotf-plugins/models/hiss-intervals/manifest.json": "eb14b273ba2c996518fe4c90f1f7731bc0e9a6da03300a2c0d476f8bb6ea7140",
+  "crates/sotf-plugins/models/hiss-intervals/README.md": "a3a57d34df8c2a318ba3d37d650df61d894df76219703e379c4e0f0377f54326",
+  "crates/sotf-plugins/models/hiss-intervals/model.synthetic.json": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+  "audit/plugin-ml-implementation.json": "361d2eb049a213b8531afef20a5cf9f0322bc916673f045153cdfb9e3cd58777"
+}

@@ -1,0 +1,11 @@
+test_bounded_verified_loader_and_cli_fallback_preserve_outputs (test_hiss_intervals.HissIntervalTests.test_bounded_verified_loader_and_cli_fallback_preserve_outputs) ... ok
+test_features_are_gain_and_channel_order_invariant (test_hiss_intervals.HissIntervalTests.test_features_are_gain_and_channel_order_invariant) ... ok
+test_grouped_fit_is_explicit_and_optimizer_matches_independent_bfgs (test_hiss_intervals.HissIntervalTests.test_grouped_fit_is_explicit_and_optimizer_matches_independent_bfgs) ... ok
+test_prefix_model_unavailable_and_context_mismatch_never_capture (test_hiss_intervals.HissIntervalTests.test_prefix_model_unavailable_and_context_mismatch_never_capture) ... ok
+test_repeated_source_and_contradictory_feature_labels_do_not_admit (test_hiss_intervals.HissIntervalTests.test_repeated_source_and_contradictory_feature_labels_do_not_admit) ... ok
+test_semantic_counterfactual_has_identical_review_decision (test_hiss_intervals.HissIntervalTests.test_semantic_counterfactual_has_identical_review_decision) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.832s
+
+OK

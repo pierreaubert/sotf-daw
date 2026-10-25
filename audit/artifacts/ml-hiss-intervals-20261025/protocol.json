@@ -1,0 +1,25 @@
+{
+  "issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "scope": "Source-labelled conditional review model, never capture/profile application",
+  "environment": {
+    "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1"
+  },
+  "thread_overrides": {
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1"
+  },
+  "training_sources": 8,
+  "training_intervals": 16,
+  "fresh_procedural_intervals": 32,
+  "counterfactual_records": 2,
+  "recorded_development_records": 1,
+  "model_sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+  "semantic_counterfactual": "Identical PCM has opposite intended-use labels; both learned and classical review decisions are identical. Explicit manual diagnostic capture attenuates desired noise effect9.593dB.",
+  "data_origin": "synthetic_validation; recorded speech is evaluation only",
+  "raw_external_root": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025",
+  "automatic_capture": false,
+  "worker_integration": false,
+  "full_ml_audit_complete": false
+}

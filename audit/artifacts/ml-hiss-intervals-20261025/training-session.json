@@ -1,0 +1,128 @@
+{
+  "format": "sotf-hiss-labelled-intervals-v1",
+  "data_origin": "synthetic_validation",
+  "context": {
+    "sample_rate": 48000,
+    "channels": 1,
+    "frequency_hz": 4000.0,
+    "capture_setup_id": "synthetic-development-chain",
+    "noise_definition": "unwanted_stationary_hiss"
+  },
+  "protocol": {
+    "whole_source_grouping": true
+  },
+  "records": [
+    {
+      "id": "source-0-noise_only",
+      "source_group": "source-20771026",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-0-noise_only.f32le",
+      "audio_sha256": "b3794dca85713f141362a82bde09c3c4caf96aed15247b06c85e0a46f0702001"
+    },
+    {
+      "id": "source-0-programme",
+      "source_group": "source-20771026",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-0-programme.f32le",
+      "audio_sha256": "af2ac82623f68a5fbd24d20e015d714c63490937968ac20119bcd214c9778a71"
+    },
+    {
+      "id": "source-1-noise_only",
+      "source_group": "source-20771027",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-1-noise_only.f32le",
+      "audio_sha256": "0e94dbd4ba0b3c0b3fa455695e241a4c5b5f20c68c7b2d0d6424144f0c9b5a64"
+    },
+    {
+      "id": "source-1-programme",
+      "source_group": "source-20771027",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-1-programme.f32le",
+      "audio_sha256": "a884b90332f61433f9fc3978cec2043fe4e1d8a6b74767247353dbd683d48dea"
+    },
+    {
+      "id": "source-2-noise_only",
+      "source_group": "source-20771028",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-2-noise_only.f32le",
+      "audio_sha256": "b477adcc7514a6455175095e5d99fe9eb45a3341b7dfd6c1a7042f0dc2b4c28e"
+    },
+    {
+      "id": "source-2-programme",
+      "source_group": "source-20771028",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-2-programme.f32le",
+      "audio_sha256": "a317f5d8d3f82a3513b4a3472aa5253135026559d9e3a07171b81038a7bb5555"
+    },
+    {
+      "id": "source-3-noise_only",
+      "source_group": "source-20771029",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-3-noise_only.f32le",
+      "audio_sha256": "3c212ef8423b51d4b5b9602bdbab37cea3e4edb444e913dbc973c5bd77459383"
+    },
+    {
+      "id": "source-3-programme",
+      "source_group": "source-20771029",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-3-programme.f32le",
+      "audio_sha256": "52b66ea54da6ae451e98272d943b8c210f8521d31ed80427911e29e147a9e20e"
+    },
+    {
+      "id": "source-4-noise_only",
+      "source_group": "source-20771030",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-4-noise_only.f32le",
+      "audio_sha256": "e90d450c88979fd36d07b7bba74e8d3908744e3baf2e186e3bcbfb743477d1bf"
+    },
+    {
+      "id": "source-4-programme",
+      "source_group": "source-20771030",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-4-programme.f32le",
+      "audio_sha256": "be31c1ef6dfe94148c3d9cb874a9cdc407b689e1bb5fbb8c1f1a0cf6c64be26a"
+    },
+    {
+      "id": "source-5-noise_only",
+      "source_group": "source-20771031",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-5-noise_only.f32le",
+      "audio_sha256": "5ee4d7a59b1969e350766d017b692d53d75998aeec05292cdb8fe4cc3f8ca5c9"
+    },
+    {
+      "id": "source-5-programme",
+      "source_group": "source-20771031",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-5-programme.f32le",
+      "audio_sha256": "3dc0592ab68d194768b56ec664264eb3b1a27e0e2ecd3a650c384718e7e73d97"
+    },
+    {
+      "id": "source-6-noise_only",
+      "source_group": "source-20771032",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-6-noise_only.f32le",
+      "audio_sha256": "6c5f07cacbd1ae234ca6bb88d1e346f0822529d83786fecda1c3d6b1344f1cad"
+    },
+    {
+      "id": "source-6-programme",
+      "source_group": "source-20771032",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-6-programme.f32le",
+      "audio_sha256": "b9c5c6b8bbe0e7ca8bdbd22dc0a79cf9eeb4facf9725ca45955337e24549d30c"
+    },
+    {
+      "id": "source-7-noise_only",
+      "source_group": "source-20771033",
+      "label": "noise_only",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-7-noise_only.f32le",
+      "audio_sha256": "2a5732c423c676e734793c874d07dd8159bd8530553af05b99185ec450609d93"
+    },
+    {
+      "id": "source-7-programme",
+      "source_group": "source-20771033",
+      "label": "programme",
+      "audio_file": "/Volumes/home_tmp/tmp/ml-hiss-intervals-20261025/evaluation/training/source-7-programme.f32le",
+      "audio_sha256": "b54de4fa77785a8693963b171856735fe6c52051b2bda372a4924158ed7b088b"
+    }
+  ]
+}

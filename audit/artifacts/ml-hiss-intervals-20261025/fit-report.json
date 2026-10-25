@@ -1,0 +1,190 @@
+{
+  "accepted": true,
+  "reasons": [],
+  "source_groups": 8,
+  "intervals": 16,
+  "data_origin": "synthetic_validation",
+  "automatic_capture": false,
+  "cross_validation": [
+    {
+      "record_id": "source-0-noise_only",
+      "source_group": "source-20771026",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9966812378761385,
+      "bootstrap_lower_score": 0.9965059706673809,
+      "nearest_noise_support_distance": 0.013148247519431291,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-0-programme",
+      "source_group": "source-20771026",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.016709725578211047,
+      "bootstrap_lower_score": 0.014062414418407642,
+      "nearest_noise_support_distance": 1.699596405348116,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-1-noise_only",
+      "source_group": "source-20771027",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9941162791974707,
+      "bootstrap_lower_score": 0.9916593382558282,
+      "nearest_noise_support_distance": 0.01541458685835372,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-1-programme",
+      "source_group": "source-20771027",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.004402291749711116,
+      "bootstrap_lower_score": 0.0033244270011013027,
+      "nearest_noise_support_distance": 1.7090031710148343,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-2-noise_only",
+      "source_group": "source-20771028",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9943875142230719,
+      "bootstrap_lower_score": 0.9924062156754422,
+      "nearest_noise_support_distance": 0.012758827964665187,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-2-programme",
+      "source_group": "source-20771028",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.0015113852800317726,
+      "bootstrap_lower_score": 0.0008572001712582092,
+      "nearest_noise_support_distance": 1.9209392128257938,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-3-noise_only",
+      "source_group": "source-20771029",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9953331385827365,
+      "bootstrap_lower_score": 0.99390880907589,
+      "nearest_noise_support_distance": 0.01108017332703283,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-3-programme",
+      "source_group": "source-20771029",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.0021342236703010675,
+      "bootstrap_lower_score": 0.0013050085571371223,
+      "nearest_noise_support_distance": 1.832762698916682,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-4-noise_only",
+      "source_group": "source-20771030",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9965982709104619,
+      "bootstrap_lower_score": 0.9962058574557124,
+      "nearest_noise_support_distance": 0.013266917172931195,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-4-programme",
+      "source_group": "source-20771030",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.004011639183171035,
+      "bootstrap_lower_score": 0.0029378519406747243,
+      "nearest_noise_support_distance": 1.7390855167356136,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-5-noise_only",
+      "source_group": "source-20771031",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9966253010837052,
+      "bootstrap_lower_score": 0.996223688991152,
+      "nearest_noise_support_distance": 0.013110933938783162,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-5-programme",
+      "source_group": "source-20771031",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.004416276460380333,
+      "bootstrap_lower_score": 0.0031007629329304993,
+      "nearest_noise_support_distance": 1.7392945976813252,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-6-noise_only",
+      "source_group": "source-20771032",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9940099893948573,
+      "bootstrap_lower_score": 0.9912761150566136,
+      "nearest_noise_support_distance": 0.012783112955546929,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-6-programme",
+      "source_group": "source-20771032",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.004107397973131244,
+      "bootstrap_lower_score": 0.0030530936063424548,
+      "nearest_noise_support_distance": 1.7286910192254061,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    },
+    {
+      "record_id": "source-7-noise_only",
+      "source_group": "source-20771033",
+      "label": true,
+      "review_candidate": true,
+      "noise_score": 0.9953275977323073,
+      "bootstrap_lower_score": 0.9934903694277749,
+      "nearest_noise_support_distance": 0.012757983910840319,
+      "automatic_capture": false,
+      "classical_review_candidate": true
+    },
+    {
+      "record_id": "source-7-programme",
+      "source_group": "source-20771033",
+      "label": false,
+      "review_candidate": false,
+      "noise_score": 0.9999999981217778,
+      "bootstrap_lower_score": 0.9918635455399057,
+      "nearest_noise_support_distance": 52.877302742290844,
+      "automatic_capture": false,
+      "classical_review_candidate": false
+    }
+  ],
+  "held_source_programme_proposals": 0,
+  "held_source_noise_coverage": 1.0,
+  "session_sha256": "40a4868b45389eb8b2486b6c0ad71274defa67cf5b5beeb31f42d4f2cc8ed99b",
+  "model_sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de"
+}
