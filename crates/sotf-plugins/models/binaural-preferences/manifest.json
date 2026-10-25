@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "kind": "optional_offline_per_session_hrtf_preference_ranking",
+  "pretrained_weights": null,
+  "status": "synthetic_functional_validation_only",
+  "method": "Regularized Bradley-Terry categorical utilities with presentation-side bias, equal whole-programme weight, 200 programme bootstraps and leave-one-programme-out prediction. No interpolation or unobserved HRTF generation.",
+  "native_boundary": "Actual fixed-zero-pose native SOFA render, explicit diffuse-field EQ, native normalization, room order 0 and late reverb disabled. No inference added to processing or head tracking.",
+  "identity": "Verified SOFA/programme/native-renderer SHA256; candidate snapshots; raw native input/output hashes; exported selected SOFA and native preset with separate per-programme audition-trim setup.",
+  "admission": "2..12 unique SOFAs, at least 8 programme groups and 32 trials, both comparison orders, connected full and held-programme graphs, stable bootstrap winner/margin, held-programme prediction advantage, limited side bias; every native audition must pass full-tail RMS matching, sample-peak and distinct-output checks.",
+  "scope": "1..32 declared whole-source programmes, aggregate at most 4 million PCM samples, bounded SOFA files and session JSON. Controlled listener/playback declarations remain self-reported.",
+  "uncertainty": "Bootstrap stability is heuristic, not calibrated population confidence; ties are half labels, not a separately trained tie-probability model.",
+  "data": "Three generated synthetic FIR candidates and eight synthetic noise programmes with predetermined choices; no listener observations, anthropometry or individualized HRTF training/evaluation.",
+  "evidence": "audit/artifacts/ml-binaural-preferences-20261025",
+  "license": "GPL-3.0-or-later",
+  "remaining": [
+    "Controlled real listener preference and localization/externalization tests with grouped unseen material/directions",
+    "Development calibration of uncertainty/thresholds then frozen independent listener/source assessment",
+    "Actual host/headphone setup, moving-head, resource and cross-platform validation"
+  ]
+}

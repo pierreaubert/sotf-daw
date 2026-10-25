@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/preference_ranking.py",
+    "scripts/ml/fit_crossfeed_preferences.py",
+    "scripts/ml/test_crossfeed_preferences.py",
+    "scripts/ml/fit_binaural_preferences.py",
+    "scripts/ml/binaural_preference_cases.py",
+    "scripts/ml/test_binaural_preferences.py",
+    "scripts/ml/evaluate_binaural_preferences.py",
+    "scripts/ml/analyze_binaural_preferences.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.01264291605912149
+}

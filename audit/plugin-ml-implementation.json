@@ -123,12 +123,21 @@
         "crates/sotf-plugins/crates/sotf-plugin-binaural/bin/qa_binaural_render.rs",
         "scripts/ml/binaural_native.py",
         "scripts/ml/test_binaural_native.py",
-        "audit/artifacts/ml-binaural-native-20261025"
+        "audit/artifacts/ml-binaural-native-20261025",
+        "scripts/ml/fit_binaural_preferences.py",
+        "scripts/ml/preference_ranking.py",
+        "scripts/ml/binaural_preference_cases.py",
+        "scripts/ml/evaluate_binaural_preferences.py",
+        "scripts/ml/analyze_binaural_preferences.py",
+        "scripts/ml/test_binaural_preferences.py",
+        "crates/sotf-plugins/models/binaural-preferences/manifest.json",
+        "audit/artifacts/ml-binaural-preferences-20261025"
       ],
       "remaining": [
-        "Implement explicit offline HRTF selection from measured responses or controlled listener preferences, with candidate file identities and matching audition context. The native renderer is the validation foundation, not a learned selector.",
-        "Use adequate listener/source-disjoint data and held-out directions/programmes; the existing KEMAR mannequin fixture cannot prove personalized HRTF quality.",
-        "Validate native selected preset reopening and normalization/level invariants; keep model inference outside head tracking and verify host/resource behavior separately."
+        "Gather controlled real listener observations across adequate whole-source groups and held-out directions/programmes. Current six synthetic cases verify ranking/refusal/native export only, not personalized benefit.",
+        "Calibrate uncertainty and validation thresholds on development listener data, then freeze an independent listener/source-disjoint final assessment; bootstrap stability is not population confidence.",
+        "Extend beyond fixed zero head pose and static layout to measured moving-head localization/externalization and actual host setup/resource acceptance without learned inference on the tracking path.",
+        "Audition RMS matching and per-programme trims do not establish perceived loudness or a global playback gain. Verify headphone calibration and keep the exported audition setup with the native preset."
       ]
     },
     {

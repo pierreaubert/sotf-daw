@@ -1,0 +1,11 @@
+{
+  "cases": 6,
+  "native_auditions_verified": 144,
+  "independent_bfgs_bootstrap_fits": 1200,
+  "max_full_model_difference": 1.6415225534416322e-07,
+  "max_bootstrap_difference": 1.64622426357397e-07,
+  "max_native_metric_difference": 0.0,
+  "max_reopen_error": 1.1175870895385742e-08,
+  "crossfeed_prior_reports_identical": 4,
+  "scope": "Functional synthetic data only; no human preference, localization or calibrated confidence claim"
+}

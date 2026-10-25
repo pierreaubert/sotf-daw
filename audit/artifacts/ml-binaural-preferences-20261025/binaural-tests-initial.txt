@@ -1,0 +1,22 @@
+test_cli_abstention_and_existing_output_preservation (test_binaural_preferences.BinauralPreferenceTests.test_cli_abstention_and_existing_output_preservation) ... ok
+test_consistent_choices_native_export_and_reopening (test_binaural_preferences.BinauralPreferenceTests.test_consistent_choices_native_export_and_reopening) ... ERROR
+test_duplicate_waveforms_with_different_file_metadata_are_refused (test_binaural_preferences.BinauralPreferenceTests.test_duplicate_waveforms_with_different_file_metadata_are_refused) ... ok
+test_hashes_groups_context_and_protocol_reject_before_native_work (test_binaural_preferences.BinauralPreferenceTests.test_hashes_groups_context_and_protocol_reject_before_native_work) ... ok
+test_native_level_mismatch_refuses_without_export (test_binaural_preferences.BinauralPreferenceTests.test_native_level_mismatch_refuses_without_export) ... ok
+test_ties_source_heterogeneity_and_side_bias_abstain (test_binaural_preferences.BinauralPreferenceTests.test_ties_source_heterogeneity_and_side_bias_abstain) ... ok
+
+======================================================================
+ERROR: test_consistent_choices_native_export_and_reopening (test_binaural_preferences.BinauralPreferenceTests.test_consistent_choices_native_export_and_reopening)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/test_binaural_preferences.py", line 32, in test_consistent_choices_native_export_and_reopening
+    result = fitter.run(self.data, RENDERER, self.root / "success")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_binaural_preferences.py", line 308, in run
+    raise ValueError("Selected HRTF reopening changed native audio")
+ValueError: Selected HRTF reopening changed native audio
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.067s
+
+FAILED (errors=1)

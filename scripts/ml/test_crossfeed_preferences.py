@@ -184,6 +184,18 @@ class CrossfeedPreferenceTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertFalse((root / "invalid").exists())
 
+    def test_each_held_programme_requires_connected_comparisons(self):
+        data = session()
+        data["trials"] = [
+            t
+            for t in data["trials"]
+            if t["programme_id"] == "programme-0"
+            or "candidate-2" not in (t["a"], t["b"])
+        ]
+        result = fitter.fit(data)
+        self.assertFalse(result["accepted"])
+        self.assertIn("disconnected_held_programme_comparison_graph", result["reasons"])
+
     def test_optimizer_agrees_with_independent_logistic_likelihood(self):
         _, design, labels, groups, _ = fitter.validate(session())
         weights = np.full(len(labels), 1 / len(labels))
