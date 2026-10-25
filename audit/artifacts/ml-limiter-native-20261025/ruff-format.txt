@@ -1,0 +1,33 @@
+unformatted: File would be reformatted
+  --> scripts/ml/limiter_native.py:94:45
+   |
+93 |         raise ValueError("Invalid native alignment/output/sample ceiling")
+   -     return raw.reshape(-1, signal.shape[1])[latency : latency + len(signal)].copy(), metadata
+94 +     return raw.reshape(-1, signal.shape[1])[
+95 +         latency : latency + len(signal)
+96 +     ].copy(), metadata
+   |
+
+unformatted: File would be reformatted
+  --> scripts/ml/test_limiter_native.py:64:28
+   |
+63 |         slow, _ = self.run_native(signal, release_ms=1000.0)
+   -         self.assertGreater(float(fast[6000:12000].mean()), float(slow[6000:12000].mean()))
+64 +         self.assertGreater(
+65 +             float(fast[6000:12000].mean()), float(slow[6000:12000].mean())
+66 +         )
+67 |         for out in [fast, slow]:
+--------------------------------------------------------------------------------
+71 |         for settings in [
+   -             {"release_ms": 9.0}, {"threshold_db": -21.0}, {"soft": True},
+   -             {"mix": 0.5}, {"typo": 1}, {"oversampling": 3},
+72 +             {"release_ms": 9.0},
+73 +             {"threshold_db": -21.0},
+74 +             {"soft": True},
+75 +             {"mix": 0.5},
+76 +             {"typo": 1},
+77 +             {"oversampling": 3},
+78 |         ]:
+   |
+
+2 files would be reformatted

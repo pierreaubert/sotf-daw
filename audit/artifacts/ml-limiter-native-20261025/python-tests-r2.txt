@@ -1,0 +1,9 @@
+test_ceiling_streaming_and_zero_continuation (test_limiter_native.LimiterNativeTests.test_ceiling_streaming_and_zero_continuation) ... ok
+test_identity_markers_and_exact_delay (test_limiter_native.LimiterNativeTests.test_identity_markers_and_exact_delay) ... ok
+test_invalid_requests_do_not_export (test_limiter_native.LimiterNativeTests.test_invalid_requests_do_not_export) ... ok
+test_release_changes_recovery_without_changing_bound (test_limiter_native.LimiterNativeTests.test_release_changes_recovery_without_changing_bound) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.510s
+
+OK

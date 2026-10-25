@@ -1,0 +1,10 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/limiter_native.py",
+    "scripts/ml/test_limiter_native.py"
+  ],
+  "exit_code": 1,
+  "seconds": 0.046903999987989664
+}

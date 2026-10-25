@@ -28,3 +28,8 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+
+[[bin]]
+name = "qa-limiter-render"
+path = "bin/qa_limiter_render.rs"
+required-features = ["qa"]

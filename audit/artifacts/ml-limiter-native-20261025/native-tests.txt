@@ -1,0 +1,292 @@
+
+running 84 tests
+test native_kernel::remediation_tests::bs1770_hann_sinc_impulse_matches_independent_fixed_coefficient_oracle ... ok
+test oversampled_core::tests::scalar_gain_labels_silence_as_unity_and_avoid_f32_ratio_overflow ... ok
+test oversampled_core::tests::transport_subdivision_preserves_arbitrary_musical_origin ... ok
+test native_kernel::remediation_tests::monotonic_window_matches_naive_maximum ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test native_kernel::remediation_tests::isp_alignment_requirement_tracks_rate_dependent_detector_delay ... ok
+test oversampled_core::tests::a_core_attenuation_block_labels_exactly_its_two_downsampling_contributors ... ok
+test params::tests::dynamics_row_is_pinned_and_secondary_groups_disclose_by_name ... ok
+test params::tests::param_index_coverage ... ok
+test params::tests::roundtrip_serde ... ok
+test tests::from_params_sanitizes_non_finite_and_out_of_range_values ... ok
+test tests::from_params_seeds_mix_smoother_at_saved_value ... ok
+test oversampled_path::tests::contributor_delay_and_mix_are_gain_indicators_not_waveform_ratios ... ok
+test tests::process_rejects_wrong_buffer_lengths_without_advancing_state ... ok
+test tests::reset_matches_fresh_instance_observable_state ... ok
+test oversampled_path::tests::guard_gain_labels_follow_isp_audio_delay_and_keep_channels_separate ... ok
+test tests::test_channels ... ok
+test tests::test_dual_release_limits ... ok
+test tests::test_dual_release_parameter ... ok
+test tests::test_channel_count_above_32 ... ok
+test tests::test_feed_forward_disabled_when_lookahead_zero ... ok
+test tests::test_from_params_new_fields ... ok
+test native_kernel::remediation_tests::isp_preserves_ceiling_utilization_for_a_steady_tone ... ok
+test tests::test_get_data_returns_typed_data ... ok
+test tests::test_initialize_different_sample_rates ... ok
+test tests::test_cache_update_channel_mismatch_does_not_panic ... ok
+test tests::test_get_parameter_unknown_id_returns_none ... ok
+test tests::test_get_parameter_all_ids ... ok
+test tests::test_info ... ok
+test tests::test_initialize_resizes_detectors ... ok
+test tests::test_isp_meter_floor_without_true_peak ... ok
+test tests::test_isp_correction_decay_speed ... ok
+test tests::test_dual_release_envelope_decay ... ok
+test tests::test_isp_meter_resets_to_floor_when_true_peak_disabled ... ok
+test tests::test_isp_mode_implies_true_peak ... ok
+test tests::test_isp_mode_parameter ... ok
+test tests::test_latency_samples_matches_lookahead ... ok
+test tests::test_limiter_basic ... ok
+test tests::test_limiter_ceiling_enforcement ... ok
+test tests::test_limiter_clamps_output ... ok
+test tests::test_limiter_compile_metadata_tracks_lookahead_latency ... ok
+test tests::test_limiter_compiled_op_matches_process_in_place ... ok
+test native_kernel::remediation_tests::isp_threshold_steps_follow_the_smoothed_ceiling_in_final_output ... ok
+test tests::test_parameters_returns_all_params ... ok
+test tests::test_isp_mode_correction_decay_path ... ok
+test tests::test_lookahead_causes_delay ... ok
+test tests::test_link_amount_interpolates_average_to_peak_detection ... ok
+test tests::test_lookahead_parameter_change_uses_preallocated_storage ... ok
+test tests::test_mix_smoother_advances_per_frame ... ok
+test tests::test_isp_meter_exposure ... ok
+test tests::test_process_below_threshold_no_limiting ... ok
+test tests::test_process_empty_buffer_returns_zero ... ok
+test tests::test_process_silence_no_gr ... ok
+test tests::test_process_stereo_independent_channels ... ok
+test tests::test_limiter_mix_parameter ... ok
+test tests::test_set_parameter_boundary_values ... ok
+test tests::test_reset_clears_new_state ... ok
+test tests::test_set_parameter_feed_forward_and_link_amount ... ok
+test tests::test_set_parameter_infinite_rejected_by_validation ... ok
+test tests::test_set_release_below_min_errors ... ok
+test tests::test_lookahead_buffer_wraps_correctly ... ok
+test tests::test_set_parameter_nan_returns_error ... ok
+test tests::test_set_parameter_out_of_bounds_returns_error ... ok
+test tests::test_set_parameter_soft_roundtrip ... ok
+test tests::test_set_parameter_unknown_id_returns_error ... ok
+test tests::test_set_release_recomputes_coefficients ... ok
+test tests::test_soft_knee_identity_region ... ok
+test tests::test_single_channel_ignores_link_amount ... ok
+test tests::test_soft_knee_at_threshold_equals_hard_knee ... ok
+test tests::test_soft_vs_hard_clipping_difference ... ok
+test tests::test_envelope_decay_after_transient ... ok
+test tests::test_threshold_zero_db ... ok
+test tests::test_soft_knee_not_stricter_than_hard ... ok
+test tests::threshold_smoother_operates_in_decibels ... ok
+test tests::test_true_peak_parameter ... ok
+test tests::zero_lookahead_is_sample_exact_without_hidden_latency ... ok
+test tests::test_true_peak_detection ... ok
+test types::tests::deserialize_empty_json_uses_param_specs_defaults ... ok
+test tests::test_threshold_transition_is_smooth ... ok
+test types::tests::oversampling_constructor_wire_forms_preserve_integer_serialization ... ok
+test native_kernel::remediation_tests::bs1770_high_frequency_phase_sweep_meets_rate_appropriate_error_bounds ... ok
+test native_kernel::remediation_tests::isp_limiter_holds_the_whole_output_below_ceiling_by_independent_dbtp_oracle ... ok
+test native_kernel::remediation_tests::isp_corrects_bursts_and_two_tones_at_minimum_lookahead ... ok
+test oversampled_path::capacity_tests::descriptor_frontier_and_full_capacity_quotas_cover_every_residual_phase ... ok
+
+test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.65s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test unchanged_eos_snapshot_preserves_legacy_constructor_release_range ... ok
+test joint_isp_preparation_validates_final_state_instead_of_sorted_key_order ... ok
+test eos_accepts_identical_snapshots_and_rejects_changed_batches_until_reset ... ok
+test rapid_valid_batches_keep_the_ceiling_and_one_clock_through_eof ... ok
+test rejected_bulk_controls_leave_all_state_and_audio_unchanged ... ok
+test randomized_high_frequency_phases_respect_final_emitted_isp_criterion ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+
+running 5 tests
+test enabling_full_linking_merges_existing_independent_envelopes ... ok
+test linked_dual_release_preserves_channel_ratios_during_release ... ok
+test independent_dual_release_matches_separate_mono_instances ... ok
+test isp_stage_preserves_linking_and_independent_streaming_across_blocks ... ok
+test linked_dual_release_matches_mono_for_every_channel_and_block_size ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+
+running 8 tests
+test rejected_input_neither_changes_audio_nor_enters_eos ... ok
+test empty_and_zero_delay_streams_do_not_invent_tail_samples ... ok
+test drain_validation_is_transactional_before_and_during_eos ... ok
+test eos_freezes_real_changes_but_idempotent_controls_and_reset_work ... ok
+test cold_process_drain_queries_controls_and_reset_neither_allocate_nor_free ... ok
+test drain_call_bound_tracks_full_capacity_partial_empty_and_reset ... ok
+test first_and_final_markers_follow_exact_independent_delay ... ok
+test nonlinear_tail_matches_separately_zero_continued_stream ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 20 tests
+test limiter_clamps_loud_signal ... ok
+test feed_forward_pre_empts_transient ... ok
+test info_and_channels_match_construction ... ok
+test from_params_wires_all_fields ... ok
+test lookahead_parameter_change_requires_graph_rebuild ... ok
+test invalid_parameter_rejected ... ok
+test get_data_returns_typed_cache ... ok
+test initialize_changes_sample_rate_and_latency ... ok
+test non_finite_audio_is_sanitized_without_poisoning_state ... ok
+test link_amount_zero_preserves_independence ... ok
+test isp_guarantee_rejects_uncontrollable_configurations ... ok
+test dual_release_limits_normally ... ok
+test mix_zero_is_dry_passthrough ... ok
+test parameter_roundtrip ... ok
+test parameters_list_contains_expected_ids ... ok
+test process_zero_frames_returns_zero ... ok
+test reset_clears_state ... ok
+test soft_knee_respects_ceiling ... ok
+test true_peak_detection_limits_inter_sample_peaks ... ok
+test isp_mode_limits_output_true_peaks ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test isp_requires_the_detector_delay_at_the_initialized_sample_rate ... ok
+test isp_latency_changes_require_a_graph_rebuild ... ok
+test isp_output_delay_matches_reported_latency_and_reset ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test threshold_automation_keeps_output_meters_consistent ... ok
+test disabled_true_peak_reports_silence_floor_and_reset_clears_output_meters ... ok
+test output_true_peak_matches_independent_reconstruction ... ok
+test output_peak_matches_emitted_samples_across_paths ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.73s
+
+
+running 6 tests
+test independent_reconstruction_detects_peaks_between_samples ... ok
+test dry_and_half_wet_outputs_use_one_exactly_aligned_final_mix ... ok
+test coherent_alias_measurements_preserve_specific_improvements_without_factor_ordering ... ok
+test first_and_late_low_level_impulses_peak_at_the_declared_physical_delay ... ok
+test all_840_bursts_respect_the_final_sample_and_isp_ceilings ... ok
+test public_waveforms_are_bit_identical_across_partitions_and_reset ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
+
+
+running 2 tests
+test synchronous_downsampler_has_only_current_and_previous_unit_support ... ok
+test every_control_event_phase_matches_absolute_processing_and_output_clocks ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.63s
+
+
+running 1 test
+test cold_process_control_begin_partial_drain_bounds_and_reset_do_not_allocate_or_free ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.36s
+
+
+running 7 tests
+test preinitialization_metadata_and_legacy_json_are_unambiguous ... ok
+test preflight_and_failed_reinitialization_preserve_live_audio_and_drain ... ok
+test reset_installs_current_controls_and_successful_reinitialize_matches_fresh_rate ... ok
+test rejected_bulk_factor_change_cannot_retarget_earlier_controls ... ok
+test nonlinear_finite_drain_matches_explicit_zero_continuation_and_partition ... ok
+test neutral_low_level_high_frequency_and_dry_limiting_never_light_meter ... ok
+test dry_delay_is_exact_integer_native_latency_at_all_residual_phases ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.02s
+
+
+running 3 tests
+test independently_measured_neutral_filter_attenuation_is_not_gain_reduction ... ok
+test every_residual_phase_keeps_all_neutral_publications_zero_through_mix_reset_and_eos ... ok
+test settled_dc_publishes_independent_limiting_gain_and_reset_clears_the_meter_epoch ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.54s
+
+
+running 5 tests
+test parameter_roundtrip ... ok
+test process_finite_output ... ok
+test no_nan_with_random_settings ... ok
+test monotonic_threshold ... ok
+test unity_mix_passthrough ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+
+running 2 tests
+test bulk_and_direct_parameter_paths_report_identical_values ... ok
+test realtime_getters_setters_and_processing_do_not_allocate ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 9 tests
+test old_preset_defaults_and_save_reload_preserve_audio ... ok
+test disabled_true_peak_protection_only_promises_the_sample_ceiling ... ok
+test release_lookahead_edges_and_eof_tail ... ok
+test threshold_automation_with_link_modes_holds_ceiling ... ok
+test thirty_two_channel_link_stress_holds_ceiling ... ok
+test dual_release_recovers_monotonically_without_ceiling_violation ... ok
+test single_release_dc_step_matches_one_pole_oracle ... ok
+test two_tone_phase_ceiling_and_limiter_engages ... ok
+test burst_ceiling_holds_across_rate_link_release ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.76s
+
+
+running 4 tests
+test test_more_than_32_channels ... ok
+test test_feed_forward_lookahead_tracks_peak ... ok
+test test_limiter_prevents_clipping ... ok
+test test_limiter_soft_mode ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+   Compiling sotf-plugin-limiter v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-limiter)
+    Finished `release` profile [optimized] target(s) in 2m 53s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_limiter-084551609fa49104)
+     Running unittests bin/qa_limiter.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_limiter-f3e8d4bd771834bd)
+     Running unittests bin/qa_limiter_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_limiter_render-9611483f065d6ed8)
+     Running tests/audit_safety.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_safety-6b93cab7b85419ae)
+     Running tests/channel_link_accuracy.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/channel_link_accuracy-4cfe17363c4a9607)
+     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/finite_stream-cbba0ea9fa85421b)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-a0c7b615da6d10a4)
+     Running tests/isp_configuration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/isp_configuration-6388a274ebb2f10d)
+     Running tests/native_baseline.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/native_baseline-d38e0dbb999769ed)
+     Running tests/output_metering.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/output_metering-30dcd0d8fca680f3)
+     Running tests/oversampling_accuracy.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/oversampling_accuracy-f4f678622c46c4fb)
+     Running tests/oversampling_automation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/oversampling_automation-5d6fd9d3e472adc9)
+     Running tests/oversampling_realtime.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/oversampling_realtime-3c9eeeb6c3252cb2)
+     Running tests/oversampling_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/oversampling_stream-f58190c2a52bcb2a)
+     Running tests/oversampling_telemetry.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/oversampling_telemetry-f82217821c966e99)
+     Running tests/property_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/property_tests-9a1c10c90b4b465b)
+     Running tests/realtime_parameters.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/realtime_parameters-f2421fc395777499)
+     Running tests/release_channel_matrix.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/release_channel_matrix-99e1f543701ced4a)
+     Running tests/test_dynamics.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/test_dynamics-c0bfeb7c58ba4e25)
+   Doc-tests sotf_plugin_limiter

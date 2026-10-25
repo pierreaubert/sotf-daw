@@ -512,8 +512,20 @@
       "requirements": [
         "ML may recommend release characteristics, but a learned model should never be the only ceiling enforcement mechanism."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-limiter/bin/qa_limiter_render.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-limiter/Cargo.toml",
+        "scripts/ml/limiter_native.py",
+        "scripts/ml/test_limiter_native.py",
+        "audit/artifacts/ml-limiter-native-20261025"
+      ],
+      "remaining": [
+        "Train a release recommendation model against explicit paired reference outputs with identity-grouped training/development/fresh evaluation.",
+        "Compare learned initialization to bounded deterministic native fitting and strong classical baselines.",
+        "Bounded/checksummed model loading, opt-in preset export, abstention and fallback policy.",
+        "Independent signal/rate/channel/noise/level/identifiability validation, timing/memory cost, real recordings, listening and host integration."
+      ]
     },
     {
       "plugin_id": 30,

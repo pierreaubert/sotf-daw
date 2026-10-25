@@ -1,0 +1,18 @@
+{
+  "native_test_totals": {
+    "passed": 169,
+    "failed": 0,
+    "ignored": 0
+  },
+  "python_integration_tests": 6,
+  "checks": {
+    "native-tests": 0,
+    "clippy": 0,
+    "python-tests-post-build": 0,
+    "ruff-final": 0,
+    "ruff-format-final": 0,
+    "rustfmt": 0
+  },
+  "adoption": "Native renderer foundation only; trained release suggestion remains pending.",
+  "sources_and_renderer_hashes_verified": true
+}
