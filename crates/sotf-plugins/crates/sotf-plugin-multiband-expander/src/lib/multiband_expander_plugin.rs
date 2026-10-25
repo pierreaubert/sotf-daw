@@ -133,6 +133,21 @@ impl MultibandExpanderPlugin {
         self.denoising.as_ref().map(|mode| mode.counters())
     }
 
+    /// Inspect actual synthesis gains, Hann window and rendered hop count.
+    ///
+    /// Gains use channel-major bin order. Rendered hops include frozen EOF
+    /// continuation, while denoising source counters exclude that continuation.
+    #[cfg(feature = "qa")]
+    pub fn spectral_synthesis_snapshot(&self) -> Option<(usize, &[f32], &[f32])> {
+        self.spectral.as_ref().map(|ss| {
+            (
+                ss.rendered_hops,
+                ss.synthesis_gains.as_slice(),
+                ss.analysis_window.as_slice(),
+            )
+        })
+    }
+
     /// Inspect independent classical spectral attenuation histories for qualification.
     #[cfg(feature = "qa")]
     pub fn classical_spectral_envelopes(&self) -> Option<impl Iterator<Item = f32> + '_> {
@@ -834,10 +849,18 @@ impl MultibandExpanderPlugin {
             for k in 0..num_bins {
                 let b = ss.bin_to_band[k];
                 let info = &ss.band_info[b];
+                #[cfg(feature = "qa")]
+                {
+                    ss.synthesis_gains[ch * num_bins + k] = 1.0;
+                }
 
                 // Muted bands (solo active, this band not solo)
                 if any_solo && !info.solo {
                     ss.freq_scratch[k] = Complex::new(0.0, 0.0);
+                    #[cfg(feature = "qa")]
+                    {
+                        ss.synthesis_gains[ch * num_bins + k] = 0.0;
+                    }
                     continue;
                 }
 
@@ -924,6 +947,10 @@ impl MultibandExpanderPlugin {
                     .denoising
                     .as_ref()
                     .map_or(gain, |mode| mode.gain(k, gain));
+                #[cfg(feature = "qa")]
+                {
+                    ss.synthesis_gains[ch * num_bins + k] = gain;
+                }
                 ss.freq_scratch[k] *= gain;
             }
 
@@ -946,6 +973,10 @@ impl MultibandExpanderPlugin {
         }
 
         // Advance OLA write position by one hop
+        #[cfg(feature = "qa")]
+        {
+            ss.rendered_hops += 1;
+        }
         ss.next_add_position = (ss.next_add_position + ss.hop_size) & mask;
 
         // Zero the "fresh" fft_size positions just past the write head.

@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/expander_mask_model.py",
+    "scripts/ml/train_expander_mask.py",
+    "scripts/ml/test_expander_mask.py",
+    "scripts/ml/expander_mask_native.py",
+    "scripts/ml/evaluate_expander_mask.py",
+    "scripts/ml/calibrate_expander_mask.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.011428375029936433
+}

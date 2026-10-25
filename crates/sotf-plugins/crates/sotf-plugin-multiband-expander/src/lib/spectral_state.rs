@@ -23,6 +23,10 @@ pub(super) struct SpectralBandInfo {
 /// Pre-allocated in `initialize()` to avoid hot-path allocation.
 /// Uses the same Hann-window 75%-overlap OLA as XTC/Binaural plugins.
 pub(super) struct SpectralState {
+    #[cfg(feature = "qa")]
+    pub(super) rendered_hops: usize,
+    #[cfg(feature = "qa")]
+    pub(super) synthesis_gains: Vec<f32>,
     pub(super) fft_size: usize,
     pub(super) hop_size: usize,
     /// Number of frequency bins = fft_size / 2 + 1
@@ -151,6 +155,10 @@ impl SpectralState {
         let dry_delay_len = dry_delay_frames * channels;
 
         Self {
+            #[cfg(feature = "qa")]
+            rendered_hops: 0,
+            #[cfg(feature = "qa")]
+            synthesis_gains: vec![1.0; channels * num_bins],
             fft_size,
             hop_size,
             num_bins,
@@ -266,6 +274,11 @@ impl SpectralState {
     }
 
     pub(super) fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        {
+            self.rendered_hops = 0;
+            self.synthesis_gains.fill(1.0);
+        }
         for buf in &mut self.input_buffers {
             buf.fill(0.0);
         }

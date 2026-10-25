@@ -895,12 +895,20 @@
         "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/denoising.rs",
         "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/tests/spectral_finite_allocations.rs",
         "audit/ml-expander-mask-20261025.md",
-        "audit/artifacts/ml-expander-mask-20261025"
+        "audit/artifacts/ml-expander-mask-20261025",
+        "scripts/ml/expander_mask_model.py",
+        "scripts/ml/train_expander_mask.py",
+        "scripts/ml/expander_mask_native.py",
+        "scripts/ml/evaluate_expander_mask.py",
+        "scripts/ml/calibrate_expander_mask.py",
+        "scripts/ml/test_expander_mask.py",
+        "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/bin/qa_expander_mask_render.rs",
+        "crates/sotf-plugins/models/expander-denoising-mask/manifest.json"
       ],
       "remaining": [
-        "No trained model yet: train/freeze with disjoint sources and validate Python/native parity.",
-        "Actual native waveform renderer and independent WOLA, clean-damage/noise-leakage, artifact and attenuation-matched classical comparisons.",
-        "Distribution shifts, complete memory/local callback budgets, recorded music/noise and cross-platform DAW validation; production controls/activation require demonstrated benefit."
+        "Synthetic candidate is unadmitted: severe clean-material mask failure and output damage; confidence calibration and independent onset/pumping/musical-noise metrics remain.",
+        "Complete memory and callback budgets; recorded music/noise and cross-platform DAW validation.",
+        "Production controls and click-free activation require independently demonstrated quality benefit; post-hoc noise-lead controls do not establish admission."
       ]
     },
     {

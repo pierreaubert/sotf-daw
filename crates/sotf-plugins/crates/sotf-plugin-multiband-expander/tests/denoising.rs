@@ -159,6 +159,46 @@ fn feature_and_model_domains_are_explicit() {
 }
 
 #[test]
+fn frozen_trained_candidate_matches_python_features_and_network() {
+    let bytes = include_bytes!("../../../models/expander-denoising-mask/model.synthetic.json");
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../models/expander-denoising-mask/parity.synthetic.json"
+    ))
+    .unwrap();
+    let sha = fixture["model_sha256"].as_str().unwrap();
+    let network = DenoisingMask::from_json(bytes, sha).unwrap();
+    let mut feature_error = 0.0_f64;
+    let mut prediction_error = 0.0_f64;
+    for case in fixture["cases"].as_array().unwrap() {
+        let values = |key: &str| {
+            case[key]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|v| v.as_f64().unwrap())
+                .collect::<Vec<_>>()
+        };
+        let power = values("power");
+        let previous = values("previous");
+        for point in case["points"].as_array().unwrap() {
+            let bin = point["bin"].as_u64().unwrap() as usize;
+            let actual = features(&power, &previous, bin).unwrap();
+            for (a, b) in actual.iter().zip(point["features"].as_array().unwrap()) {
+                feature_error = feature_error.max((a - b.as_f64().unwrap()).abs());
+            }
+            prediction_error = prediction_error.max(
+                (f64::from(network.predict(&actual).unwrap())
+                    - point["prediction"].as_f64().unwrap())
+                .abs(),
+            );
+        }
+    }
+    println!("frozen expander parity feature={feature_error}, prediction={prediction_error}");
+    assert!(feature_error < 1e-12);
+    assert!(prediction_error < 2e-7);
+}
+
+#[test]
 fn constant_mask_matches_independent_full_complex_wola_and_energy_bound() {
     use rustfft::{FftPlanner, num_complex::Complex};
     const N: usize = 1024;

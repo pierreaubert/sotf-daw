@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_expander_mask.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-expander-mask-render",
+    "--model",
+    "crates/sotf-plugins/models/expander-denoising-mask/model.synthetic.json",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-expander-mask-native-20261025"
+  ],
+  "exit_code": 0,
+  "seconds": 4.793213542085141
+}

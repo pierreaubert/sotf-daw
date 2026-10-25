@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_expander_mask.py",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-expander-mask-training-replay-20261025"
+  ],
+  "exit_code": 0,
+  "seconds": 33.01336433296092
+}

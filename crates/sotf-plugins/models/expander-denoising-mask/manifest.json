@@ -1,0 +1,54 @@
+{
+  "format": "sotf-expander-mask-manifest-v1",
+  "status": "synthetic_qualification_only",
+  "deployment_admitted": false,
+  "automatic_activation": false,
+  "model": {
+    "file": "model.synthetic.json",
+    "bytes": 1996,
+    "sha256": "3b93c142cbcd5fc118bd2a075c6bca7d5bccc1dc94b9cc36338f9c9fd7899af9",
+    "coefficients": 65,
+    "architecture": "6 normalized causal features,8 tanh units,1 sigmoid Wiener amplitude ratio"
+  },
+  "provenance": {
+    "origin": "project-generated music/noise",
+    "license": "GPL-3.0-or-later",
+    "external_training_audio": false
+  },
+  "splits": {
+    "training_source_seeds": 32,
+    "validation_source_seeds": 8,
+    "final_source_seeds": 16,
+    "rows_per_source": 256,
+    "shift_variants_reuse_final_seeds": true,
+    "training_sample_rate": 48000,
+    "training_channels": 1
+  },
+  "native_policy": {
+    "fft_size": 1024,
+    "hop_size": 256,
+    "sample_rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "maximum_channels": 2,
+    "confidence_threshold": 0.85,
+    "gain_floor": 0.1,
+    "gain_ceiling": 1.0,
+    "gain_attack_ms": 5,
+    "gain_release_ms": 30,
+    "feature_history_ms": 30,
+    "latency_samples": 1024,
+    "added_model_lookahead_samples": 0,
+    "fallback": "independent_classical_expander",
+    "drain": "freeze_learned_gains_features_and_counters"
+  },
+  "evidence": "audit/artifacts/ml-expander-mask-20261025",
+  "remaining": [
+    "Clean-material failure, confidence calibration and independent artifact metrics",
+    "Complete memory and callback budgets",
+    "Recorded music/noise and cross-platform DAW validation",
+    "Product selector and click-free activation only after demonstrated quality benefit"
+  ]
+}

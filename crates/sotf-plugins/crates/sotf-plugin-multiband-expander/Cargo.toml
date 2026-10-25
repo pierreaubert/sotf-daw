@@ -20,6 +20,11 @@ name = "qa-multiband-expander"
 path = "bin/qa_multiband_expander.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-expander-mask-render"
+path = "bin/qa_expander_mask_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 math-dsp = { workspace = true }

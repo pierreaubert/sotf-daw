@@ -1,0 +1,15 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_expander_mask.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "seconds": 1.3371327079366893
+}
