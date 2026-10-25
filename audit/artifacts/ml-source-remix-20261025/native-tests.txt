@@ -1,0 +1,10 @@
+   Compiling sotf-plugin-downmix v0.5.28 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)
+error[E0277]: the trait bound `DownmixPluginParams: Default` is not satisfied
+   --> crates/sotf-plugins/crates/sotf-plugin-downmix/tests/source_remix.rs:251:19
+    |
+251 |                 ..Default::default()
+    |                   ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `DownmixPluginParams`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `sotf-plugin-downmix` (test "source_remix") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

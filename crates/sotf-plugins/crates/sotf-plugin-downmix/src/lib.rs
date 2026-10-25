@@ -1,4 +1,6 @@
 pub mod params;
+#[cfg(feature = "qa")]
+pub mod source_remix;
 
 #[cfg(test)]
 #[path = "lib/allpass_stage.rs"]

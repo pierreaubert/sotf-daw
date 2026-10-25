@@ -1,0 +1,10 @@
+test_features_are_stereo_swap_and_global_phase_invariant (test_source_remix.ModelTests.test_features_are_stereo_swap_and_global_phase_invariant) ... ok
+test_gradient_matches_independent_central_differences (test_source_remix.ModelTests.test_gradient_matches_independent_central_differences) ... ok
+test_hash_policy_provenance_shape_and_coefficients_reject (test_source_remix.ModelTests.test_hash_policy_provenance_shape_and_coefficients_reject) ... ok
+test_conditional_trace_and_callback_drain_reopening_match_actual_output (test_source_remix.NativeTests.test_conditional_trace_and_callback_drain_reopening_match_actual_output) ... ok
+test_rejected_model_and_unsupported_clock_keep_neutral_delayed_downmix (test_source_remix.NativeTests.test_rejected_model_and_unsupported_clock_keep_neutral_delayed_downmix) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.049s
+
+OK

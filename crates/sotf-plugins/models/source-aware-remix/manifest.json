@@ -1,0 +1,37 @@
+{
+  "format": "sotf-source-remix-manifest-v1",
+  "status": "synthetic_qualification_only",
+  "deployment_admitted": false,
+  "automatic_activation": false,
+  "model": {
+    "file": "model.synthetic.json",
+    "bytes": 2497,
+    "sha256": "5fe02bae05ffe7994e755c93b89226d156803d1cd976e6406ba7315a8e6adb0c",
+    "architecture": "6 features,8 tanh hidden units,1 sigmoid centered mid-energy fraction",
+    "coefficients": 65
+  },
+  "provenance": {
+    "origin": "project-generated complex centered foreground and stereo bed",
+    "license": "GPL-3.0-or-later",
+    "external_training_audio": false,
+    "semantic_source_labels": false
+  },
+  "splits": {
+    "training_scene_seeds": 64,
+    "validation_scene_seeds": 16,
+    "final_scene_seeds": 32,
+    "rows_per_scene": 512,
+    "shift_variants_reuse_final_seeds": true
+  },
+  "latency": {
+    "matrix_downmix_samples": 0,
+    "separate_remix_samples": 512,
+    "added_model_lookahead_samples": 0
+  },
+  "evidence": "audit/artifacts/ml-source-remix-20261025",
+  "remaining": [
+    "Recorded source-quality advantage and confidence calibration",
+    "Production selector, activation UX and broader layouts",
+    "Complete heap accounting and cross-platform DAW deadlines"
+  ]
+}

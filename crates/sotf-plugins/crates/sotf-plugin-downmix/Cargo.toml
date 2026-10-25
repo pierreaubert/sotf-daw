@@ -13,11 +13,16 @@ name = "sotf_plugin_downmix"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-downmix"
 path = "bin/qa_downmix.rs"
+required-features = ["qa"]
+
+[[bin]]
+name = "qa-source-remix-render"
+path = "bin/qa_source_remix_render.rs"
 required-features = ["qa"]
 
 [dependencies]
@@ -28,3 +33,4 @@ realfft = { workspace = true }
 rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true, optional = true }

@@ -1,0 +1,14 @@
+
+running 5 tests
+source_remix_parity feature=0.00000000000000033306690738754696 probability=0.000000026410920006547656
+test features_network_and_stereo_symmetry_match_independent_numpy_reference ... ok
+test rejected_calls_preserve_stream_and_primitive_controls_allocate_nothing ... ok
+test missing_unsupported_and_neutral_remix_reconstruct_delayed_stereo ... ok
+test learned_callbacks_drain_reset_and_swapped_channels_are_deterministic ... ok
+test conditional_operator_and_complete_output_energy_remain_inside_explicit_gain_bound ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling sotf-plugin-downmix v0.5.28 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)
+    Finished `release` profile [optimized] target(s) in 15.86s
+     Running tests/source_remix.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/source_remix-b4e3491a9ec596ee)

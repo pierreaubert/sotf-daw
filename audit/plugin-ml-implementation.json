@@ -384,8 +384,26 @@
       "requirements": [
         "Learned source-aware remixing should be a separate optional product mode, not a hidden change to deterministic downmix."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-downmix/src/source_remix.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-downmix/src/source_remix/model.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-downmix/bin/qa_source_remix_render.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-downmix/tests/source_remix.rs",
+        "scripts/ml/source_remix_model.py",
+        "scripts/ml/train_source_remix.py",
+        "scripts/ml/source_remix_native.py",
+        "scripts/ml/evaluate_source_remix.py",
+        "scripts/ml/test_source_remix.py",
+        "crates/sotf-plugins/models/source-aware-remix/manifest.json",
+        "audit/ml-source-remix-20261025.md",
+        "audit/artifacts/ml-source-remix-20261025"
+      ],
+      "remaining": [
+        "Demonstrated source-quality advantage: synthetic learned waveform mode regresses against analytic in 7 of 10 probes; centered bed ambiguity remains.",
+        "Recorded multilingual and music/noise validation and confidence calibration; no semantic dialogue identity claim.",
+        "Production mode selection, click-free activation, broader layouts, complete heap accounting and cross-platform DAW deadlines. Current separate QA-only stage adds 512 samples and remains unadmitted."
+      ]
     },
     {
       "plugin_id": 22,

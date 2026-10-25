@@ -1,0 +1,140 @@
+
+running 36 tests
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test params::tests::param_index_coverage ... ok
+test tests::test_allpass_stage_coeff_and_process ... ok
+test params::tests::roundtrip_serde ... ok
+test params::tests::indexed_set_clamps_to_spec_range ... ok
+test tests::test_downmix_center_channel_coherence ... ok
+test tests::test_advance_coeff_smoothers_by ... ok
+test tests::test_initialize_different_sample_rate ... ok
+test tests::test_514_gain_changes_do_not_normalize_front_routes ... ok
+test tests::test_downmix_basic ... ok
+test tests::test_downmix_51 ... ok
+test tests::test_count_surround_channels ... ok
+test tests::test_is_center_channel ... ok
+test tests::phase_alignment_preserves_ordinary_mix_bin_magnitude ... ok
+test tests::test_compute_standard_coefficients_with_gains ... ok
+test tests::explicit_layout_distinguishes_7_1_from_5_1_2 ... ok
+test tests::test_is_surround_channel ... ok
+test tests::test_latency_samples_phase_coherence_off ... ok
+test tests::test_latency_samples_phase_coherence_on ... ok
+test tests::test_lt_rt_allpass_update_sample_rate_and_reset ... ok
+test tests::misc::test_514_rear_height_no_negative_gains ... ok
+test tests::test_lfe_lookup_uses_channel_indexed_flags ... ok
+test tests::test_param_value_roundtrip ... ok
+test tests::test_process_eight_channels ... ok
+test tests::test_process_itu_mode ... ok
+test tests::test_process_phase_coherence_small_buffer_zeros_output ... ok
+test tests::test_process_single_channel ... ok
+test tests::test_process_zero_input ... ok
+test tests::test_reset_clears_state ... ok
+test tests::test_set_parameter_get_parameter_roundtrip ... ok
+test tests::test_surround_panning_energy_preservation ... ok
+test tests::test_all_configs_valid_coefficients ... ok
+test tests::reinitialize_discards_old_rate_stream_and_filter_state ... ok
+test tests::test_stft_path_advances_coeff_smoothers_per_fft_block ... ok
+test tests::test_process_matrix_ltrt ... ok
+test tests::test_wola_perfect_reconstruction ... ok
+
+test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+test unnamed_layouts_have_explicit_index_pan_without_invented_lfe ... ok
+test every_named_layout_matches_independent_basis_vectors_and_coherent_headroom ... ok
+test lfe_filter_and_omission_match_independent_complex_reference ... ok
+test coherent_surrounds_survive_passive_ltrt_decoding_without_polarity_inversion ... ok
+test coherent_full_scale_spectral_paths_retain_the_matrix_headroom ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 11 tests
+test drain_validation_and_frozen_controls_preserve_the_audio ... ok
+test recursive_lfe_is_eligible_only_when_unobservable ... ok
+test minimal_oversampled_setup_prepares_the_future_spectral_drain_capacity ... ok
+test invalid_ordinary_callbacks_preserve_output_and_prepared_audio ... ok
+test newly_settled_itu_keeps_prior_analysis_and_overlap_output ... ok
+test reset_and_reinitialize_rearm_finite_streams ... ok
+test declared_call_bound_covers_full_capacity_and_partially_served_tails ... ok
+test cold_first_final_drain_metadata_and_reset_do_not_allocate_or_free ... ok
+test nontrivial_spectral_tail_matches_ordinary_zero_continuation ... ok
+test dense_front_channels_have_exact_delay_and_endpoint_across_layouts ... ok
+test first_and_final_markers_survive_every_final_hop_phase ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+
+running 18 tests
+test construction_rejects_invalid_dimensions_and_modes ... ok
+test phase_mode_is_structural ... ok
+test reset_clears_buffers ... ok
+test info_is_reported ... ok
+test center_gain_roundtrip ... ok
+test five_one_center_fold_down ... ok
+test itu_mode_center_fold_down ... ok
+test mono_input_goes_to_both_channels ... ok
+test stereo_left_passes_to_left ... ok
+test from_params_happy_path ... ok
+test parameter_list_contains_expected_keys ... ok
+test process_rejects_inexact_buffer_lengths ... ok
+test structural_phase_change_requires_reconstruction_after_initialize ... ok
+test unknown_parameter_errors ... ok
+test phase_output_is_partition_invariant ... ok
+test ltrt_surround_rotation_preserves_matrix_magnitude_and_polarity ... ok
+test phase_aligner_stress_matrix_has_bounded_level_image_and_phase_jumps ... ok
+test ltrt_matches_independent_decoder_oracle_across_rates_layouts_and_partitions ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 6 tests
+test measure_explicit_remix_callback_budget ... ignored, Local callback budget evidence; run alone with one test thread
+source_remix_parity feature=0.00000000000000033306690738754696 probability=0.000000026410920006547656
+test features_network_and_stereo_symmetry_match_independent_numpy_reference ... ok
+test rejected_calls_preserve_stream_and_primitive_controls_allocate_nothing ... ok
+test missing_unsupported_and_neutral_remix_reconstruct_delayed_stereo ... ok
+test learned_callbacks_drain_reset_and_swapped_channels_are_deterministic ... ok
+test conditional_operator_and_complete_output_energy_remain_inside_explicit_gain_bound ... ok
+
+test result: ok. 5 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test setup_mode_changes_clear_the_correct_spectral_prefix ... ok
+test simple_named_layouts_keep_immediate_front_routing ... ok
+test constructors_mode_setup_and_reset_establish_the_same_clock ... ok
+test cold_spectral_and_simple_process_reset_do_not_allocate_or_free ... ok
+test each_initial_hop_phase_and_final_marker_survives ... ok
+test dense_front_programme_preserves_startup_and_ring_wrap_for_every_layout ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.28s
+
+
+running 1 test
+test test_pure_tone_no_ola_flutter ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling sotf-plugin-downmix v0.5.28 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-downmix)
+    Finished `release` profile [optimized] target(s) in 46.59s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_downmix-e1f7c99b642e2f3a)
+     Running unittests bin/qa_downmix.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_downmix-e48637d536220000)
+     Running unittests bin/qa_source_remix_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_source_remix_render-ab0f93952119d784)
+     Running tests/audit_matrix.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_matrix-467917ab667f33d4)
+     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/finite_stream-cb961b3e145209c0)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-3905a4617fd500bc)
+     Running tests/source_remix.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/source_remix-3d3e52e252b9a40e)
+     Running tests/startup.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/startup-5b5eaf3635aaf47e)
+     Running tests/test_cola.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/test_cola-a2d7c90db46d5999)
