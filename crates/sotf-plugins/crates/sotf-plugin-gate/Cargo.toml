@@ -24,6 +24,11 @@ path = "bin/qa_gate_silero.rs"
 required-features = ["qa", "silero-vad-eval"]
 
 [[bin]]
+name = "qa-gate-speech"
+path = "bin/qa_gate_speech.rs"
+required-features = ["qa", "silero-speech"]
+
+[[bin]]
 name = "qa-gate"
 path = "bin/qa_gate.rs"
 required-features = ["qa"]

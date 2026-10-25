@@ -1,0 +1,10 @@
+{
+  "command": [
+    "python3",
+    "scripts/ml/analyze_gate_quality.py",
+    "audit/artifacts/ml-gate-quality-20261025",
+    "audit/artifacts/ml-gate-quality-20261025/final-analysis.json"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.1058929581195116
+}

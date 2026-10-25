@@ -173,6 +173,39 @@ cargo run -p sotf-plugin-gate --bin qa-gate-silero \
   audit/artifacts/ml-gate-silero-20261025/fixed-batch/ort-golden.json
 ```
 
+### Speech quality development comparison
+
+Run the frozen comparison with an unused output directory:
+
+```bash
+cargo run -p sotf-plugin-gate --bin qa-gate-speech \
+  --features qa,silero-speech --release --locked -- \
+  crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx \
+  /path/to/new-results
+```
+
+The 22 cases compare classical, RNNoise, and Silero with a fixed gate curve and
+confidence threshold: original and 0.1 gain, clean and 10 dB white-noise mixtures,
+plus noise-only controls. A linked pilot measures actual gain while a separate
+key reproduces mono input detection. Analytic gain/loss, mono/pilot agreement,
+activity exclusions, and annotation endpoint selection have calibration tests.
+Saved per-window component energies permit independent reduction.
+
+Results in `audit/artifacts/ml-gate-quality-20261025` are conditional development
+proxies. Silero reduced cuts in six speech-region/case rows and triggered no
+false protection on these negative controls. It failed to activate on the
+quieter plosive clip, leaving the classical 65 cut windows unchanged; RNNoise
+reduced that count to 30 but also protected instrument tails. Energy-weighted
+speech loss was often already small. These window counts establish neither
+word intelligibility nor population accuracy. No model or threshold was tuned
+from the comparison.
+
+Both runs are retained. `scripts/ml/analyze_gate_quality.py` independently
+checks 46 region summaries and source-frame coverage from saved energies. Its
+final analysis repairs a binary-float endpoint error in the original reports;
+the current native tool also repairs near-integer timestamp conversion. The
+correction changes measurement selection, not controller output.
+
 ### Timing
 
 Controls the gate's response speed. Fast attack reduces attenuation quickly to preserve transients. Hold keeps the unity-gain target for a set time after the signal drops below the closing threshold (prevents chattering). Release controls increasing attenuation. Attack and release are one-pole time constants in dB; after one time constant, approximately 63% of a step toward the new gain target is complete.

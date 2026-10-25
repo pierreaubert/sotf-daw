@@ -193,7 +193,8 @@
         "crates/sotf-engine/src/plugins/plugin_config_converter/dynamics.rs",
         "audit/artifacts/ml-gate-20261025",
         "audit/artifacts/ml-gate-silero-20261025",
-        "audit/artifacts/ml-gate-streaming-20261025"
+        "audit/artifacts/ml-gate-streaming-20261025",
+        "audit/artifacts/ml-gate-quality-20261025"
       ],
       "implementation": {
         "mode": "Explicit speech_protection config with optional neural-speech build feature; linked Downward mode only; defaults remain classical.",
@@ -290,7 +291,7 @@
           "state_tolerance": 0.001
         },
         "interpretation": "Zero passing windows on the existing violin and cymbal clips; recurrent streaming scores exceed independent-window scores on three speech clips. Different grids/protocols and unlabeled speech pauses prevent a recall or general superiority claim. Unknown training overlap.",
-        "next": "Extend controlled false-cut/onset/noise/gain/rate evaluation, offline-render policy, user-facing model configuration, and real-host budgets before adoption. Full audit scope remains unchanged.",
+        "next": "Address the observed quiet-plosive gain-shift failure with separately selected development/held-out evidence; evaluate stronger classical speech presets and natural/colored-noise/rate shifts. Add an explicit offline processing/preparation contract before promising deterministic bounce behavior.",
         "runtime_evidence": "audit/artifacts/ml-gate-streaming-20261025",
         "local_runtime_results": {
           "full_gate_tests_passed": 117,
@@ -313,6 +314,50 @@
           "packet_partition_invariance": "Exact recurrent state, partial frame, score and source-clock agreement at 22.05/44.12345/48/96 kHz.",
           "memory_scope": "Whole standalone test process, baseline and live Silero Gate plus cold preparation and a rejected reinitialization; not incremental or steady-state per-plugin RAM.",
           "maximum_resident_set_bytes": 31047680
+        }
+      },
+      "development_quality_comparison": {
+        "evidence": "audit/artifacts/ml-gate-quality-20261025",
+        "cases": 22,
+        "regions": 46,
+        "thresholds_tuned": false,
+        "model_weights_changed": false,
+        "results": {
+          "status": "development_comparison_complete_no_adoption_claim",
+          "protocol_cases": 22,
+          "independently_verified_regions": 46,
+          "source_scope": "Three isolated phoneme clips from one speaker, two instrument controls, synthetic white-noise-only controls; all existing development data, unknown training overlap.",
+          "fixed_gate": "Threshold -40 dBFS, ratio 10, attack 1 ms, hold 10 ms, release 100 ms, range 80 dB, hysteresis 4 dB, zero lookahead, linked mono-equivalent external key.",
+          "fixed_ml": "Raw score threshold 0.8 and 150 ms source-age policy; RNNoise and pinned Silero unchanged.",
+          "gain_factors": [
+            1.0,
+            0.1
+          ],
+          "white_noise_conditions": [
+            "none",
+            "10 dB clip SNR"
+          ],
+          "beneficial_speech_region_case_rows": {
+            "rnnoise": 7,
+            "silero": 6
+          },
+          "speech_region_case_rows": 36,
+          "negative_control_case_rows": 10,
+          "negative_control_windows_protected_over_1db_vs_cut_classical": {
+            "rnnoise": 281,
+            "silero": 0
+          },
+          "important_failure": "At gain 0.1 on clean p/plosive_speech, classical and Silero cut 65 of 142 active annotated windows; RNNoise cuts 30. Silero peak observed score is about 0.388, with completed warmup, 46 observed frames, and zero dropped packets: a confidence/gain-shift failure, not missing inference.",
+          "interpretation": "Silero improves some tail-window proxies and rejects the tested non-speech controls, but it is not uniformly better. Most energy-weighted speech losses are already small; counts are quiet-window engineering proxies, not word/intelligibility errors. No tuning was performed from these results.",
+          "repeat": "Both real controller runs retained; source input bytes identical, no reported cut-count changes across repeat runs. Source pacing is after-work sleeping, not a DAW deadline benchmark.",
+          "metric_correction": "Independent trace reduction identified f64 annotation mapping at 2.3s discarding one complete violin window. Raw reports preserved; final-analysis.json corrects four case rows from saved energies. Future native reductions repair only near-integer representation errors.",
+          "offline_contract": "ProcessContext and TransportInfo do not carry a realtime/offline processing mode. The offline renderer has a separate configuration; deterministic inference requires an explicit preparation/processing contract and remains open.",
+          "remaining": [
+            "Held-out multilingual and natural-word/noise/intelligibility evaluation.",
+            "Stronger speech-oriented classical baselines and wider noise/gain/rate shifts.",
+            "Gain-shift robustness without tuning to these evaluation clips.",
+            "Full host/DAW budgets, frontend model configuration and offline policy."
+          ]
         }
       }
     },

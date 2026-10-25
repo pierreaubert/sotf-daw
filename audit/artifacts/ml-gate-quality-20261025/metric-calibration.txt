@@ -1,0 +1,12 @@
+   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)
+    Finished `release` profile [optimized] target(s) in 56.88s
+     Running unittests bin/qa_gate_speech.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_gate_speech-3f855f8b3fbb03a0)
+
+running 4 tests
+test tests::metrics_exclude_partial_annotation_windows_and_inactive_speech ... ok
+test tests::gain_metrics_distinguish_analytic_speech_loss_and_noise_passage ... ok
+test tests::linked_pilot_and_external_key_reproduce_independent_mono_classical_processing ... ok
+test tests::decimal_annotation_endpoints_do_not_discard_a_complete_window ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

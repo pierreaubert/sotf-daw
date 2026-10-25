@@ -1,0 +1,54 @@
+{
+  "activity_floor_rms_dbfs": -80,
+  "added_white_noise_snr_db": [
+    null,
+    10.0
+  ],
+  "architecture": "aarch64",
+  "block_frames": 480,
+  "cut_threshold_db": 3.0,
+  "fixture_manifest_sha256": "8732b877c0b6b4d2e75dac103dff1c386663795fb20c04c6c5c518227708ad21",
+  "gain_factors": [
+    1.0,
+    0.1
+  ],
+  "gate_parameters": {
+    "attack_ms": 1.0,
+    "detection_mode": "Peak",
+    "hold_ms": 10.0,
+    "hysteresis_db": 4.0,
+    "knee_db": 0.0,
+    "link_channels": true,
+    "lookahead_ms": 0.0,
+    "max_boost_db": 12.0,
+    "mix": 1.0,
+    "mode": "Downward",
+    "range_db": 80.0,
+    "ratio": 10.0,
+    "release_ms": 100.0,
+    "sidechain_external": true,
+    "sidechain_hpf_hz": 0.0,
+    "sidechain_hpf_order": "2nd",
+    "threshold_db": -40.0
+  },
+  "limits": "Existing single-speaker isolated phonemes and two instruments, unknown model-training overlap. Conservative intervals and an activity floor yield conditional development proxies, not multilingual speech recall. Regions may overlap and are not pooled. First surviving active-window offsets have 10 ms resolution and are not VAD onset ground truth.",
+  "max_age_ms": 150.0,
+  "measurement": "Linked power-of-two pilot reveals per-sample applied gain. External detector key reproduces mono input detection and is read-only. All input, including warmup and final partial callbacks, is processed.",
+  "model_sha256": "7d47a98acce5f4b688a7d541ee0d9061b64171fdb39581cbcf29fe72bfe57c51",
+  "models": [
+    "classical",
+    "rnnoise",
+    "silero"
+  ],
+  "noise_only_base_rms_dbfs": -50,
+  "noise_only_seed_xor": 1313818963,
+  "noise_recipe": "LCG u32, uniform signed values normalized to unit clip RMS; seed XOR fixture index. Noisy speech uses clip RMS, including pauses. No threshold or model fitting.",
+  "noise_seed": 20261025,
+  "os": "macos",
+  "package_version": "0.5.12",
+  "rnnoise_provenance": "audit/artifacts/ml-gate-20261025/model-provenance.json",
+  "sample_rate": 48000,
+  "source_sha256": "859dac8f844fe65600c798baa449fe5b876f3da9c26d64b56ec75f67ec093289",
+  "speech_probability_threshold": 0.8,
+  "timing": "After-work source-duration sleep; source clock and wall clock reported separately. Callback wall times are observational, not host deadline benchmarks."
+}

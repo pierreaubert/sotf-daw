@@ -1,0 +1,36 @@
+{
+  "analysis_source_sha256": "b0c9b0a5713748b03d1cffdacfd73189f3249450be16a977f7e86a4b8b9dd366",
+  "cases": 22,
+  "regions_verified": 46,
+  "all_audio_including_partial_callbacks_accounted": true,
+  "repeat_inputs_byte_identical": true,
+  "native_metric_reductions_verified": true,
+  "annotation_mapping": "Exact decimal seconds with conservative ceil/floor PCM boundaries; complete 10 ms windows only. Repairs binary-f64 representation error without widening fractional boundaries.",
+  "boundary_corrections": [
+    {
+      "case": "violin-gain-0.1-noise-10db",
+      "label": "bright_bowed_string",
+      "native_active_windows": 209,
+      "corrected_active_windows": 210
+    },
+    {
+      "case": "violin-gain-0.1-noise-none",
+      "label": "bright_bowed_string",
+      "native_active_windows": 209,
+      "corrected_active_windows": 210
+    },
+    {
+      "case": "violin-gain-1-noise-10db",
+      "label": "bright_bowed_string",
+      "native_active_windows": 209,
+      "corrected_active_windows": 210
+    },
+    {
+      "case": "violin-gain-1-noise-none",
+      "label": "bright_bowed_string",
+      "native_active_windows": 209,
+      "corrected_active_windows": 210
+    }
+  ],
+  "repeat_scheduling_variation": []
+}

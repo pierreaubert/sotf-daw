@@ -1,0 +1,25 @@
+   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)
+    Finished `release` profile [optimized] target(s) in 57.07s
+     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-gate-speech crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx audit/artifacts/ml-gate-quality-20261025/measurements-energy-trace`
+s-gain-1-noise-none: 2.5890416666666667 source seconds, elapsed 3.333s
+s-gain-1-noise-10db: 2.5890416666666667 source seconds, elapsed 3.392s
+s-gain-0.1-noise-none: 2.5890416666666667 source seconds, elapsed 3.379s
+s-gain-0.1-noise-10db: 2.5890416666666667 source seconds, elapsed 3.422s
+sh-gain-1-noise-none: 2.4 source seconds, elapsed 3.158s
+sh-gain-1-noise-10db: 2.4 source seconds, elapsed 3.149s
+sh-gain-0.1-noise-none: 2.4 source seconds, elapsed 3.162s
+sh-gain-0.1-noise-10db: 2.4 source seconds, elapsed 3.107s
+p-gain-1-noise-none: 1.5 source seconds, elapsed 1.998s
+p-gain-1-noise-10db: 1.5 source seconds, elapsed 1.984s
+p-gain-0.1-noise-none: 1.5 source seconds, elapsed 1.971s
+p-gain-0.1-noise-10db: 1.5 source seconds, elapsed 1.986s
+violin-gain-1-noise-none: 2.4 source seconds, elapsed 3.162s
+violin-gain-1-noise-10db: 2.4 source seconds, elapsed 3.115s
+violin-gain-0.1-noise-none: 2.4 source seconds, elapsed 3.109s
+violin-gain-0.1-noise-10db: 2.4 source seconds, elapsed 3.176s
+cymbal-gain-1-noise-none: 4 source seconds, elapsed 5.281s
+cymbal-gain-1-noise-10db: 4 source seconds, elapsed 5.212s
+cymbal-gain-0.1-noise-none: 4 source seconds, elapsed 5.290s
+cymbal-gain-0.1-noise-10db: 4 source seconds, elapsed 5.308s
+noise-only-gain-1: 4 source seconds, elapsed 5.260s
+noise-only-gain-0.1: 4 source seconds, elapsed 5.219s

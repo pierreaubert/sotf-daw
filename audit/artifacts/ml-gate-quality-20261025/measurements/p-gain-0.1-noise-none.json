@@ -1,0 +1,5561 @@
+{
+  "added_noise_snr_db": null,
+  "callback_wall_times": [
+    {
+      "calls": 150,
+      "max_ns": 76250,
+      "p99_ns": 66125
+    },
+    {
+      "calls": 150,
+      "max_ns": 471125,
+      "p99_ns": 201416
+    },
+    {
+      "calls": 150,
+      "max_ns": 113167,
+      "p99_ns": 61833
+    }
+  ],
+  "first_observed_usable_ms": [
+    null,
+    140.0,
+    null
+  ],
+  "fixture_id": "p",
+  "gain_factor": 0.10000000149011612,
+  "id": "p-gain-0.1-noise-none",
+  "maximum_usable_source_age_ms": [
+    0.0,
+    110.0,
+    0.0
+  ],
+  "measured_clip_noise_snr_db": null,
+  "mixed_f32le_sha256": "b592b47ffb11871d0c669e608236eefcb896534048f2d1f658c38774b88268ab",
+  "noise_seed": 20261027,
+  "peak_observed_scores": [
+    0.0,
+    0.9995580315589905,
+    0.3884824216365814
+  ],
+  "regions": [
+    {
+      "active_10ms_windows": 142,
+      "annotation_kind": "isolated_speech_development_proxy",
+      "below_activity_floor_windows": 8,
+      "end_seconds": 1.5,
+      "label": "plosive_speech",
+      "models": [
+        {
+          "active_windows_cut_over_3db": 65,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.45774647887323944,
+          "first_surviving_active_window_offset_ms": 0.0,
+          "model": "classical",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.07621356775014385
+        },
+        {
+          "active_windows_cut_over_3db": 30,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.2112676056338028,
+          "first_surviving_active_window_offset_ms": 0.0,
+          "model": "rnnoise",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.02276039661147023
+        },
+        {
+          "active_windows_cut_over_3db": 65,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.45774647887323944,
+          "first_surviving_active_window_offset_ms": 0.0,
+          "model": "silero",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.07621356775014385
+        }
+      ],
+      "start_seconds": 0.0
+    },
+    {
+      "active_10ms_windows": 7,
+      "annotation_kind": "isolated_speech_development_proxy",
+      "below_activity_floor_windows": 0,
+      "end_seconds": 0.66,
+      "label": "plosive_burst",
+      "models": [
+        {
+          "active_windows_cut_over_3db": 4,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.5714285714285714,
+          "first_surviving_active_window_offset_ms": 40.0,
+          "model": "classical",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.46941612028988117
+        },
+        {
+          "active_windows_cut_over_3db": 4,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.5714285714285714,
+          "first_surviving_active_window_offset_ms": 40.0,
+          "model": "rnnoise",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.4366796075527083
+        },
+        {
+          "active_windows_cut_over_3db": 4,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.5714285714285714,
+          "first_surviving_active_window_offset_ms": 40.0,
+          "model": "silero",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.46941612028988117
+        }
+      ],
+      "start_seconds": 0.59
+    },
+    {
+      "active_10ms_windows": 8,
+      "annotation_kind": "isolated_speech_development_proxy",
+      "below_activity_floor_windows": 0,
+      "end_seconds": 1.1,
+      "label": "plosive_burst",
+      "models": [
+        {
+          "active_windows_cut_over_3db": 1,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.125,
+          "first_surviving_active_window_offset_ms": 10.0,
+          "model": "classical",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.030057469329995395
+        },
+        {
+          "active_windows_cut_over_3db": 1,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.125,
+          "first_surviving_active_window_offset_ms": 10.0,
+          "model": "rnnoise",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.026457785661933166
+        },
+        {
+          "active_windows_cut_over_3db": 1,
+          "added_noise_component_loss_db": null,
+          "cut_fraction": 0.125,
+          "first_surviving_active_window_offset_ms": 10.0,
+          "model": "silero",
+          "negative_windows_protected_over_1db_vs_cut_classical": 0,
+          "speech_component_loss_db": 0.030057469329995395
+        }
+      ],
+      "start_seconds": 1.02
+    }
+  ],
+  "samples_above_model_input_full_scale": 0,
+  "source_frames": 72000,
+  "source_pcm_sha256": "7542b93a3d5b808a3bfe2e1df3b7b5251e0601fa7375d11f60af54292fd46834",
+  "source_seconds": 1.5,
+  "wall_seconds": 1.934096375,
+  "window_trace": [
+    {
+      "first_frame": 0,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.10463159463457186,
+        0.10463159463457186,
+        0.10463159463457186
+      ]
+    },
+    {
+      "first_frame": 480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006542530651269676,
+        0.006542530651269676,
+        0.006542530651269676
+      ]
+    },
+    {
+      "first_frame": 960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 1440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 4,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 1920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 4,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 2400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 4,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 2880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 1,
+          "observed": 1,
+          "restarts": 0,
+          "score": 0.1063021719455719,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 7,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 3360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 1,
+          "observed": 1,
+          "restarts": 0,
+          "score": 0.1063021719455719,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 7,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006535040747878339,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 3840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 0,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 1,
+          "observed": 1,
+          "restarts": 0,
+          "score": 0.1063021719455719,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 7,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.003184603949059156,
+        0.003184603949059156,
+        0.003184603949059156
+      ]
+    },
+    {
+      "first_frame": 4320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 1,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 2,
+          "observed": 2,
+          "restarts": 0,
+          "score": 0.21366780996322632,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 10,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 4800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 1,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 2,
+          "observed": 2,
+          "restarts": 0,
+          "score": 0.21366780996322632,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 10,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 5280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 1,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 2,
+          "observed": 2,
+          "restarts": 0,
+          "score": 0.21366780996322632,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 10,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 5760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 0,
+          "observed": 0,
+          "restarts": 0,
+          "score": null,
+          "source_age_ms": null,
+          "submitted": 1,
+          "usable": false,
+          "warmup_complete": false
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 2,
+          "observed": 2,
+          "restarts": 0,
+          "score": 0.21366780996322632,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 10,
+          "usable": false,
+          "warmup_complete": false
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 6240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.9956504702568054,
+          "source_age_ms": 110.0,
+          "submitted": 5,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 14,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 6720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.9956504702568054,
+          "source_age_ms": 110.0,
+          "submitted": 5,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 14,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 7200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.9956504702568054,
+          "source_age_ms": 110.0,
+          "submitted": 5,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 14,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 7680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.9965490102767944,
+          "source_age_ms": 110.0,
+          "submitted": 8,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 17,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 8160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.9965490102767944,
+          "source_age_ms": 110.0,
+          "submitted": 8,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 17,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 8640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.9965490102767944,
+          "source_age_ms": 110.0,
+          "submitted": 8,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 4,
+          "observed": 4,
+          "restarts": 0,
+          "score": 0.22116953134536743,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 17,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 9120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.9972387552261353,
+          "source_age_ms": 110.0,
+          "submitted": 11,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 5,
+          "observed": 5,
+          "restarts": 0,
+          "score": 0.14295828342437744,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 20,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 9600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.9972387552261353,
+          "source_age_ms": 110.0,
+          "submitted": 11,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 5,
+          "observed": 5,
+          "restarts": 0,
+          "score": 0.14295828342437744,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 20,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 10080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.9972387552261353,
+          "source_age_ms": 110.0,
+          "submitted": 11,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 5,
+          "observed": 5,
+          "restarts": 0,
+          "score": 0.14295828342437744,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 20,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 10560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.9972387552261353,
+          "source_age_ms": 110.0,
+          "submitted": 11,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 5,
+          "observed": 5,
+          "restarts": 0,
+          "score": 0.14295828342437744,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 20,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 11040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.9949820637702942,
+          "source_age_ms": 110.0,
+          "submitted": 15,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 7,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.06269985437393188,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 24,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 11520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.9949820637702942,
+          "source_age_ms": 110.0,
+          "submitted": 15,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 7,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.06269985437393188,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 24,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 12000,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.9949820637702942,
+          "source_age_ms": 110.0,
+          "submitted": 15,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 7,
+          "observed": 7,
+          "restarts": 0,
+          "score": 0.06269985437393188,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 24,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 12480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.9956785440444946,
+          "source_age_ms": 110.0,
+          "submitted": 18,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 8,
+          "observed": 8,
+          "restarts": 0,
+          "score": 0.04547041654586792,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 27,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 12960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.9956785440444946,
+          "source_age_ms": 110.0,
+          "submitted": 18,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 8,
+          "observed": 8,
+          "restarts": 0,
+          "score": 0.04547041654586792,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 27,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 13440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.9956785440444946,
+          "source_age_ms": 110.0,
+          "submitted": 18,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 8,
+          "observed": 8,
+          "restarts": 0,
+          "score": 0.04547041654586792,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 27,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 13920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.9908599257469177,
+          "source_age_ms": 110.0,
+          "submitted": 21,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 9,
+          "observed": 9,
+          "restarts": 0,
+          "score": 0.04274487495422363,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 30,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 14400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.9908599257469177,
+          "source_age_ms": 110.0,
+          "submitted": 21,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 9,
+          "observed": 9,
+          "restarts": 0,
+          "score": 0.04274487495422363,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 30,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 14880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.9908599257469177,
+          "source_age_ms": 110.0,
+          "submitted": 21,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 9,
+          "observed": 9,
+          "restarts": 0,
+          "score": 0.04274487495422363,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 30,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0009923088060535192,
+        0.0,
+        0.0009923088060535192
+      ]
+    },
+    {
+      "first_frame": 15360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.9908599257469177,
+          "source_age_ms": 110.0,
+          "submitted": 21,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 9,
+          "observed": 9,
+          "restarts": 0,
+          "score": 0.04274487495422363,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 30,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.009361671412647722,
+        1.0785819492519214e-9,
+        0.009361671412647722
+      ]
+    },
+    {
+      "first_frame": 15840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.9972547292709351,
+          "source_age_ms": 110.0,
+          "submitted": 25,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.04685795307159424,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 34,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.06881003153144233,
+        7.873648685665919e-8,
+        0.06881003153144233
+      ]
+    },
+    {
+      "first_frame": 16320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.9972547292709351,
+          "source_age_ms": 110.0,
+          "submitted": 25,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.04685795307159424,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 34,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        2.384650570524958,
+        3.2066246897958485e-6,
+        2.384650570524958
+      ]
+    },
+    {
+      "first_frame": 16800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.9972547292709351,
+          "source_age_ms": 110.0,
+          "submitted": 25,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 10,
+          "observed": 10,
+          "restarts": 0,
+          "score": 0.04685795307159424,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 34,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        9.246010533322753,
+        8.228506053946555e-6,
+        9.246010533322753
+      ]
+    },
+    {
+      "first_frame": 17280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.9940180778503418,
+          "source_age_ms": 110.0,
+          "submitted": 28,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 11,
+          "observed": 11,
+          "restarts": 0,
+          "score": 0.04524487257003784,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 37,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        15.566344606410262,
+        0.000010407244046286164,
+        15.566344606410262
+      ]
+    },
+    {
+      "first_frame": 17760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.9940180778503418,
+          "source_age_ms": 110.0,
+          "submitted": 28,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 11,
+          "observed": 11,
+          "restarts": 0,
+          "score": 0.04524487257003784,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 37,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        21.38228401356343,
+        0.000011332668649309425,
+        21.38228401356343
+      ]
+    },
+    {
+      "first_frame": 18240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.9940180778503418,
+          "source_age_ms": 110.0,
+          "submitted": 28,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 11,
+          "observed": 11,
+          "restarts": 0,
+          "score": 0.04524487257003784,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 37,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        26.648494555918134,
+        0.000011900003519370618,
+        26.648494555918134
+      ]
+    },
+    {
+      "first_frame": 18720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.9934908151626587,
+          "source_age_ms": 110.0,
+          "submitted": 31,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 12,
+          "observed": 12,
+          "restarts": 0,
+          "score": 0.053210675716400146,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 40,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        31.49464767738192,
+        0.000011961482775466674,
+        31.49464767738192
+      ]
+    },
+    {
+      "first_frame": 19200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.9934908151626587,
+          "source_age_ms": 110.0,
+          "submitted": 31,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 12,
+          "observed": 12,
+          "restarts": 0,
+          "score": 0.053210675716400146,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 40,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        36.002558128607554,
+        0.000012425273681693113,
+        36.002558128607554
+      ]
+    },
+    {
+      "first_frame": 19680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.9934908151626587,
+          "source_age_ms": 110.0,
+          "submitted": 31,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 12,
+          "observed": 12,
+          "restarts": 0,
+          "score": 0.053210675716400146,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 40,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        40.152307430964804,
+        0.000012425273681693113,
+        40.152307430964804
+      ]
+    },
+    {
+      "first_frame": 20160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.9934908151626587,
+          "source_age_ms": 110.0,
+          "submitted": 31,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 12,
+          "observed": 12,
+          "restarts": 0,
+          "score": 0.053210675716400146,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 40,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        43.959115579322244,
+        0.000012425273681693113,
+        43.959115579322244
+      ]
+    },
+    {
+      "first_frame": 20640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.9832761883735657,
+          "source_age_ms": 110.0,
+          "submitted": 35,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 13,
+          "observed": 13,
+          "restarts": 0,
+          "score": 0.05159205198287964,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 44,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        47.39869326241204,
+        0.000012425273681693113,
+        47.39869326241204
+      ]
+    },
+    {
+      "first_frame": 21120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.9832761883735657,
+          "source_age_ms": 110.0,
+          "submitted": 35,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 13,
+          "observed": 13,
+          "restarts": 0,
+          "score": 0.05159205198287964,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 44,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        50.51010978174843,
+        0.000012425273681693113,
+        50.51010978174843
+      ]
+    },
+    {
+      "first_frame": 21600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.9832761883735657,
+          "source_age_ms": 110.0,
+          "submitted": 35,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 13,
+          "observed": 13,
+          "restarts": 0,
+          "score": 0.05159205198287964,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 44,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        53.32360260269166,
+        0.00001618806204285291,
+        53.32360260269166
+      ]
+    },
+    {
+      "first_frame": 22080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.005920052528381348,
+          "source_age_ms": 110.0,
+          "submitted": 38,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 14,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.05960032343864441,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 47,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        55.86926956602984,
+        0.42913036133132854,
+        55.86926956602984
+      ]
+    },
+    {
+      "first_frame": 22560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.005920052528381348,
+          "source_age_ms": 110.0,
+          "submitted": 38,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 14,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.05960032343864441,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 47,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        58.1688650903046,
+        1.296722367740069,
+        58.1688650903046
+      ]
+    },
+    {
+      "first_frame": 23040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.005920052528381348,
+          "source_age_ms": 110.0,
+          "submitted": 38,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 14,
+          "observed": 14,
+          "restarts": 0,
+          "score": 0.05960032343864441,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 47,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        60.25251162359561,
+        2.1646721475911215,
+        60.25251162359561
+      ]
+    },
+    {
+      "first_frame": 23520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.0024283528327941895,
+          "source_age_ms": 110.0,
+          "submitted": 41,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 15,
+          "observed": 15,
+          "restarts": 0,
+          "score": 0.0642024576663971,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 50,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        62.13439473633353,
+        3.032837080792443,
+        62.13439473633353
+      ]
+    },
+    {
+      "first_frame": 24000,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.0024283528327941895,
+          "source_age_ms": 110.0,
+          "submitted": 41,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 15,
+          "observed": 15,
+          "restarts": 0,
+          "score": 0.0642024576663971,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 50,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        63.83621221413938,
+        3.901133276783951,
+        63.83621221413938
+      ]
+    },
+    {
+      "first_frame": 24480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.0024283528327941895,
+          "source_age_ms": 110.0,
+          "submitted": 41,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 15,
+          "observed": 15,
+          "restarts": 0,
+          "score": 0.0642024576663971,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 50,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        65.37651623366439,
+        4.769494193262453,
+        65.37651623366439
+      ]
+    },
+    {
+      "first_frame": 24960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.0024283528327941895,
+          "source_age_ms": 110.0,
+          "submitted": 41,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 15,
+          "observed": 15,
+          "restarts": 0,
+          "score": 0.0642024576663971,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 50,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        66.77387647635402,
+        5.637889618487333,
+        66.77387647635402
+      ]
+    },
+    {
+      "first_frame": 25440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.0017442703247070312,
+          "source_age_ms": 110.0,
+          "submitted": 45,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 16,
+          "observed": 16,
+          "restarts": 0,
+          "score": 0.06508126854896545,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 54,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        68.03194241746357,
+        6.506302048229306,
+        68.03194241746357
+      ]
+    },
+    {
+      "first_frame": 25920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.0017442703247070312,
+          "source_age_ms": 110.0,
+          "submitted": 45,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 16,
+          "observed": 16,
+          "restarts": 0,
+          "score": 0.06508126854896545,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 54,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        69.1711960416445,
+        7.3747197584097375,
+        69.1711960416445
+      ]
+    },
+    {
+      "first_frame": 26400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.0017442703247070312,
+          "source_age_ms": 110.0,
+          "submitted": 45,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 16,
+          "observed": 16,
+          "restarts": 0,
+          "score": 0.06508126854896545,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 54,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        70.20248308209375,
+        8.243130154353734,
+        70.20248308209375
+      ]
+    },
+    {
+      "first_frame": 26880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 46,
+          "restarts": 0,
+          "score": 0.0010992586612701416,
+          "source_age_ms": 110.0,
+          "submitted": 48,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 17,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.04918283224105835,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 57,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        71.13566324578376,
+        9.11152932554286,
+        71.13566324578376
+      ]
+    },
+    {
+      "first_frame": 27360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 46,
+          "restarts": 0,
+          "score": 0.0010992586612701416,
+          "source_age_ms": 110.0,
+          "submitted": 48,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 17,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.04918283224105835,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 57,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        71.98094410463518,
+        9.979913364999582,
+        71.98094410463518
+      ]
+    },
+    {
+      "first_frame": 27840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 46,
+          "restarts": 0,
+          "score": 0.0010992586612701416,
+          "source_age_ms": 110.0,
+          "submitted": 48,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 17,
+          "observed": 17,
+          "restarts": 0,
+          "score": 0.04918283224105835,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 57,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        72.74829164709496,
+        10.848265409043275,
+        72.74829164709496
+      ]
+    },
+    {
+      "first_frame": 28320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 49,
+          "restarts": 0,
+          "score": 0.0008992254734039307,
+          "source_age_ms": 110.0,
+          "submitted": 51,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 18,
+          "observed": 18,
+          "restarts": 0,
+          "score": 0.03987470269203186,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 60,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        69.78621983585637,
+        11.714605441300009,
+        69.78621983585637
+      ]
+    },
+    {
+      "first_frame": 28800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 49,
+          "restarts": 0,
+          "score": 0.0008992254734039307,
+          "source_age_ms": 110.0,
+          "submitted": 51,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 18,
+          "observed": 18,
+          "restarts": 0,
+          "score": 0.03987470269203186,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 60,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        66.12645863457898,
+        12.576503598854355,
+        66.12645863457898
+      ]
+    },
+    {
+      "first_frame": 29280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 49,
+          "restarts": 0,
+          "score": 0.0008992254734039307,
+          "source_age_ms": 110.0,
+          "submitted": 51,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 18,
+          "observed": 18,
+          "restarts": 0,
+          "score": 0.03987470269203186,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 60,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        67.06564446845559,
+        13.444841817296842,
+        67.06564446845559
+      ]
+    },
+    {
+      "first_frame": 29760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 49,
+          "restarts": 0,
+          "score": 0.0008992254734039307,
+          "source_age_ms": 110.0,
+          "submitted": 51,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 18,
+          "observed": 18,
+          "restarts": 0,
+          "score": 0.03987470269203186,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 60,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        5.631229038494529,
+        4.925853362957086,
+        5.631229038494529
+      ]
+    },
+    {
+      "first_frame": 30240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 53,
+          "restarts": 0,
+          "score": 0.47989994287490845,
+          "source_age_ms": 110.0,
+          "submitted": 55,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 19,
+          "observed": 19,
+          "restarts": 0,
+          "score": 0.07043835520744324,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 64,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.02273558225599119,
+        0.01867566799782646,
+        0.02273558225599119
+      ]
+    },
+    {
+      "first_frame": 30720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 53,
+          "restarts": 0,
+          "score": 0.47989994287490845,
+          "source_age_ms": 110.0,
+          "submitted": 55,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 19,
+          "observed": 19,
+          "restarts": 0,
+          "score": 0.07043835520744324,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 64,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535656002263888,
+        0.005507406321996065,
+        0.006535656002263888
+      ]
+    },
+    {
+      "first_frame": 31200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 53,
+          "restarts": 0,
+          "score": 0.47989994287490845,
+          "source_age_ms": 110.0,
+          "submitted": 55,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 19,
+          "observed": 19,
+          "restarts": 0,
+          "score": 0.07043835520744324,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 64,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0005383856149054708,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 31680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 56,
+          "restarts": 0,
+          "score": 0.9995580315589905,
+          "source_age_ms": 110.0,
+          "submitted": 58,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 20,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.07158952951431274,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 67,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 32160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 56,
+          "restarts": 0,
+          "score": 0.9995580315589905,
+          "source_age_ms": 110.0,
+          "submitted": 58,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 20,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.07158952951431274,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 67,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 32640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 56,
+          "restarts": 0,
+          "score": 0.9995580315589905,
+          "source_age_ms": 110.0,
+          "submitted": 58,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 20,
+          "observed": 20,
+          "restarts": 0,
+          "score": 0.07158952951431274,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 67,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 33120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 59,
+          "restarts": 0,
+          "score": 0.9976663589477539,
+          "source_age_ms": 110.0,
+          "submitted": 61,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 21,
+          "observed": 21,
+          "restarts": 0,
+          "score": 0.0389782190322876,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 70,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 33600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 59,
+          "restarts": 0,
+          "score": 0.9976663589477539,
+          "source_age_ms": 110.0,
+          "submitted": 61,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 21,
+          "observed": 21,
+          "restarts": 0,
+          "score": 0.0389782190322876,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 70,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 34080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 59,
+          "restarts": 0,
+          "score": 0.9976663589477539,
+          "source_age_ms": 110.0,
+          "submitted": 61,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 21,
+          "observed": 21,
+          "restarts": 0,
+          "score": 0.0389782190322876,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 70,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0016600576958526272,
+        0.0,
+        0.0016600576958526272
+      ]
+    },
+    {
+      "first_frame": 34560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 59,
+          "restarts": 0,
+          "score": 0.9976663589477539,
+          "source_age_ms": 110.0,
+          "submitted": 61,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 21,
+          "observed": 21,
+          "restarts": 0,
+          "score": 0.0389782190322876,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 70,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 35040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 63,
+          "restarts": 0,
+          "score": 0.9262653589248657,
+          "source_age_ms": 110.0,
+          "submitted": 65,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 22,
+          "observed": 22,
+          "restarts": 0,
+          "score": 0.030082136392593384,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 74,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        2.5689839612528536,
+        3.450384272237396e-6,
+        2.5689839612528536
+      ]
+    },
+    {
+      "first_frame": 35520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 63,
+          "restarts": 0,
+          "score": 0.9262653589248657,
+          "source_age_ms": 110.0,
+          "submitted": 65,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 22,
+          "observed": 22,
+          "restarts": 0,
+          "score": 0.030082136392593384,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 74,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        9.900582470333442,
+        8.54776662037914e-6,
+        9.900582470333442
+      ]
+    },
+    {
+      "first_frame": 36000,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 63,
+          "restarts": 0,
+          "score": 0.9262653589248657,
+          "source_age_ms": 110.0,
+          "submitted": 65,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 22,
+          "observed": 22,
+          "restarts": 0,
+          "score": 0.030082136392593384,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 74,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        16.609624031282177,
+        0.000013999687588748483,
+        16.609624031282177
+      ]
+    },
+    {
+      "first_frame": 36480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 66,
+          "restarts": 0,
+          "score": 0.08571434020996094,
+          "source_age_ms": 110.0,
+          "submitted": 68,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 23,
+          "observed": 23,
+          "restarts": 0,
+          "score": 0.1866174340248108,
+          "source_age_ms": 134.0416717529297,
+          "submitted": 77,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        22.67384903163547,
+        0.40154322181112984,
+        22.67384903163547
+      ]
+    },
+    {
+      "first_frame": 36960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 66,
+          "restarts": 0,
+          "score": 0.08571434020996094,
+          "source_age_ms": 110.0,
+          "submitted": 68,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 23,
+          "observed": 23,
+          "restarts": 0,
+          "score": 0.1866174340248108,
+          "source_age_ms": 134.0416717529297,
+          "submitted": 77,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        28.155370464404328,
+        1.246153510567712,
+        28.155370464404328
+      ]
+    },
+    {
+      "first_frame": 37440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9046440124511719,
+          "model_frames": 10,
+          "observed": 66,
+          "restarts": 0,
+          "score": 0.08571434020996094,
+          "source_age_ms": 110.0,
+          "submitted": 68,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 23,
+          "observed": 23,
+          "restarts": 0,
+          "score": 0.1866174340248108,
+          "source_age_ms": 134.0416717529297,
+          "submitted": 77,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        33.11081542931164,
+        2.114151745325592,
+        33.11081542931164
+      ]
+    },
+    {
+      "first_frame": 37920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 69,
+          "restarts": 0,
+          "score": 0.009767681360244751,
+          "source_age_ms": 110.0,
+          "submitted": 71,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 24,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.3884824216365814,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 80,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        37.59182803673723,
+        2.988643152825512,
+        37.59182803673723
+      ]
+    },
+    {
+      "first_frame": 38400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 69,
+          "restarts": 0,
+          "score": 0.009767681360244751,
+          "source_age_ms": 110.0,
+          "submitted": 71,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 24,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.3884824216365814,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 80,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        41.64162261297312,
+        3.864064338037677,
+        41.64162261297312
+      ]
+    },
+    {
+      "first_frame": 38880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 69,
+          "restarts": 0,
+          "score": 0.009767681360244751,
+          "source_age_ms": 110.0,
+          "submitted": 71,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 24,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.3884824216365814,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 80,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        45.30334099842963,
+        4.738733355393133,
+        45.30334099842963
+      ]
+    },
+    {
+      "first_frame": 39360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.6701690554618835,
+          "model_frames": 10,
+          "observed": 69,
+          "restarts": 0,
+          "score": 0.009767681360244751,
+          "source_age_ms": 110.0,
+          "submitted": 71,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 24,
+          "observed": 24,
+          "restarts": 0,
+          "score": 0.3884824216365814,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 80,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        48.61659729344648,
+        5.612306722294159,
+        48.61659729344648
+      ]
+    },
+    {
+      "first_frame": 39840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 73,
+          "restarts": 0,
+          "score": 0.00049552321434021,
+          "source_age_ms": 110.0,
+          "submitted": 75,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 25,
+          "observed": 25,
+          "restarts": 0,
+          "score": 0.26646530628204346,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 84,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        51.60986257260835,
+        6.484835753551832,
+        51.60986257260835
+      ]
+    },
+    {
+      "first_frame": 40320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 73,
+          "restarts": 0,
+          "score": 0.00049552321434021,
+          "source_age_ms": 110.0,
+          "submitted": 75,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 25,
+          "observed": 25,
+          "restarts": 0,
+          "score": 0.26646530628204346,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 84,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        54.32005189397582,
+        7.356512879860714,
+        54.32005189397582
+      ]
+    },
+    {
+      "first_frame": 40800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.4492218792438507,
+          "model_frames": 10,
+          "observed": 73,
+          "restarts": 0,
+          "score": 0.00049552321434021,
+          "source_age_ms": 110.0,
+          "submitted": 75,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 25,
+          "observed": 25,
+          "restarts": 0,
+          "score": 0.26646530628204346,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 84,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        56.76822185888927,
+        8.227490553227913,
+        56.76822185888927
+      ]
+    },
+    {
+      "first_frame": 41280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 76,
+          "restarts": 0,
+          "score": 0.0008554160594940186,
+          "source_age_ms": 110.0,
+          "submitted": 78,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 26,
+          "observed": 26,
+          "restarts": 0,
+          "score": 0.1343737244606018,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 87,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        58.98291569833411,
+        9.097930074713386,
+        58.98291569833411
+      ]
+    },
+    {
+      "first_frame": 41760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 76,
+          "restarts": 0,
+          "score": 0.0008554160594940186,
+          "source_age_ms": 110.0,
+          "submitted": 78,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 26,
+          "observed": 26,
+          "restarts": 0,
+          "score": 0.1343737244606018,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 87,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        60.98996565382101,
+        9.967953423589794,
+        60.98996565382101
+      ]
+    },
+    {
+      "first_frame": 42240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.33278799057006836,
+          "model_frames": 10,
+          "observed": 76,
+          "restarts": 0,
+          "score": 0.0008554160594940186,
+          "source_age_ms": 110.0,
+          "submitted": 78,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 26,
+          "observed": 26,
+          "restarts": 0,
+          "score": 0.1343737244606018,
+          "source_age_ms": 138.0416717529297,
+          "submitted": 87,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        62.799752949776035,
+        10.837616375713303,
+        62.799752949776035
+      ]
+    },
+    {
+      "first_frame": 42720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 79,
+          "restarts": 0,
+          "score": 0.0006378293037414551,
+          "source_age_ms": 110.0,
+          "submitted": 81,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 27,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.07694494724273682,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 90,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        64.43861256768157,
+        11.707005100275591,
+        64.43861256768157
+      ]
+    },
+    {
+      "first_frame": 43200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 79,
+          "restarts": 0,
+          "score": 0.0006378293037414551,
+          "source_age_ms": 110.0,
+          "submitted": 81,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 27,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.07694494724273682,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 90,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        65.92303294645664,
+        12.576173057969521,
+        65.92303294645664
+      ]
+    },
+    {
+      "first_frame": 43680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 79,
+          "restarts": 0,
+          "score": 0.0006378293037414551,
+          "source_age_ms": 110.0,
+          "submitted": 81,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 27,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.07694494724273682,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 90,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        67.26598332834476,
+        13.445153769987126,
+        67.26598332834476
+      ]
+    },
+    {
+      "first_frame": 44160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.24653305113315582,
+          "model_frames": 10,
+          "observed": 79,
+          "restarts": 0,
+          "score": 0.0006378293037414551,
+          "source_age_ms": 110.0,
+          "submitted": 81,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 27,
+          "observed": 27,
+          "restarts": 0,
+          "score": 0.07694494724273682,
+          "source_age_ms": 136.0416717529297,
+          "submitted": 90,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        68.47738638460707,
+        14.313966048163104,
+        68.47738638460707
+      ]
+    },
+    {
+      "first_frame": 44640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 83,
+          "restarts": 0,
+          "score": 0.00038614869117736816,
+          "source_age_ms": 110.0,
+          "submitted": 85,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 94,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        69.57451192193624,
+        15.182641487648622,
+        69.57451192193624
+      ]
+    },
+    {
+      "first_frame": 45120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 83,
+          "restarts": 0,
+          "score": 0.00038614869117736816,
+          "source_age_ms": 110.0,
+          "submitted": 85,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 94,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        70.56746495778563,
+        16.05118998140976,
+        70.56746495778563
+      ]
+    },
+    {
+      "first_frame": 45600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.16525357961654663,
+          "model_frames": 10,
+          "observed": 83,
+          "restarts": 0,
+          "score": 0.00038614869117736816,
+          "source_age_ms": 110.0,
+          "submitted": 85,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 94,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        71.46589854726253,
+        16.91960932663777,
+        71.46589854726253
+      ]
+    },
+    {
+      "first_frame": 46080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.12242177128791809,
+          "model_frames": 10,
+          "observed": 86,
+          "restarts": 0,
+          "score": 0.001102536916732788,
+          "source_age_ms": 110.0,
+          "submitted": 88,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 97,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        72.28167852413141,
+        17.787914533699926,
+        72.28167852413141
+      ]
+    },
+    {
+      "first_frame": 46560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.12242177128791809,
+          "model_frames": 10,
+          "observed": 86,
+          "restarts": 0,
+          "score": 0.001102536916732788,
+          "source_age_ms": 110.0,
+          "submitted": 88,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 97,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        73.01764024013256,
+        18.656107465416785,
+        73.01764024013256
+      ]
+    },
+    {
+      "first_frame": 47040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.12242177128791809,
+          "model_frames": 10,
+          "observed": 86,
+          "restarts": 0,
+          "score": 0.001102536916732788,
+          "source_age_ms": 110.0,
+          "submitted": 88,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 29,
+          "observed": 29,
+          "restarts": 0,
+          "score": 0.0431022047996521,
+          "source_age_ms": 142.0416717529297,
+          "submitted": 97,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        73.68124247604486,
+        19.524186458955192,
+        73.68124247604486
+      ]
+    },
+    {
+      "first_frame": 47520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.09069137275218964,
+          "model_frames": 10,
+          "observed": 89,
+          "restarts": 0,
+          "score": 0.0016058683395385742,
+          "source_age_ms": 110.0,
+          "submitted": 91,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 30,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.038035184144973755,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 100,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        74.28219728106284,
+        20.39215185095701,
+        74.28219728106284
+      ]
+    },
+    {
+      "first_frame": 48000,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.09069137275218964,
+          "model_frames": 10,
+          "observed": 89,
+          "restarts": 0,
+          "score": 0.0016058683395385742,
+          "source_age_ms": 110.0,
+          "submitted": 91,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 30,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.038035184144973755,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 100,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        74.8262158711468,
+        21.26000401366599,
+        74.8262158711468
+      ]
+    },
+    {
+      "first_frame": 48480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.09069137275218964,
+          "model_frames": 10,
+          "observed": 89,
+          "restarts": 0,
+          "score": 0.0016058683395385742,
+          "source_age_ms": 110.0,
+          "submitted": 91,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 30,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.038035184144973755,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 100,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        75.31860081611667,
+        22.12773532005583,
+        75.31860081611667
+      ]
+    },
+    {
+      "first_frame": 48960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.09069137275218964,
+          "model_frames": 10,
+          "observed": 89,
+          "restarts": 0,
+          "score": 0.0016058683395385742,
+          "source_age_ms": 110.0,
+          "submitted": 91,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 30,
+          "observed": 30,
+          "restarts": 0,
+          "score": 0.038035184144973755,
+          "source_age_ms": 140.0416717529297,
+          "submitted": 100,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        75.76419831585858,
+        22.99532790826078,
+        75.76419831585858
+      ]
+    },
+    {
+      "first_frame": 49440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.060791414231061935,
+          "model_frames": 10,
+          "observed": 93,
+          "restarts": 0,
+          "score": 0.002419382333755493,
+          "source_age_ms": 110.0,
+          "submitted": 95,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 32,
+          "observed": 32,
+          "restarts": 0,
+          "score": 0.02903848886489868,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 104,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        2.7090592611193,
+        2.6258936745245407,
+        2.7090592611193
+      ]
+    },
+    {
+      "first_frame": 49920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.060791414231061935,
+          "model_frames": 10,
+          "observed": 93,
+          "restarts": 0,
+          "score": 0.002419382333755493,
+          "source_age_ms": 110.0,
+          "submitted": 95,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 32,
+          "observed": 32,
+          "restarts": 0,
+          "score": 0.02903848886489868,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 104,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.007672143165393906,
+        0.007225528477520978,
+        0.007672143165393906
+      ]
+    },
+    {
+      "first_frame": 50400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.060791414231061935,
+          "model_frames": 10,
+          "observed": 93,
+          "restarts": 0,
+          "score": 0.002419382333755493,
+          "source_age_ms": 110.0,
+          "submitted": 95,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 32,
+          "observed": 32,
+          "restarts": 0,
+          "score": 0.02903848886489868,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 104,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006192878562555859,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 50880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.06473344564437866,
+          "model_frames": 10,
+          "observed": 96,
+          "restarts": 0,
+          "score": 0.9803596138954163,
+          "source_age_ms": 110.0,
+          "submitted": 98,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 33,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.3409389853477478,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 107,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.006225165257392352,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 51360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.06473344564437866,
+          "model_frames": 10,
+          "observed": 96,
+          "restarts": 0,
+          "score": 0.9803596138954163,
+          "source_age_ms": 110.0,
+          "submitted": 98,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 33,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.3409389853477478,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 107,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0006045403180417951,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 51840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.06473344564437866,
+          "model_frames": 10,
+          "observed": 96,
+          "restarts": 0,
+          "score": 0.9803596138954163,
+          "source_age_ms": 110.0,
+          "submitted": 98,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 33,
+          "observed": 33,
+          "restarts": 0,
+          "score": 0.3409389853477478,
+          "source_age_ms": 114.04166412353516,
+          "submitted": 107,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        3.2357458485593703e-9,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 52320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 99,
+          "restarts": 0,
+          "score": 0.9992954730987549,
+          "source_age_ms": 110.0,
+          "submitted": 101,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 34,
+          "observed": 34,
+          "restarts": 0,
+          "score": 0.15791451930999756,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 110,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 52800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 99,
+          "restarts": 0,
+          "score": 0.9992954730987549,
+          "source_age_ms": 110.0,
+          "submitted": 101,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 34,
+          "observed": 34,
+          "restarts": 0,
+          "score": 0.15791451930999756,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 110,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006535040747878339,
+        0.0,
+        0.006535040747878339
+      ]
+    },
+    {
+      "first_frame": 53280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 99,
+          "restarts": 0,
+          "score": 0.9992954730987549,
+          "source_age_ms": 110.0,
+          "submitted": 101,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 34,
+          "observed": 34,
+          "restarts": 0,
+          "score": 0.15791451930999756,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 110,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.006453292017122833,
+        0.0,
+        0.006453292017122833
+      ]
+    },
+    {
+      "first_frame": 53760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 99,
+          "restarts": 0,
+          "score": 0.9992954730987549,
+          "source_age_ms": 110.0,
+          "submitted": 101,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 34,
+          "observed": 34,
+          "restarts": 0,
+          "score": 0.15791451930999756,
+          "source_age_ms": 112.04166412353516,
+          "submitted": 110,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 54240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 103,
+          "restarts": 0,
+          "score": 0.9977567195892334,
+          "source_age_ms": 110.0,
+          "submitted": 105,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 35,
+          "observed": 35,
+          "restarts": 0,
+          "score": 0.18068131804466248,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 114,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 54720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 103,
+          "restarts": 0,
+          "score": 0.9977567195892334,
+          "source_age_ms": 110.0,
+          "submitted": 105,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 35,
+          "observed": 35,
+          "restarts": 0,
+          "score": 0.18068131804466248,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 114,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 55200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 103,
+          "restarts": 0,
+          "score": 0.9977567195892334,
+          "source_age_ms": 110.0,
+          "submitted": 105,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 35,
+          "observed": 35,
+          "restarts": 0,
+          "score": 0.18068131804466248,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 114,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 55680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 106,
+          "restarts": 0,
+          "score": 0.992789626121521,
+          "source_age_ms": 110.0,
+          "submitted": 108,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 36,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.11345714330673218,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 117,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 56160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 106,
+          "restarts": 0,
+          "score": 0.992789626121521,
+          "source_age_ms": 110.0,
+          "submitted": 108,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 36,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.11345714330673218,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 117,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 56640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 106,
+          "restarts": 0,
+          "score": 0.992789626121521,
+          "source_age_ms": 110.0,
+          "submitted": 108,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 36,
+          "observed": 36,
+          "restarts": 0,
+          "score": 0.11345714330673218,
+          "source_age_ms": 118.04166412353516,
+          "submitted": 117,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 57120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 109,
+          "restarts": 0,
+          "score": 0.9973688125610352,
+          "source_age_ms": 110.0,
+          "submitted": 111,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 37,
+          "observed": 37,
+          "restarts": 0,
+          "score": 0.05774405598640442,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 120,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 57600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 109,
+          "restarts": 0,
+          "score": 0.9973688125610352,
+          "source_age_ms": 110.0,
+          "submitted": 111,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 37,
+          "observed": 37,
+          "restarts": 0,
+          "score": 0.05774405598640442,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 120,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 58080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 109,
+          "restarts": 0,
+          "score": 0.9973688125610352,
+          "source_age_ms": 110.0,
+          "submitted": 111,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 37,
+          "observed": 37,
+          "restarts": 0,
+          "score": 0.05774405598640442,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 120,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 58560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 109,
+          "restarts": 0,
+          "score": 0.9973688125610352,
+          "source_age_ms": 110.0,
+          "submitted": 111,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 37,
+          "observed": 37,
+          "restarts": 0,
+          "score": 0.05774405598640442,
+          "source_age_ms": 116.04166412353516,
+          "submitted": 120,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 59040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 113,
+          "restarts": 0,
+          "score": 0.9917610883712769,
+          "source_age_ms": 110.0,
+          "submitted": 115,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 38,
+          "observed": 38,
+          "restarts": 0,
+          "score": 0.03005063533782959,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 124,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 59520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 113,
+          "restarts": 0,
+          "score": 0.9917610883712769,
+          "source_age_ms": 110.0,
+          "submitted": 115,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 38,
+          "observed": 38,
+          "restarts": 0,
+          "score": 0.03005063533782959,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 124,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 60000,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 113,
+          "restarts": 0,
+          "score": 0.9917610883712769,
+          "source_age_ms": 110.0,
+          "submitted": 115,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 38,
+          "observed": 38,
+          "restarts": 0,
+          "score": 0.03005063533782959,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 124,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 60480,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 116,
+          "restarts": 0,
+          "score": 0.9882197380065918,
+          "source_age_ms": 110.0,
+          "submitted": 118,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 39,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.018670380115509033,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 127,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 60960,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 116,
+          "restarts": 0,
+          "score": 0.9882197380065918,
+          "source_age_ms": 110.0,
+          "submitted": 118,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 39,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.018670380115509033,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 127,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 61440,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 116,
+          "restarts": 0,
+          "score": 0.9882197380065918,
+          "source_age_ms": 110.0,
+          "submitted": 118,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 39,
+          "observed": 39,
+          "restarts": 0,
+          "score": 0.018670380115509033,
+          "source_age_ms": 122.04166412353516,
+          "submitted": 127,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 61920,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 119,
+          "restarts": 0,
+          "score": 0.9353522062301636,
+          "source_age_ms": 110.0,
+          "submitted": 121,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 40,
+          "observed": 40,
+          "restarts": 0,
+          "score": 0.029146641492843628,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 130,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "first_frame": 62400,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 119,
+          "restarts": 0,
+          "score": 0.9353522062301636,
+          "source_age_ms": 110.0,
+          "submitted": 121,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 40,
+          "observed": 40,
+          "restarts": 0,
+          "score": 0.029146641492843628,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 130,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.01610473969793506,
+        3.235745366395637e-9,
+        0.01610473969793506
+      ]
+    },
+    {
+      "first_frame": 62880,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 119,
+          "restarts": 0,
+          "score": 0.9353522062301636,
+          "source_age_ms": 110.0,
+          "submitted": 121,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 40,
+          "observed": 40,
+          "restarts": 0,
+          "score": 0.029146641492843628,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 130,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.04440228850391523,
+        0.0027730224947953254,
+        0.04440228850391523
+      ]
+    },
+    {
+      "first_frame": 63360,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 119,
+          "restarts": 0,
+          "score": 0.9353522062301636,
+          "source_age_ms": 110.0,
+          "submitted": 121,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 40,
+          "observed": 40,
+          "restarts": 0,
+          "score": 0.029146641492843628,
+          "source_age_ms": 120.04166412353516,
+          "submitted": 130,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.16535756511108507,
+        0.00009345001939084377,
+        0.16535756511108507
+      ]
+    },
+    {
+      "first_frame": 63840,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9067926406860352,
+          "model_frames": 10,
+          "observed": 123,
+          "restarts": 0,
+          "score": 0.8997141718864441,
+          "source_age_ms": 110.0,
+          "submitted": 125,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 41,
+          "observed": 41,
+          "restarts": 0,
+          "score": 0.04473748803138733,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 134,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        0.18322292212806265,
+        0.015852351571286047,
+        0.18322292212806265
+      ]
+    },
+    {
+      "first_frame": 64320,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9067926406860352,
+          "model_frames": 10,
+          "observed": 123,
+          "restarts": 0,
+          "score": 0.8997141718864441,
+          "source_age_ms": 110.0,
+          "submitted": 125,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 41,
+          "observed": 41,
+          "restarts": 0,
+          "score": 0.04473748803138733,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 134,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        4.529884252192649,
+        0.017700359053734193,
+        4.529884252192649
+      ]
+    },
+    {
+      "first_frame": 64800,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9067926406860352,
+          "model_frames": 10,
+          "observed": 123,
+          "restarts": 0,
+          "score": 0.8997141718864441,
+          "source_age_ms": 110.0,
+          "submitted": 125,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 41,
+          "observed": 41,
+          "restarts": 0,
+          "score": 0.04473748803138733,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 134,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        10.363893033430411,
+        9.431125941243582e-6,
+        10.363893033430411
+      ]
+    },
+    {
+      "first_frame": 65280,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 126,
+          "restarts": 0,
+          "score": 0.9791193604469299,
+          "source_age_ms": 110.0,
+          "submitted": 128,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 42,
+          "observed": 42,
+          "restarts": 0,
+          "score": 0.04587408900260925,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 137,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        16.12635871045328,
+        0.000010504316534388566,
+        16.12635871045328
+      ]
+    },
+    {
+      "first_frame": 65760,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 126,
+          "restarts": 0,
+          "score": 0.9791193604469299,
+          "source_age_ms": 110.0,
+          "submitted": 128,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 42,
+          "observed": 42,
+          "restarts": 0,
+          "score": 0.04587408900260925,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 137,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        21.885116218427388,
+        0.00001138767640509932,
+        21.885116218427388
+      ]
+    },
+    {
+      "first_frame": 66240,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 126,
+          "restarts": 0,
+          "score": 0.9791193604469299,
+          "source_age_ms": 110.0,
+          "submitted": 128,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 42,
+          "observed": 42,
+          "restarts": 0,
+          "score": 0.04587408900260925,
+          "source_age_ms": 126.04166412353516,
+          "submitted": 137,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        26.176462781666455,
+        0.000011873038931557218,
+        26.176462781666455
+      ]
+    },
+    {
+      "first_frame": 66720,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 129,
+          "restarts": 0,
+          "score": 0.9669978022575378,
+          "source_age_ms": 110.0,
+          "submitted": 131,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 43,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.049612194299697876,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 140,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        31.160803962839545,
+        0.000011912946520886197,
+        31.160803962839545
+      ]
+    },
+    {
+      "first_frame": 67200,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 129,
+          "restarts": 0,
+          "score": 0.9669978022575378,
+          "source_age_ms": 110.0,
+          "submitted": 131,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 43,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.049612194299697876,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 140,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        35.72908027956906,
+        0.000012425273681693113,
+        35.72908027956906
+      ]
+    },
+    {
+      "first_frame": 67680,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 129,
+          "restarts": 0,
+          "score": 0.9669978022575378,
+          "source_age_ms": 110.0,
+          "submitted": 131,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 43,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.049612194299697876,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 140,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        39.953297064694304,
+        0.000012425273681693113,
+        39.953297064694304
+      ]
+    },
+    {
+      "first_frame": 68160,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 129,
+          "restarts": 0,
+          "score": 0.9669978022575378,
+          "source_age_ms": 110.0,
+          "submitted": 131,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 43,
+          "observed": 43,
+          "restarts": 0,
+          "score": 0.049612194299697876,
+          "source_age_ms": 124.04166412353516,
+          "submitted": 140,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        43.727265685919946,
+        0.000012425273681693113,
+        43.727265685919946
+      ]
+    },
+    {
+      "first_frame": 68640,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 133,
+          "restarts": 0,
+          "score": 0.9803929924964905,
+          "source_age_ms": 110.0,
+          "submitted": 135,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 44,
+          "observed": 44,
+          "restarts": 0,
+          "score": 0.06099677085876465,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 144,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        47.16226527728685,
+        0.000012425273681693113,
+        47.16226527728685
+      ]
+    },
+    {
+      "first_frame": 69120,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 133,
+          "restarts": 0,
+          "score": 0.9803929924964905,
+          "source_age_ms": 110.0,
+          "submitted": 135,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 44,
+          "observed": 44,
+          "restarts": 0,
+          "score": 0.06099677085876465,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 144,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        50.29678372153814,
+        0.000012425273681693113,
+        50.29678372153814
+      ]
+    },
+    {
+      "first_frame": 69600,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9999985694885254,
+          "model_frames": 10,
+          "observed": 133,
+          "restarts": 0,
+          "score": 0.9803929924964905,
+          "source_age_ms": 110.0,
+          "submitted": 135,
+          "usable": true,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 44,
+          "observed": 44,
+          "restarts": 0,
+          "score": 0.06099677085876465,
+          "source_age_ms": 132.0416717529297,
+          "submitted": 144,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        53.13021391595733,
+        0.000012425273681693113,
+        53.13021391595733
+      ]
+    },
+    {
+      "first_frame": 70080,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9997902512550354,
+          "model_frames": 10,
+          "observed": 136,
+          "restarts": 0,
+          "score": 0.7341094017028809,
+          "source_age_ms": 110.0,
+          "submitted": 138,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 45,
+          "observed": 45,
+          "restarts": 0,
+          "score": 0.06804028153419495,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 147,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        55.69497906735097,
+        0.000016189140403169048,
+        55.69497906735097
+      ]
+    },
+    {
+      "first_frame": 70560,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9997902512550354,
+          "model_frames": 10,
+          "observed": 136,
+          "restarts": 0,
+          "score": 0.7341094017028809,
+          "source_age_ms": 110.0,
+          "submitted": 138,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 45,
+          "observed": 45,
+          "restarts": 0,
+          "score": 0.06804028153419495,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 147,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        58.010927343179254,
+        0.42927439694322495,
+        58.010927343179254
+      ]
+    },
+    {
+      "first_frame": 71040,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.9997902512550354,
+          "model_frames": 10,
+          "observed": 136,
+          "restarts": 0,
+          "score": 0.7341094017028809,
+          "source_age_ms": 110.0,
+          "submitted": 138,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 45,
+          "observed": 45,
+          "restarts": 0,
+          "score": 0.06804028153419495,
+          "source_age_ms": 130.0416717529297,
+          "submitted": 147,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        60.10936131985156,
+        1.2970609387962853,
+        60.10936131985156
+      ]
+    },
+    {
+      "first_frame": 71520,
+      "frames": 480,
+      "status": [
+        null,
+        {
+          "dropped": 0,
+          "mix": 0.7406548857688904,
+          "model_frames": 10,
+          "observed": 139,
+          "restarts": 0,
+          "score": 0.08048519492149353,
+          "source_age_ms": 110.0,
+          "submitted": 141,
+          "usable": false,
+          "warmup_complete": true
+        },
+        {
+          "dropped": 0,
+          "mix": 0.0,
+          "model_frames": 46,
+          "observed": 46,
+          "restarts": 0,
+          "score": 0.06847193837165833,
+          "source_age_ms": 128.0416717529297,
+          "submitted": 150,
+          "usable": false,
+          "warmup_complete": true
+        }
+      ],
+      "wet_gain_loss_db": [
+        62.00531739965055,
+        2.1651034715702675,
+        62.00531739965055
+      ]
+    }
+  ]
+}

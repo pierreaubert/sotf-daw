@@ -1,0 +1,24 @@
+{
+  "command": [
+    "cargo",
+    "run",
+    "-p",
+    "sotf-plugin-gate",
+    "--bin",
+    "qa-gate-speech",
+    "--features",
+    "qa,silero-speech",
+    "--release",
+    "--offline",
+    "--locked",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx",
+    "audit/artifacts/ml-gate-quality-20261025/measurements"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 148.0099595831707
+}

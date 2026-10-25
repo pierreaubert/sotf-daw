@@ -1,0 +1,577 @@
+//! Frozen, paced comparisons of classical and learned speech protection.
+//!
+//! Annotated isolated phonemes are development proxies, not population recall.
+//! A linked pilot channel reveals applied gain without dividing by near-zero
+//! speech. Its detector key is zero; the other key exactly matches program
+//! speech/noise, retaining the corresponding mono classical detector behavior.
+
+use serde::Deserialize;
+use serde_json::{Value, json};
+use sha2::{Digest, Sha256};
+use sotf_host::{CountingAlloc, ParametricInPlacePlugin, ProcessContext, assert_no_allocs};
+use sotf_plugin_gate::{
+    GateData, GatePlugin, GatePluginParams, SILERO_MODEL_SHA256, SpeechProtectionConfig,
+    SpeechProtectionModel,
+};
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+#[global_allocator]
+static ALLOCATOR: CountingAlloc = CountingAlloc;
+
+const RATE: usize = 48000;
+const HOP: usize = 480;
+const PILOT: f32 = 0.125;
+const ACTIVITY_POWER: f64 = 1e-8; // -80 dBFS clean RMS; fixed before inference.
+const CUT_DB: f64 = 3.0;
+
+#[derive(Deserialize)]
+struct Manifest {
+    sample_rate: usize,
+    fixtures: Vec<Fixture>,
+}
+#[derive(Deserialize)]
+struct Fixture {
+    id: String,
+    file: String,
+    frames: usize,
+    pcm_sha256: String,
+    regions: Vec<Region>,
+}
+#[derive(Deserialize)]
+struct Region {
+    label: String,
+    start_seconds: f64,
+    end_seconds: f64,
+}
+
+fn sha(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|v| format!("{v:02x}"))
+        .collect()
+}
+
+fn energy(samples: &[f32]) -> f64 {
+    samples.iter().map(|&v| f64::from(v).powi(2)).sum()
+}
+
+fn loss(reference: f64, output: f64) -> Option<f64> {
+    (reference > 1e-30).then(|| (-10.0 * (output.max(1e-30) / reference).log10()).max(0.0))
+}
+
+fn shaped_energy(source: &[f32], gains: &[f32]) -> f64 {
+    source
+        .iter()
+        .zip(gains)
+        .map(|(&x, &g)| (f64::from(x) * f64::from(g)).powi(2))
+        .sum()
+}
+
+fn annotation_frame(seconds: f64, start: bool) -> usize {
+    let value = seconds * RATE as f64;
+    let nearest = value.round();
+    // Decimal source annotations can land a few ulps below an integer sample
+    // (2.3 * 48000 is 110399.99999999999). Repair representation error only;
+    // truly fractional boundaries still use conservative ceil/floor selection.
+    let value = if (value - nearest).abs() < 1e-6 {
+        nearest
+    } else {
+        value
+    };
+    if start {
+        value.ceil() as usize
+    } else {
+        value.floor() as usize
+    }
+}
+
+fn noise(length: usize, seed: u32) -> Vec<f32> {
+    let mut state = seed;
+    let mut values: Vec<f32> = (0..length)
+        .map(|_| {
+            state = state.wrapping_mul(1664525).wrapping_add(1013904223);
+            (f64::from(state) / f64::from(u32::MAX) * 2.0 - 1.0) as f32
+        })
+        .collect();
+    let rms = (energy(&values) / length as f64).sqrt();
+    for value in &mut values {
+        *value = (f64::from(*value) / rms) as f32;
+    }
+    values
+}
+
+fn configuration(model: Option<SpeechProtectionModel>) -> GatePluginParams {
+    GatePluginParams {
+        speech_protection: model.map(|model| SpeechProtectionConfig {
+            model,
+            ..Default::default()
+        }),
+        threshold_db: -40.0,
+        ratio: 10.0,
+        attack_ms: 1.0,
+        hold_ms: 10.0,
+        release_ms: 100.0,
+        range_db: 80.0,
+        hysteresis_db: 4.0,
+        knee_db: 0.0,
+        lookahead_ms: 0.0,
+        mix: 1.0,
+        link_channels: true,
+        sidechain_external: true,
+        ..Default::default()
+    }
+}
+
+fn region_metrics(
+    region: &Region,
+    speech: bool,
+    clean: &[f32],
+    added_noise: &[f32],
+    mixed: &[f32],
+    gains: &[Vec<f32>; 3],
+) -> Value {
+    let begin = annotation_frame(region.start_seconds, true);
+    let end = annotation_frame(region.end_seconds, false).min(clean.len());
+    let mut active = 0;
+    let mut inactive = 0;
+    let mut cut = [0; 3];
+    let mut first_surviving: [Option<f64>; 3] = [None; 3];
+    let mut input_clean = 0.0;
+    let mut input_noise = 0.0;
+    let mut output_clean = [0.0; 3];
+    let mut output_noise = [0.0; 3];
+    let mut false_protection = [0; 3];
+    for first in (0..clean.len()).step_by(HOP) {
+        let last = first + HOP;
+        if first < begin || last > end {
+            continue;
+        }
+        let activity = if speech {
+            &clean[first..last]
+        } else {
+            &mixed[first..last]
+        };
+        if energy(activity) / (HOP as f64) < ACTIVITY_POWER {
+            inactive += 1;
+            continue;
+        }
+        active += 1;
+        let reference = energy(activity);
+        let clean_energy = energy(&clean[first..last]);
+        let noise_energy = energy(&added_noise[first..last]);
+        input_clean += clean_energy;
+        input_noise += noise_energy;
+        let mut losses = [0.0; 3];
+        for model in 0..3 {
+            let gain = &gains[model][first..last];
+            losses[model] = loss(reference, shaped_energy(activity, gain)).unwrap();
+            cut[model] += usize::from(losses[model] > CUT_DB);
+            if losses[model] <= CUT_DB && first_surviving[model].is_none() {
+                first_surviving[model] =
+                    Some(first as f64 * 1000.0 / RATE as f64 - region.start_seconds * 1000.0);
+            }
+            output_clean[model] += shaped_energy(&clean[first..last], gain);
+            output_noise[model] += shaped_energy(&added_noise[first..last], gain);
+        }
+        if !speech && losses[0] > CUT_DB {
+            for model in 1..3 {
+                false_protection[model] += usize::from(losses[0] - losses[model] >= 1.0);
+            }
+        }
+    }
+    let models: Vec<_> = ["classical", "rnnoise", "silero"]
+        .iter()
+        .enumerate()
+        .map(|(i, name)| {
+            json!({
+                "model":name, "active_windows_cut_over_3db":cut[i],
+                "cut_fraction":(active>0).then(||cut[i] as f64/active as f64),
+                "first_surviving_active_window_offset_ms":first_surviving[i],
+                "speech_component_loss_db":loss(input_clean,output_clean[i]),
+                "added_noise_component_loss_db":loss(input_noise,output_noise[i]),
+                "negative_windows_protected_over_1db_vs_cut_classical":false_protection[i]
+            })
+        })
+        .collect();
+    json!({"label":region.label,"start_seconds":region.start_seconds,"end_seconds":region.end_seconds,
+        "annotation_kind":if speech {"isolated_speech_development_proxy"} else {"non_speech_control"},
+        "active_10ms_windows":active,"below_activity_floor_windows":inactive,"models":models})
+}
+
+fn run_case(
+    id: &str,
+    clean: &[f32],
+    added_noise: &[f32],
+    model_path: &Path,
+    regions: &[Region],
+    speech: bool,
+) -> Result<Value, Box<dyn std::error::Error>> {
+    let mixed: Vec<_> = clean
+        .iter()
+        .zip(added_noise)
+        .map(|(&a, &b)| a + b)
+        .collect();
+    let models = [
+        None,
+        Some(SpeechProtectionModel::Rnnoise),
+        Some(SpeechProtectionModel::Silero {
+            model_path: model_path.to_owned(),
+            sha256: SILERO_MODEL_SHA256.to_owned(),
+        }),
+    ];
+    let mut gates: Vec<_> = models
+        .into_iter()
+        .map(|model| GatePlugin::try_from_params(2, configuration(model)))
+        .collect::<Result<_, _>>()?;
+    for gate in &mut gates {
+        gate.initialize(RATE as f64)?;
+        if gate.latency_samples() != 0 {
+            return Err("Frozen measurement requires zero audio latency".into());
+        }
+    }
+    let mut gains: [Vec<f32>; 3] = std::array::from_fn(|_| vec![0.0; clean.len()]);
+    let mut process_ns: [Vec<u64>; 3] =
+        std::array::from_fn(|_| Vec::with_capacity(clean.len().div_ceil(HOP)));
+    let mut buffers = [[0.0; HOP * 4]; 3];
+    let mut peak_score = [0.0_f32; 3];
+    let mut first_ready: [Option<f64>; 3] = [None; 3];
+    let mut peak_age = [0.0_f32; 3];
+    let mut window_trace = Vec::new();
+    let started = Instant::now();
+    for first in (0..clean.len()).step_by(HOP) {
+        let count = HOP.min(clean.len() - first);
+        let context = ProcessContext::new(RATE as f64, count);
+        for model in 0..3 {
+            for (index, frame) in buffers[model][..count * 4]
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .enumerate()
+            {
+                let signal = mixed[first + index];
+                frame.copy_from_slice(&[signal, PILOT, signal, 0.0]);
+            }
+            let now = Instant::now();
+            assert_no_allocs("Gate speech measurement callback", || {
+                let processed = gates[model]
+                    .process_in_place(&mut buffers[model][..count * 4], &context)
+                    .unwrap();
+                assert_eq!(processed, count);
+            });
+            process_ns[model].push(now.elapsed().as_nanos() as u64);
+            for (index, frame) in buffers[model][..count * 4]
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .enumerate()
+            {
+                if frame[2] != mixed[first + index] || frame[3] != 0.0 {
+                    return Err("Detector key changed".into());
+                }
+                let gain = frame[1] / PILOT;
+                if (frame[0] - mixed[first + index] * gain).abs() > 1e-7 {
+                    return Err("Pilot does not match applied program gain".into());
+                }
+                if !gain.is_finite() || !(0.0..=1.000001).contains(&gain) {
+                    return Err("Gain outside downward bound".into());
+                }
+                if model > 0 && gain + 1e-6 < gains[0][first + index] {
+                    return Err("Learned mode added attenuation".into());
+                }
+                gains[model][first + index] = gain;
+            }
+        }
+        let status: Vec<_> = gates
+            .iter()
+            .enumerate()
+            .map(|(index, gate)| {
+                let data = gate.get_data().unwrap().downcast::<GateData>().unwrap();
+                data.speech_protection.map(|data| {
+                    peak_score[index] = peak_score[index].max(data.model_score.unwrap_or(0.0));
+                    if data.observation_usable {
+                        peak_age[index] = peak_age[index].max(data.source_age_ms.unwrap());
+                        if first_ready[index].is_none() {
+                            first_ready[index] =
+                                Some((first + count) as f64 * 1000.0 / RATE as f64);
+                        }
+                    }
+                    json!({"score":data.model_score,"source_age_ms":data.source_age_ms,
+                    "usable":data.observation_usable,"warmup_complete":data.warmup_complete,
+                    "mix":data.protection_mix,"submitted":data.submitted_windows,
+                    "dropped":data.dropped_windows,"observed":data.observed_windows,
+                    "model_frames":data.model_frames,"restarts":data.stream_restarts})
+                })
+            })
+            .collect();
+        let losses: Vec<_> = gains
+            .iter()
+            .map(|gain| {
+                loss(
+                    count as f64,
+                    gain[first..first + count]
+                        .iter()
+                        .map(|&v| f64::from(v).powi(2))
+                        .sum(),
+                )
+            })
+            .collect();
+        let component_output = |source: &[f32]| -> Vec<f64> {
+            gains
+                .iter()
+                .map(|gain| {
+                    shaped_energy(&source[first..first + count], &gain[first..first + count])
+                })
+                .collect()
+        };
+        window_trace.push(
+            json!({"first_frame":first,"frames":count,"wet_gain_loss_db":losses,"status":status,
+            "clean_input_energy":energy(&clean[first..first+count]),
+            "clean_output_energies":component_output(clean),
+            "added_noise_input_energy":energy(&added_noise[first..first+count]),
+            "added_noise_output_energies":component_output(added_noise),
+            "mixed_input_energy":energy(&mixed[first..first+count]),
+            "mixed_output_energies":component_output(&mixed)}),
+        );
+        // Sleep after processing: this provides at least realtime source pacing,
+        // not a controlled 10 ms DAW scheduling/deadline benchmark.
+        std::thread::sleep(Duration::from_secs_f64(count as f64 / RATE as f64));
+    }
+    let elapsed = started.elapsed().as_secs_f64();
+    let metrics: Vec<_> = regions
+        .iter()
+        .map(|r| region_metrics(r, speech, clean, added_noise, &mixed, &gains))
+        .collect();
+    let callback_times: Vec<_> = process_ns.iter_mut().map(|times| {
+        times.sort_unstable(); json!({"calls":times.len(),"p99_ns":times[(times.len()-1)*99/100],"max_ns":times.last()})
+    }).collect();
+    println!(
+        "{id}: {} source seconds, elapsed {elapsed:.3}s",
+        clean.len() as f64 / RATE as f64
+    );
+    Ok(
+        json!({"id":id,"source_frames":clean.len(),"source_seconds":clean.len() as f64/RATE as f64,
+        "wall_seconds":elapsed,"mixed_f32le_sha256":sha(&mixed.iter().flat_map(|v|v.to_le_bytes()).collect::<Vec<_>>()),
+        "samples_above_model_input_full_scale":mixed.iter().filter(|v|v.abs()>1.0).count(),
+        "peak_observed_scores":peak_score,"first_observed_usable_ms":first_ready,
+        "maximum_usable_source_age_ms":peak_age,"callback_wall_times":callback_times,
+        "regions":metrics,"window_trace":window_trace}),
+    )
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = std::env::args_os().skip(1);
+    let model = PathBuf::from(args.next().ok_or("Missing model path")?);
+    let output = PathBuf::from(args.next().ok_or("Missing output directory")?);
+    if args.next().is_some() || output.exists() {
+        return Err("Expected model and unused output directory".into());
+    }
+    let fixture_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../sotf-plugin-de-esser/tests/fixtures/recorded");
+    let manifest_bytes = std::fs::read(fixture_root.join("manifest.json"))?;
+    let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
+    if manifest.sample_rate != RATE {
+        return Err("Unexpected fixture sample rate".into());
+    }
+    std::fs::create_dir_all(&output)?;
+    let protocol = json!({"models":["classical","rnnoise","silero"],"sample_rate":RATE,"block_frames":HOP,
+        "source_sha256":sha(include_bytes!("qa_gate_speech.rs")),
+        "package_version":env!("CARGO_PKG_VERSION"),"os":std::env::consts::OS,"architecture":std::env::consts::ARCH,
+        "rnnoise_provenance":"audit/artifacts/ml-gate-20261025/model-provenance.json",
+        "gain_factors":[1.0,0.1],"added_white_noise_snr_db":[null,10.0],"noise_seed":20261025,
+        "noise_recipe":"LCG u32, uniform signed values normalized to unit clip RMS; seed XOR fixture index. Noisy speech uses clip RMS, including pauses. No threshold or model fitting.",
+        "noise_only_base_rms_dbfs":-50,"noise_only_seed_xor":0x4e4f4953_u32,
+        "gate_parameters":configuration(None),"speech_probability_threshold":0.8,"max_age_ms":150.0,
+        "activity_floor_rms_dbfs":-80,"cut_threshold_db":CUT_DB,
+        "annotation_frame_mapping":"decimal_conservative_with_near_integer_repair",
+        "model_sha256":SILERO_MODEL_SHA256,"fixture_manifest_sha256":sha(&manifest_bytes),
+        "timing":"After-work source-duration sleep; source clock and wall clock reported separately. Callback wall times are observational, not host deadline benchmarks.",
+        "measurement":"Linked power-of-two pilot reveals per-sample applied gain. External detector key reproduces mono input detection and is read-only. All input, including warmup and final partial callbacks, is processed.",
+        "limits":"Existing single-speaker isolated phonemes and two instruments, unknown model-training overlap. Conservative intervals and an activity floor yield conditional development proxies, not multilingual speech recall. Regions may overlap and are not pooled. First surviving active-window offsets have 10 ms resolution and are not VAD onset ground truth."});
+    std::fs::write(
+        output.join("protocol.json"),
+        serde_json::to_vec_pretty(&protocol)?,
+    )?;
+    std::fs::write(output.join("fixture-manifest.json"), manifest_bytes)?;
+    for (index, fixture) in manifest.fixtures.iter().enumerate() {
+        let bytes = std::fs::read(fixture_root.join(&fixture.file))?;
+        if fixture.frames == 0
+            || sha(&bytes) != fixture.pcm_sha256
+            || bytes.len() != fixture.frames * 2
+        {
+            return Err("Fixture identity mismatch".into());
+        }
+        let original: Vec<_> = bytes
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|x| f32::from(i16::from_le_bytes(*x)) / 32768.0)
+            .collect();
+        let unit_noise = noise(original.len(), 20261025 ^ index as u32);
+        for gain in [1.0, 0.1] {
+            let clean: Vec<_> = original.iter().map(|v| v * gain).collect();
+            for snr in [None, Some(10.0_f64)] {
+                let amplitude = snr.map_or(0.0, |snr| {
+                    (energy(&clean) / clean.len() as f64 / 10.0_f64.powf(snr / 10.0)).sqrt()
+                });
+                let added: Vec<_> = unit_noise
+                    .iter()
+                    .map(|&v| (f64::from(v) * amplitude) as f32)
+                    .collect();
+                let id = format!(
+                    "{}-gain-{gain}-noise-{}",
+                    fixture.id,
+                    if snr.is_some() { "10db" } else { "none" }
+                );
+                let mut result = run_case(
+                    &id,
+                    &clean,
+                    &added,
+                    &model,
+                    &fixture.regions,
+                    !matches!(fixture.id.as_str(), "violin" | "cymbal"),
+                )?;
+                result["fixture_id"] = json!(fixture.id);
+                result["source_pcm_sha256"] = json!(fixture.pcm_sha256);
+                result["gain_factor"] = json!(gain);
+                result["added_noise_snr_db"] = json!(snr);
+                result["noise_seed"] = json!(20261025_u32 ^ index as u32);
+                result["measured_clip_noise_snr_db"] = if energy(&added) > 0.0 {
+                    json!(10.0 * (energy(&clean) / energy(&added)).log10())
+                } else {
+                    Value::Null
+                };
+                std::fs::write(
+                    output.join(format!("{id}.json")),
+                    serde_json::to_vec_pretty(&result)?,
+                )?;
+            }
+        }
+    }
+    let clean = vec![0.0; RATE * 4];
+    let unit_noise = noise(clean.len(), 20261025 ^ 0x4e4f4953);
+    let regions = [Region {
+        label: "synthetic_white_noise_only".into(),
+        start_seconds: 0.0,
+        end_seconds: 4.0,
+    }];
+    for gain in [1.0, 0.1] {
+        let added: Vec<_> = unit_noise
+            .iter()
+            .map(|&v| (f64::from(v) * 10.0_f64.powf(-50.0 / 20.0) * gain) as f32)
+            .collect();
+        let id = format!("noise-only-gain-{gain}");
+        let mut result = run_case(&id, &clean, &added, &model, &regions, false)?;
+        result["fixture_id"] = json!("synthetic_white_noise_only");
+        result["gain_factor"] = json!(gain);
+        result["noise_rms_dbfs"] = json!(10.0 * (energy(&added) / added.len() as f64).log10());
+        std::fs::write(
+            output.join(format!("{id}.json")),
+            serde_json::to_vec_pretty(&result)?,
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gain_metrics_distinguish_analytic_speech_loss_and_noise_passage() {
+        let clean = vec![0.01; HOP * 3];
+        let added = vec![0.001; clean.len()];
+        let mixed: Vec<_> = clean.iter().zip(&added).map(|(a, b)| a + b).collect();
+        let gains = [
+            vec![0.5; clean.len()],
+            vec![1.0; clean.len()],
+            vec![0.25; clean.len()],
+        ];
+        let region = Region {
+            label: "known".into(),
+            start_seconds: 0.0,
+            end_seconds: 0.03,
+        };
+        let report = region_metrics(&region, true, &clean, &added, &mixed, &gains);
+        assert_eq!(report["active_10ms_windows"], 3);
+        let rows = report["models"].as_array().unwrap();
+        assert_eq!(rows[0]["active_windows_cut_over_3db"], 3);
+        assert_eq!(rows[1]["active_windows_cut_over_3db"], 0);
+        assert!((rows[0]["speech_component_loss_db"].as_f64().unwrap() - 6.020599913).abs() < 1e-7);
+        assert!(
+            (rows[2]["added_noise_component_loss_db"].as_f64().unwrap() - 12.041199826).abs()
+                < 1e-7
+        );
+        let negative = region_metrics(&region, false, &clean, &added, &mixed, &gains);
+        assert_eq!(
+            negative["models"][1]["negative_windows_protected_over_1db_vs_cut_classical"],
+            3
+        );
+    }
+
+    #[test]
+    fn metrics_exclude_partial_annotation_windows_and_inactive_speech() {
+        let clean = vec![0.01; HOP * 3];
+        let added = vec![0.0; clean.len()];
+        let gains = std::array::from_fn(|_| vec![1.0; clean.len()]);
+        let region = Region {
+            label: "partial".into(),
+            start_seconds: 0.005,
+            end_seconds: 0.025,
+        };
+        let report = region_metrics(&region, true, &clean, &added, &clean, &gains);
+        assert_eq!(report["active_10ms_windows"], 1);
+        assert_eq!(
+            report["models"][0]["first_surviving_active_window_offset_ms"],
+            5.0
+        );
+        let silent = vec![0.0; clean.len()];
+        let report = region_metrics(&region, true, &silent, &added, &silent, &gains);
+        assert_eq!(report["active_10ms_windows"], 0);
+        assert_eq!(report["below_activity_floor_windows"], 1);
+        assert!(report["models"][0]["cut_fraction"].is_null());
+    }
+
+    #[test]
+    fn linked_pilot_and_external_key_reproduce_independent_mono_classical_processing() {
+        let mut mono_settings = configuration(None);
+        mono_settings.sidechain_external = false;
+        let mut mono = GatePlugin::try_from_params(1, mono_settings).unwrap();
+        let mut pilot = GatePlugin::try_from_params(2, configuration(None)).unwrap();
+        mono.initialize(RATE as f64).unwrap();
+        pilot.initialize(RATE as f64).unwrap();
+        let context = ProcessContext::new(RATE as f64, HOP);
+        for block in 0..50 {
+            let level = if block < 20 { 0.1 } else { 0.0005 };
+            let mut signal: Vec<_> = (0..HOP)
+                .map(|n| {
+                    (2.0 * std::f64::consts::PI * 200.0 * (block * HOP + n) as f64 / RATE as f64)
+                        .sin() as f32
+                        * level
+                })
+                .collect();
+            let mut buffer: Vec<_> = signal.iter().flat_map(|&v| [v, PILOT, v, 0.0]).collect();
+            mono.process_in_place(&mut signal, &context).unwrap();
+            pilot.process_in_place(&mut buffer, &context).unwrap();
+            for (&expected, frame) in signal.iter().zip(buffer.as_chunks::<4>().0) {
+                assert_eq!(frame[0], expected);
+            }
+        }
+    }
+
+    #[test]
+    fn decimal_annotation_endpoints_do_not_discard_a_complete_window() {
+        let clean = vec![0.01; RATE * 3];
+        let noise = vec![0.0; clean.len()];
+        let gains = std::array::from_fn(|_| vec![1.0; clean.len()]);
+        let region = Region {
+            label: "decimal_endpoint".into(),
+            start_seconds: 0.2,
+            end_seconds: 2.3,
+        };
+        let report = region_metrics(&region, true, &clean, &noise, &clean, &gains);
+        assert_eq!(report["active_10ms_windows"], 210);
+        assert_eq!(annotation_frame(0.005005, true), 241);
+        assert_eq!(annotation_frame(0.025005, false), 1200);
+    }
+}

@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""Independently reduce recorded pilot energies and retain both frozen runs.
+
+The raw native summaries use f64 ceil/floor annotation boundaries. This reducer
+checks those summaries, then maps exact decimal annotation times to conservative PCM boundaries,
+avoiding a one-sample rounding error that can discard a whole window.
+No controller, model, threshold, or input is tuned by this analysis.
+"""
+
+import argparse
+import hashlib
+import json
+import math
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
+from pathlib import Path
+
+
+def loss(reference, output):
+    return (
+        max(0.0, -10 * math.log10(max(output, 1e-30) / reference))
+        if reference > 1e-30
+        else None
+    )
+
+
+def bounds(region, rate, length, decimal):
+    if decimal:
+        start = int(
+            (Decimal(str(region["start_seconds"])) * rate).to_integral_value(
+                rounding=ROUND_CEILING
+            )
+        )
+        end = int(
+            (Decimal(str(region["end_seconds"])) * rate).to_integral_value(
+                rounding=ROUND_FLOOR
+            )
+        )
+        return start, min(end, length)
+    return math.ceil(region["start_seconds"] * rate), min(
+        math.floor(region["end_seconds"] * rate), length
+    )
+
+
+def reduce_region(case, region, protocol, decimal):
+    rate = protocol["sample_rate"]
+    begin, end = bounds(region, rate, case["source_frames"], decimal)
+    speech = region["annotation_kind"] == "isolated_speech_development_proxy"
+    reference_kind = "clean" if speech else "mixed"
+    active = inactive = 0
+    cuts = [0] * 3
+    first = [None] * 3
+    protected = [0] * 3
+    clean_in = noise_in = 0.0
+    clean_out = [0.0] * 3
+    noise_out = [0.0] * 3
+    for window in case["window_trace"]:
+        start, count = window["first_frame"], window["frames"]
+        if count != protocol["block_frames"] or start < begin or start + count > end:
+            continue
+        reference = window[f"{reference_kind}_input_energy"]
+        if reference / count < 10 ** (protocol["activity_floor_rms_dbfs"] / 10):
+            inactive += 1
+            continue
+        active += 1
+        clean_in += window["clean_input_energy"]
+        noise_in += window["added_noise_input_energy"]
+        losses = [
+            loss(reference, value)
+            for value in window[f"{reference_kind}_output_energies"]
+        ]
+        for model in range(3):
+            cuts[model] += losses[model] > protocol["cut_threshold_db"]
+            if losses[model] <= protocol["cut_threshold_db"] and first[model] is None:
+                first[model] = start * 1000 / rate - region["start_seconds"] * 1000
+            clean_out[model] += window["clean_output_energies"][model]
+            noise_out[model] += window["added_noise_output_energies"][model]
+            if not speech and model and losses[0] > protocol["cut_threshold_db"]:
+                protected[model] += losses[0] - losses[model] >= 1.0
+    return {
+        "label": region["label"],
+        "start_seconds": region["start_seconds"],
+        "end_seconds": region["end_seconds"],
+        "annotation_kind": region["annotation_kind"],
+        "active_10ms_windows": active,
+        "below_activity_floor_windows": inactive,
+        "models": [
+            {
+                "model": name,
+                "active_windows_cut_over_3db": cuts[i],
+                "cut_fraction": cuts[i] / active if active else None,
+                "first_surviving_active_window_offset_ms": first[i],
+                "speech_component_loss_db": loss(clean_in, clean_out[i]),
+                "added_noise_component_loss_db": loss(noise_in, noise_out[i]),
+                "negative_windows_protected_over_1db_vs_cut_classical": protected[i],
+            }
+            for i, name in enumerate(protocol["models"])
+        ],
+    }
+
+
+def check_equal(actual, expected, path):
+    if isinstance(expected, dict):
+        for key, value in expected.items():
+            check_equal(actual[key], value, f"{path}.{key}")
+    elif isinstance(expected, list):
+        if len(actual) != len(expected):
+            raise ValueError(f"Length mismatch: {path}")
+        for index, (a, b) in enumerate(zip(actual, expected, strict=True)):
+            check_equal(a, b, f"{path}[{index}]")
+    elif isinstance(expected, float):
+        if not math.isfinite(actual) or not math.isclose(
+            actual, expected, abs_tol=1e-8, rel_tol=1e-8
+        ):
+            raise ValueError(f"Metric mismatch: {path}: {actual} != {expected}")
+    elif actual != expected:
+        raise ValueError(f"Metric mismatch: {path}: {actual} != {expected}")
+
+
+def load_cases(folder):
+    result = {}
+    for path in folder.glob("*.json"):
+        case = json.loads(path.read_text())
+        if "window_trace" in case:
+            result[case["id"]] = case
+    if len(result) != 22:
+        raise ValueError("Expected every one of the 22 predeclared cases")
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("artifacts", type=Path)
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+    if args.output.exists():
+        raise ValueError("Output exists; preserve prior analyses")
+    old = load_cases(args.artifacts / "measurements")
+    new = load_cases(args.artifacts / "measurements-energy-trace")
+    before = json.loads((args.artifacts / "measurements/protocol.json").read_text())
+    protocol = json.loads(
+        (args.artifacts / "measurements-energy-trace/protocol.json").read_text()
+    )
+    check_equal(
+        {k: v for k, v in before.items() if k != "source_sha256"},
+        {k: v for k, v in protocol.items() if k != "source_sha256"},
+        "frozen_protocol",
+    )
+    for report, source in [
+        (before, "first-run-source.rs.txt"),
+        (protocol, "energy-trace-source.rs.txt"),
+    ]:
+        if (
+            hashlib.sha256((args.artifacts / source).read_bytes()).hexdigest()
+            != report["source_sha256"]
+        ):
+            raise ValueError("Recorded executable source identity mismatch")
+    if set(old) != set(new):
+        raise ValueError("Repeat case identities changed")
+    rows, corrections, variation = [], [], []
+    for name, case in sorted(new.items()):
+        if old[name]["mixed_f32le_sha256"] != case["mixed_f32le_sha256"]:
+            raise ValueError("Repeat input bytes changed")
+        expected_start = 0
+        for window in case["window_trace"]:
+            if (
+                window["first_frame"] != expected_start
+                or not 0 < window["frames"] <= protocol["block_frames"]
+            ):
+                raise ValueError("Missing or reordered measured audio")
+            expected_start += window["frames"]
+            for kind in ["clean", "added_noise", "mixed"]:
+                reference = window[f"{kind}_input_energy"]
+                outputs = window[f"{kind}_output_energies"]
+                if not math.isfinite(reference) or reference < 0 or len(outputs) != 3:
+                    raise ValueError("Invalid energy record")
+                for i, value in enumerate(outputs):
+                    if (
+                        not math.isfinite(value)
+                        or not 0 <= value <= reference * 1.000003 + 1e-24
+                    ):
+                        raise ValueError("Measured energy exceeds downward gain bound")
+                    if i and value + 1e-24 < outputs[0] * (1 - 1e-5):
+                        raise ValueError("Learned energy below classical baseline")
+        if expected_start != case["source_frames"]:
+            raise ValueError("Final partial audio block was discarded")
+        for index, region in enumerate(case["regions"]):
+            legacy = reduce_region(case, region, protocol, False)
+            check_equal(region, legacy, f"{name}.region[{index}]")
+            corrected = reduce_region(case, region, protocol, True)
+            if bounds(
+                region, protocol["sample_rate"], case["source_frames"], False
+            ) != bounds(region, protocol["sample_rate"], case["source_frames"], True):
+                corrections.append(
+                    {
+                        "case": name,
+                        "label": region["label"],
+                        "native_active_windows": region["active_10ms_windows"],
+                        "corrected_active_windows": corrected["active_10ms_windows"],
+                    }
+                )
+            previous = old[name]["regions"][index]
+            delta = [
+                b["active_windows_cut_over_3db"] - a["active_windows_cut_over_3db"]
+                for a, b in zip(previous["models"], region["models"], strict=True)
+            ]
+            if any(delta):
+                variation.append(
+                    {
+                        "case": name,
+                        "label": region["label"],
+                        "repeat_cut_count_deltas": delta,
+                    }
+                )
+            rows.append(
+                {
+                    "case": name,
+                    "region": corrected,
+                    "peak_observed_scores": case["peak_observed_scores"],
+                    "first_observed_usable_ms": case["first_observed_usable_ms"],
+                    "last_status": case["window_trace"][-1]["status"],
+                }
+            )
+    summary = {
+        "analysis_source_sha256": hashlib.sha256(
+            Path(__file__).read_bytes()
+        ).hexdigest(),
+        "cases": len(new),
+        "regions_verified": len(rows),
+        "all_audio_including_partial_callbacks_accounted": True,
+        "repeat_inputs_byte_identical": True,
+        "native_metric_reductions_verified": True,
+        "annotation_mapping": "Exact decimal seconds with conservative ceil/floor PCM boundaries; complete 10 ms windows only. Repairs binary-f64 representation error without widening fractional boundaries.",
+        "boundary_corrections": corrections,
+        "repeat_scheduling_variation": variation,
+        "rows": rows,
+        "limits": protocol["limits"],
+        "interpretation": "No aggregate recall or superiority claim. Both runs retained; controller/model/threshold fixed. Corrected metrics are derived from recorded pilot/component energies without rerendering or selecting model outputs.",
+    }
+    args.output.write_text(json.dumps(summary, indent=2) + "\n")
+    print(
+        json.dumps(
+            {
+                k: v
+                for k, v in summary.items()
+                if k not in ["rows", "limits", "interpretation"]
+            },
+            indent=2,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()

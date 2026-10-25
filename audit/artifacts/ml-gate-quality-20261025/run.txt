@@ -1,0 +1,28 @@
+   Compiling sotf-tract-nnef v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+   Compiling sotf-tract-onnx-opl v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+   Compiling sotf-tract-onnx v0.22.4 (https://github.com/pierreaubert/sotf-3rdparties#9b7c2134)
+   Compiling sotf-plugin-gate v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gate)
+    Finished `release` profile [optimized] target(s) in 1m 10s
+     Running `/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-gate-speech crates/sotf-plugins/models/silero-vad/silero_vad_16k_batch1.onnx audit/artifacts/ml-gate-quality-20261025/measurements`
+s-gain-1-noise-none: 2.5890416666666667 source seconds, elapsed 3.265s
+s-gain-1-noise-10db: 2.5890416666666667 source seconds, elapsed 3.286s
+s-gain-0.1-noise-none: 2.5890416666666667 source seconds, elapsed 3.364s
+s-gain-0.1-noise-10db: 2.5890416666666667 source seconds, elapsed 3.319s
+sh-gain-1-noise-none: 2.4 source seconds, elapsed 3.065s
+sh-gain-1-noise-10db: 2.4 source seconds, elapsed 3.067s
+sh-gain-0.1-noise-none: 2.4 source seconds, elapsed 3.087s
+sh-gain-0.1-noise-10db: 2.4 source seconds, elapsed 3.079s
+p-gain-1-noise-none: 1.5 source seconds, elapsed 1.913s
+p-gain-1-noise-10db: 1.5 source seconds, elapsed 1.946s
+p-gain-0.1-noise-none: 1.5 source seconds, elapsed 1.934s
+p-gain-0.1-noise-10db: 1.5 source seconds, elapsed 1.945s
+violin-gain-1-noise-none: 2.4 source seconds, elapsed 3.105s
+violin-gain-1-noise-10db: 2.4 source seconds, elapsed 3.067s
+violin-gain-0.1-noise-none: 2.4 source seconds, elapsed 3.027s
+violin-gain-0.1-noise-10db: 2.4 source seconds, elapsed 3.073s
+cymbal-gain-1-noise-none: 4 source seconds, elapsed 5.163s
+cymbal-gain-1-noise-10db: 4 source seconds, elapsed 5.192s
+cymbal-gain-0.1-noise-none: 4 source seconds, elapsed 5.155s
+cymbal-gain-0.1-noise-10db: 4 source seconds, elapsed 5.135s
+noise-only-gain-1: 4 source seconds, elapsed 5.124s
+noise-only-gain-0.1: 4 source seconds, elapsed 5.153s
