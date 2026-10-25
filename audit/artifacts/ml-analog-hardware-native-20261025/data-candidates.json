@@ -1,0 +1,29 @@
+{
+  "checked_on": "2026-10-25",
+  "downloaded_training_data": false,
+  "admitted_hardware_target": null,
+  "candidates": [
+    {
+      "name": "UA6176/610B physical preamp captures",
+      "url": "https://zenodo.org/records/10798111",
+      "original": "https://zenodo.org/records/3562442",
+      "published_operating_controls": {
+        "gain_db": 10,
+        "level": 6,
+        "input": "Line",
+        "high_db": 0,
+        "low_db": 0
+      },
+      "status": "not_used",
+      "reason": "Identified physical target and controls; absolute input/output full-scale calibration, source/load impedance and residual alignment evidence required by this workflow have not been established."
+    },
+    {
+      "name": "Original dry source: IDMT-SMT Audio Effects",
+      "url": "https://www.idmt.fraunhofer.de/en/publications/datasets/audio_effects.html",
+      "published_license": "CC BY-NC-ND4.0 for evaluation",
+      "status": "not_used",
+      "reason": "Original dry recordings are licensed separately; the page describes effects mostly processed using plugins. A repository code license is not evidence of rights to train/redistribute its linked recordings."
+    }
+  ],
+  "scope": "Read-only primary-source discovery. No archive downloads, model training, data redistribution or calibration inference."
+}

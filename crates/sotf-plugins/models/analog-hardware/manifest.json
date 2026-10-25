@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "status": "native_baseline_and_capture_contract_only",
+  "pretrained_weights": null,
+  "hardware_model_admitted": false,
+  "purpose": "Supporting comparison and capture qualification for later identified-hardware learned coloration; does not train or replace the shared native stage.",
+  "native_models": [
+    "Harmonics",
+    "Static",
+    "Hammerstein",
+    "Tape",
+    "Transformer",
+    "Console Preamp"
+  ],
+  "capture_format": "sotf-analog-hardware-capture-v1",
+  "calibration": "Explicit measured full-scale-sine RMS dBu at input/output, source/load impedances, shared clock and alignment evidence; native -18dBFS VU label is not physical calibration.",
+  "bounds": "1MiB capture JSON;1..64 mono pairs;250ms..4M frames per pair,8M aggregate paired frames. Native QA covers44.1..192kHz,1..32 channels,4M samples including explicit zeros.",
+  "data": "Generated functional probes only. Three synthetic tanh paired captures are not actual hardware observations. No external audio downloaded or used for training.",
+  "license": "GPL-3.0-or-later for new project code and generated fixtures; external recording rights require independent provenance.",
+  "evidence": "audit/artifacts/ml-analog-hardware-native-20261025",
+  "remaining": [
+    "Target-specific learned model and explicit optional native inference/fallback.",
+    "Measured target calibration/provenance and frozen independent quality/operating-level comparison against appropriate classical baselines.",
+    "Alias/state/cost,host and cross-platform acceptance."
+  ]
+}

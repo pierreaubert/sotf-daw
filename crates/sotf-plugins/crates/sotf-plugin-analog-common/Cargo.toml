@@ -13,6 +13,16 @@ readme.workspace = true
 name = "sotf_plugin_analog_common"
 path = "src/lib.rs"
 
+[features]
+qa = ["sotf-host/qa", "dep:serde", "dep:serde_json"]
+
+[[bin]]
+name = "qa-analog-color-render"
+path = "bin/qa_analog_color_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 math-analog = { workspace = true }
 sotf-host = { workspace = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }

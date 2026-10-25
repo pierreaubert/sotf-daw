@@ -9003,6 +9003,8 @@ name = "sotf-plugin-analog-common"
 version = "0.5.0"
 dependencies = [
  "math-analog",
+ "serde",
+ "serde_json",
  "sotf-host",
 ]
 

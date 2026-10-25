@@ -1,0 +1,14 @@
+test_calibration_origin_clock_alignment_rights_and_split_refusals (test_analog_hardware.CaptureTests.test_calibration_origin_clock_alignment_rights_and_split_refusals) ... ok
+test_capture_cli_reports_data_without_admitting_a_hardware_model (test_analog_hardware.CaptureTests.test_capture_cli_reports_data_without_admitting_a_hardware_model) ... ok
+test_hash_duplicate_source_adc_headroom_and_signal_refusals (test_analog_hardware.CaptureTests.test_hash_duplicate_source_adc_headroom_and_signal_refusals) ... ok
+test_paired_bytes_and_calibration_levels_are_preserved (test_analog_hardware.CaptureTests.test_paired_bytes_and_calibration_levels_are_preserved) ... ok
+test_sine_reference_dbu_conversion_and_silence (test_analog_hardware.CaptureTests.test_sine_reference_dbu_conversion_and_silence) ... ok
+test_independent_wet_trim_and_color_blend_laws (test_analog_hardware.NativeTests.test_independent_wet_trim_and_color_blend_laws) ... ok
+test_invalid_controls_and_geometry_refuse (test_analog_hardware.NativeTests.test_invalid_controls_and_geometry_refuse) ... ok
+test_native_json_callbacks_prepared_chunk_and_explicit_zeros (test_analog_hardware.NativeTests.test_native_json_callbacks_prepared_chunk_and_explicit_zeros) ... ok
+test_zero_color_identity_all_models_and_rates (test_analog_hardware.NativeTests.test_zero_color_identity_all_models_and_rates) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 3.704s
+
+OK
