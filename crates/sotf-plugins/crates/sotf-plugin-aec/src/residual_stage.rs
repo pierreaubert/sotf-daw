@@ -103,6 +103,10 @@ pub(crate) struct ResidualStage {
 }
 
 impl ResidualStage {
+    #[cfg(feature = "qa")]
+    pub(crate) fn analysis_extra_gain(&self, bin: usize) -> f32 {
+        self.extra_gains[bin]
+    }
     pub(crate) fn prepare(
         config: &ResidualSuppressionConfig,
         rate: f64,

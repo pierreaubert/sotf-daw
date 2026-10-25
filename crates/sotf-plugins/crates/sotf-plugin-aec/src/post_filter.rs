@@ -46,6 +46,14 @@ pub struct ResidualEchoSuppressor {
 }
 
 impl ResidualEchoSuppressor {
+    #[cfg(feature = "qa")]
+    pub(crate) fn analysis_gain(&self, bin: usize, frozen: bool) -> f32 {
+        if !frozen && self.near_end_protected {
+            1.0
+        } else {
+            self.smoothed_gains[bin]
+        }
+    }
     #[cfg(feature = "neural-residual")]
     pub(crate) fn near_end_protected(&self) -> bool {
         self.near_end_protected

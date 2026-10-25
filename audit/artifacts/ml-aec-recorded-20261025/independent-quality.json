@@ -1,0 +1,285 @@
+{
+  "cases": 72,
+  "unique_mixtures": 72,
+  "applied_blocks": 84975,
+  "max_abs_errors": {
+    "spectrum": 2.0237267136034204e-06,
+    "reconstruction": 5.960464488641293e-08,
+    "metric": 1.4210854715202004e-14
+  },
+  "metrics": {
+    "steady/erle_db": {
+      "count": 54,
+      "worst_delta": {
+        "case": 18,
+        "classical": -1.6971328831720445,
+        "hybrid": -1.6825381194292854,
+        "hybrid_minus_classical_db": 0.014594763742759032
+      },
+      "largest_delta": {
+        "case": 1,
+        "classical": 28.73813454930875,
+        "hybrid": 33.23322679679387,
+        "hybrid_minus_classical_db": 4.495092247485122
+      },
+      "negative_deltas": 0
+    },
+    "onset/erle_db": {
+      "count": 36,
+      "worst_delta": {
+        "case": 65,
+        "classical": 40.58279450293285,
+        "hybrid": 40.622810188180736,
+        "hybrid_minus_classical_db": 0.040015685247887234
+      },
+      "largest_delta": {
+        "case": 17,
+        "classical": 13.743992705649264,
+        "hybrid": 17.348024100584873,
+        "hybrid_minus_classical_db": 3.6040313949356086
+      },
+      "negative_deltas": 0
+    },
+    "near_only/near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 3,
+        "classical": 138.8558255963751,
+        "hybrid": 138.8558255963751,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 3,
+        "classical": 138.8558255963751,
+        "hybrid": 138.8558255963751,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "near_only/conditional_near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 3,
+        "classical": 314.975453345554,
+        "hybrid": 314.975453345554,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 3,
+        "classical": 314.975453345554,
+        "hybrid": 314.975453345554,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "near_only/conditional_near_projection_loss_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 3,
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 3,
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "onset/near_snr_db": {
+      "count": 27,
+      "worst_delta": {
+        "case": 69,
+        "classical": 23.850150527865832,
+        "hybrid": 12.669393867184413,
+        "hybrid_minus_classical_db": -11.18075666068142
+      },
+      "largest_delta": {
+        "case": 45,
+        "classical": -3.0150007886468053,
+        "hybrid": -1.3690403244709897,
+        "hybrid_minus_classical_db": 1.6459604641758157
+      },
+      "negative_deltas": 11
+    },
+    "onset/conditional_near_snr_db": {
+      "count": 27,
+      "worst_delta": {
+        "case": 69,
+        "classical": 24.357759967982084,
+        "hybrid": 12.687444075884082,
+        "hybrid_minus_classical_db": -11.670315892098001
+      },
+      "largest_delta": {
+        "case": 4,
+        "classical": 301.37788271952326,
+        "hybrid": 301.37788271952326,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 14
+    },
+    "onset/conditional_near_projection_loss_db": {
+      "count": 27,
+      "worst_delta": {
+        "case": 4,
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 29,
+        "classical": 2.316526613174635,
+        "hybrid": 7.718836062090137,
+        "hybrid_minus_classical_db": 5.402309448915502
+      },
+      "negative_deltas": 0
+    },
+    "double_talk/near_snr_db": {
+      "count": 18,
+      "worst_delta": {
+        "case": 4,
+        "classical": 20.209280798306946,
+        "hybrid": 16.57894685679839,
+        "hybrid_minus_classical_db": -3.6303339415085567
+      },
+      "largest_delta": {
+        "case": 37,
+        "classical": 3.4244058720330477,
+        "hybrid": 4.192215895145127,
+        "hybrid_minus_classical_db": 0.7678100231120792
+      },
+      "negative_deltas": 16
+    },
+    "double_talk/conditional_near_snr_db": {
+      "count": 18,
+      "worst_delta": {
+        "case": 4,
+        "classical": 20.333136861081023,
+        "hybrid": 16.629084240761394,
+        "hybrid_minus_classical_db": -3.7040526203196293
+      },
+      "largest_delta": {
+        "case": 60,
+        "classical": 19.448316860710314,
+        "hybrid": 19.29755097703142,
+        "hybrid_minus_classical_db": -0.15076588367889343
+      },
+      "negative_deltas": 18
+    },
+    "double_talk/conditional_near_projection_loss_db": {
+      "count": 18,
+      "worst_delta": {
+        "case": 60,
+        "classical": 0.14875672470781126,
+        "hybrid": 0.1547358445536336,
+        "hybrid_minus_classical_db": 0.005979119845822334
+      },
+      "largest_delta": {
+        "case": 13,
+        "classical": 2.078775281104735,
+        "hybrid": 2.8654706841629456,
+        "hybrid_minus_classical_db": 0.7866954030582107
+      },
+      "negative_deltas": 0
+    },
+    "steady/near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": 138.51105780747486,
+        "hybrid": 138.51105780747486,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": 138.51105780747486,
+        "hybrid": 138.51105780747486,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "steady/conditional_near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": 307.0764591251533,
+        "hybrid": 307.0764591251533,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": 307.0764591251533,
+        "hybrid": 307.0764591251533,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "steady/conditional_near_projection_loss_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "near_after_echo/near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": 138.7033865609067,
+        "hybrid": 138.7033865609067,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": 138.7033865609067,
+        "hybrid": 138.7033865609067,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "near_after_echo/conditional_near_snr_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": 313.3716091651776,
+        "hybrid": 313.3716091651776,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": 313.3716091651776,
+        "hybrid": 313.3716091651776,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    },
+    "near_after_echo/conditional_near_projection_loss_db": {
+      "count": 9,
+      "worst_delta": {
+        "case": 6,
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "largest_delta": {
+        "case": 6,
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "negative_deltas": 0
+    }
+  },
+  "conclusion": "Experimental only: recorded-source onset and double-talk damage prevents general adoption despite echo reduction. Conditional near estimates exclude adaptive cancellation damage; physical-device and multilingual acceptance remain open."
+}

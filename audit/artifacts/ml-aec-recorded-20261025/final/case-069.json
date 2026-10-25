@@ -1,0 +1,203 @@
+{
+  "index": 69,
+  "provenance": {
+    "rate": 48000,
+    "scene": "quiet_double_talk",
+    "seed": 20275094,
+    "pair": [
+      2,
+      0
+    ],
+    "frames": 576000,
+    "delay_initial_samples": 490.62992478397854,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      249.03543229726588,
+      296.99852849924787,
+      542.3054032685025,
+      571.8546130547239,
+      641.9855604790486,
+      956.797797364764,
+      1130.0379332525215
+    ],
+    "tap_gains": [
+      0.5,
+      0.04441129377364311,
+      0.12562664085169475,
+      -0.0456227838087602,
+      0.005620693569596972,
+      -0.04940606704736297,
+      0.01892973197678741,
+      0.03014415270372164
+    ],
+    "drive": 0.0,
+    "input_sha256": "6b02d35dcef281c9bd029c88062b6045217ae7479ed3117ba91334abe94f8763",
+    "near_sha256": "e52f6145631de8e7d68872d0d048d815dbaadf3d1ffcc36dcc8de38ecb2d975a",
+    "echo_sha256": "481953b69df73d64b9ee4f7a564fb871bb4f2be2251b3928cbf4b04954329bcc"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 576000,
+        "sha256": "3e29c1b366983e8fc90a8b6684bc9b37af6bfd8829ae6079b98f9f05ccb048c4"
+      },
+      "blocks": 2250,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_069",
+      "effective_gains": {
+        "floats": 578250,
+        "sha256": "93f61725d09aa0a1d65cec7f917da019f9922c6293008f6a8a5b4a9afcca7df6"
+      },
+      "error_spectra": {
+        "floats": 1156500,
+        "sha256": "83992dcb5f939a06b893eb2f67381b25331608012e8f6b914945afa68ecc8cd9"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 432000,
+        "sha256": "556acc807cbcaf357b1c97c9c09a4c1532aca4d3e256791d02e6a964a419c38a"
+      },
+      "frames": 576000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 576000,
+        "sha256": "41d82e04b86d461e6bcd287f4be554315859da0604f1ae692bc8d58d75dbf722"
+      },
+      "id": "hybrid_069",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2241,
+        "applied_blocks": 1886,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 364,
+        "native_blocks": 2250,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2250,
+        "warmup_complete": true
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 72000,
+        "sha256": "600b1b5345cb3bc731de638f80bde858f6938205f61f7b31c814b12540eb110e"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 576000,
+        "sha256": "3e29c1b366983e8fc90a8b6684bc9b37af6bfd8829ae6079b98f9f05ccb048c4"
+      },
+      "blocks": 2250,
+      "classical": {
+        "floats": 576000,
+        "sha256": "a20530387aa5f6e23413476028d140ab63e211b68511be0ee9b69a9ecb364ff3"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_069",
+      "effective_gains": {
+        "floats": 578250,
+        "sha256": "47a883c21582552c9727be08d35e38c116a7428bad6f145d4e6577c5fd5d6b1a"
+      },
+      "error_spectra": {
+        "floats": 1156500,
+        "sha256": "83992dcb5f939a06b893eb2f67381b25331608012e8f6b914945afa68ecc8cd9"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 432000,
+        "sha256": "556acc807cbcaf357b1c97c9c09a4c1532aca4d3e256791d02e6a964a419c38a"
+      },
+      "frames": 576000,
+      "gain_floor": 0.25,
+      "id": "classical_069",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 72000,
+        "sha256": "600b1b5345cb3bc731de638f80bde858f6938205f61f7b31c814b12540eb110e"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "hybrid": 2.2321351933474176e-08,
+    "classical": 3.236320622601596e-08
+  },
+  "max_output_difference": 0.15502485632896423,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 28.917558570984447,
+        "hybrid": 32.293956970803535,
+        "hybrid_minus_classical_db": 3.376398399819088
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 23.850150527865832,
+        "hybrid": 12.669393867184413,
+        "hybrid_minus_classical_db": -11.18075666068142
+      },
+      "conditional_near_snr_db": {
+        "classical": 24.357759967982084,
+        "hybrid": 12.687444075884082,
+        "hybrid_minus_classical_db": -11.670315892098001
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 0.18501371052241963,
+        "hybrid": 1.1202628887256276,
+        "hybrid_minus_classical_db": 0.935249178203208
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 10.05732904480283,
+        "hybrid": 9.580217916838528,
+        "hybrid_minus_classical_db": -0.4771111279643012
+      },
+      "conditional_near_snr_db": {
+        "classical": 10.211800937755784,
+        "hybrid": 9.686682414190352,
+        "hybrid_minus_classical_db": -0.5251185235654319
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 1.196831081163349,
+        "hybrid": 1.4392946194626677,
+        "hybrid_minus_classical_db": 0.24246353829931877
+      }
+    }
+  }
+}

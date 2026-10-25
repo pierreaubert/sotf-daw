@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_aec*.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.6013418750371784
+}

@@ -22,6 +22,7 @@
   "adoption_recommended": false,
   "quality_evidence": "audit/artifacts/ml-aec-residual-20261025/independent-quality.json",
   "remaining": [
+    "Resolve recorded-source onset/double-talk speech damage using separate development data, then pass a new independent final evaluation; current model/policy rejected for general adoption.",
     "Natural speech/nonlinear physical device and listening acceptance; offline synthetic scores do not establish realtime quality.",
     "Cross-platform realtime host timing/memory budgets and calibration of guard/freshness policies."
   ],
@@ -47,5 +48,29 @@
     ],
     "fresh_final_steady_drift_improvements_above_1db": 3,
     "fresh_final_worst_near_snr_delta_db": -0.122614820203788
+  },
+  "recorded_source_evaluation": {
+    "artifacts": "audit/artifacts/ml-aec-recorded-20261025",
+    "cases": 72,
+    "speakers": 3,
+    "unique_excerpt_seconds_each": 4,
+    "repetitions": 3,
+    "rates": [
+      16000,
+      44100,
+      48000
+    ],
+    "source": "Existing CC BY 4.0 MiniLibriSpeech English fixtures through simulated paths; absent from synthetic AEC training. Not physical-device recordings.",
+    "applied_blocks": 84975,
+    "steady_erle_delta_db": [
+      0.014594763742759032,
+      4.495092247485122
+    ],
+    "worst_onset_near_snr_delta_db": -11.18075666068142,
+    "worst_double_talk_near_snr_delta_db": -3.6303339415085567,
+    "worst_added_onset_projection_loss_db": 5.402309448915502,
+    "conditional_double_talk_snr_degraded_cases": 18,
+    "quality_gate": "failed_near_end_preservation",
+    "policy_tuned_on_evaluation": false
   }
 }

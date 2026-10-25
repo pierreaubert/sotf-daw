@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/evaluate_aec_recorded.py",
+    "scripts/ml/analyze_aec_recorded.py",
+    "scripts/ml/test_aec_recorded.py"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 0.01037966599687934
+}

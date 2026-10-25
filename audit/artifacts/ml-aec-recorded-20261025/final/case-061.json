@@ -1,0 +1,203 @@
+{
+  "index": 61,
+  "provenance": {
+    "rate": 44100,
+    "scene": "quiet_double_talk",
+    "seed": 20275086,
+    "pair": [
+      2,
+      0
+    ],
+    "frames": 529152,
+    "delay_initial_samples": 253.29555273612428,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      425.84204176066663,
+      660.6542131499303,
+      671.0427960032805,
+      815.5635054608068,
+      916.8640144575231,
+      981.8079107967799,
+      1091.9681962814277
+    ],
+    "tap_gains": [
+      0.5,
+      -0.04320579412749695,
+      -0.03527498257869018,
+      0.02426895363477745,
+      0.00052358271017256,
+      -0.035166936604309654,
+      -0.0435140105393444,
+      0.01024549762357273
+    ],
+    "drive": 0.0,
+    "input_sha256": "525c49a8d03dbb8e75e846366db7a97e83ded51acfb33744b7e67a86946932c3",
+    "near_sha256": "39dfa088a026c117b7a2ea16fcfe387d1a976529cc0ded290e2cc453f1cd0489",
+    "echo_sha256": "9bcb12899787150e4d1b5491a060eff1a86528ad9efb07a9c00c9e9b34fedac7"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "e794e30ca5643d91a8271bbdc86da72f0230a3297163c771c9186c434a51e503"
+      },
+      "blocks": 2067,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_061",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "13d46e5b080f2da9aacb41e008e7972ab10b667c7d91bb0dcc54da456052a5b5"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "2dd8cd12b75abf5f03ee21f3b2269a62cf8d63a6d3ae556ed6f1bc4f22388e46"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "c7e504ec52d425fce3ae639e49bd660bb88a5c0a750cde28edd06ad4b3c61efd"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 529152,
+        "sha256": "e0709d65c11c41e01d3a8a53e1ce25c7ce32f0e545ec6a2814d509d197be714a"
+      },
+      "id": "hybrid_061",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2059,
+        "applied_blocks": 1615,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 452,
+        "native_blocks": 2067,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2067,
+        "warmup_complete": true
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "5dc54ba006f452f4f460b032fa10e4dea6083a45f51e2e9a56f8811f070fd3be"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "e794e30ca5643d91a8271bbdc86da72f0230a3297163c771c9186c434a51e503"
+      },
+      "blocks": 2067,
+      "classical": {
+        "floats": 529152,
+        "sha256": "20e4745dbd76731cd53a9ece24bdb981ec68cb562ce071b1c0440e72a0797563"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_061",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "b15985358ee0b4708adabdd8c5940541cdf03b246c2afbf0de87743686238e8c"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "2dd8cd12b75abf5f03ee21f3b2269a62cf8d63a6d3ae556ed6f1bc4f22388e46"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "c7e504ec52d425fce3ae639e49bd660bb88a5c0a750cde28edd06ad4b3c61efd"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "id": "classical_061",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "5dc54ba006f452f4f460b032fa10e4dea6083a45f51e2e9a56f8811f070fd3be"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "hybrid": 2.2568147239887537e-08,
+    "classical": 3.9989967670628346e-08
+  },
+  "max_output_difference": 0.15435519814491272,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 39.707534245200954,
+        "hybrid": 42.44234280011799,
+        "hybrid_minus_classical_db": 2.734808554917038
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 25.593135268239628,
+        "hybrid": 18.98503280723071,
+        "hybrid_minus_classical_db": -6.608102461008919
+      },
+      "conditional_near_snr_db": {
+        "classical": 26.008697830071192,
+        "hybrid": 19.004442617788705,
+        "hybrid_minus_classical_db": -7.004255212282487
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 0.11192873130782857,
+        "hybrid": 0.3400756799987773,
+        "hybrid_minus_classical_db": 0.22814694869094873
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 11.069662100675776,
+        "hybrid": 10.63529399778351,
+        "hybrid_minus_classical_db": -0.43436810289226635
+      },
+      "conditional_near_snr_db": {
+        "classical": 11.125197186515003,
+        "hybrid": 10.67374719036387,
+        "hybrid_minus_classical_db": -0.45144999615113335
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 1.0118194221717198,
+        "hybrid": 1.1796163059017044,
+        "hybrid_minus_classical_db": 0.16779688372998458
+      }
+    }
+  }
+}

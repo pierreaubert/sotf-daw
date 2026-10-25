@@ -1,0 +1,203 @@
+{
+  "index": 13,
+  "provenance": {
+    "rate": 44100,
+    "scene": "quiet_double_talk",
+    "seed": 20275038,
+    "pair": [
+      0,
+      1
+    ],
+    "frames": 529152,
+    "delay_initial_samples": 528.7347508272261,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      78.62862801226662,
+      424.33271111088834,
+      579.9577990423192,
+      593.602936888325,
+      758.0616630364984,
+      769.1039558055227,
+      936.6881112397083
+    ],
+    "tap_gains": [
+      0.5,
+      0.142403988191113,
+      0.04671123617761905,
+      0.05940291236083031,
+      0.06979622402059125,
+      -0.02099626624784799,
+      0.015643702674659907,
+      0.015455185004253358
+    ],
+    "drive": 0.0,
+    "input_sha256": "dd49435d794b8b1314570c2f922adf673ece18326f69016c76125773cf6e5022",
+    "near_sha256": "d47bdc7e9826078b26c7c90b5ec352540da72155785ef8652b8fa4aac752a7fc",
+    "echo_sha256": "eec966c31fa40397b4c0843366c04065445244ce7285f1a01ed904facddae9fa"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "9de73f9560dd229fbc04d85ce1eeb689de399b710f1a329f113ae0b8c26923f6"
+      },
+      "blocks": 2067,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_013",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "a17bc3d0c505b66f54cd8d58c2e1f41f9c6c0d1a5b75d4981062738795f33d40"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "80e8c9f9d47bf439be478b48ff377b9dcf7afd42261c75d6a5bcec66b1d3501f"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "e103094c8ffc510800aa1fc8bb9c511134e038f13b4a5fb700c7571b623e6bf1"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 529152,
+        "sha256": "0d6900666a23e92c9ab6b7ca6bbc775d840595490c414e8097f1f701fc8ca083"
+      },
+      "id": "hybrid_013",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2059,
+        "applied_blocks": 1699,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 368,
+        "native_blocks": 2067,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2067,
+        "warmup_complete": true
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "6245b59821655ea4884704e64f462cdb61bcc058ac3efdd5c1a022cc8aa11489"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "9de73f9560dd229fbc04d85ce1eeb689de399b710f1a329f113ae0b8c26923f6"
+      },
+      "blocks": 2067,
+      "classical": {
+        "floats": 529152,
+        "sha256": "53be415dc422f7daff2c70099d4900383c4dab6b1852f35b8cd4df939b4caadb"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_013",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "5212d03cd33d2e5f8d36f8390d01405fd7285d1ae95346dd67d7aaa3243e71a4"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "80e8c9f9d47bf439be478b48ff377b9dcf7afd42261c75d6a5bcec66b1d3501f"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "e103094c8ffc510800aa1fc8bb9c511134e038f13b4a5fb700c7571b623e6bf1"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "id": "classical_013",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "6245b59821655ea4884704e64f462cdb61bcc058ac3efdd5c1a022cc8aa11489"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "hybrid": 1.2599047194417068e-08,
+    "classical": 2.1716774489810575e-08
+  },
+  "max_output_difference": 0.10324380546808243,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 39.219981733282225,
+        "hybrid": 42.320114124475296,
+        "hybrid_minus_classical_db": 3.100132391193071
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 12.67684325297017,
+        "hybrid": 9.798520455610149,
+        "hybrid_minus_classical_db": -2.8783227973600205
+      },
+      "conditional_near_snr_db": {
+        "classical": 18.15679101207765,
+        "hybrid": 11.506952381554349,
+        "hybrid_minus_classical_db": -6.649838630523302
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 0.5317487660971116,
+        "hybrid": 1.6616702786815496,
+        "hybrid_minus_classical_db": 1.129921512584438
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 8.097524513697334,
+        "hybrid": 7.109593638281765,
+        "hybrid_minus_classical_db": -0.9879308754155689
+      },
+      "conditional_near_snr_db": {
+        "classical": 8.13346334244436,
+        "hybrid": 7.11453938428561,
+        "hybrid_minus_classical_db": -1.0189239581587497
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 2.078775281104735,
+        "hybrid": 2.8654706841629456,
+        "hybrid_minus_classical_db": 0.7866954030582107
+      }
+    }
+  }
+}

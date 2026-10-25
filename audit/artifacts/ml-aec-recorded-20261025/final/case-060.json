@@ -1,0 +1,203 @@
+{
+  "index": 60,
+  "provenance": {
+    "rate": 44100,
+    "scene": "double_talk",
+    "seed": 20275085,
+    "pair": [
+      2,
+      0
+    ],
+    "frames": 529152,
+    "delay_initial_samples": 520.9998513403947,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      48.464176527358866,
+      85.5683329239786,
+      87.37353969693585,
+      139.79661621723903,
+      416.8101613277489,
+      575.2489063838505,
+      917.2302240406499
+    ],
+    "tap_gains": [
+      0.5,
+      0.29124083847333976,
+      0.0475061473638107,
+      0.13554679506791542,
+      0.0969996965120162,
+      0.09771184103946831,
+      0.06871831074435562,
+      -0.004572197547937554
+    ],
+    "drive": 0.0,
+    "input_sha256": "80c8cb743722a3a26d7273293380b0c60090074bb55c513394bd2caa4d7f380e",
+    "near_sha256": "b25db9cb800c9726c8730a50e47c0a68396a365bc6229e213767971d5dc2881a",
+    "echo_sha256": "667f55b45d80f061b612024c67418cdb00551363f442dbb1a379c64c11b2d955"
+  },
+  "native": {
+    "classical": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "910388dc1a2aceaace01eb0d39d69944c9536ceebe1069acd2bf4545c78ae6e5"
+      },
+      "blocks": 2067,
+      "classical": {
+        "floats": 529152,
+        "sha256": "28144a4c72c2218a387f5ccfdda98a3ea31c8e5ae0f56e7332bc80b808b9de65"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_060",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "3846e546670cdbda774876a1d354eb4135dd484b79d6fbcc5603e602845770ed"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "3453558e6a445b33d63860aeb64863a1aafeac6fffafc288909ef13f5c768d63"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "ac5cd8e33f34a4e85f7d6f7799dc7f52ef5a4ababe41ebd9a303fc112436ee12"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "id": "classical_060",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "8a611b2dac739916c140d7941a490be5c3856868e513b785f71d87c889b611d7"
+      }
+    },
+    "hybrid": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "910388dc1a2aceaace01eb0d39d69944c9536ceebe1069acd2bf4545c78ae6e5"
+      },
+      "blocks": 2067,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_060",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "444153ec860b0d3b4ab743a926145577acdf0e98e0fc35975261b303215dd11a"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "3453558e6a445b33d63860aeb64863a1aafeac6fffafc288909ef13f5c768d63"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "ac5cd8e33f34a4e85f7d6f7799dc7f52ef5a4ababe41ebd9a303fc112436ee12"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 529152,
+        "sha256": "6c18d9dcb83e7d356a3c25b5c6a33eea41fd2b44a86c8b420df749c5ac2e8e1e"
+      },
+      "id": "hybrid_060",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2059,
+        "applied_blocks": 1619,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 448,
+        "native_blocks": 2067,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2067,
+        "warmup_complete": true
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "8a611b2dac739916c140d7941a490be5c3856868e513b785f71d87c889b611d7"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "classical": 3.304470663767489e-08,
+    "hybrid": 2.5831529582021062e-08
+  },
+  "max_output_difference": 0.15886741876602173,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 38.89206234604722,
+        "hybrid": 41.19498733918683,
+        "hybrid_minus_classical_db": 2.3029249931396123
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 43.63746252282229,
+        "hybrid": 43.63746252282229,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 305.5933834197294,
+        "hybrid": 305.5933834197294,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 19.37226790766226,
+        "hybrid": 19.227816207104823,
+        "hybrid_minus_classical_db": -0.14445170055743617
+      },
+      "conditional_near_snr_db": {
+        "classical": 19.448316860710314,
+        "hybrid": 19.29755097703142,
+        "hybrid_minus_classical_db": -0.15076588367889343
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 0.14875672470781126,
+        "hybrid": 0.1547358445536336,
+        "hybrid_minus_classical_db": 0.005979119845822334
+      }
+    }
+  }
+}

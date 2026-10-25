@@ -1,0 +1,213 @@
+{
+  "index": 6,
+  "provenance": {
+    "rate": 16000,
+    "scene": "near_after_echo",
+    "seed": 20275031,
+    "pair": [
+      0,
+      1
+    ],
+    "frames": 192000,
+    "delay_initial_samples": 155.80050913868007,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      112.42782115540973,
+      196.3957851070224,
+      202.9068229756945,
+      212.44637476140988,
+      326.8826105226555,
+      338.67688272119733,
+      369.15342677290323
+    ],
+    "tap_gains": [
+      0.5,
+      -0.07310481832284633,
+      -0.044332003411753126,
+      0.11947880844122408,
+      -0.034127732095602104,
+      -0.009061562996764022,
+      -0.03773032919557348,
+      -0.007909305923060578
+    ],
+    "drive": 0.0,
+    "input_sha256": "3a706370dc35758741a9f940953f3038c88459fd1f58cecb4313b73504ae49c4",
+    "near_sha256": "a7d126c1b293f658e8ddcf434d27ea11f7056da2412f89c4f6e17cf9c9406722",
+    "echo_sha256": "c26afa9b7b9598cd2476c45202270de903afd5ff689a530307227c39c3a5efca"
+  },
+  "native": {
+    "classical": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "c023a328e55d1401157b3da4e489f3a0fa43ebd1e46d007eb55e5ccfc36da472"
+      },
+      "blocks": 750,
+      "classical": {
+        "floats": 192000,
+        "sha256": "a60304d7eabc59225df77c098be9730cb9ad51e801807f80921a1b909594abe7"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_006",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "8e69e76f4689b8cbedbd9227f3519aa9927049125b14857c28caa015652445b0"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "9e2a87f762e36222d92b7b3d913938909c1bf73050ca987f957df2eb540980fb"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "d5f0e12e031b056be502dc6e87d51583afc76b46d155838659735e2c0aac7b81"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "id": "classical_006",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "d8d205c6a812d941b7ed23408788ab97eae8fc388e63a52feb6e4255c6fa5f1e"
+      }
+    },
+    "hybrid": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "c023a328e55d1401157b3da4e489f3a0fa43ebd1e46d007eb55e5ccfc36da472"
+      },
+      "blocks": 750,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_006",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "f85ac7dfea11d81cc2c7c606b0161a63d97de18b13a945924c7aeef0f289e652"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "9e2a87f762e36222d92b7b3d913938909c1bf73050ca987f957df2eb540980fb"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "d5f0e12e031b056be502dc6e87d51583afc76b46d155838659735e2c0aac7b81"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 192000,
+        "sha256": "202437d37b37abde8a692a35befc00e01d3c2e170eca7b09a817eeca7da44f3c"
+      },
+      "id": "hybrid_006",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 747,
+        "applied_blocks": 336,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 414,
+        "native_blocks": 750,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 750,
+        "warmup_complete": true
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "d8d205c6a812d941b7ed23408788ab97eae8fc388e63a52feb6e4255c6fa5f1e"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "classical": 1.7243280345247136e-08,
+    "hybrid": 1.5784769297200185e-08
+  },
+  "max_output_difference": 0.09256412088871002,
+  "quality": {
+    "steady": {
+      "near_snr_db": {
+        "classical": 138.51105780747486,
+        "hybrid": 138.51105780747486,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 307.0764591251533,
+        "hybrid": 307.0764591251533,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 44.12421132612096,
+        "hybrid": 44.12421132612096,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 296.91806397980366,
+        "hybrid": 296.91806397980366,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      }
+    },
+    "near_after_echo": {
+      "near_snr_db": {
+        "classical": 138.7033865609067,
+        "hybrid": 138.7033865609067,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 313.3716091651776,
+        "hybrid": 313.3716091651776,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -1.928654933106574e-15,
+        "hybrid": -1.928654933106574e-15,
+        "hybrid_minus_classical_db": 0.0
+      }
+    }
+  }
+}

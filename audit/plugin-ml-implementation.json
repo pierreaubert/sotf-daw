@@ -53,9 +53,14 @@
         "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_stage.rs",
         "scripts/ml/evaluate_aec_hybrid.py",
         "scripts/ml/analyze_aec_hybrid.py",
-        "audit/artifacts/ml-aec-worker-20261025"
+        "audit/artifacts/ml-aec-worker-20261025",
+        "scripts/ml/evaluate_aec_recorded.py",
+        "scripts/ml/analyze_aec_recorded.py",
+        "scripts/ml/test_aec_recorded.py",
+        "audit/artifacts/ml-aec-recorded-20261025"
       ],
       "remaining": [
+        "FAILED recorded-source near-end gate: frozen 72 mixtures improve steady ERLE but onset near-SNR loses up to 11.181 dB; all 18 sustained double-talk cases suffer additional conditional near distortion. Develop stronger protection/model on separate development data and evaluate new independent final material; no general adoption.",
         "Natural speech/nonlinear physical-device and near-end listening acceptance; fresh 24-case synthetic offline hybrid improves drift while worst near-target SNR changes -0.123 dB. This is not realtime/device quality acceptance.",
         "Cross-platform host timing/memory budgets and calibrated guard/freshness policy; user recordings/CI hosts remain unavailable.",
         "Any further learned model or hybrid policy choice must use development data and a fresh final holdout."

@@ -1,0 +1,203 @@
+{
+  "index": 45,
+  "provenance": {
+    "rate": 48000,
+    "scene": "quiet_double_talk",
+    "seed": 20275070,
+    "pair": [
+      1,
+      2
+    ],
+    "frames": 576000,
+    "delay_initial_samples": 418.03649614162134,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      118.95405884349842,
+      378.78960171333046,
+      461.2907733074696,
+      945.9530427373428,
+      1016.8477829229872,
+      1053.9900325070146,
+      1101.6464825773473
+    ],
+    "tap_gains": [
+      0.5,
+      0.008979292994882225,
+      -0.14377116732754702,
+      -0.18426559455184188,
+      -0.021986740099198543,
+      0.016923173863570822,
+      0.02613393509053837,
+      -0.013805252897997401
+    ],
+    "drive": 0.0,
+    "input_sha256": "81787a56f9c9cebb2a2483aa18cd349d6c76fce8affb51ca5c84dbb9ff9e7be3",
+    "near_sha256": "ae8cd4dc987e46715fad7c602494a6dac58fdf896705dc9076d6e56e3ba917bc",
+    "echo_sha256": "741ce9a194209929e460b7ec3360fbec8fbe40e662ca083b82091797cf9353f3"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 576000,
+        "sha256": "fb02baac46093794a6a5c27d15359b0015f75f461961adc160651f86cf12f9b6"
+      },
+      "blocks": 2250,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_045",
+      "effective_gains": {
+        "floats": 578250,
+        "sha256": "1aa16780f7510c6d505ce919b4f305b625f63ff3338e8c90627c5bd9c3dd05ee"
+      },
+      "error_spectra": {
+        "floats": 1156500,
+        "sha256": "e966fa5ce9c867503732db2e53430632cb20481d2f580b330fbf8d4dac883ed3"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 432000,
+        "sha256": "ebc8e18e54ce6791f9a299ef5e855cbfbac2a19cb781baac6c1dff8d197b35a7"
+      },
+      "frames": 576000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 576000,
+        "sha256": "4ae53c458af90d3030454f6a754721cc09e0355a848172e16288faa768cd505a"
+      },
+      "id": "hybrid_045",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2241,
+        "applied_blocks": 1717,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 533,
+        "native_blocks": 2250,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2250,
+        "warmup_complete": true
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 72000,
+        "sha256": "bbe2705ee19f48c7bf3d99e57fa027f682ad3bd59b436387401161356b9546fd"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 576000,
+        "sha256": "fb02baac46093794a6a5c27d15359b0015f75f461961adc160651f86cf12f9b6"
+      },
+      "blocks": 2250,
+      "classical": {
+        "floats": 576000,
+        "sha256": "f4df8eb050a5cd1141e47b6047c3a30069f4f0d04fa936a222d8762c10793297"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_045",
+      "effective_gains": {
+        "floats": 578250,
+        "sha256": "2b98fe441ea18a1abe73b0b8eb5a48d3fac6223aa697ec01a4435e15addc887c"
+      },
+      "error_spectra": {
+        "floats": 1156500,
+        "sha256": "e966fa5ce9c867503732db2e53430632cb20481d2f580b330fbf8d4dac883ed3"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 432000,
+        "sha256": "ebc8e18e54ce6791f9a299ef5e855cbfbac2a19cb781baac6c1dff8d197b35a7"
+      },
+      "frames": 576000,
+      "gain_floor": 0.25,
+      "id": "classical_045",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 48000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 72000,
+        "sha256": "bbe2705ee19f48c7bf3d99e57fa027f682ad3bd59b436387401161356b9546fd"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "hybrid": 1.7301151067350418e-08,
+    "classical": 2.6096483807247495e-08
+  },
+  "max_output_difference": 0.0869678258895874,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 23.05634568705617,
+        "hybrid": 26.75617299201768,
+        "hybrid_minus_classical_db": 3.699827304961513
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": -3.0150007886468053,
+        "hybrid": -1.3690403244709897,
+        "hybrid_minus_classical_db": 1.6459604641758157
+      },
+      "conditional_near_snr_db": {
+        "classical": 2.907954097486166,
+        "hybrid": 2.3412824621040844,
+        "hybrid_minus_classical_db": -0.5666716353820815
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 10.79487734918918,
+        "hybrid": 12.477265552305523,
+        "hybrid_minus_classical_db": 1.6823882031163429
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 4.015788943694112,
+        "hybrid": 4.1663360019830895,
+        "hybrid_minus_classical_db": 0.15054705828897763
+      },
+      "conditional_near_snr_db": {
+        "classical": 5.432827875928324,
+        "hybrid": 4.995781156420965,
+        "hybrid_minus_classical_db": -0.43704671950735907
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 3.7718044545268885,
+        "hybrid": 4.3362879001732795,
+        "hybrid_minus_classical_db": 0.564483445646391
+      }
+    }
+  }
+}

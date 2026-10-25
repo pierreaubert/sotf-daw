@@ -1,0 +1,203 @@
+{
+  "index": 5,
+  "provenance": {
+    "rate": 16000,
+    "scene": "quiet_double_talk",
+    "seed": 20275030,
+    "pair": [
+      0,
+      1
+    ],
+    "frames": 192000,
+    "delay_initial_samples": 131.55273538408093,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      34.458415962199666,
+      67.63774695910926,
+      128.85611632258497,
+      141.34574064846768,
+      142.6875745528408,
+      280.43372502856647,
+      335.4753306530744
+    ],
+    "tap_gains": [
+      0.5,
+      -0.2253109923983644,
+      -0.018046159132447684,
+      -0.15009005235133727,
+      -0.2877331372388337,
+      -0.002728715206375569,
+      -0.04732896610484559,
+      0.029245171710071523
+    ],
+    "drive": 0.0,
+    "input_sha256": "d07837ff138b998f28cb171170aabc96f72886bcac15ccf2c004ea889b87e341",
+    "near_sha256": "07a9a6b6e18b6bd5b927f0a6db9b4e8eb70a626f27b4cd0a53b136f89f74a4ad",
+    "echo_sha256": "46a46d8613c515558035efc31d159c19f00dc59f2d3751ef8fda5e2dba6f6735"
+  },
+  "native": {
+    "hybrid": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "1bd7a3911a316759fe8a2670697c046a06adccee2bd0ce40e7ecee5f1323a6ec"
+      },
+      "blocks": 750,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_005",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "832f93b76f4dfa9b3fbbab79e36c88c2420c1b07466cd5c711381e87835f5d6e"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "8c50552b47ab9bb1b1b51fb35d5dd5ad2d8aa55c81d899168336ace6d6b564f2"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "e5893666f6d18c6d620a4a5a1a97d5af2bb49924bbe6026c2db6f7548baa8b3a"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 192000,
+        "sha256": "fbf387e8ca6a039799f8f376ecc1fd4f68c6b9d09043fbefdf7a1134a89ba9c6"
+      },
+      "id": "hybrid_005",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 747,
+        "applied_blocks": 626,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 124,
+        "native_blocks": 750,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 750,
+        "warmup_complete": true
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "210f02b5a8204e990fe599ce71644eb962e161b0b623b9b97bba39f9074af164"
+      }
+    },
+    "classical": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "1bd7a3911a316759fe8a2670697c046a06adccee2bd0ce40e7ecee5f1323a6ec"
+      },
+      "blocks": 750,
+      "classical": {
+        "floats": 192000,
+        "sha256": "3f8d855d64ef312e61906f510ce5d7a0aa162d48a27c0bef4ccaad7abc407716"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_005",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "ed0ed80c44e0fef46a3fabd2ddbbab483233aa303019eec56a8b6cc4d2ee1f52"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "8c50552b47ab9bb1b1b51fb35d5dd5ad2d8aa55c81d899168336ace6d6b564f2"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "e5893666f6d18c6d620a4a5a1a97d5af2bb49924bbe6026c2db6f7548baa8b3a"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "id": "classical_005",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "210f02b5a8204e990fe599ce71644eb962e161b0b623b9b97bba39f9074af164"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "hybrid": 8.130742815137815e-09,
+    "classical": 2.2599325438799056e-08
+  },
+  "max_output_difference": 0.11043816059827805,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 51.082811399100684,
+        "hybrid": 52.928919212228635,
+        "hybrid_minus_classical_db": 1.8461078131279507
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 12.696918214116435,
+        "hybrid": 6.167448630713269,
+        "hybrid_minus_classical_db": -6.5294695834031655
+      },
+      "conditional_near_snr_db": {
+        "classical": 13.15546518223307,
+        "hybrid": 6.174508955413215,
+        "hybrid_minus_classical_db": -6.980956226819856
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 1.1846995865243923,
+        "hybrid": 4.880665574304935,
+        "hybrid_minus_classical_db": 3.6959659877805424
+      }
+    },
+    "double_talk": {
+      "near_snr_db": {
+        "classical": 12.261721592885513,
+        "hybrid": 10.717758771581371,
+        "hybrid_minus_classical_db": -1.5439628213041416
+      },
+      "conditional_near_snr_db": {
+        "classical": 12.443815757629151,
+        "hybrid": 10.844993585973103,
+        "hybrid_minus_classical_db": -1.5988221716560478
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": 0.8036696785724353,
+        "hybrid": 1.1543856202807794,
+        "hybrid_minus_classical_db": 0.3507159417083441
+      }
+    }
+  }
+}

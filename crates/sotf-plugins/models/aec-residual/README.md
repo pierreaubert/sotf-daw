@@ -5,12 +5,13 @@ adaptive canceller and classical post-filter remain active; a bounded worker
 proposes additional spectral attenuation. Default presets remain classical.
 Build the facade with `neural-aec` or the AEC crate with `neural-residual`.
 
-This is still experimental. The fresh 24-scene synthetic offline comparison
-preserves the classical adaptive analysis hashes exactly, improves three steady
-drift cases by more than 1 dB (up to 4.88 dB), and leaves reference-silent near-only
-output bit-identical. Worst near-target SNR change is -0.123 dB. Natural speech,
-physical devices and realtime quality acceptance remain open; no automatic
-adoption is recommended.
+This is experimental and fails the recorded-source near-end quality gate. The
+72-case recorded-source comparison improves steady echo reduction by 0.015–4.495 dB,
+but reduces onset near-target SNR by as much as 11.181 dB. All 18 sustained
+double-talk cases show additional conditional near-end distortion; worst added
+onset projection loss is 5.402 dB. This model/policy is unsuitable for general
+adoption. The previous fresh 24-scene synthetic result (worst near-target SNR
+change -0.123 dB) did not expose this failure. Defaults remain classical.
 
 The earlier neural-only prototype won only 2/12 steady echo comparisons and had
 poor 48 kHz double-talk onset residual echo. Those negative results remain under
@@ -81,8 +82,9 @@ independent NumPy FFT recomputes all 64 scenes' near-end oracle targets.
 Conditional near-end decomposition freezes mixture-derived neural masks and
 applies them separately to the known near-end signal. Worst projection loss in
 these synthetic cases is about 0.103 dB. That separates mask attenuation from
-uncancelled echo in near-target SNR. Classical near-end attenuation is not
-separately decomposed, and numerical passthrough noise floors are not model wins.
+uncancelled echo in near-target SNR. That initial comparison did not separately
+decompose classical near-end attenuation. The recorded-source comparison below captures both native operators;
+numerical passthrough noise floors are not model wins.
 
 ## Reproduction
 
@@ -176,3 +178,54 @@ source-clock and in-flight reset regressions, enabled/disabled builds and the
 fresh independently reduced native comparison. Broader natural/device-domain,
 listening, cross-platform host and realtime timing/memory budgets remain open.
 The AEC proposal and full ML audit remain in progress.
+
+## Recorded-source rejection evidence
+
+`audit/artifacts/ml-aec-recorded-20261025` freezes the model and policy from
+`2d59bd25` before inference on 72 mixtures: three far/near speaker pairings,
+16/44.1/48 kHz, and eight linear/nonlinear, delay, drift and near-end conditions.
+Each four-second MiniLibriSpeech excerpt repeats three times. Sources are the
+existing speech-denoiser CC BY 4.0 fixtures, with provenance and attribution in
+`crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded`.
+They previously served other plugin tests, but never this model's synthetic-only
+training. There are only three English speakers, and paths are simulated;
+this is not measured device audio, multilingual validation or listening acceptance.
+No weights or policy were changed in response to these results.
+
+The QA-only collector exports effective real spectral gains. An independent
+SciPy full complex FFT verifies the native error spectrum from padded adaptive
+output and reconstructs processed audio with maximum error 5.97e-8. It then
+applies the same mixture-derived gains to the known near-end signal, holding
+those decisions fixed. This measures suppression damage separately from residual
+echo; it excludes dependence of adaptive cancellation on near-end history.
+The outer wet mix must stay exactly one. Native FFT size is 512, hop is 256,
+input padding precedes each block, and output latency is compensated by 256.
+There is no coefficient capture in production builds without `qa`.
+
+All 72 adaptive/error/feature/target pairs remain byte-identical between methods.
+Nine near-only outputs are exactly classical, as are the scored near-after-echo
+intervals. The hybrid applies cuts on 84,975 blocks. Steady far-only ERLE improves
+in all 54 intervals, but 11/27 near-active onset intervals lose SNR, with a worst
+change of -11.181 dB. Sustained double-talk near-target SNR worsens in 16/18 cases,
+by as much as 3.630 dB. Conditional near-component SNR worsens in all 18 sustained
+double-talk cases and 14/27 near-active onset intervals. Worst added onset
+projection loss is 5.402 dB; worst added sustained projection loss is 0.787 dB.
+This demonstrates inadequate protection of near-end speech. Preserve these final
+results; subsequent training/guard development needs separate development data
+and a new independent final evaluation. A spectral attenuation cap does not
+establish speech preservation.
+
+```sh
+python scripts/ml/evaluate_aec_recorded.py \
+  --renderer target/release/qa-aec-residual-corpus \
+  --model crates/sotf-plugins/models/aec-residual/model.json \
+  --fixtures crates/sotf-plugins/crates/sotf-plugin-speech-denoiser/tests/fixtures/recorded \
+  --temporary ./aec-recorded-arrays --output ./aec-recorded-evidence
+python scripts/ml/analyze_aec_recorded.py --evidence ./aec-recorded-evidence \
+  --sources ./aec-recorded-arrays --output ./aec-recorded-analysis.json
+python -m unittest discover -s scripts/ml -p 'test_aec*.py' -v
+```
+
+Derived source and native float arrays stay in temporary storage; only hashes,
+protocol, commands and metrics are committed. Original licensed fixtures retain
+their existing attribution. Reproduction needs those arrays or a new run.

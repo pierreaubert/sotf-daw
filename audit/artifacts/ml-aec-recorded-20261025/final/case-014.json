@@ -1,0 +1,213 @@
+{
+  "index": 14,
+  "provenance": {
+    "rate": 44100,
+    "scene": "near_after_echo",
+    "seed": 20275039,
+    "pair": [
+      0,
+      1
+    ],
+    "frames": 529152,
+    "delay_initial_samples": 258.232324094016,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      444.5286219179515,
+      448.66867356383864,
+      459.6902637113948,
+      561.4668780112521,
+      730.4038936905185,
+      743.7639887445544,
+      1008.2144383402368
+    ],
+    "tap_gains": [
+      0.5,
+      0.005481567955478911,
+      0.02283422514623571,
+      0.008770644457250513,
+      -0.01757483543536898,
+      -0.020223890996242624,
+      0.04992005710045772,
+      0.010366476850088178
+    ],
+    "drive": 0.0,
+    "input_sha256": "8ffe66998a522ed7ce0d66264e4ef0879a20a82333cda61f879c429cd42175e9",
+    "near_sha256": "f53fa3388469c205aa057be480db99a8d6247fc97950d6aebd3d5d64b52f4de1",
+    "echo_sha256": "5816a589c65ea56bbb3c348652961899c9bb74c8c7ba7285a19487e367607907"
+  },
+  "native": {
+    "classical": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "0b1e36a4cede82c4deb95184782094de11ec01e6dbbac89510f259b56bd06572"
+      },
+      "blocks": 2067,
+      "classical": {
+        "floats": 529152,
+        "sha256": "b9441bf336847d92ca2b03c1d23190893ebae257541c4358745c8e651e95bb04"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_014",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "868b5877c94550bc8471d6e8756d2dfe68229cc93f6971a16c3046d81dd6649c"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "d8453f5f91c6e8cdb4b5b0eb60121d89b106c8e54fd504a5d727d098964df56c"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "8855494a2a16fe20036faefdcddb43b14a19cd9fb56163995a9a38a50c1c318f"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "id": "classical_014",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "f5a4257bd0cc8a34c03ca5f409e9610c1491d6c3cabb9aefef95aff4122807ec"
+      }
+    },
+    "hybrid": {
+      "adaptive": {
+        "floats": 529152,
+        "sha256": "0b1e36a4cede82c4deb95184782094de11ec01e6dbbac89510f259b56bd06572"
+      },
+      "blocks": 2067,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_014",
+      "effective_gains": {
+        "floats": 531219,
+        "sha256": "3b0a4fd5f6dbb04872eba6d41d8b33fe0fa93bcb9036a27f16b1b2b84e37a697"
+      },
+      "error_spectra": {
+        "floats": 1062438,
+        "sha256": "d8453f5f91c6e8cdb4b5b0eb60121d89b106c8e54fd504a5d727d098964df56c"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 396864,
+        "sha256": "8855494a2a16fe20036faefdcddb43b14a19cd9fb56163995a9a38a50c1c318f"
+      },
+      "frames": 529152,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 529152,
+        "sha256": "3f2062b38591264d2309782b4faae58fdd0f67ba0d9b52b03006c6467d204369"
+      },
+      "id": "hybrid_014",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 2059,
+        "applied_blocks": 833,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 1234,
+        "native_blocks": 2067,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 2067,
+        "warmup_complete": true
+      },
+      "sample_rate": 44100,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 66144,
+        "sha256": "f5a4257bd0cc8a34c03ca5f409e9610c1491d6c3cabb9aefef95aff4122807ec"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "classical": 2.0534904859870196e-08,
+    "hybrid": 1.4523514307862584e-08
+  },
+  "max_output_difference": 0.10462372750043869,
+  "quality": {
+    "steady": {
+      "near_snr_db": {
+        "classical": 139.10919630494718,
+        "hybrid": 139.10919630494718,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 311.7517983462949,
+        "hybrid": 311.7517983462949,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -5.785964799319721e-15,
+        "hybrid": -5.785964799319721e-15,
+        "hybrid_minus_classical_db": 0.0
+      }
+    },
+    "onset": {
+      "near_snr_db": {
+        "classical": 43.24084049030915,
+        "hybrid": 43.24084049030915,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 301.59342071798926,
+        "hybrid": 301.59342071798926,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -0.0,
+        "hybrid": -0.0,
+        "hybrid_minus_classical_db": 0.0
+      }
+    },
+    "near_after_echo": {
+      "near_snr_db": {
+        "classical": 139.074258337535,
+        "hybrid": 139.074258337535,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_snr_db": {
+        "classical": 315.05045245680134,
+        "hybrid": 315.05045245680134,
+        "hybrid_minus_classical_db": 0.0
+      },
+      "conditional_near_projection_loss_db": {
+        "classical": -7.714619732426294e-15,
+        "hybrid": -7.714619732426294e-15,
+        "hybrid_minus_classical_db": 0.0
+      }
+    }
+  }
+}

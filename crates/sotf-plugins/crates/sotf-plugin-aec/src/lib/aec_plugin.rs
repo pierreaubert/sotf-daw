@@ -26,6 +26,8 @@ struct StreamDrain {
 
 pub struct AecPlugin {
     drain_state: StreamDrain,
+    #[cfg(feature = "qa")]
+    qa_wet_gains: [f32; crate::residual_features::BINS],
     residual_config: Option<ResidualSuppressionConfig>,
     residual_data: ResidualSuppressionData,
     residual_load_error: Option<String>,
@@ -79,6 +81,8 @@ impl AecPlugin {
         let scratch_len = fft_inverse.get_scratch_len();
 
         let mut p = Self {
+            #[cfg(feature = "qa")]
+            qa_wet_gains: [1.0; crate::residual_features::BINS],
             residual_config: None,
             residual_data: ResidualSuppressionData::default(),
             residual_load_error: None,
@@ -266,6 +270,8 @@ impl AecPlugin {
     }
 
     fn reset_streaming_state(&mut self) {
+        #[cfg(feature = "qa")]
+        self.qa_wet_gains.fill(1.0);
         #[cfg(feature = "neural-residual")]
         if let Some(stage) = &mut self.residual_stage {
             stage.reset();
@@ -524,7 +530,8 @@ impl AecPlugin {
     /// Borrow the latest complete adaptive block for explicit QA collection.
     ///
     /// Returns `None` before input, after EOF, or within a partial native block.
-    /// This view precedes residual suppression and does not advance DSP state.
+    /// Error channels precede suppression; gains describe the last wet branch.
+    /// Reading this view does not advance DSP state.
     #[cfg(feature = "qa")]
     pub fn residual_training_analysis(
         &self,
@@ -540,6 +547,7 @@ impl AecPlugin {
             error_spectrum: &self.aec.last_error_freq()[..self.block_size + 1],
             echo_spectrum: &self.aec.last_echo_estimate_freq()[..self.block_size + 1],
             reference: &self.ref_buffer,
+            wet_gains: &self.qa_wet_gains,
         })
     }
 
@@ -676,6 +684,14 @@ impl AecPlugin {
                                     enabled: self.post_filter_enabled,
                                 },
                             );
+                        }
+                    }
+                    #[cfg(feature = "qa")]
+                    for (bin, gain) in self.qa_wet_gains.iter_mut().enumerate() {
+                        *gain = self.post_filter.analysis_gain(bin, frozen);
+                        #[cfg(feature = "neural-residual")]
+                        if let Some(stage) = &self.residual_stage {
+                            *gain *= stage.analysis_extra_gain(bin);
                         }
                     }
                     self.fft_inverse

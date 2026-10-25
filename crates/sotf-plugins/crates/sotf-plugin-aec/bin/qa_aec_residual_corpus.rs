@@ -113,6 +113,7 @@ fn export(root: &Path, request: &Request) -> Result<Value, Box<dyn std::error::E
     let mut features = Output::new(&path.join("features.f32le"))?;
     let mut targets = Output::new(&path.join("targets.f32le"))?;
     let mut error_spectra = Output::new(&path.join("error_spectra.f32le"))?;
+    let mut effective_gains = Output::new(&path.join("effective_gains.f32le"))?;
     let output_stage = if request.residual_suppression.is_some() {
         "hybrid"
     } else {
@@ -157,6 +158,10 @@ fn export(root: &Path, request: &Request) -> Result<Value, Box<dyn std::error::E
         let analysis = plugin
             .residual_training_analysis()
             .ok_or("missing native analysis endpoint")?;
+        if plugin.post_filter_mix() != 1.0 {
+            return Err("corpus gain reconstruction requires constant full wet mix".into());
+        }
+        effective_gains.append(analysis.wet_gains.iter().copied())?;
         let power = |channel: usize| {
             input[first * 2..(first + 256) * 2]
                 .as_chunks::<2>()
@@ -221,6 +226,7 @@ fn export(root: &Path, request: &Request) -> Result<Value, Box<dyn std::error::E
         "native_adaptation":"fresh two-path PBFDAF, 50 ms, step_size 0.5", "feature_version":1,
         "feature_shape":[BANDS,12], "target_shape":[2,BANDS], "gain_floor":0.25,
         "features":features.finish()?, "targets":targets.finish()?, "error_spectra":error_spectra.finish()?,
+        "effective_gains":effective_gains.finish()?,
         "output_stage":output_stage,"residual":plugin.residual_suppression_data(),
         "adaptive":adaptive.finish()?});
     metadata[output_stage] = classical.finish()?;

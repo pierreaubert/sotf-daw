@@ -1,0 +1,176 @@
+{
+  "index": 26,
+  "provenance": {
+    "rate": 16000,
+    "scene": "delay_jump",
+    "seed": 20275051,
+    "pair": [
+      1,
+      2
+    ],
+    "frames": 192000,
+    "delay_initial_samples": 132.9997626908491,
+    "drift_ppm": 0.0,
+    "tap_offsets_samples": [
+      0.0,
+      77.66886494476655,
+      200.3336582023825,
+      231.29208659262798,
+      285.37144360466414,
+      292.45714918425125,
+      361.24576656234404,
+      394.09695430288787
+    ],
+    "tap_gains": [
+      0.5,
+      0.06397354222370817,
+      0.03008758554512311,
+      0.1097537527321312,
+      -0.0802790044351982,
+      0.049695986927202423,
+      -0.028675071645679773,
+      0.0014506492710272244
+    ],
+    "drive": 0.0,
+    "input_sha256": "0dcf050ce937cbe8cbb9e7c23ac82533a4251aef876d71cc36047a3d10ff52a2",
+    "near_sha256": "2b30259b585c9c5ff673c5ffe7769c08ba43a4cf29ed6ae42162bc699200999d",
+    "echo_sha256": "2843de9d6354ecec2c71f08684c3cc185ed353c6ddc79c02791f8c5a8c488b20"
+  },
+  "native": {
+    "classical": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "f855b7407d18036585f5b90b35a345b7ad7db3243afa59f05298903cbf362972"
+      },
+      "blocks": 750,
+      "classical": {
+        "floats": 192000,
+        "sha256": "85d88323744bd540405bdd1edb5fc73bad416c09a513a63f1a101e85049e9208"
+      },
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/classical_026",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "154a777e22460f089ac90c2cd840106d621e7a4e18442111ad939f48cabafe5d"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "a9a1566c2a09643b1edca49a60f0697b837d1fb04c3799702c96de72bc9caa58"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "62231349619baf41a8c0b61199a45e7caf4b75b90b1538b5de9d0abf8072e692"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "id": "classical_026",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "classical",
+      "residual": {
+        "accepted_observations": 0,
+        "applied_blocks": 0,
+        "availability": "disabled",
+        "dropped_blocks": 0,
+        "fallback_blocks": 0,
+        "native_blocks": 0,
+        "observation_age_samples": null,
+        "offline": true,
+        "submitted_blocks": 0,
+        "warmup_complete": false
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "567f7022e8d80984a88d1de229444cbf85481e412bb7988a946aff51fb88227b"
+      }
+    },
+    "hybrid": {
+      "adaptive": {
+        "floats": 192000,
+        "sha256": "f855b7407d18036585f5b90b35a345b7ad7db3243afa59f05298903cbf362972"
+      },
+      "blocks": 750,
+      "directory": "/Volumes/home_tmp/tmp/ml-aec-recorded-20261025/native/hybrid_026",
+      "effective_gains": {
+        "floats": 192750,
+        "sha256": "5810bf35a536eeee82629a1be8c17fc227dc62f8534ec2a0185d3e2b2dde8c2a"
+      },
+      "error_spectra": {
+        "floats": 385500,
+        "sha256": "a9a1566c2a09643b1edca49a60f0697b837d1fb04c3799702c96de72bc9caa58"
+      },
+      "feature_shape": [
+        16,
+        12
+      ],
+      "feature_version": 1,
+      "features": {
+        "floats": 144000,
+        "sha256": "62231349619baf41a8c0b61199a45e7caf4b75b90b1538b5de9d0abf8072e692"
+      },
+      "frames": 192000,
+      "gain_floor": 0.25,
+      "hybrid": {
+        "floats": 192000,
+        "sha256": "8280b9e0eaf3e1f58d7984fe8545f40bfff88ec2b215ee8bce8f0fd24a24cd54"
+      },
+      "id": "hybrid_026",
+      "latency_samples": 256,
+      "native_adaptation": "fresh two-path PBFDAF, 50 ms, step_size 0.5",
+      "output_stage": "hybrid",
+      "residual": {
+        "accepted_observations": 747,
+        "applied_blocks": 669,
+        "availability": "prepared",
+        "dropped_blocks": 0,
+        "fallback_blocks": 81,
+        "native_blocks": 750,
+        "observation_age_samples": 0,
+        "offline": true,
+        "submitted_blocks": 750,
+        "warmup_complete": true
+      },
+      "sample_rate": 16000,
+      "status": "ok",
+      "target_shape": [
+        2,
+        16
+      ],
+      "targets": {
+        "floats": 24000,
+        "sha256": "567f7022e8d80984a88d1de229444cbf85481e412bb7988a946aff51fb88227b"
+      }
+    }
+  },
+  "reconstruction_max_abs": {
+    "classical": 2.4729498393494254e-08,
+    "hybrid": 1.2826147727240667e-08
+  },
+  "max_output_difference": 0.0772583931684494,
+  "quality": {
+    "steady": {
+      "erle_db": {
+        "classical": 40.173994398198246,
+        "hybrid": 43.04727738097554,
+        "hybrid_minus_classical_db": 2.8732829827772903
+      }
+    },
+    "onset": {
+      "erle_db": {
+        "classical": -0.5402506979218437,
+        "hybrid": 1.6858953294457373,
+        "hybrid_minus_classical_db": 2.226146027367581
+      }
+    }
+  }
+}

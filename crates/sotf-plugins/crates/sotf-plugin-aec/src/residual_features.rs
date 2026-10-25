@@ -31,6 +31,11 @@ pub struct TrainingAnalysis<'a> {
     pub echo_spectrum: &'a [Complex<f32>],
     /// Current far-end reference block, before input storage is reused.
     pub reference: &'a [f32],
+    /// Effective real wet-branch spectral gains, before the outer wet/dry ramp.
+    ///
+    /// Conditional source decomposition holds these decisions fixed. A
+    /// reconstruction using this array also requires the wet mix to be one.
+    pub wet_gains: &'a [f32],
 }
 
 /// Return a band's half-open unique-bin range.
