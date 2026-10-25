@@ -1,0 +1,994 @@
+{
+  "binaries_sha256": {
+    "candidate": "b6404143d5644a9712752c4afb0c061d0afa01c5964c1d78daf234149416e1ea",
+    "classical": "5b69717cb376aa45f03e0385f4dc702aa2bbc9c041419841fdd5b4e8eb552305"
+  },
+  "cases": [
+    {
+      "case": "cross-memory-record-8-0.5-0",
+      "input_sha256": "e634b81de96bd231db5f5a3b89ee5c46c162b13559459deb861dd420777cdf00",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-0.5-0",
+      "max_error": 2.2321284820492338e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5186508297920227,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-8-0.5-5",
+      "input_sha256": "e634b81de96bd231db5f5a3b89ee5c46c162b13559459deb861dd420777cdf00",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-0.5-5",
+      "max_error": 2.2321284820492338e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5186508297920227,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-8-1.0-0",
+      "input_sha256": "411fc1ce4b31294c21a6fdb710d32778909033b4fbd9c3bddd0e894fb82c7f72",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-1.0-0",
+      "max_error": 2.976846846802772e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7287608981132507,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-8-1.0-5",
+      "input_sha256": "411fc1ce4b31294c21a6fdb710d32778909033b4fbd9c3bddd0e894fb82c7f72",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-1.0-5",
+      "max_error": 2.976846846802772e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7287608981132507,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-8-2.0-0",
+      "input_sha256": "bf91b58bc615198dab17b4537321e1d21d79cd4c271453c32deb89aa0d8582c0",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-2.0-0",
+      "max_error": 2.9792360023428444e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9582,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8262780904769897,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-8-2.0-5",
+      "input_sha256": "bf91b58bc615198dab17b4537321e1d21d79cd4c271453c32deb89aa0d8582c0",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-8-2.0-5",
+      "max_error": 2.9792360023428444e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9582,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8262780904769897,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-0.5-0",
+      "input_sha256": "d9630b4092c9b36db84f514bf939b0a0427fcf8d2f085eba5e5bb103f2e9c7df",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-0.5-0",
+      "max_error": 1.4894970090661985e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.49611249566078186,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-0.5-5",
+      "input_sha256": "d9630b4092c9b36db84f514bf939b0a0427fcf8d2f085eba5e5bb103f2e9c7df",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-0.5-5",
+      "max_error": 1.4894970090661985e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.49611249566078186,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-1.0-0",
+      "input_sha256": "fd993b191f3cbc604aa12b620ffcecb70a93435575cf2287d98fe1dc340e1431",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-1.0-0",
+      "max_error": 2.9801380141414313e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7568696737289429,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-1.0-5",
+      "input_sha256": "fd993b191f3cbc604aa12b620ffcecb70a93435575cf2287d98fe1dc340e1431",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-1.0-5",
+      "max_error": 2.9801380141414313e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7568696737289429,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-2.0-0",
+      "input_sha256": "42a9ca055bc59bead7e61fe67c60928c57d9b20e299fb7b5f9b1db5a6a8b4231",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-2.0-0",
+      "max_error": 2.9785761412881584e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9667,
+        "numerical": 0,
+        "out_of_domain": 2541,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8365813493728638,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-9-2.0-5",
+      "input_sha256": "42a9ca055bc59bead7e61fe67c60928c57d9b20e299fb7b5f9b1db5a6a8b4231",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-9-2.0-5",
+      "max_error": 2.9785761412881584e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9667,
+        "numerical": 0,
+        "out_of_domain": 2541,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8365813493728638,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-0.5-0",
+      "input_sha256": "b01560459b347344db5f11d02f9365ba66d5e68b8559270c5c2bf0503a529268",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-0.5-0",
+      "max_error": 1.4899859235306678e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5510085225105286,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-0.5-5",
+      "input_sha256": "b01560459b347344db5f11d02f9365ba66d5e68b8559270c5c2bf0503a529268",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-0.5-5",
+      "max_error": 1.4899859235306678e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5510085225105286,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-1.0-0",
+      "input_sha256": "4bceff6b0864e93307c44509cdfea642ce7e284c1bc11bd073a029977857f7da",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-1.0-0",
+      "max_error": 2.9790727440470732e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7759048938751221,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-1.0-5",
+      "input_sha256": "4bceff6b0864e93307c44509cdfea642ce7e284c1bc11bd073a029977857f7da",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-1.0-5",
+      "max_error": 2.9790727440470732e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7759048938751221,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-2.0-0",
+      "input_sha256": "4f0fc620f683bbd512b243377d1d45c986b7d9f5a7074f65bb956bf598a4970a",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-2.0-0",
+      "max_error": 2.9793820410795036e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9584,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8233779668807983,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-10-2.0-5",
+      "input_sha256": "4f0fc620f683bbd512b243377d1d45c986b7d9f5a7074f65bb956bf598a4970a",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-10-2.0-5",
+      "max_error": 2.9793820410795036e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9584,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8233779668807983,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-0.5-0",
+      "input_sha256": "f57c01f5bb3d768c1d40233b5a2dc71cc0b45d1494a9aa31e6353d66d9939226",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-0.5-0",
+      "max_error": 1.4897093003618522e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.49283722043037415,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-0.5-5",
+      "input_sha256": "f57c01f5bb3d768c1d40233b5a2dc71cc0b45d1494a9aa31e6353d66d9939226",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-0.5-5",
+      "max_error": 1.4897093003618522e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.49283722043037415,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-1.0-0",
+      "input_sha256": "eab8bd61f2645a6d2e1b50cc7ef272017a2cbb6ef6c3925673b408bbb84a9263",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-1.0-0",
+      "max_error": 2.976463220338843e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7289915680885315,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-1.0-5",
+      "input_sha256": "eab8bd61f2645a6d2e1b50cc7ef272017a2cbb6ef6c3925673b408bbb84a9263",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-1.0-5",
+      "max_error": 2.976463220338843e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7289915680885315,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-2.0-0",
+      "input_sha256": "f4131ab37cf3e959b718b57763c4748d2b32bbc7be43f49adb749ad6ead9bd71",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-2.0-0",
+      "max_error": 2.977671131887405e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9558,
+        "numerical": 0,
+        "out_of_domain": 2652,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8434513807296753,
+      "pass": true
+    },
+    {
+      "case": "cross-memory-record-11-2.0-5",
+      "input_sha256": "f4131ab37cf3e959b718b57763c4748d2b32bbc7be43f49adb749ad6ead9bd71",
+      "candidate_sha256": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/cross-memory-record-11-2.0-5",
+      "max_error": 2.977671131887405e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9558,
+        "numerical": 0,
+        "out_of_domain": 2652,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.8434513807296753,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-0.5-0",
+      "input_sha256": "e634b81de96bd231db5f5a3b89ee5c46c162b13559459deb861dd420777cdf00",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-0.5-0",
+      "max_error": 7.403968937946814e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.2519073486328125,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-0.5-5",
+      "input_sha256": "e634b81de96bd231db5f5a3b89ee5c46c162b13559459deb861dd420777cdf00",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-0.5-5",
+      "max_error": 7.403968937946814e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.15517903864383698,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-1.0-0",
+      "input_sha256": "411fc1ce4b31294c21a6fdb710d32778909033b4fbd9c3bddd0e894fb82c7f72",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-1.0-0",
+      "max_error": 1.4699619410585285e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.405169278383255,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-1.0-5",
+      "input_sha256": "411fc1ce4b31294c21a6fdb710d32778909033b4fbd9c3bddd0e894fb82c7f72",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-1.0-5",
+      "max_error": 1.4699619410585285e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12207,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.3235042095184326,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-2.0-0",
+      "input_sha256": "bf91b58bc615198dab17b4537321e1d21d79cd4c271453c32deb89aa0d8582c0",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-2.0-0",
+      "max_error": 1.4870547515588584e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9582,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.6687721014022827,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-8-2.0-5",
+      "input_sha256": "bf91b58bc615198dab17b4537321e1d21d79cd4c271453c32deb89aa0d8582c0",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-8-2.0-5",
+      "max_error": 1.4870547515588584e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9582,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.4943736791610718,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-0.5-0",
+      "input_sha256": "d9630b4092c9b36db84f514bf939b0a0427fcf8d2f085eba5e5bb103f2e9c7df",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-0.5-0",
+      "max_error": 7.299502113866652e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.1714370846748352,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-0.5-5",
+      "input_sha256": "d9630b4092c9b36db84f514bf939b0a0427fcf8d2f085eba5e5bb103f2e9c7df",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-0.5-5",
+      "max_error": 7.299502113866652e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.15336602926254272,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-1.0-0",
+      "input_sha256": "fd993b191f3cbc604aa12b620ffcecb70a93435575cf2287d98fe1dc340e1431",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-1.0-0",
+      "max_error": 1.4861758435014139e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.3198663294315338,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-1.0-5",
+      "input_sha256": "fd993b191f3cbc604aa12b620ffcecb70a93435575cf2287d98fe1dc340e1431",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-1.0-5",
+      "max_error": 1.4861758435014139e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12208,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.3198663294315338,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-2.0-0",
+      "input_sha256": "42a9ca055bc59bead7e61fe67c60928c57d9b20e299fb7b5f9b1db5a6a8b4231",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-2.0-0",
+      "max_error": 1.4878130949469437e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9667,
+        "numerical": 0,
+        "out_of_domain": 2541,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.6575028896331787,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-9-2.0-5",
+      "input_sha256": "42a9ca055bc59bead7e61fe67c60928c57d9b20e299fb7b5f9b1db5a6a8b4231",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-9-2.0-5",
+      "max_error": 1.4878130949469437e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9667,
+        "numerical": 0,
+        "out_of_domain": 2541,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.502896249294281,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-0.5-0",
+      "input_sha256": "b01560459b347344db5f11d02f9365ba66d5e68b8559270c5c2bf0503a529268",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-0.5-0",
+      "max_error": 7.3176207870950805e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.1951354444026947,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-0.5-5",
+      "input_sha256": "b01560459b347344db5f11d02f9365ba66d5e68b8559270c5c2bf0503a529268",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-0.5-5",
+      "max_error": 7.3176207870950805e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.1609034240245819,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-1.0-0",
+      "input_sha256": "4bceff6b0864e93307c44509cdfea642ce7e284c1bc11bd073a029977857f7da",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-1.0-0",
+      "max_error": 1.4879113385823928e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.334009051322937,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-1.0-5",
+      "input_sha256": "4bceff6b0864e93307c44509cdfea642ce7e284c1bc11bd073a029977857f7da",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-1.0-5",
+      "max_error": 1.4879113385823928e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12209,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.334009051322937,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-2.0-0",
+      "input_sha256": "4f0fc620f683bbd512b243377d1d45c986b7d9f5a7074f65bb956bf598a4970a",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-2.0-0",
+      "max_error": 1.4873444198482133e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9584,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7201575040817261,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-10-2.0-5",
+      "input_sha256": "4f0fc620f683bbd512b243377d1d45c986b7d9f5a7074f65bb956bf598a4970a",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-10-2.0-5",
+      "max_error": 1.4873444198482133e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9584,
+        "numerical": 0,
+        "out_of_domain": 2625,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5132566690444946,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-0.5-0",
+      "input_sha256": "f57c01f5bb3d768c1d40233b5a2dc71cc0b45d1494a9aa31e6353d66d9939226",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-0.5-0",
+      "max_error": 7.382567696057052e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.2165699601173401,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-0.5-5",
+      "input_sha256": "f57c01f5bb3d768c1d40233b5a2dc71cc0b45d1494a9aa31e6353d66d9939226",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-0.5-5",
+      "max_error": 7.382567696057052e-09,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.16396602988243103,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-1.0-0",
+      "input_sha256": "eab8bd61f2645a6d2e1b50cc7ef272017a2cbb6ef6c3925673b408bbb84a9263",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-1.0-0",
+      "max_error": 1.4526541525228254e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.34836816787719727,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-1.0-5",
+      "input_sha256": "eab8bd61f2645a6d2e1b50cc7ef272017a2cbb6ef6c3925673b408bbb84a9263",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-1.0-5",
+      "max_error": 1.4526541525228254e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 12210,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.3408093750476837,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-2.0-0",
+      "input_sha256": "f4131ab37cf3e959b718b57763c4748d2b32bbc7be43f49adb749ad6ead9bd71",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-2.0-0",
+      "max_error": 1.4881686216661194e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9558,
+        "numerical": 0,
+        "out_of_domain": 2652,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.7141497135162354,
+      "pass": true
+    },
+    {
+      "case": "hammerstein-record-11-2.0-5",
+      "input_sha256": "f4131ab37cf3e959b718b57763c4748d2b32bbc7be43f49adb749ad6ead9bd71",
+      "candidate_sha256": "3182bc73849c92186df23bc0d8e3e12bbac3e7de97f8b8c2a3ccf43d798e5f59",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/hammerstein-record-11-2.0-5",
+      "max_error": 1.4881686216661194e-08,
+      "counts": {
+        "disabled": 314,
+        "neural": 9558,
+        "numerical": 0,
+        "out_of_domain": 2652,
+        "unavailable": 0
+      },
+      "callback_exact": true,
+      "counts_match": true,
+      "sample_peak": 0.5706785917282104,
+      "pass": true
+    },
+    {
+      "case": "nonfinite",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/nonfinite",
+      "max_error": 1.4875768117317278e-08,
+      "counts": {
+        "disabled": 0,
+        "neural": 4090,
+        "numerical": 0,
+        "out_of_domain": 9,
+        "unavailable": 0
+      },
+      "pass": true
+    },
+    {
+      "case": "missing",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/missing",
+      "max_error": 0.0,
+      "counts": {
+        "disabled": 0,
+        "neural": 0,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 4099
+      },
+      "pass": true
+    },
+    {
+      "case": "bad-hash",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/bad-hash",
+      "max_error": 0.0,
+      "counts": {
+        "disabled": 0,
+        "neural": 0,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 4099
+      },
+      "pass": true
+    },
+    {
+      "case": "bad-context",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/bad-context",
+      "max_error": 0.0,
+      "counts": {
+        "disabled": 0,
+        "neural": 0,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 4099
+      },
+      "pass": true
+    },
+    {
+      "case": "disabled",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/disabled",
+      "max_error": 0.0,
+      "counts": {
+        "disabled": 4099,
+        "neural": 0,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 0
+      },
+      "pass": true
+    },
+    {
+      "case": "rate-mismatch",
+      "input_sha256": "8391e82e781302483741e4d773a585cdd31fb5e6f0a3252ffe6e76114b6eace3",
+      "work": "/Volumes/home_tmp/tmp/ml-analog-hardware-native-model-20261025/rate-mismatch",
+      "max_error": 0.0,
+      "counts": {
+        "disabled": 0,
+        "neural": 0,
+        "numerical": 0,
+        "out_of_domain": 0,
+        "unavailable": 4099
+      },
+      "pass": true
+    }
+  ],
+  "all_pass": true,
+  "qa_timings": [
+    {
+      "mode": "missing",
+      "seconds": [
+        0.003828583,
+        0.003835125,
+        0.003845375,
+        0.003845875,
+        0.003829625
+      ],
+      "median_seconds": 0.003835125
+    },
+    {
+      "mode": "disabled",
+      "seconds": [
+        0.003855583,
+        0.003861416,
+        0.003827333,
+        0.003853041,
+        0.0038845
+      ],
+      "median_seconds": 0.003855583
+    },
+    {
+      "mode": "enabled",
+      "seconds": [
+        0.006034083,
+        0.006060708,
+        0.006007792,
+        0.005985875,
+        0.005976875
+      ],
+      "median_seconds": 0.006007792
+    }
+  ],
+  "timing_scope": "Five fresh65537-frame mono runs per mode, same QA wrapper and input. Includes continuous classical fallback, candidate history, guards and copies; not a production deadline, portable speed or standalone neural cost guarantee.",
+  "scope": "Native functional parity/fallback using unadmitted generated candidates. Gain/callback variants share sources. No measured-hardware quality or production activation."
+}

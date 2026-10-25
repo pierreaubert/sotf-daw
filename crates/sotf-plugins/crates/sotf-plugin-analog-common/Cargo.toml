@@ -14,11 +14,16 @@ name = "sotf_plugin_analog_common"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa", "dep:serde", "dep:serde_json"]
+qa = ["sotf-host/qa", "dep:serde", "dep:serde_json", "dep:sha2"]
 
 [[bin]]
 name = "qa-analog-color-render"
 path = "bin/qa_analog_color_render.rs"
+required-features = ["qa"]
+
+[[bin]]
+name = "qa-hardware-candidate-render"
+path = "bin/qa_hardware_candidate_render.rs"
 required-features = ["qa"]
 
 [dependencies]
@@ -26,3 +31,4 @@ math-analog = { workspace = true }
 sotf-host = { workspace = true }
 serde = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }

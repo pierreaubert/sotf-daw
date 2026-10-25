@@ -1,0 +1,9 @@
+test_missing_bad_hash_context_and_disabled_outputs_keep_classical (test_hardware_candidate_native.NativeTests.test_missing_bad_hash_context_and_disabled_outputs_keep_classical) ... ok
+test_native_neural_matches_independent_scalar_and_numpy_prediction (test_hardware_candidate_native.NativeTests.test_native_neural_matches_independent_scalar_and_numpy_prediction) ... ok
+test_nonfinite_and_peak_domain_history_switches_match_scalar_reference (test_hardware_candidate_native.NativeTests.test_nonfinite_and_peak_domain_history_switches_match_scalar_reference) ... ok
+test_reset_and_enable_event_timeline_is_callback_invariant (test_hardware_candidate_native.NativeTests.test_reset_and_enable_event_timeline_is_callback_invariant) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.300s
+
+OK

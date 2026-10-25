@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "status": "offline_neural_candidate_only",
+  "status": "offline_candidate_and_native_qualification_only",
   "pretrained_weights": null,
   "hardware_model_admitted": false,
-  "purpose": "Target-specific offline causal neural candidate and Hammerstein comparison; no hardware model or native learned inference admitted.",
+  "purpose": "Target-specific offline candidate/Hammerstein comparison and QA-only native streaming qualification with continuous classical fallback; no hardware model or production learned route admitted.",
   "native_models": [
     "Harmonics",
     "Static",
@@ -19,10 +19,11 @@
   "license": "GPL-3.0-or-later for new project code and generated fixtures; external recording rights require independent provenance.",
   "evidence": [
     "audit/artifacts/ml-analog-hardware-native-20261025",
-    "audit/artifacts/ml-analog-hardware-model-20261025"
+    "audit/artifacts/ml-analog-hardware-model-20261025",
+    "audit/artifacts/ml-analog-hardware-native-model-20261025"
   ],
   "remaining": [
-    "Optional native inference/fallback, independent parity/cost and measured-hardware deployment admission; offline candidate training is implemented.",
+    "Explicit production preset/factory/host activation and measured-device deployment admission; QA-only native inference/fallback and parity are implemented.",
     "Measured target calibration/provenance and frozen independent quality/operating-level comparison against appropriate classical baselines.",
     "Alias/state/cost,host and cross-platform acceptance."
   ],

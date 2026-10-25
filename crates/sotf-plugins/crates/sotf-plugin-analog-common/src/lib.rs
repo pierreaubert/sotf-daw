@@ -27,6 +27,10 @@ use math_audio_analog::{
 };
 use sotf_host::param_specs::ParamSpec;
 
+/// Native processing for unadmitted hardware candidates during explicit qualification.
+#[cfg(feature = "qa")]
+pub mod hardware_candidate;
+
 /// Supported coloration models in [`AnalogModel`] id order.
 ///
 /// `MODEL_NAMES[id as usize]` is the display name for

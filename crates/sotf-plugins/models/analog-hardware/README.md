@@ -4,7 +4,7 @@ The audit permits learned coloration only with identified hardware and operating
 levels. The offline fitter now trains a target-specific causal neural candidate
 and a classical Hammerstein comparison from the calibrated paired-data contract.
 No hardware model has been admitted, no default learned model is selected, and
-no realtime neural processing or native coloration replacement is introduced.
+no production neural processing or native coloration replacement is introduced.
 `candidate.synthetic.json` is a generated functional fixture, not measured
 hardware evidence or a pretrained production model.
 
@@ -52,8 +52,59 @@ did not. Both outcomes explicitly state `hardware_model_admitted: false` and
 `automatic_apply: false`, and neither emits a runtime preset. Loading requires
 an explicit file/SHA256 and exact hardware/calibration/rate context, validates
 parameter dimensions, finite bounds and the frozen policy, and rejects a changed
-deployment flag. Inference is currently an offline Python comparison path;
-native inference, fallback and deployment admission remain outstanding.
+deployment flag. Python and native QA inference support qualification.
+Production native activation and deployment admission remain outstanding; the
+QA-only native inference/fallback path is described below.
+
+## Native qualification
+
+`sotf_plugin_analog_common::hardware_candidate` is gated entirely by `qa`. It
+validates bounded candidate bytes, explicit SHA256, calibrated context and the
+frozen comparison policy on the control thread. Its fixed-size weights/history
+support the full64-tap/32-unit format. It accepts only the unadmitted candidate
+format; no production plugin factory or model ID selects it.
+
+`HardwareQualification` owns a mono native classical stage and an optional
+candidate. It starts disabled. Classical processing and neural input history run
+continuously, so fallback uses the current classical state and enabling does not
+start the candidate with stale history. Missing/rejected models use classical
+output. Nonfinite or out-of-domain inputs mark every affected neural history
+window invalid; fallback continues until all required past samples are valid.
+Invalid computed neural output also falls back. Callback-rate mismatch rejects
+before output/history/counter changes. Reset clears both histories and counters
+while preserving controls and enabled state. Process/reset/toggle/counter reads
+have allocation/deallocation guards and use no hashing, file access or locks.
+
+Candidate output replaces the sample during enabled valid qualification. The
+fallback drive/color/character/trim controls affect the classical path only;
+they do not retune the fixed captured hardware candidate. Enable and fallback
+switches are immediate for testing. Click-free live transitions, full production
+control/preset semantics and real-device admission are not implemented here.
+The ordinary shared stage and its zero-color behavior are unchanged.
+
+```sh
+cargo build -p sotf-plugin-analog-common --features qa \
+  --bin qa-hardware-candidate-render --release
+```
+
+`scripts/ml/hardware_candidate_native.py` writes bounded raw-PCM requests for this
+renderer. Requests contain explicit candidate path/hash or null, expected
+context, complete classical controls and sample/frame geometry. Sorted
+`disabled_ranges` and `reset_frames` let qualification exercise exact event
+boundaries independently of callback partition. Input float32 patterns including
+NaN/infinity are retained to test native recovery. Output reports frame-decision
+counters, loader errors, epoch counts, zero host latency, hashes and QA timing.
+Every output remains finite within software rails; there is no additional gain
+normalization, limiting or finite-zero-tail promise. Files are never overwritten.
+
+The native evidence is in
+`audit/artifacts/ml-analog-hardware-native-model-20261025`:28 Rust tests,21 combined
+Python tests,54 conditional parity/fallback cases, strict QA Clippy and compilation
+without QA pass. Maximum reference error is2.9801380141e-8 and callback reopening
+is bit-identical. Five65537-frame timing runs per mode show a local median about
+1.56 times higher with candidate inference plus warm fallback than disabled
+qualification. This includes QA guards/copies and is not a portable speed,
+standalone inference cost or production deadline guarantee.
 
 Two retained generated controls exercise both outcomes: a cross-lag tanh target
 has neural held error near-55dB, while a Hammerstein target is approximated about
@@ -133,7 +184,7 @@ The CLI refuses to overwrite existing evidence. Successful output always states
 trained model. `test_analog_hardware.py` contains an executable synthetic schema
 example with deliberately fictional hardware identity and calibration.
 
-Seventeen Python tests cover the capture/native and model paths. The earlier
+Twenty-one Python tests cover the capture/native and model paths. The earlier
 21 native tests and96-case procedural probe matrix are retained in
 `audit/artifacts/ml-analog-hardware-native-20261025`; new model evidence is in
 `audit/artifacts/ml-analog-hardware-model-20261025`. Public physical preamp
@@ -141,9 +192,9 @@ captures were found, but the I/O calibration and capture evidence needed by this
 workflow were not established. No external audio was downloaded or used for
 training. Linked source-code licensing is not treated as recording provenance.
 
-Next work is optional native learned inference/fallback, classical/native and
+Next work is explicit production learned activation/fallback, classical/native and
 WDF/state-space comparisons as appropriate to the measured target, frozen
 whole-source/operating-level validation, explicit opt-in and fallback, alias and
-state behavior, actual native inference parity/cost and host/platform acceptance.
+state behavior, production resource profiling and host/platform acceptance.
 The existing six models remain available independently. The Analog common ML
 proposal and the broader audit remain incomplete.

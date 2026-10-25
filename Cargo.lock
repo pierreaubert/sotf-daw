@@ -9005,6 +9005,7 @@ dependencies = [
  "math-analog",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
 ]
 
