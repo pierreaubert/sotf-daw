@@ -6,6 +6,10 @@ mod fft;
 mod masking;
 mod mcra;
 mod multi_resolution;
+#[cfg(feature = "qa")]
+pub mod music_mask;
+#[cfg(all(test, feature = "qa"))]
+mod music_mask_tests;
 mod noise_profile;
 pub mod params;
 mod polyphonic;

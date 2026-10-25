@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_music_noise_mask.py",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-music-mask-20261025"
+  ],
+  "exit_code": 0,
+  "seconds": 20.22754087508656
+}

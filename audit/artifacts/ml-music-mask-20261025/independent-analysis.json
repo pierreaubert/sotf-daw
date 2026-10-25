@@ -1,0 +1,590 @@
+{
+  "model_sha256": "ab1a996543de22b77b38ea57363a57d23a65319161ba81f4ecce1d5b280fe0a1",
+  "mask_recomputation": [
+    {
+      "kind": "matched",
+      "pooled_gain_mse": 0.23120399275071402,
+      "equal_source_gain_mse": 0.22562376927390299,
+      "sources": 8
+    },
+    {
+      "kind": "dense_percussion",
+      "pooled_gain_mse": 0.202756547997773,
+      "equal_source_gain_mse": 0.19750674644414595,
+      "sources": 8
+    },
+    {
+      "kind": "vibrato",
+      "pooled_gain_mse": 0.22985672499976023,
+      "equal_source_gain_mse": 0.2242557384673165,
+      "sources": 8
+    },
+    {
+      "kind": "step_noise",
+      "pooled_gain_mse": 0.3904950762629096,
+      "equal_source_gain_mse": 0.3933535109057986,
+      "sources": 8
+    },
+    {
+      "kind": "tone_noise",
+      "pooled_gain_mse": 0.26473740113326494,
+      "equal_source_gain_mse": 0.2567450789871399,
+      "sources": 8
+    },
+    {
+      "kind": "clean_only",
+      "pooled_gain_mse": 0.27817202766895255,
+      "equal_source_gain_mse": 0.2772838892983332,
+      "sources": 8
+    }
+  ],
+  "native_waveform_metric_max_error": 6.217248937900877e-15,
+  "cases": [
+    {
+      "case": "0-matched-44100-1-fft512",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 0.9244900848956837,
+        "relative_rms": 0.8990327153000406,
+        "max_abs_error": 0.08953531831502914,
+        "projection_gain": 0.9968773601845431
+      },
+      "neural": {
+        "snr_db": 1.9801423460810506,
+        "relative_rms": 0.7961463029069874,
+        "max_abs_error": 0.08096519857645035,
+        "projection_gain": 0.9786032643618517
+      },
+      "classical_dry_blend": 0.8116652798981943,
+      "calibration_source_frames": [
+        6615,
+        8379
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/0-matched-44100-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "b7322b9524fb428f2a211806c77370cc8bd37d308b119e431a6bb7054c02abb0",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.24599704636666633,
+      "matched_control": {
+        "snr_db": 2.4361467767060607,
+        "relative_rms": 0.7554272750285025,
+        "max_abs_error": 0.07797917909920216,
+        "projection_gain": 0.811017517972862
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.45600443062501017
+    },
+    {
+      "case": "0-matched-44100-1-fft2048",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 0.9244900848956837,
+        "relative_rms": 0.8990327153000406,
+        "max_abs_error": 0.08953531831502914,
+        "projection_gain": 0.9968773601845431
+      },
+      "neural": {
+        "snr_db": 1.7506977076697339,
+        "relative_rms": 0.8174573717644422,
+        "max_abs_error": 0.0787244439125061,
+        "projection_gain": 0.9812578473673798
+      },
+      "classical_dry_blend": 0.8440570200713255,
+      "calibration_source_frames": [
+        6615,
+        8379
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/0-matched-44100-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "f6e9bdd158a4809690e29d6ce409d31d03cadcdd475b31d329376322c257006e",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": 0.17232820981892272,
+      "matched_control": {
+        "snr_db": 2.1996273386137255,
+        "relative_rms": 0.7762804216261447,
+        "max_abs_error": 0.07898329757153988,
+        "projection_gain": 0.8429760221420747
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.44892963094399163
+    },
+    {
+      "case": "1-matched-48000-1-fft512",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 1.003313733595341,
+        "relative_rms": 0.8909109839086827,
+        "max_abs_error": 0.09786470979452133,
+        "projection_gain": 0.9987977954753098
+      },
+      "neural": {
+        "snr_db": 4.806096685298642,
+        "relative_rms": 0.5750361738311892,
+        "max_abs_error": 0.06737089157104492,
+        "projection_gain": 0.9744581399910289
+      },
+      "classical_dry_blend": 0.4529508137500982,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/1-matched-48000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "a1abd087d41dd169c1ba11bdece792d113eda475a9e200691bec6d3849f842c9",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -1.0548208025091153,
+      "matched_control": {
+        "snr_db": 3.3657939850777128,
+        "relative_rms": 0.6787507160324479,
+        "max_abs_error": 0.0815911516547203,
+        "projection_gain": 0.4578758215885594
+      },
+      "steady_neural_minus_matched_control_snr_db": 1.4403027002209292
+    },
+    {
+      "case": "1-matched-48000-1-fft2048",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 1.003313733595341,
+        "relative_rms": 0.8909109839086827,
+        "max_abs_error": 0.09786470979452133,
+        "projection_gain": 0.9987977954753098
+      },
+      "neural": {
+        "snr_db": 3.8150475849496535,
+        "relative_rms": 0.6445366548494036,
+        "max_abs_error": 0.06785423681139946,
+        "projection_gain": 0.9815176124656996
+      },
+      "classical_dry_blend": 0.5959213687147978,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/1-matched-48000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "c9d4f5dc8cf5bcd986860e746bf9656d4dabea8a2874d3ec40d77103683b38d1",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.487979345893273,
+      "matched_control": {
+        "snr_db": 3.7798149560658407,
+        "relative_rms": 0.6471564026024522,
+        "max_abs_error": 0.07350299507379532,
+        "projection_gain": 0.6574332310393114
+      },
+      "steady_neural_minus_matched_control_snr_db": 0.03523262888381273
+    },
+    {
+      "case": "2-matched-96000-1-fft512",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 3.6735536222664016,
+        "relative_rms": 0.6551222035476232,
+        "max_abs_error": 0.0945814661681652,
+        "projection_gain": 0.9995176058503373
+      },
+      "neural": {
+        "snr_db": 7.66181500721811,
+        "relative_rms": 0.4139131743083101,
+        "max_abs_error": 0.06781781860627234,
+        "projection_gain": 0.9730537190966813
+      },
+      "classical_dry_blend": 0.29449929883305387,
+      "calibration_source_frames": [
+        14400,
+        18240
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/2-matched-96000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "a327e7e56fa4aae60651ea389f73c1ed00b0691f8d463d66dba01c243b240092",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -2.265643896102948,
+      "matched_control": {
+        "snr_db": 2.9238936713364816,
+        "relative_rms": 0.7141761066714425,
+        "max_abs_error": 0.09640041925013065,
+        "projection_gain": 0.3171784255649605
+      },
+      "steady_neural_minus_matched_control_snr_db": 4.737921335881628
+    },
+    {
+      "case": "2-matched-96000-1-fft2048",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 3.6735536222664016,
+        "relative_rms": 0.6551222035476232,
+        "max_abs_error": 0.0945814661681652,
+        "projection_gain": 0.9995176058503373
+      },
+      "neural": {
+        "snr_db": 7.659957290839507,
+        "relative_rms": 0.4140017104916954,
+        "max_abs_error": 0.06735439994372427,
+        "projection_gain": 0.9882714637987264
+      },
+      "classical_dry_blend": 0.3410499591518313,
+      "calibration_source_frames": [
+        14400,
+        18240
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/2-matched-96000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "f9ebcc4784796826dcbf0b25e188840589e014082451f59a7d8cbb9662848f8b",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -1.4350842079428832,
+      "matched_control": {
+        "snr_db": 4.198177103908158,
+        "relative_rms": 0.6167244194133085,
+        "max_abs_error": 0.09034858644008636,
+        "projection_gain": 0.45926169458079974
+      },
+      "steady_neural_minus_matched_control_snr_db": 3.4617801869313487
+    },
+    {
+      "case": "3-matched-48000-2-fft512",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 6.5178835644901145,
+        "relative_rms": 0.4721780798786354,
+        "max_abs_error": 0.05938776768743992,
+        "projection_gain": 1.0003094709802112
+      },
+      "neural": {
+        "snr_db": 8.487472006222145,
+        "relative_rms": 0.3763798802016003,
+        "max_abs_error": 0.05309109576046467,
+        "projection_gain": 0.9824857510335918
+      },
+      "classical_dry_blend": 0.5617882983928247,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/3-matched-48000-2-fft512-matched-control.f32le",
+      "matched_control_sha256": "51ca23b058b84651b0045b9ccd68084bd89871c7922fc1b0cdd280020ea2b01f",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -1.5487826502635207,
+      "matched_control": {
+        "snr_db": 5.899181811334536,
+        "relative_rms": 0.5070384677565903,
+        "max_abs_error": 0.09017863124608994,
+        "projection_gain": 0.570074580177853
+      },
+      "steady_neural_minus_matched_control_snr_db": 2.588290194887609
+    },
+    {
+      "case": "3-matched-48000-2-fft2048",
+      "kind": "matched",
+      "input_reference": {
+        "snr_db": 6.5178835644901145,
+        "relative_rms": 0.4721780798786354,
+        "max_abs_error": 0.05938776768743992,
+        "projection_gain": 1.0003094709802112
+      },
+      "neural": {
+        "snr_db": 8.22930607965765,
+        "relative_rms": 0.38773472360632455,
+        "max_abs_error": 0.05437290668487549,
+        "projection_gain": 0.9854116187871015
+      },
+      "classical_dry_blend": 0.6647857173615839,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/3-matched-48000-2-fft2048-matched-control.f32le",
+      "matched_control_sha256": "f00226d960e34d29fe3495261591b4ec04a8f1fcfee761adee9d206b4230f9e1",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.26544427376671553,
+      "matched_control": {
+        "snr_db": 7.16420962042525,
+        "relative_rms": 0.4383182151638011,
+        "max_abs_error": 0.07565503567457199,
+        "projection_gain": 0.7046135514046042
+      },
+      "steady_neural_minus_matched_control_snr_db": 1.0650964592324002
+    },
+    {
+      "case": "4-clean_only-48000-2-fft512",
+      "kind": "clean_only",
+      "input_reference": {
+        "snr_db": 321.32228462179035,
+        "relative_rms": 8.587876076363487e-17,
+        "max_abs_error": 0.0,
+        "projection_gain": 1.0
+      },
+      "neural": {
+        "snr_db": 27.33411666527365,
+        "relative_rms": 0.04298274692181755,
+        "max_abs_error": 0.013269670307636261,
+        "projection_gain": 0.9804046082591604
+      }
+    },
+    {
+      "case": "4-clean_only-48000-2-fft2048",
+      "kind": "clean_only",
+      "input_reference": {
+        "snr_db": 321.32228462179035,
+        "relative_rms": 8.587876076363487e-17,
+        "max_abs_error": 0.0,
+        "projection_gain": 1.0
+      },
+      "neural": {
+        "snr_db": 29.682854546287242,
+        "relative_rms": 0.03279874850059713,
+        "max_abs_error": 0.018070638179779053,
+        "projection_gain": 0.9848198594789488
+      }
+    },
+    {
+      "case": "5-dense_percussion-48000-1-fft512",
+      "kind": "dense_percussion",
+      "input_reference": {
+        "snr_db": 6.631477331231279,
+        "relative_rms": 0.46604315475630176,
+        "max_abs_error": 0.06788923405110836,
+        "projection_gain": 1.0003784570005387
+      },
+      "neural": {
+        "snr_db": 10.348845118563867,
+        "relative_rms": 0.30377899715910833,
+        "max_abs_error": 0.045547328889369965,
+        "projection_gain": 0.9780031938026872
+      },
+      "classical_dry_blend": 0.20466073894590603,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/5-dense_percussion-48000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "310407d27382c49ab407361426aac5c3d1718ae1cb7f33f53bfc228e3098c965",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -3.094334036373645,
+      "matched_control": {
+        "snr_db": 2.368846968750136,
+        "relative_rms": 0.761303193491616,
+        "max_abs_error": 0.12570212595164776,
+        "projection_gain": 0.2574287881670908
+      },
+      "steady_neural_minus_matched_control_snr_db": 7.979998149813731
+    },
+    {
+      "case": "5-dense_percussion-48000-1-fft2048",
+      "kind": "dense_percussion",
+      "input_reference": {
+        "snr_db": 6.631477331231279,
+        "relative_rms": 0.46604315475630176,
+        "max_abs_error": 0.06788923405110836,
+        "projection_gain": 1.0003784570005387
+      },
+      "neural": {
+        "snr_db": 10.235908706610196,
+        "relative_rms": 0.3077546082408841,
+        "max_abs_error": 0.04774979688227177,
+        "projection_gain": 0.9815950895286812
+      },
+      "classical_dry_blend": 0.2816511884992418,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/5-dense_percussion-48000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "fd6682d28127ae2ea5c42bb271a36b45ad18f999012d46fa89e44f7984ded591",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -1.4716360506888706,
+      "matched_control": {
+        "snr_db": 3.341770756052927,
+        "relative_rms": 0.6806305872329697,
+        "max_abs_error": 0.1158134937286377,
+        "projection_gain": 0.3638381318143598
+      },
+      "steady_neural_minus_matched_control_snr_db": 6.894137950557269
+    },
+    {
+      "case": "6-vibrato-48000-1-fft512",
+      "kind": "vibrato",
+      "input_reference": {
+        "snr_db": 4.953503157631033,
+        "relative_rms": 0.5653596925327398,
+        "max_abs_error": 0.09544327948242426,
+        "projection_gain": 1.0022412966714507
+      },
+      "neural": {
+        "snr_db": 5.9815122808559105,
+        "relative_rms": 0.5022551353889164,
+        "max_abs_error": 0.08725412841886282,
+        "projection_gain": 0.9905543398539377
+      },
+      "classical_dry_blend": 0.7772758567533383,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/6-vibrato-48000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "86f5f95e797b46b6bae619d6d338de7277fd96a6ac0a9cf8e48bc32a3f2bf606",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.6664618092316994,
+      "matched_control": {
+        "snr_db": 6.160861021422074,
+        "relative_rms": 0.49199076283251997,
+        "max_abs_error": 0.07633910328149796,
+        "projection_gain": 0.7813086342146655
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.17934874056616312
+    },
+    {
+      "case": "6-vibrato-48000-1-fft2048",
+      "kind": "vibrato",
+      "input_reference": {
+        "snr_db": 4.953503157631033,
+        "relative_rms": 0.5653596925327398,
+        "max_abs_error": 0.09544327948242426,
+        "projection_gain": 1.0022412966714507
+      },
+      "neural": {
+        "snr_db": 5.744286909948259,
+        "relative_rms": 0.516161555506718,
+        "max_abs_error": 0.08813992980867624,
+        "projection_gain": 0.9925254106832273
+      },
+      "classical_dry_blend": 0.8219242101918404,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/6-vibrato-48000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "ed18518d0bc620045d4617ca2666807a318d8a4eb2aff75baecb99ea4ccb7a19",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.11224441970805506,
+      "matched_control": {
+        "snr_db": 6.06782323887682,
+        "relative_rms": 0.49728898314839526,
+        "max_abs_error": 0.07870047586038709,
+        "projection_gain": 0.8255602096176274
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.32353632892856155
+    },
+    {
+      "case": "7-step_noise-48000-1-fft512",
+      "kind": "step_noise",
+      "input_reference": {
+        "snr_db": -0.8648691965006117,
+        "relative_rms": 1.104697725498515,
+        "max_abs_error": 0.17763138562440872,
+        "projection_gain": 0.9988670323163346
+      },
+      "neural": {
+        "snr_db": 1.6880375588746774,
+        "relative_rms": 0.8233758448221583,
+        "max_abs_error": 0.12991225346922874,
+        "projection_gain": 0.9864385936467422
+      },
+      "classical_dry_blend": 0.29956743898551386,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/7-step_noise-48000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "def8c78adad2d11c2545a8eda784773d198bef8455667b2011be81bd524512f1",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -2.0595883045206973,
+      "matched_control": {
+        "snr_db": 2.346470069529358,
+        "relative_rms": 0.7632670185309902,
+        "max_abs_error": 0.15168749098666012,
+        "projection_gain": 0.31846267158891434
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.6584325106546804
+    },
+    {
+      "case": "7-step_noise-48000-1-fft2048",
+      "kind": "step_noise",
+      "input_reference": {
+        "snr_db": -0.8648691965006117,
+        "relative_rms": 1.104697725498515,
+        "max_abs_error": 0.17763138562440872,
+        "projection_gain": 0.9988670323163346
+      },
+      "neural": {
+        "snr_db": 0.9263812626239762,
+        "relative_rms": 0.8988369903211444,
+        "max_abs_error": 0.1420317217707634,
+        "projection_gain": 0.9894072714213114
+      },
+      "classical_dry_blend": 0.46452529262681175,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/7-step_noise-48000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "5056d374efc6391bfb4762ad4ffccba46e4df0bd9f430f130ef2efd08e29b82e",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.8255625307614414,
+      "matched_control": {
+        "snr_db": 2.7958839549249515,
+        "relative_rms": 0.7247793351128604,
+        "max_abs_error": 0.14698199275881052,
+        "projection_gain": 0.511664491906491
+      },
+      "steady_neural_minus_matched_control_snr_db": -1.8695026923009752
+    },
+    {
+      "case": "8-tone_noise-48000-1-fft512",
+      "kind": "tone_noise",
+      "input_reference": {
+        "snr_db": 7.766105595413613,
+        "relative_rms": 0.408973078137356,
+        "max_abs_error": 0.04549954831600189,
+        "projection_gain": 0.9994314006030425
+      },
+      "neural": {
+        "snr_db": 8.308232141928354,
+        "relative_rms": 0.3842274538730361,
+        "max_abs_error": 0.036656031385064125,
+        "projection_gain": 0.9902750536605738
+      },
+      "classical_dry_blend": 0.8804105493564613,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/8-tone_noise-48000-1-fft512-matched-control.f32le",
+      "matched_control_sha256": "8002959c0342a4c18dcb404be460c6ba4e1e1f1e7489a64ec32756220eac967f",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.20152926464518112,
+      "matched_control": {
+        "snr_db": 8.484221620810649,
+        "relative_rms": 0.37652075334810636,
+        "max_abs_error": 0.044510968029499054,
+        "projection_gain": 0.8988076988903636
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.1759894788822951
+    },
+    {
+      "case": "8-tone_noise-48000-1-fft2048",
+      "kind": "tone_noise",
+      "input_reference": {
+        "snr_db": 7.766105595413613,
+        "relative_rms": 0.408973078137356,
+        "max_abs_error": 0.04549954831600189,
+        "projection_gain": 0.9994314006030425
+      },
+      "neural": {
+        "snr_db": 8.294942205112402,
+        "relative_rms": 0.38481579511496633,
+        "max_abs_error": 0.038653935422189534,
+        "projection_gain": 0.9925247564937204
+      },
+      "classical_dry_blend": 0.901930107821544,
+      "calibration_source_frames": [
+        7200,
+        9120
+      ],
+      "matched_control_output": "/Volumes/home_tmp/tmp/ml-music-mask-controls-20261025/8-tone_noise-48000-1-fft2048-matched-control.f32le",
+      "matched_control_sha256": "fd6b68f9c752484f96aad9961aff067a05f53ef5ae32d641a7c2f4b810db9883",
+      "calibration_energy_attainable": true,
+      "later_noise_energy_mismatch_db": -0.11261634560999921,
+      "matched_control": {
+        "snr_db": 8.554315161710488,
+        "relative_rms": 0.3734945266974826,
+        "max_abs_error": 0.04365766420960426,
+        "projection_gain": 0.9656778644655634
+      },
+      "steady_neural_minus_matched_control_snr_db": -0.2593729565980851
+    }
+  ],
+  "deployment_admitted": false,
+  "scope": "Independent generated-mask/native-PCM arithmetic, hashes, complete drain and source-counter accounting. Additional diagnostic control blends native classical output with latency-aligned input. Its coefficient uses only the declared noise-only0.15..0.19s span to match neural output energy; a10ms ramp then applies it before music, and0.20..0.24s checks noise transfer. It is an oracle noise-span reference, not a deployed parameter or independent model-selection gate. Clean-only cases have no usable noise calibration and retain an unfiltered-input reference."
+}

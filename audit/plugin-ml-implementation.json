@@ -355,8 +355,28 @@
       "requirements": [
         "A learned music mask is plausible, but speech-trained models should not be assumed safe for arbitrary music; evaluate removal artifacts and latency against the existing path."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/music_noise_mask.py",
+        "scripts/ml/music_mask_cases.py",
+        "scripts/ml/train_music_noise_mask.py",
+        "scripts/ml/music_mask_native.py",
+        "scripts/ml/evaluate_music_noise_mask.py",
+        "scripts/ml/analyze_music_noise_mask.py",
+        "scripts/ml/test_music_noise_mask.py",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/music_mask.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/src/music_mask_tests.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/tests/music_mask.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-denoiser/bin/qa_music_mask_render.rs",
+        "crates/sotf-plugins/models/music-noise-mask",
+        "audit/ml-music-mask-20261025.md",
+        "audit/artifacts/ml-music-mask-20261025"
+      ],
+      "remaining": [
+        "Real licensed music acceptance across unseen instruments, genres, levels and recording chains; current training and evaluation use generated sources only and no speech-pretrained model.",
+        "Perceptual/transient/stereo validation at comparable noise removal; pooled gain MSE is poor and the noise-span-calibrated classical/dry control yields eight noisy wins and eight losses, with imperfect later attenuation matching.",
+        "Product parameter/profile semantics, activation UX and full memory/platform deadline evidence; the current explicit mode is QA-only and unadmitted."
+      ]
     },
     {
       "plugin_id": 21,

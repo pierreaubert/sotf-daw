@@ -20,13 +20,19 @@ rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sotf-plugin-pnd = { workspace = true }
+sha2 = { workspace = true, optional = true }
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-denoiser"
 path = "bin/qa_denoiser.rs"
+required-features = ["qa"]
+
+[[bin]]
+name = "qa-music-mask-render"
+path = "bin/qa_music_mask_render.rs"
 required-features = ["qa"]
 
 [dev-dependencies]

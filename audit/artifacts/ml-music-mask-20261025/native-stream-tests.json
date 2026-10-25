@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-denoiser",
+    "--features",
+    "qa",
+    "--test",
+    "music_mask",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "--nocapture"
+  ],
+  "exit_code": 0,
+  "seconds": 20.08167245797813
+}

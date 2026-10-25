@@ -1,0 +1,15 @@
+   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)
+error[E0433]: cannot find `PluginDrainResult` in `sotf_host`
+   --> crates/sotf-plugins/crates/sotf-plugin-denoiser/bin/qa_music_mask_render.rs:141:40
+    |
+141 |         let mut result = Ok(sotf_host::PluginDrainResult::COMPLETE);
+    |                                        ^^^^^^^^^^^^^^^^^ could not find `PluginDrainResult` in `sotf_host`
+    |
+help: a type alias with a similar name exists
+    |
+141 -         let mut result = Ok(sotf_host::PluginDrainResult::COMPLETE);
+141 +         let mut result = Ok(sotf_host::PluginResult::COMPLETE);
+    |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `sotf-plugin-denoiser` (bin "qa-music-mask-render") due to 1 previous error

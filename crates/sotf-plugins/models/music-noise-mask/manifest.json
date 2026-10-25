@@ -1,0 +1,72 @@
+{
+  "format": "sotf-music-noise-mask-manifest-v1",
+  "status": "synthetic_qualification_only",
+  "deployment_admitted": false,
+  "automatic_activation": false,
+  "model": {
+    "file": "model.synthetic.json",
+    "bytes": 2577,
+    "sha256": "ab1a996543de22b77b38ea57363a57d23a65319161ba81f4ecce1d5b280fe0a1",
+    "architecture": "6 causal features,8 tanh hidden units,1 sigmoid gain ratio",
+    "coefficients": 65
+  },
+  "provenance": {
+    "origin": "project-generated polyphonic and percussive music/noise mixtures",
+    "license": "GPL-3.0-or-later",
+    "external_training_audio": false,
+    "speech_pretrained": false
+  },
+  "splits": {
+    "training_source_seeds": 32,
+    "validation_source_seeds": 8,
+    "final_source_seeds": 8,
+    "sampled_rows_per_train_validation_source": 1024,
+    "final_variants_reuse_seeds": true
+  },
+  "contexts": {
+    "sample_rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "fft_sizes": [
+      512,
+      2048
+    ],
+    "channels": [
+      1,
+      2
+    ]
+  },
+  "latency": {
+    "native_samples": [
+      512,
+      2048
+    ],
+    "added_model_lookahead_samples": 0
+  },
+  "fallback": "Classical estimator and gains run independently; synthesis-only selection, boundary/invalid/context fallback",
+  "validation": {
+    "native_tests": 138,
+    "python_native_tests": 6,
+    "parity_points": 30,
+    "waveform_probes": 18,
+    "native_outputs": 36,
+    "local_callback_budget_probes": 18,
+    "all_local_budgets_passed": true,
+    "gain_metric_exceeds_flatness_reference": true,
+    "independent_control_noisy_wins": 8,
+    "independent_control_noisy_losses": 8,
+    "control_noise_validation_mismatch_db": [
+      -3.094334036373645,
+      0.17232820981892272
+    ]
+  },
+  "remaining": [
+    "Real licensed held-out music across instruments, genres, levels and recording chains",
+    "Perceptual/transient/stereo acceptance at comparable achieved noise removal",
+    "Formal product parameter/profile semantics and click-free activation",
+    "Complete heap memory accounting and cross-platform host deadlines"
+  ],
+  "evidence": "audit/artifacts/ml-music-mask-20261025"
+}

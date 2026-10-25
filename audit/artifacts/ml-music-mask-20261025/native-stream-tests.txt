@@ -1,0 +1,12 @@
+
+running 4 tests
+test rejected_rate_and_live_replacement_preserve_audio_state ... ok
+test zero_depth_is_exact_delayed_input_with_active_neural_history ... ok
+test missing_disabled_and_unsupported_modes_keep_exact_classical_audio ... ok
+test callback_reset_and_frozen_drain_are_deterministic_without_heap_work ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)
+    Finished `release` profile [optimized] target(s) in 19.99s
+     Running tests/music_mask.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/music_mask-c249f1988cdbfc1a)

@@ -1,0 +1,3 @@
+    Checking sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)
+    Checking sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)
+    Finished `release` profile [optimized] target(s) in 1.79s

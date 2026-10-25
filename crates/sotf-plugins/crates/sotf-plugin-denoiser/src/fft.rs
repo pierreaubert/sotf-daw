@@ -36,6 +36,11 @@ impl DenoiserPlugin {
             // Apply smoothed Wiener gains to frequency domain
             for k in 0..self.config.spectrum_size {
                 let gain = self.gains.smoothed_gain[ch][k];
+                #[cfg(feature = "qa")]
+                let gain = self
+                    .qa_music_mask
+                    .as_ref()
+                    .map_or(gain, |mask| mask.gain(ch, k, gain, self.gains.zero_mix));
                 self.fft.freq_domain[ch][k] *= gain;
             }
 

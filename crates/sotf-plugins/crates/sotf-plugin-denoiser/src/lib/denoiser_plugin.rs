@@ -276,6 +276,8 @@ impl DenoiserAudition {
 
 /// Spectral denoiser using Wiener filter with MCRA noise estimation
 pub struct DenoiserPlugin {
+    #[cfg(feature = "qa")]
+    pub(super) qa_music_mask: Option<crate::music_mask::MusicPath>,
     pub(super) config: DenoiserConfig,
     pub(super) fft: DenoiserFft,
     pub(super) params: DenoiserParameters,
@@ -362,6 +364,8 @@ impl DenoiserPlugin {
             .collect();
 
         let mut p = Self {
+            #[cfg(feature = "qa")]
+            qa_music_mask: None,
             config: DenoiserConfig {
                 channels,
                 fft_size,
@@ -1120,6 +1124,20 @@ impl DenoiserPlugin {
 
         // Zero requested attenuation owns the final gain endpoint, including
         // every optional path. Estimation/analysis above stays warm.
+        #[cfg(feature = "qa")]
+        if capture_noise && let Some(mask) = &mut self.qa_music_mask {
+            mask.prepare(
+                &self.fft.freq_domain,
+                crate::music_mask::GainContext {
+                    sample_rate: self.config.sample_rate,
+                    fft_size: self.config.fft_size,
+                    reduction_db: self.params.reduction_db,
+                    floor: self.coeffs.floor_linear,
+                    transparency: self.params.transparency,
+                    curve: &self.curve.scales,
+                },
+            );
+        }
         self.apply_zero_reduction_endpoint();
 
         // Phase 4: Apply gains and inverse FFT
@@ -1494,6 +1512,10 @@ impl ParametricInPlacePlugin for DenoiserPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        if let Some(mask) = &mut self.qa_music_mask {
+            mask.reset();
+        }
         self.gains.zero_mix = 0.0;
         self.gains.zero_mix_initialized = false;
         // Reset MCRA state

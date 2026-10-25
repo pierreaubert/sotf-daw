@@ -1,0 +1,12 @@
+
+running 2 tests
+music_mask_parity feature_max=0.0000000000000026645352591003757 gain_max=0.000000029568352988285085
+test music_mask_tests::music_features_and_network_match_frozen_numpy_reference ... ok
+test music_mask_tests::selected_learned_gains_never_feed_native_estimator_or_gain_history ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 87 filtered out; finished in 0.05s
+
+   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)
+   Compiling sotf-plugin-denoiser v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-denoiser)
+    Finished `release` profile [optimized] target(s) in 16.38s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_denoiser-395b45e13926ac48)
