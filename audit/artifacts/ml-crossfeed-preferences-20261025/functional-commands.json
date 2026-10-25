@@ -1,0 +1,58 @@
+[
+  {
+    "case": "consistent",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "--session",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/consistent-session.json",
+      "--output",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/consistent"
+    ],
+    "exit_code": 0,
+    "seconds": 2.1835385418962687,
+    "output": "{\"accepted\": true, \"selected_id\": \"candidate-1\", \"reasons\": []}\n"
+  },
+  {
+    "case": "ties",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "--session",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/ties-session.json",
+      "--output",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/ties"
+    ],
+    "exit_code": 2,
+    "seconds": 1.2169957500882447,
+    "output": "{\"accepted\": false, \"selected_id\": null, \"reasons\": [\"unstable_programme_bootstrap\", \"no_held_programme_prediction_advantage\"]}\n"
+  },
+  {
+    "case": "heterogeneous",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "--session",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/heterogeneous-session.json",
+      "--output",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/heterogeneous"
+    ],
+    "exit_code": 2,
+    "seconds": 1.9142008328344673,
+    "output": "{\"accepted\": false, \"selected_id\": null, \"reasons\": [\"unstable_programme_bootstrap\", \"no_held_programme_prediction_advantage\"]}\n"
+  },
+  {
+    "case": "side-bias",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "--session",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/side-bias-session.json",
+      "--output",
+      "audit/artifacts/ml-crossfeed-preferences-20261025/side-bias"
+    ],
+    "exit_code": 2,
+    "seconds": 2.6742572081275284,
+    "output": "{\"accepted\": false, \"selected_id\": null, \"reasons\": [\"unstable_programme_bootstrap\", \"presentation_side_bias\"]}\n"
+  }
+]

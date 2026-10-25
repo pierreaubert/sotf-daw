@@ -1,0 +1,29 @@
+{
+  "seed": 20271026,
+  "sessions_per_family": 8,
+  "families": {
+    "strong": [
+      0,
+      2.5,
+      0.5
+    ],
+    "weak": [
+      0,
+      0,
+      0
+    ]
+  },
+  "heldout_programmes": 8,
+  "policy": {
+    "ridge": 0.01,
+    "bootstrap_samples": 200,
+    "bootstrap_seed": 20261026,
+    "minimum_programmes": 8,
+    "minimum_trials": 32,
+    "minimum_bootstrap_winner_fraction": 0.9,
+    "minimum_bootstrap_margin_p05": 0.1,
+    "minimum_lopo_log_loss_improvement": 0.01,
+    "maximum_abs_side_bias": 0.5
+  },
+  "qualification": "Synthetic logistic choices from the assumed model; not independent physical listening evidence"
+}

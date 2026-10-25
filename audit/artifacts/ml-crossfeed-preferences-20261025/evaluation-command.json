@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_crossfeed_preferences.py",
+    "--template",
+    "audit/artifacts/ml-crossfeed-preferences-20261025/consistent-session.json",
+    "--output",
+    "audit/artifacts/ml-crossfeed-preferences-20261025/fresh-synthetic"
+  ],
+  "exit_code": 0,
+  "seconds": 4.822752832900733,
+  "output": "{\"sessions\": 16, \"strong_accepted_correct\": 7, \"strong_accepted_wrong\": 0, \"weak_accepted\": 0, \"qualification\": \"Synthetic logistic choices from the assumed model; not independent physical listening evidence\"}\n"
+}

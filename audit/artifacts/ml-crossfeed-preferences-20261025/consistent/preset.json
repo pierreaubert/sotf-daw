@@ -1,0 +1,16 @@
+{
+  "mode": "Bauer",
+  "enabled": true,
+  "autogain_enabled": false,
+  "mix": 1.0,
+  "bauer_fcut_hz": 700,
+  "bauer_feed_db": 4.5,
+  "meier_level": 40,
+  "mb_low_freq_hz": 200,
+  "mb_mid_high_freq_hz": 4000,
+  "mb_low_feed_db": 6,
+  "mb_mid_feed_db": 3,
+  "mb_high_feed_db": 0,
+  "itd_delay_ms": 0,
+  "head_yaw_deg": 0
+}

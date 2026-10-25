@@ -1,0 +1,12 @@
+{
+  "format": "sotf-crossfeed-preference-assistant-v1",
+  "model": "ridge Bradley-Terry with presentation-side bias",
+  "weights": "per-session fitted utility table in report.json; no pretrained weights",
+  "inference_location": "offline Python CLI only",
+  "runtime_dsp": "unchanged native Crossfeed plugin",
+  "license": "GPL-3.0-or-later",
+  "training_data": "user supplied controlled pairwise preference observations; repository fixtures are synthetic only",
+  "source": "scripts/ml/fit_crossfeed_preferences.py",
+  "validation": "audit/artifacts/ml-crossfeed-preferences-20261025",
+  "status": "experimental_requires_listening_validation"
+}

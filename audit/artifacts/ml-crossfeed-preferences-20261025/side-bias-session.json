@@ -1,0 +1,749 @@
+{
+  "format": "sotf-crossfeed-preferences-v1",
+  "data_origin": "synthetic_validation",
+  "context": {
+    "listener_id": "synthetic-listener",
+    "headphones_id": "synthetic-headphones",
+    "session_id": "functional-side-bias",
+    "sample_rate": 48000
+  },
+  "protocol": {
+    "blinded": true,
+    "randomized_order": true,
+    "maximum_level_mismatch_db": 0.1
+  },
+  "candidates": [
+    {
+      "id": "candidate-0",
+      "parameters": {
+        "mode": "Off",
+        "enabled": true,
+        "autogain_enabled": false,
+        "mix": 1.0,
+        "bauer_fcut_hz": 700,
+        "bauer_feed_db": 0,
+        "meier_level": 40,
+        "mb_low_freq_hz": 200,
+        "mb_mid_high_freq_hz": 4000,
+        "mb_low_feed_db": 6,
+        "mb_mid_feed_db": 3,
+        "mb_high_feed_db": 0,
+        "itd_delay_ms": 0,
+        "head_yaw_deg": 0
+      }
+    },
+    {
+      "id": "candidate-1",
+      "parameters": {
+        "mode": "Bauer",
+        "enabled": true,
+        "autogain_enabled": false,
+        "mix": 1.0,
+        "bauer_fcut_hz": 700,
+        "bauer_feed_db": 4.5,
+        "meier_level": 40,
+        "mb_low_freq_hz": 200,
+        "mb_mid_high_freq_hz": 4000,
+        "mb_low_feed_db": 6,
+        "mb_mid_feed_db": 3,
+        "mb_high_feed_db": 0,
+        "itd_delay_ms": 0,
+        "head_yaw_deg": 0
+      }
+    },
+    {
+      "id": "candidate-2",
+      "parameters": {
+        "mode": "Bauer",
+        "enabled": true,
+        "autogain_enabled": false,
+        "mix": 1.0,
+        "bauer_fcut_hz": 700,
+        "bauer_feed_db": 9,
+        "meier_level": 40,
+        "mb_low_freq_hz": 200,
+        "mb_mid_high_freq_hz": 4000,
+        "mb_low_feed_db": 6,
+        "mb_mid_feed_db": 3,
+        "mb_high_feed_db": 0,
+        "itd_delay_ms": 0,
+        "head_yaw_deg": 0
+      }
+    }
+  ],
+  "baseline_id": "candidate-0",
+  "trials": [
+    {
+      "id": "trial-0",
+      "programme_id": "programme-0",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-1",
+      "programme_id": "programme-0",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-2",
+      "programme_id": "programme-0",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-3",
+      "programme_id": "programme-0",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-4",
+      "programme_id": "programme-0",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-5",
+      "programme_id": "programme-0",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-6",
+      "programme_id": "programme-0",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-7",
+      "programme_id": "programme-0",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-8",
+      "programme_id": "programme-0",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-9",
+      "programme_id": "programme-0",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-10",
+      "programme_id": "programme-0",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-11",
+      "programme_id": "programme-0",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-12",
+      "programme_id": "programme-1",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-13",
+      "programme_id": "programme-1",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-14",
+      "programme_id": "programme-1",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-15",
+      "programme_id": "programme-1",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-16",
+      "programme_id": "programme-1",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-17",
+      "programme_id": "programme-1",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-18",
+      "programme_id": "programme-1",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-19",
+      "programme_id": "programme-1",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-20",
+      "programme_id": "programme-1",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-21",
+      "programme_id": "programme-1",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-22",
+      "programme_id": "programme-1",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-23",
+      "programme_id": "programme-1",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-24",
+      "programme_id": "programme-2",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-25",
+      "programme_id": "programme-2",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-26",
+      "programme_id": "programme-2",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-27",
+      "programme_id": "programme-2",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-28",
+      "programme_id": "programme-2",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-29",
+      "programme_id": "programme-2",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-30",
+      "programme_id": "programme-2",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-31",
+      "programme_id": "programme-2",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-32",
+      "programme_id": "programme-2",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-33",
+      "programme_id": "programme-2",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-34",
+      "programme_id": "programme-2",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-35",
+      "programme_id": "programme-2",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-36",
+      "programme_id": "programme-3",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-37",
+      "programme_id": "programme-3",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-38",
+      "programme_id": "programme-3",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-39",
+      "programme_id": "programme-3",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-40",
+      "programme_id": "programme-3",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-41",
+      "programme_id": "programme-3",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-42",
+      "programme_id": "programme-3",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-43",
+      "programme_id": "programme-3",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-44",
+      "programme_id": "programme-3",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-45",
+      "programme_id": "programme-3",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-46",
+      "programme_id": "programme-3",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-47",
+      "programme_id": "programme-3",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-48",
+      "programme_id": "programme-4",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-49",
+      "programme_id": "programme-4",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-50",
+      "programme_id": "programme-4",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-51",
+      "programme_id": "programme-4",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-52",
+      "programme_id": "programme-4",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-53",
+      "programme_id": "programme-4",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-54",
+      "programme_id": "programme-4",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-55",
+      "programme_id": "programme-4",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-56",
+      "programme_id": "programme-4",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-57",
+      "programme_id": "programme-4",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-58",
+      "programme_id": "programme-4",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-59",
+      "programme_id": "programme-4",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-60",
+      "programme_id": "programme-5",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-61",
+      "programme_id": "programme-5",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-62",
+      "programme_id": "programme-5",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-63",
+      "programme_id": "programme-5",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-64",
+      "programme_id": "programme-5",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-65",
+      "programme_id": "programme-5",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-66",
+      "programme_id": "programme-5",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-67",
+      "programme_id": "programme-5",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-68",
+      "programme_id": "programme-5",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-69",
+      "programme_id": "programme-5",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-70",
+      "programme_id": "programme-5",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-71",
+      "programme_id": "programme-5",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-72",
+      "programme_id": "programme-6",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-73",
+      "programme_id": "programme-6",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-74",
+      "programme_id": "programme-6",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-75",
+      "programme_id": "programme-6",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-76",
+      "programme_id": "programme-6",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-77",
+      "programme_id": "programme-6",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-78",
+      "programme_id": "programme-6",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-79",
+      "programme_id": "programme-6",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-80",
+      "programme_id": "programme-6",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-81",
+      "programme_id": "programme-6",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-82",
+      "programme_id": "programme-6",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-83",
+      "programme_id": "programme-6",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-84",
+      "programme_id": "programme-7",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-85",
+      "programme_id": "programme-7",
+      "a": "candidate-0",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-86",
+      "programme_id": "programme-7",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-87",
+      "programme_id": "programme-7",
+      "a": "candidate-0",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-88",
+      "programme_id": "programme-7",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-89",
+      "programme_id": "programme-7",
+      "a": "candidate-1",
+      "b": "candidate-2",
+      "choice": "a"
+    },
+    {
+      "id": "trial-90",
+      "programme_id": "programme-7",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-91",
+      "programme_id": "programme-7",
+      "a": "candidate-1",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-92",
+      "programme_id": "programme-7",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-93",
+      "programme_id": "programme-7",
+      "a": "candidate-2",
+      "b": "candidate-0",
+      "choice": "a"
+    },
+    {
+      "id": "trial-94",
+      "programme_id": "programme-7",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    },
+    {
+      "id": "trial-95",
+      "programme_id": "programme-7",
+      "a": "candidate-2",
+      "b": "candidate-1",
+      "choice": "a"
+    }
+  ]
+}

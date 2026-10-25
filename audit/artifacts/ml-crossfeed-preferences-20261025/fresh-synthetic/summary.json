@@ -1,0 +1,227 @@
+{
+  "sessions": 16,
+  "rows": [
+    {
+      "case": "strong-0",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.43139498428456263,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-1",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.4477093707644897,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-2",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.44374686370651095,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-3",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.3985878772308842,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-4",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.5021669617791009,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-5",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.5012391748305597,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-6",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": true,
+      "selected_id": "candidate-1",
+      "heldout_log_loss": 0.48495636629003136,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": []
+    },
+    {
+      "case": "strong-7",
+      "family": "strong",
+      "expected_best": "candidate-1",
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.5743600058419567,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "presentation_side_bias"
+      ]
+    },
+    {
+      "case": "weak-0",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-2",
+      "vote_best": "candidate-2",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.7394728115760622,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-1",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-2",
+      "vote_best": "candidate-2",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.732434356603337,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-2",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.6954859526252011,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-3",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-1",
+      "vote_best": "candidate-1",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.716037635566912,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-4",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-0",
+      "vote_best": "candidate-0",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.6994729902679676,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-5",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-0",
+      "vote_best": "candidate-0",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.6881054033435955,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-6",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-0",
+      "vote_best": "candidate-0",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.7036627443432586,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    },
+    {
+      "case": "weak-7",
+      "family": "weak",
+      "expected_best": null,
+      "learned_best": "candidate-0",
+      "vote_best": "candidate-0",
+      "accepted": false,
+      "selected_id": null,
+      "heldout_log_loss": 0.6860210962576853,
+      "uniform_log_loss": 0.6931471805599453,
+      "reasons": [
+        "unstable_programme_bootstrap",
+        "no_held_programme_prediction_advantage"
+      ]
+    }
+  ],
+  "strong_accepted_correct": 7,
+  "strong_accepted_wrong": 0,
+  "weak_accepted": 0,
+  "qualification": "Synthetic logistic choices from the assumed model; not independent physical listening evidence"
+}

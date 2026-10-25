@@ -1,0 +1,16 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-crossfeed",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2"
+  ],
+  "target_dir": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+  "exit_code": 101,
+  "seconds": 49.6222255830653
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_crossfeed_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 4.124030709033832,
+    "output": "........\n----------------------------------------------------------------------\nRan 8 tests in 3.414s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "scripts/ml/evaluate_crossfeed_preferences.py",
+      "scripts/ml/analyze_crossfeed_preferences.py",
+      "scripts/ml/test_crossfeed_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03391400002874434,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "scripts/ml/evaluate_crossfeed_preferences.py",
+      "scripts/ml/analyze_crossfeed_preferences.py",
+      "scripts/ml/test_crossfeed_preferences.py"
+    ],
+    "exit_code": 1,
+    "seconds": 0.054014916997402906,
+    "output": "unformatted: File would be reformatted\n   --> scripts/ml/test_crossfeed_preferences.py:173:40\n    |\n172 |             ]\n    -             completed = subprocess.run(command, check=False, capture_output=True, text=True)\n173 +             completed = subprocess.run(\n174 +                 command, check=False, capture_output=True, text=True\n175 +             )\n176 |             self.assertNotEqual(completed.returncode, 0)\n--------------------------------------------------------------------------------\n180 |             command[-1] = str(root / \"invalid\")\n    -             completed = subprocess.run(command, check=False, capture_output=True, text=True)\n181 +             completed = subprocess.run(\n182 +                 command, check=False, capture_output=True, text=True\n183 +             )\n184 |             self.assertNotEqual(completed.returncode, 0)\n    |\n\n1 file would be reformatted, 3 files already formatted\n"
+  }
+]

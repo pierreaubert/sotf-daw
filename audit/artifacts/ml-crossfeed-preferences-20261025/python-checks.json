@@ -1,0 +1,44 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_crossfeed_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 1.581559041980654,
+    "output": "........\n----------------------------------------------------------------------\nRan 8 tests in 1.275s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "scripts/ml/evaluate_crossfeed_preferences.py",
+      "scripts/ml/analyze_crossfeed_preferences.py",
+      "scripts/ml/test_crossfeed_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.02242241590283811,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/fit_crossfeed_preferences.py",
+      "scripts/ml/evaluate_crossfeed_preferences.py",
+      "scripts/ml/analyze_crossfeed_preferences.py",
+      "scripts/ml/test_crossfeed_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.012647334020584822,
+    "output": "4 files already formatted\n"
+  }
+]

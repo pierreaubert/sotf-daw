@@ -163,8 +163,21 @@
       "requirements": [
         "ML personalization may select settings offline; it is not needed in this low-cost deterministic path."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/fit_crossfeed_preferences.py",
+        "scripts/ml/evaluate_crossfeed_preferences.py",
+        "scripts/ml/analyze_crossfeed_preferences.py",
+        "scripts/ml/test_crossfeed_preferences.py",
+        "crates/sotf-plugins/crates/sotf-plugin-crossfeed/tests/ml_offline_preferences.rs",
+        "crates/sotf-plugins/models/crossfeed-preferences",
+        "audit/artifacts/ml-crossfeed-preferences-20261025"
+      ],
+      "remaining": [
+        "Independent controlled preference sessions and confidence/admission-policy calibration; current fixtures and fresh simulations contain no real listening observations.",
+        "Representative programme/device/level repeatability and matched simple preference baselines; synthetic logistic cases do not prove listener benefit.",
+        "Application review/import UI and real host/platform acceptance."
+      ]
     },
     {
       "plugin_id": 17,

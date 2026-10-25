@@ -1,0 +1,220 @@
+   Compiling sotf-plugin-crossfeed v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-crossfeed)
+    Finished `release` profile [optimized] target(s) in 2m 45s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_crossfeed-57784f50f0c9d47a)
+
+running 60 tests
+test params::tests::mix_displays_as_percent_of_full_wet ... ok
+test params::tests::param_index_coverage ... ok
+test params::tests::param_indices_are_append_only ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test params::tests::roundtrip_serde ... ok
+test tests::scratch_capacity_matches_setup_contract ... ok
+test tests::autogain_target_lufs_updates_the_helper ... ok
+test tests::process_requires_initialized_matching_sample_rate ... ok
+test tests::hrtf_preserves_mono_fold_and_bounds_antiphase_input ... ok
+test tests::non_finite_audio_is_sanitized_before_dsp_state ... ok
+test tests::test_bauer_frequency_automation_is_click_free ... ok
+test tests::test_crossfeed_basic ... ok
+test tests::test_bauer_basic ... ok
+test tests::hrtf_render_is_partition_invariant ... ok
+test tests::test_bauer_mono_preserved ... ok
+test tests::test_bauer_uses_lowpass ... ok
+test tests::test_delay_line_supports_fractional_and_high_sample_rate_delay ... ok
+test tests::failed_parameter_batch_is_transactional ... ok
+test tests::test_disabled_passthrough ... ok
+test tests::test_empty_create_matches_documented_defaults ... ok
+test tests::disabled_crossfeed_resets_state_before_reentry ... ok
+test tests::test_explicit_mode_off_and_mb_preserved ... ok
+test tests::test_invalid_construction_and_sample_rate_are_rejected ... ok
+test tests::test_itd_delay ... ok
+test tests::test_itd_delay_accuracy ... ok
+test tests::test_itd_delay_zero ... ok
+test tests::mode_transition_resets_inactive_filter_state ... ok
+test tests::test_crossfeed_frequency_response_low_vs_high ... ok
+test tests::test_mb_feed_linear_cache_updates_on_parameter_change ... ok
+test tests::test_mb_basic ... ok
+test tests::test_itd_parameter ... ok
+test tests::test_itd_yaw_asymmetry ... ok
+test tests::test_mb_feed_has_true_off_endpoint_and_per_band_constant_power_norm ... ok
+test tests::test_presets_pin_modes_and_keep_yaw_zero ... ok
+test tests::test_meier_basic ... ok
+test tests::test_multiband_frequency_automation_preserves_crossover_state ... ok
+test tests::test_process_in_place_enabled_off_mode_passthrough ... ok
+test tests::test_mb_mono_signal_is_headroom_normalized ... ok
+test tests::test_missing_mode_state_preserves_explicit_values ... ok
+test tests::test_mix_ramp_no_step_discontinuity ... ok
+test tests::test_process_in_place_meier_with_itd ... ok
+test tests::test_bauer_difference_shelved ... ok
+test tests::hrtf_hard_pan_bleeds_after_interaural_delay_and_reports_zero_latency ... ok
+test tests::test_process_in_place_mix_zero_passthrough ... ok
+test tests::test_non_finite_yaw_is_rejected ... ok
+test tests::test_process_in_place_yaw_parameter_affects_itd ... ok
+test tests::test_meier_filter_coefficients_correct_after_sample_rate_change ... ok
+test tests::test_process_does_not_resize_buffers ... ok
+test tests::test_process_in_place_mb_with_itd ... ok
+test tests::test_reset_clears_all_filter_state ... ok
+test tests::test_unrelated_parameter_update_preserves_filter_history ... ok
+test tests::test_process_rejects_non_exact_stereo_buffer_lengths ... ok
+test tests::test_oversized_block_returns_error ... ok
+test tests::test_zero_delay_still_advances_delay_history ... ok
+test tests::test_yaw_itd_automation_is_partition_invariant ... ok
+test tests::test_public_preset_selection_applies_complete_preset ... ok
+test tests::test_yaw_only_itd_advances_delay_for_every_algorithm ... ok
+test tests::test_process_in_place_autogain_enabled ... ok
+test tests::public_presets_converge_to_fresh_reference_audio ... ok
+test tests::autogain_target_lufs_changes_compensation ... ok
+
+test result: ok. 60 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests bin/qa_crossfeed.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_crossfeed-80c1a4316a7283c8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/audit_bypass.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_bypass-00d12bd5085a711a)
+
+running 5 tests
+test dry_mix_preserves_input_bits_including_signed_zero ... ok
+test rapid_mix_retargets_remain_continuous_and_match_the_independent_clock ... ok
+test immediate_bypass_is_exact_and_reentry_has_no_stale_history ... ok
+test mix_endpoints_are_exact_after_smoothing ... ok
+test smoothed_comparison_matches_an_independent_ramp_with_current_filter_history ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/audit_mix_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_mix_clock-e19f37e6a9fd7cc9)
+
+running 1 test
+test mix_automation_waveform_is_invariant_to_callback_partitioning ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/auto_gain_smoothing.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/auto_gain_smoothing-85a6d5ec25539c6b)
+
+running 1 test
+test realtime_smoothing_changes_crossfeed_gain_in_both_directions_and_survives_reset ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.45s
+
+     Running tests/autogain_clock.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/autogain_clock-4c313f7b8212521f)
+
+running 6 tests
+test dynamic_mix_ramp_is_independent_of_callback_partition ... ok
+test realtime_controls_and_disabled_intervals_follow_an_independent_active_clock ... ok
+test reset_and_rejected_callbacks_preserve_the_measurement_epoch ... ok
+test public_audio_is_independent_of_callback_partition ... ok
+test later_input_suffix_cannot_change_earlier_compensated_output ... ok
+test independent_public_gain_reference_publishes_only_after_completed_intervals ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.91s
+
+     Running tests/autogain_clock_heap.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/autogain_clock_heap-1247757595998c2d)
+
+running 1 test
+test cold_meter_intervals_controls_and_reset_have_no_heap_activity ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+     Running tests/autogain_settled.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/autogain_settled-8d143be43fcf4264)
+
+running 3 tests
+test settled_output_reaches_target_under_hrtf ... ok
+test clamped_correction_pins_maximum_gain ... ok
+test settled_output_reaches_absolute_target_both_directions ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-4f358b5bf770ec1f)
+
+running 27 tests
+test disabled_plugin_passthrough ... ok
+test bauer_mode_changes_stereo_signal ... ok
+test from_preset_bauer_sets_bauer_mode ... ok
+test enabled_roundtrip ... ok
+test autogain_enable_roundtrip ... ok
+test default_plugin_has_expected_metadata ... ok
+test from_preset_meier_sets_meier_mode ... ok
+test itd_delay_roundtrip ... ok
+test from_preset_off_sets_mode_off ... ok
+test get_unknown_parameter_returns_none ... ok
+test head_yaw_roundtrip ... ok
+test bauer_params_roundtrip ... ok
+test initialize_changes_sample_rate ... ok
+test meier_level_roundtrip ... ok
+test meier_mode_changes_stereo_signal ... ok
+test mix_roundtrip ... ok
+test mode_off_passthrough ... ok
+test mode_transition_resets_and_continues ... ok
+test multiband_feed_roundtrip ... ok
+test set_head_yaw_with_non_float_fails ... ok
+test process_zero_input_produces_finite_output ... ok
+test multiband_mode_changes_stereo_signal ... ok
+test parameters_include_all_public_params ... ok
+test reset_then_process_continues ... ok
+test serialized_state_rejects_unknown_fields ... ok
+test set_unknown_parameter_fails ... ok
+test yaw_out_of_range_is_clamped ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/ml_offline_preferences.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/ml_offline_preferences-105628ee3c292d13)
+
+running 2 tests
+test preference_export_is_exactly_an_auditioned_native_setting ... ok
+test exported_setting_preserves_partial_callback_and_rate_contracts ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/param_registration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/param_registration-6e0306e68755d76f)
+
+running 6 tests
+test head_yaw_descriptor_preserves_legacy_shape ... ok
+test descriptor_ids_match_params_exactly_in_order ... ok
+test descriptor_metadata_matches_spec ... ok
+test head_yaw_roundtrip_clamp_and_reject_contract ... ok
+test preset_action_resets_yaw_to_preset_default ... ok
+test batch_path_rejects_integer_yaw_and_preserves_state_and_audio ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/rate_restore.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/rate_restore-684af88bd785c16f)
+
+running 4 tests
+test supported_rate_boundaries_follow_nyquist_validation ... ok
+test rejected_update_preserves_config_and_audio ... ok
+test reinitialize_matches_fresh_plugin_bit_exact ... ok
+test json_save_reload_preserves_config_and_audio ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+
+     Running tests/realtime_parameters.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/realtime_parameters-fb5b348a349f4550)
+
+running 2 tests
+test realtime_parameter_updates_and_reset_do_not_allocate ... ok
+test hrtf_processing_does_not_allocate ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/transfer.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/transfer-b8782f0aac91a3c4)
+
+running 10 tests
+test transfer_off_is_bit_exact_identity ... ok
+test hrtf_delay_base_and_cap_onsets ... ok
+test hrtf_crossfeed_gain_is_minus_9db ... ok
+test hrtf_shadow_rolloff_is_second_order ... ok
+test hrtf_fold_preserved_all_rates_partitions ... ok
+test mono_and_antiphase_follow_mode_transfer ... ok
+test transfer_bauer_matches_reference ... ok
+test transfer_meier_matches_reference ... ok
+test transfer_multiband_matches_reference ... ok
+test transfer_hrtf_matches_reference ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
+
+   Doc-tests sotf_plugin_crossfeed
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
