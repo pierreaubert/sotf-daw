@@ -1,3 +1,4 @@
+pub mod interval_config;
 #[cfg(feature = "interval-proposals")]
 pub mod interval_proposals;
 #[cfg(feature = "interval-proposals")]
@@ -39,6 +40,9 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct HissReducerPluginParams {
+    /// Explicit control-time review model selection; omitted in legacy presets.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub interval_review: Option<interval_config::IntervalReviewConfig>,
     #[serde(default = "d_enabled")]
     pub enabled: bool,
     #[serde(default = "d_threshold_db")]
@@ -183,6 +187,7 @@ fn d_transient_guard() -> bool {
 impl Default for HissReducerPluginParams {
     fn default() -> Self {
         Self {
+            interval_review: None,
             enabled: d_enabled(),
             threshold_db: d_threshold_db(),
             frequency_hz: d_frequency_hz(),
@@ -341,7 +346,70 @@ impl HissReducerPlugin {
         plugin.publish_profile_snapshot();
         plugin.refresh_backend_params();
         plugin.rebuild_cached_parameters();
+        plugin.configure_interval_review_from_config(plugin.params.interval_review.clone())?;
         Ok(plugin)
+    }
+
+    /// Prepares an explicit review configuration on a control thread.
+    ///
+    /// Invalid settings are rejected transactionally. Unavailable models, invalid
+    /// model bytes and feature-disabled builds retain classical audio and publish
+    /// an explicit unavailable diagnostic. The selected configuration is retained
+    /// for preset reconstruction. Reinitialization never reopens the model file.
+    ///
+    /// # Errors
+    /// Rejects invalid identity/age settings or a poisoned preparation slot.
+    pub fn configure_interval_review_from_config(
+        &mut self,
+        config: Option<interval_config::IntervalReviewConfig>,
+    ) -> PluginResult<()> {
+        use interval_config::IntervalReviewPreparation;
+        if let Some(config) = &config {
+            config.validate(self.sample_rate)?;
+        }
+        #[cfg(feature = "interval-proposals")]
+        {
+            let epoch = self
+                .interval_worker
+                .as_ref()
+                .map_or(self.interval_epoch, |worker| worker.epoch())
+                .checked_add(1)
+                .ok_or_else(|| "Hiss review epoch exhausted".to_string())?;
+            let (next, preparation) = if let Some(config) = &config {
+                match config
+                    .load(self.sample_rate, self.channels, self.params.frequency_hz)
+                    .and_then(|model| {
+                        interval_worker::IntervalWorker::new(
+                            model,
+                            config.maximum_endpoint_age_frames,
+                            epoch,
+                        )
+                    }) {
+                    Ok(worker) => {
+                        let reader = worker.reader();
+                        (Some(worker), IntervalReviewPreparation::Ready(reader))
+                    }
+                    Err(reason) => (None, IntervalReviewPreparation::Unavailable { reason }),
+                }
+            } else {
+                (None, IntervalReviewPreparation::Disabled)
+            };
+            self.snapshot.set_interval_review_preparation(preparation)?;
+            self.interval_worker = next;
+            self.interval_epoch = epoch;
+        }
+        #[cfg(not(feature = "interval-proposals"))]
+        self.snapshot
+            .set_interval_review_preparation(if config.is_some() {
+                IntervalReviewPreparation::Unavailable {
+                    reason: "Hiss interval review requires the interval-proposals build feature"
+                        .into(),
+                }
+            } else {
+                IntervalReviewPreparation::Disabled
+            })?;
+        self.params.interval_review = config;
+        Ok(())
     }
 
     /// Configures review-only inference on a control thread after initialization.
@@ -389,8 +457,13 @@ impl HissReducerPlugin {
         } else {
             None
         };
+        self.snapshot.set_interval_review_preparation(match &next {
+            Some(worker) => interval_config::IntervalReviewPreparation::Ready(worker.reader()),
+            None => interval_config::IntervalReviewPreparation::Disabled,
+        })?;
         self.interval_worker = next;
         self.interval_epoch = epoch;
+        self.params.interval_review = None;
         Ok(())
     }
 

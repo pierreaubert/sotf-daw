@@ -1,0 +1,21 @@
+{
+  "argv": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugins",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa",
+    "--lib",
+    "hiss_reducer_factory_review_unavailable",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 74.97010887507349
+}

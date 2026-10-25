@@ -9304,6 +9304,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sotf-host",
+ "tempfile",
 ]
 
 [[package]]

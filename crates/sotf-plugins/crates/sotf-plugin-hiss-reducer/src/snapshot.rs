@@ -8,6 +8,11 @@
 //! clone only: no allocation, deallocation, lock, or wait on any
 //! realtime path.
 //!
+//! Optional interval-review preparation uses a separate control-time slot.
+//! Its getter may clone an unavailable diagnostic and is for control/UI callers.
+//! Audio profile publication/export never accesses that slot. A retained ready
+//! reader observes worker results without replacing this profile snapshot.
+//!
 //! Consistency uses a bounded generation protocol over atomic element
 //! storage in safe Rust (no `unsafe`, no shared non-atomic buffers):
 //!
@@ -155,6 +160,7 @@ pub struct ProfileExport {
 /// Readers never mutate DSP state.
 #[derive(Debug)]
 pub struct ProfileSnapshot {
+    review: std::sync::RwLock<crate::interval_config::IntervalReviewPreparation>,
     channels: usize,
     generation: AtomicU64,
     flags: AtomicU64,
@@ -185,6 +191,9 @@ impl ProfileSnapshot {
             .collect::<Vec<_>>()
             .into_boxed_slice();
         Self {
+            review: std::sync::RwLock::new(
+                crate::interval_config::IntervalReviewPreparation::Disabled,
+            ),
             channels,
             generation: AtomicU64::new(0),
             flags: AtomicU64::new(0),
@@ -204,6 +213,33 @@ impl ProfileSnapshot {
     /// Returns the channel capacity fixed at construction.
     pub fn channels(&self) -> usize {
         self.channels
+    }
+
+    /// Reads optional review preparation and its retained diagnostic handle.
+    ///
+    /// Call on a control/UI thread: cloning an unavailable diagnostic may allocate.
+    /// This separate slot does not change profile payload or generation semantics.
+    ///
+    /// # Errors
+    /// Returns `SnapshotBusy` during a concurrent control-time reconfiguration.
+    pub fn interval_review_preparation(
+        &self,
+    ) -> Result<crate::interval_config::IntervalReviewPreparation, SnapshotBusy> {
+        self.review
+            .try_read()
+            .map(|value| value.clone())
+            .map_err(|_| SnapshotBusy)
+    }
+
+    pub(crate) fn set_interval_review_preparation(
+        &self,
+        value: crate::interval_config::IntervalReviewPreparation,
+    ) -> Result<(), String> {
+        *self
+            .review
+            .write()
+            .map_err(|_| "Hiss review preparation slot poisoned".to_string())? = value;
+        Ok(())
     }
 
     /// Publishes the stored profile and live flags atomically.

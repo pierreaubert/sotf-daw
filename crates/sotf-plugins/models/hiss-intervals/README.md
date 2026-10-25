@@ -12,7 +12,8 @@ model bytes, an explicit SHA256, policy and exact `IntervalContext` before use.
 `evaluate` extracts features and returns review scores for exactly one second of
 interleaved PCM. Both operations allocate and belong on a control/background
 thread. Finite parameters that overflow inference arithmetic return an error.
-No default model, preset field or automatic capture action is added.
+No default model or automatic capture action is added. An optional structural
+`interval_review` preset field selects an explicitly identified local model.
 Ten deterministic Python/Rust reference probes cover 44.1/48/96/192 kHz,
 one/two/eight channels, and the odd 883-point FFT at 44150 Hz. PCM byte hashes,
 all features, main/bootstrap scores, support distances and decisions match;
@@ -144,8 +145,9 @@ After initialization, call `configure_interval_review(Some(model), max_age_frame
 on the control thread. The model must match the current rate, physical channel
 count and cutoff; its explicit setup identity must describe the recording chain.
 `None` disables review. Configuration, replacement and destruction allocate or
-join the worker and must never run on the audio callback. No model path or review
-state is added to presets or the generic plugin factory at this checkpoint.
+join the worker and must never run on the audio callback. The generic factory
+also accepts the structural configuration below. Review observations and source
+audio are never serialized into presets.
 
 Feed actual source positions using `ProcessContext::with_sample_position` or
 equivalent transport metadata. Repeated default position0 is a discontinuity,
@@ -182,7 +184,7 @@ capture/draining, preserves the profile-use flag and retires the token on succes
 Rejected requests preserve the stored profile. The native measurement matches
 ordinary explicit capture in both backends. This explicit method is never called
 by the worker; identical audio with different intended uses still requires human
-judgment. A UI and host configuration/review flow remain to be integrated.
+judgment. A UI and host review/application command flow remain to be integrated.
 
 Native evidence is in `audit/artifacts/ml-hiss-worker-20261025`. Tests include
 in-flight reset, forced queue rejection, occupied-pool recovery, future/dead/stale
@@ -190,3 +192,54 @@ result refusal, geometry changes, allocation/deallocation guards, direct model
 agreement, bitwise audio/profile preservation, EOF tails and explicit original-PCM
 profile application. These establish local functional behavior, not real-source
 classification accuracy or cross-platform acceptance.
+
+## Factory configuration and retained diagnostics
+
+Enable the facade's `hiss-interval-review` feature to prepare inference. A Hiss
+parameter JSON may explicitly include:
+
+```json
+{
+  "interval_review": {
+    "model_path": "/caller/selected/model.json",
+    "sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+    "capture_setup_id": "synthetic-development-chain",
+    "maximum_endpoint_age_frames": 48000
+  }
+}
+```
+
+The displayed digest/setup describe only this repository's synthetic example;
+real callers must select their own admitted model and actual recording identity.
+Sample rate, physical channels and cutoff come from native construction and must
+match that model exactly. Omitted configuration remains disabled and is omitted
+from serialized legacy/default parameters. This is a structural control-time
+setting, not an automatable numeric parameter.
+
+`configure_interval_review_from_config` opens the selected file once, caps the
+read at1MiB plus one byte, and hashes/parses the same bytes. Invalid identity/age
+settings reject the configuration. Missing, changed, unadmitted, oversized or
+context-mismatched models and feature-disabled builds retain classical audio
+with an explicit `Unavailable` preparation diagnostic. They do not select a
+replacement model. Presets retain the requested configuration so reconstruction
+rechecks the identity; reinitialization reuses verified in-memory weights without
+reopening the path. Retrying preparation is an explicit control-thread action.
+Selecting a different model retires the previous worker even if the new model
+is unavailable. Direct in-memory configuration clears any old file configuration.
+
+`get_data()` still returns the same stable `Arc<ProfileSnapshot>`. Existing
+profile export/status calls retain their atomic payload and generation contract.
+On a control/UI thread, `interval_review_preparation()` returns `Disabled`,
+`Unavailable { reason }`, or `Ready(Arc<IntervalReviewReader>)`. This separate
+control-time slot may report contention; cloning an unavailable reason allocates.
+It is never read/written by the audio callback.
+
+The retained reader combines bounded atomic source metadata with the shared
+inference bridge's read-only result handle. `reader.status()` can observe the
+final asynchronously completed interval without another process/get_data call.
+It rejects concurrent resets, changed source epochs, stale/future results and
+shutdown. A reader cannot submit audio, reset the worker, apply a profile or keep
+the worker running. Keep final reader destruction on a control/UI thread.
+The generic factory path and feature-disabled fallback are validated in
+`audit/artifacts/ml-hiss-host-20261025`; review UI and live host application commands
+remain open.

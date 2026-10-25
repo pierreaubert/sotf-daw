@@ -9,9 +9,10 @@
 
 // Rust guideline compliant 2026-02-21
 use crate::interval_proposals::{IntervalContext, IntervalError, IntervalModel, IntervalScores};
-use plugins_inference::{AsyncInference, InferenceModel};
+use plugins_inference::{AsyncInference, InferenceModel, InferenceReader};
 use sha2::{Digest, Sha256};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 // Two queued intervals plus one being filled bound retained source audio.
 const POOL_BUFFERS: usize = 3;
@@ -55,6 +56,82 @@ pub struct IntervalWorkerStatus {
     pub partial_frames: usize,
     /// Source PCM storage reserved at setup, excluding model/FFT working memory.
     pub prepared_audio_bytes: usize,
+}
+
+// Single audio/control owner publishes these source words. Model output remains
+// in the inference bridge, with independent worker ownership and generation.
+#[derive(Debug)]
+struct ReviewSource {
+    version: AtomicU64,
+    words: [AtomicU64; 8],
+}
+
+/// Read-only hosted review handle that remains usable after the final callback.
+///
+/// The audio owner publishes source metadata; the inference worker publishes
+/// results independently. Readers check both source consistency and generation.
+/// Retaining this handle never keeps the worker running or permits capture.
+#[derive(Debug)]
+pub struct IntervalReviewReader {
+    inference: InferenceReader<IntervalObservation>,
+    source: Arc<ReviewSource>,
+    context: IntervalContext,
+    max_age: u64,
+}
+
+impl IntervalReviewReader {
+    /// Returns the explicitly selected recording context.
+    pub fn context(&self) -> &IntervalContext {
+        &self.context
+    }
+
+    /// Reads coherent source metadata and the newest available observation.
+    ///
+    /// Missing/contended inference is represented by no observation. No data
+    /// from a previous source epoch is returned, including after a concurrent reset.
+    ///
+    /// # Errors
+    /// Returns `SnapshotBusy` if source publication overlaps all bounded retries.
+    pub fn status(&self) -> Result<IntervalWorkerStatus, crate::snapshot::SnapshotBusy> {
+        for _ in 0..crate::snapshot::SNAPSHOT_READER_RETRIES {
+            let before = self.source.version.load(Ordering::SeqCst);
+            if before & 1 != 0 {
+                continue;
+            }
+            let words = self
+                .source
+                .words
+                .each_ref()
+                .map(|word| word.load(Ordering::SeqCst));
+            let clock = (words[2] != 0).then_some(words[1]);
+            let alive = self.inference.worker_alive();
+            let matches = words[3] != 0;
+            let observation = if matches && alive {
+                self.inference.with_latest(|value| *value).filter(|value| {
+                    value.epoch == words[0]
+                        && clock
+                            .and_then(|now| now.checked_sub(value.end_frame))
+                            .is_some_and(|age| age <= self.max_age)
+                })
+            } else {
+                None
+            };
+            if self.source.version.load(Ordering::SeqCst) == before {
+                return Ok(IntervalWorkerStatus {
+                    epoch: words[0],
+                    source_end_frame: clock,
+                    context_matches: matches,
+                    worker_alive: alive,
+                    observation,
+                    submitted_intervals: words[4],
+                    dropped_intervals: words[5],
+                    partial_frames: words[6] as usize,
+                    prepared_audio_bytes: words[7] as usize,
+                });
+            }
+        }
+        Err(crate::snapshot::SnapshotBusy)
+    }
 }
 
 struct SourceInterval {
@@ -111,6 +188,7 @@ pub(crate) struct IntervalWorker {
     max_age: u64,
     submitted: u64,
     dropped: u64,
+    source: Arc<ReviewSource>,
 }
 
 pub(crate) fn pcm_sha256(samples: &[f32]) -> [u8; 32] {
@@ -147,7 +225,7 @@ impl IntervalWorker {
             QUEUE_CAPACITY,
             "hiss-interval-review",
         )?;
-        Ok(Self {
+        let prepared = Self {
             worker,
             context,
             buffers,
@@ -161,7 +239,41 @@ impl IntervalWorker {
             max_age,
             submitted: 0,
             dropped: 0,
+            source: Arc::new(ReviewSource {
+                version: AtomicU64::new(0),
+                words: std::array::from_fn(|_| AtomicU64::new(0)),
+            }),
+        };
+        prepared.publish_source();
+        Ok(prepared)
+    }
+
+    pub(crate) fn reader(&self) -> Arc<IntervalReviewReader> {
+        Arc::new(IntervalReviewReader {
+            inference: self.worker.reader(),
+            source: Arc::clone(&self.source),
+            context: self.context.clone(),
+            max_age: self.max_age,
         })
+    }
+
+    fn publish_source(&self) {
+        let words = [
+            self.epoch,
+            self.clock.unwrap_or(0),
+            u64::from(self.clock.is_some()),
+            u64::from(self.context_matches && !self.exhausted),
+            self.submitted,
+            self.dropped,
+            self.partial as u64,
+            (POOL_BUFFERS * self.context.sample_rate * self.context.channels * size_of::<f32>())
+                as u64,
+        ];
+        self.source.version.fetch_add(1, Ordering::SeqCst);
+        for (slot, value) in self.source.words.iter().zip(words) {
+            slot.store(value, Ordering::SeqCst);
+        }
+        self.source.version.fetch_add(1, Ordering::SeqCst);
     }
 
     pub(crate) fn context(&self) -> &IntervalContext {
@@ -182,6 +294,7 @@ impl IntervalWorker {
         self.active = None;
         self.partial = 0;
         self.clock = None;
+        self.publish_source();
     }
 
     pub(crate) fn set_geometry(&mut self, rate: f64, channels: usize, cutoff: f32) {
@@ -191,6 +304,7 @@ impl IntervalWorker {
         if matches != self.context_matches {
             self.reset();
             self.context_matches = matches;
+            self.publish_source();
         }
     }
 
@@ -261,6 +375,7 @@ impl IntervalWorker {
             }
         }
         self.clock = Some(start_frame + frames as u64);
+        self.publish_source();
     }
 
     pub(crate) fn status(&self) -> IntervalWorkerStatus {

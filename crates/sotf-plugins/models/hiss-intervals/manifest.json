@@ -17,7 +17,7 @@
   "finding": "No advantage over classical baseline on32 simple fresh synthetic probes. Identical PCM used as desired noise effect and unwanted hiss gets the same review proposal; explicit diagnostic capture attenuates the desired effect9.593dB. No general automatic-capture adoption.",
   "remaining": [
     "Adequate real grouped labels, independent source/level/rate/layout shifts and calibrated abstention",
-    "Generic host structural configuration, review UI and actual DAW lifecycle/deadline validation",
+    "Review UI, live host application commands and actual DAW lifecycle/deadline validation",
     "Listener/host/resource/cross-platform validation"
   ],
   "license": "GPL-3.0-or-later",
@@ -27,6 +27,13 @@
     "thread_contract": "Model loading and direct evaluate allocate off the audio thread; native plugin worker handles inference asynchronously after explicit control-time configuration.",
     "evidence": "audit/artifacts/ml-hiss-rust-20261025"
   },
-  "worker_integration_scope": "Native Hiss API with bounded complete-window delivery and hash-bound explicit control-thread application; generic factory/preset/UI integration remains pending.",
-  "worker_evidence": "audit/artifacts/ml-hiss-worker-20261025"
+  "worker_integration_scope": "Native Hiss API and generic factory configuration with retained hosted diagnostics; UI and live host application commands remain pending.",
+  "worker_evidence": "audit/artifacts/ml-hiss-worker-20261025",
+  "host_configuration": {
+    "field": "interval_review",
+    "facade_feature": "hiss-interval-review",
+    "preparation": "Explicit bounded single-read model loading; requested path/hash/setup/age persist; unavailable or unsupported inference keeps classical audio and publishes a reason",
+    "diagnostics": "Stable ProfileSnapshot retains a read-only reader for final-callback results",
+    "evidence": "audit/artifacts/ml-hiss-host-20261025"
+  }
 }

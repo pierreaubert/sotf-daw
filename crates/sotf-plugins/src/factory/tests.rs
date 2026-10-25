@@ -424,6 +424,93 @@ fn hiss_reducer_factory_carries_transient_guard_through_render_and_reload() {
 }
 
 #[test]
+fn hiss_reducer_factory_review_unavailable_preserves_audio() {
+    use sotf_plugin_hiss_reducer::{
+        interval_config::IntervalReviewPreparation, snapshot::ProfileSnapshot,
+    };
+    let parameters = serde_json::json!({"interval_review": {
+        "model_path": "/nonexistent/sotf-hiss-review-model.json",
+        "sha256": "bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+        "capture_setup_id": "synthetic-development-chain", "maximum_endpoint_age_frames": 48000
+    }});
+    let mut configured = create_plugin("hiss_reducer", &parameters, 1, 48000).unwrap();
+    let mut classical = create_plugin("hiss_reducer", &serde_json::json!({}), 1, 48000).unwrap();
+    configured.initialize(48000.0).unwrap();
+    classical.initialize(48000.0).unwrap();
+    let snapshot = configured
+        .get_data()
+        .unwrap()
+        .downcast::<ProfileSnapshot>()
+        .unwrap();
+    assert!(matches!(
+        snapshot.interval_review_preparation().unwrap(),
+        IntervalReviewPreparation::Unavailable { .. }
+    ));
+    let source = vec![0.01; 1024];
+    let mut a = vec![0.0; 1024];
+    let mut b = a.clone();
+    let context = sotf_host::ProcessContext::new(48000.0, 1024);
+    configured.process(&source, &mut a, &context).unwrap();
+    classical.process(&source, &mut b, &context).unwrap();
+    assert_eq!(a, b);
+}
+
+#[cfg(feature = "hiss-interval-review")]
+#[test]
+fn hiss_reducer_factory_review_reader_observes_final_window() {
+    use sotf_plugin_hiss_reducer::{
+        interval_config::IntervalReviewPreparation, snapshot::ProfileSnapshot,
+    };
+    use std::time::{Duration, Instant};
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("models/hiss-intervals/model.synthetic.json");
+    let parameters = serde_json::json!({"interval_review": {"model_path":path,
+        "sha256":"bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de",
+        "capture_setup_id":"synthetic-development-chain","maximum_endpoint_age_frames":48000}});
+    let encoded = serde_json::to_vec(&parameters).unwrap();
+    let decoded: serde_json::Value = serde_json::from_slice(&encoded).unwrap();
+    let mut plugin = create_plugin("hiss_reducer", &decoded, 1, 48000).unwrap();
+    plugin.initialize(48000.0).unwrap();
+    let snapshot = plugin
+        .get_data()
+        .unwrap()
+        .downcast::<ProfileSnapshot>()
+        .unwrap();
+    let IntervalReviewPreparation::Ready(reader) = snapshot.interval_review_preparation().unwrap()
+    else {
+        panic!("factory did not prepare review");
+    };
+    let mut random = 20821026_u32;
+    let source: Vec<_> = (0..48000)
+        .map(|_| {
+            random = random.wrapping_mul(1664525).wrapping_add(1013904223);
+            ((f64::from(random) / 4294967296.0 - 0.5) * 0.02) as f32
+        })
+        .collect();
+    let mut output = vec![0.0; 48000];
+    for start in (0..48000).step_by(1024) {
+        let end = (start + 1024).min(48000);
+        let context = sotf_host::ProcessContext::new(48000.0, end - start)
+            .with_sample_position(100 + start as u64);
+        plugin
+            .process(&source[start..end], &mut output[start..end], &context)
+            .unwrap();
+    }
+    let deadline = Instant::now() + Duration::from_secs(3);
+    loop {
+        if let Some(value) = reader.status().unwrap().observation {
+            assert_eq!((value.start_frame, value.end_frame), (100, 48100));
+            assert!(value.scores.unwrap().review_candidate);
+            break;
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(1));
+    }
+    drop(plugin);
+    assert!(!reader.status().unwrap().worker_alive);
+}
+
+#[test]
 fn aec_catalog_factory_and_runtime_schema_are_canonical() {
     let entry = catalog_entry("aec").expect("AEC catalog entry");
     assert_eq!(entry.metadata.owning_crate, "sotf-plugin-aec");

@@ -1,0 +1,12 @@
+{
+  "crates/sotf-plugins/Cargo.toml": "cd23f3d04f586cbcb49ccf39962e7150737c2e4feb079508ef8942ff9c17d47a",
+  "crates/sotf-plugins/crates/plugins-inference/src/lib.rs": "b35f1119d90d14b3e9c49e6b6427d6b5075eacf2d12f0699e50495c5ee3dd141",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/Cargo.toml": "535569dcd56a1ec99bd33321e3a337b199365c5a5dd85400fb8b8cd4896524ea",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs": "87da83839aaa62cf3414ad362aeb94c100fcff406c704048ded0b53543604a20",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/snapshot.rs": "2a1c4ea9e660b814d38e7cfc73efa4a59a68af81ef27d0b001e251ad88cf7354",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_config.rs": "307113c577d7144507cb1b1204b766da7b0be2ad2751e7094bdcbe783fd59e36",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_worker.rs": "1f71944aebeb3822ab96c7dcf47a9b374a6c7cbd6c9b8d38e6062bda6e3e8f80",
+  "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/interval_config.rs": "7d56ba5dd83fd12d16d5cf8907187054110d3b0df53a65c0566b17dba6fabe54",
+  "crates/sotf-plugins/src/factory/tests.rs": "bf1d0432cbafe6053774be4352e049673d3735bceea19dcbe4483af9a859bf41",
+  "crates/sotf-plugins/examples/restore_mono.rs": "a8c5950d473b6582ac805712e427fa8c859a16d5f2d7eee3d548ea80e8b036a3"
+}

@@ -32,6 +32,7 @@ plugins-inference = { workspace = true, optional = true }
 
 [dev-dependencies]
 hound = { workspace = true }
+tempfile = { workspace = true }
 
 [[bin]]
 name = "qa-hiss-render"

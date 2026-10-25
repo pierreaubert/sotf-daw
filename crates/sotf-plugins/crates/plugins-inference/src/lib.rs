@@ -41,6 +41,66 @@ struct Shared<Output> {
     generation: AtomicU64,
     latest: Mutex<Option<(u64, Output)>>,
     shutdown: AtomicBool,
+    alive: AtomicBool,
+}
+
+/// Retained read-only access to an inference stream after its audio callback.
+///
+/// Cloning retains shared state without allocating. Reads never wait; closures
+/// must remain short and realtime safe when invoked on an audio thread. This
+/// handle cannot submit inputs, reset a stream or keep its worker running.
+pub struct InferenceReader<Output> {
+    shared: Arc<Shared<Output>>,
+}
+
+impl<Output> Clone for InferenceReader<Output> {
+    fn clone(&self) -> Self {
+        Self {
+            shared: Arc::clone(&self.shared),
+        }
+    }
+}
+
+impl<Output> std::fmt::Debug for InferenceReader<Output> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InferenceReader")
+            .field("worker_alive", &self.worker_alive())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<Output> InferenceReader<Output> {
+    /// Returns whether the worker is alive and has not begun shutdown.
+    pub fn worker_alive(&self) -> bool {
+        self.shared.alive.load(Ordering::Acquire) && !self.shared.shutdown.load(Ordering::Acquire)
+    }
+
+    /// Reads current-generation output without cloning, allocating or waiting.
+    ///
+    /// Returns `None` on shutdown, reset, absent output, contention or poisoning.
+    pub fn with_latest<R: Copy>(&self, read: impl FnOnce(&Output) -> R) -> Option<R> {
+        if !self.worker_alive() {
+            return None;
+        }
+        let generation = self.shared.generation.load(Ordering::Acquire);
+        let result = read_latest(&self.shared, read);
+        if self.worker_alive() && self.shared.generation.load(Ordering::Acquire) == generation {
+            result
+        } else {
+            None
+        }
+    }
+}
+
+fn read_latest<Output, R>(shared: &Shared<Output>, read: impl FnOnce(&Output) -> R) -> Option<R> {
+    let generation = shared.generation.load(Ordering::Acquire);
+    match shared.latest.try_lock() {
+        Ok(slot) => match &*slot {
+            Some((stamp, output)) if *stamp == generation => Some(read(output)),
+            _ => None,
+        },
+        Err(TryLockError::WouldBlock | TryLockError::Poisoned(_)) => None,
+    }
 }
 
 /// Audio-thread handle for one async inference stream.
@@ -68,6 +128,7 @@ impl<M: InferenceModel> AsyncInference<M> {
             generation: AtomicU64::new(0),
             latest: Mutex::new(None),
             shutdown: AtomicBool::new(false),
+            alive: AtomicBool::new(true),
         });
         // Some platforms lazily allocate the native mutex on first use. Prepare
         // it in its final Arc allocation before a callback can acquire it.
@@ -134,14 +195,16 @@ impl<M: InferenceModel> AsyncInference<M> {
     /// from an audio callback. The reference cannot escape the closure.
     #[inline]
     pub fn with_latest<R>(&self, read: impl FnOnce(&M::Output) -> R) -> Option<R> {
-        let generation = self.shared.generation.load(Ordering::Acquire);
-        match self.shared.latest.try_lock() {
-            Ok(slot) => match &*slot {
-                Some((stamp, output)) if *stamp == generation => Some(read(output)),
-                _ => None,
-            },
-            Err(TryLockError::WouldBlock) => None,
-            Err(TryLockError::Poisoned(_)) => None,
+        read_latest(&self.shared, read)
+    }
+
+    /// Creates a retained reader on a control thread.
+    ///
+    /// Dropping the final reader may free shared storage; keep its lifetime away
+    /// from audio callbacks. Reading never prolongs the worker's lifetime.
+    pub fn reader(&self) -> InferenceReader<M::Output> {
+        InferenceReader {
+            shared: Arc::clone(&self.shared),
         }
     }
 
@@ -207,6 +270,13 @@ fn inference_worker<M: InferenceModel>(
     mut consumer: rtrb::Consumer<Stamped<M::Input>>,
     shared: Arc<Shared<M::Output>>,
 ) {
+    struct AliveGuard<'a>(&'a AtomicBool);
+    impl Drop for AliveGuard<'_> {
+        fn drop(&mut self) {
+            self.0.store(false, Ordering::Release);
+        }
+    }
+    let _alive = AliveGuard(&shared.alive);
     loop {
         if shared.shutdown.load(Ordering::Acquire) {
             break;
@@ -445,6 +515,7 @@ mod tests {
                 generation: AtomicU64::new(0),
                 latest: Mutex::new(None),
                 shutdown: AtomicBool::new(false),
+                alive: AtomicBool::new(false),
             }),
             worker: None,
         };
@@ -454,6 +525,34 @@ mod tests {
         let returned = handle.try_send(input).unwrap_err();
         assert_eq!(returned.as_ptr(), storage);
         assert_eq!(returned, [2.0, 3.0]);
+    }
+
+    #[test]
+    fn retained_reader_tracks_reset_and_does_not_keep_worker_alive() {
+        let mut handle = spawn_passthrough(2);
+        let reader = handle.reader();
+        handle.send(vec![4.0]);
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while reader.with_latest(|value| value[0]) != Some(4.0) {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        assert_eq!(
+            reader.with_latest(|value| {
+                handle.reset();
+                value[0]
+            }),
+            None
+        );
+        assert!(reader.with_latest(|_| ()).is_none());
+        handle.send(vec![5.0]);
+        while reader.with_latest(|value| value[0]) != Some(5.0) {
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        drop(handle);
+        assert!(!reader.worker_alive());
+        assert!(reader.with_latest(|_| ()).is_none());
     }
 
     struct TrackedOutput {

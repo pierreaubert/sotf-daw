@@ -115,6 +115,7 @@ fn main() {
     // ── Stage 2: Hiss reducer ───────────────────────────────────────────
     println!("\n--- Stage 2: Hiss reducer ---");
     let hiss_params = HissReducerPluginParams {
+        interval_review: None,
         enabled: true,
         threshold_db: -35.0,
         frequency_hz: 3000.0,
