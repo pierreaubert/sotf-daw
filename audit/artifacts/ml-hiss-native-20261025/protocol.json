@@ -1,0 +1,41 @@
+{
+  "issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "scope": "Explicit native one-second capture and fresh programme render, not learned classification or automatic profile application",
+  "bounds": {
+    "request_bytes": 262144,
+    "programme_samples": 4000000,
+    "channels": [
+      1,
+      8
+    ],
+    "sample_rate": [
+      44100,
+      192000
+    ],
+    "callback_frames": [
+      1,
+      4096
+    ],
+    "drain_frames": 65536
+  },
+  "capture_condition": "exactly one second matching rate/channels; supplied profiles must match channels/rate/cutoff; no conflicting capture/profile",
+  "threshold_grid_db": [
+    -60,
+    -30
+  ],
+  "fixed_params": {
+    "strength": 1,
+    "frequency_hz": 4000,
+    "transient_guard": false,
+    "curve_low": 1,
+    "curve_mid": 1,
+    "curve_high": 1,
+    "link_mode": 0
+  },
+  "capture_noise_seed": 20691026,
+  "programme_noise_seed": 20701026,
+  "gaussian_sigma": 0.003,
+  "fixture_manifest": "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/fixtures/recorded/manifest.json",
+  "raw_external_root": "/Volumes/home_tmp/tmp/ml-hiss-native-20261025",
+  "full_ml_audit_complete": false
+}

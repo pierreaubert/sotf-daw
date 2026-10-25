@@ -1,0 +1,18 @@
+capture rate=44100 spectral=False max_floor_error_db=3.508440301e-06 max_spectral_error_relative_to_peak=1.39732481e-07
+capture rate=44100 spectral=True max_floor_error_db=3.508440301e-06 max_spectral_error_relative_to_peak=1.39732481e-07
+capture rate=48000 spectral=False max_floor_error_db=1.629114806e-06 max_spectral_error_relative_to_peak=1.512187871e-07
+capture rate=48000 spectral=True max_floor_error_db=1.629114806e-06 max_spectral_error_relative_to_peak=1.512187871e-07
+capture rate=96000 spectral=False max_floor_error_db=2.7925213e-06 max_spectral_error_relative_to_peak=1.495954507e-07
+capture rate=96000 spectral=True max_floor_error_db=2.7925213e-06 max_spectral_error_relative_to_peak=1.495954507e-07
+capture rate=192000 spectral=False max_floor_error_db=1.885931091e-06 max_spectral_error_relative_to_peak=1.618522017e-07
+capture rate=192000 spectral=True max_floor_error_db=1.885931091e-06 max_spectral_error_relative_to_peak=1.618522017e-07
+test_capture_matches_independent_floor_and_periodic_hann_spectrum (test_hiss_native.HissNativeTests.test_capture_matches_independent_floor_and_periodic_hann_spectrum) ... ok
+test_eight_channel_measured_preset_reopens_within_request_bound (test_hiss_native.HissNativeTests.test_eight_channel_measured_preset_reopens_within_request_bound) ... ok
+test_no_capture_is_not_silent_learning_and_disabled_delay_is_correct (test_hiss_native.HissNativeTests.test_no_capture_is_not_silent_learning_and_disabled_delay_is_correct) ... ok
+test_profile_mismatch_and_invalid_capture_refused_without_output (test_hiss_native.HissNativeTests.test_profile_mismatch_and_invalid_capture_refused_without_output) ... ok
+test_profile_reopening_callbacks_and_fresh_program_state (test_hiss_native.HissNativeTests.test_profile_reopening_callbacks_and_fresh_program_state) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.416s
+
+OK

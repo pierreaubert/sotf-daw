@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--offline",
+    "--locked",
+    "--release",
+    "-p",
+    "sotf-plugin-hiss-reducer",
+    "--features",
+    "qa",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-j",
+    "2"
+  ],
+  "exit_code": 0,
+  "seconds": 147.90510883298703
+}

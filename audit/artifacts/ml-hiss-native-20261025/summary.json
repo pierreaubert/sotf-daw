@@ -1,0 +1,35 @@
+{
+  "native_outputs_verified": 24,
+  "unique_profiles_verified": 2,
+  "selected_direct_dft_bins": [
+    0,
+    17,
+    85,
+    256,
+    512
+  ],
+  "max_attenuation_metric_difference_db": 2.6645352591003757e-15,
+  "max_profile_floor_difference_db": 2.23916718766759e-06,
+  "max_selected_dft_power_difference_relative_to_profile_peak": 8.34447581230109e-08,
+  "initial_minimum_threshold_outputs_bit_identical": 12,
+  "profile_floor_inflation_from_speech_db": 19.720314025878906,
+  "scope": "Recorded single-speaker development consequence only; no classifier, safe-interval or population quality claim.",
+  "status": "native_foundation_for_noise_only_interval_proposals",
+  "native_tests_passed": 131,
+  "native_tests_ignored": 0,
+  "python_integration_tests_passed": 5,
+  "passed_commands": [
+    "python-tests",
+    "native-tests",
+    "clippy",
+    "evaluation-command",
+    "analysis-command",
+    "ruff-command",
+    "ruff-format-command",
+    "rustfmt-command"
+  ],
+  "classifier_implemented": false,
+  "worker_integration_implemented": false,
+  "qa_binary_sha256": "88edf1dcdfa6ec99b2321efe4962408f01a67d84042b3b0629d82ad9f91b9e4b",
+  "full_ml_audit_complete": false
+}

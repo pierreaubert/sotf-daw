@@ -28,3 +28,8 @@ serde_json = { workspace = true }
 
 [dev-dependencies]
 hound = { workspace = true }
+
+[[bin]]
+name = "qa-hiss-render"
+path = "bin/qa_hiss_render.rs"
+required-features = ["qa"]

@@ -563,8 +563,22 @@
       "requirements": [
         "ML may classify safe noise-only intervals on a worker; avoid silently learning program material as noise."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/bin/qa_hiss_render.rs",
+        "scripts/ml/hiss_native.py",
+        "scripts/ml/test_hiss_native.py",
+        "scripts/ml/evaluate_hiss_capture.py",
+        "scripts/ml/analyze_hiss_capture.py",
+        "audit/artifacts/ml-hiss-native-20261025"
+      ],
+      "remaining": [
+        "Implement learned candidate noise-only interval classification/proposals from adequate whole-source labels; native capture/render is a validation foundation, not a classifier. The existing single-speaker sibilance fixture is insufficient training/population evidence.",
+        "Compare against classical stationarity/energy features and calibrate abstention/fallback so uncertainty cannot silently replace a stored profile with programme material.",
+        "Validate worker/source-clock provenance, discontinuity/reset, stale/overloaded/unavailable-model behavior, explicit application and host/profile lifecycle off the audio critical path.",
+        "Quantify native noise reduction and programme damage with all declared backend/threshold settings; current controlled capture contamination raises the floor by19.72dB and increases spectral speech high-band loss from0.785 to3.815dB at the default threshold. This is development-only conditional attenuation, not classification accuracy.",
+        "Real held-out noise/music/multilingual recordings, level/rate/layout shifts, listening and host/resource/cross-platform acceptance remain open."
+      ]
     },
     {
       "plugin_id": 29,

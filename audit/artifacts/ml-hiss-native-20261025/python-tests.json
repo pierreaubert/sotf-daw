@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "discover",
+    "-s",
+    "scripts/ml",
+    "-p",
+    "test_hiss_native.py",
+    "-v"
+  ],
+  "exit_code": 0,
+  "seconds": 1.1878512501716614
+}

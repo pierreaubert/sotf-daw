@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/hiss_native.py",
+    "scripts/ml/test_hiss_native.py",
+    "scripts/ml/evaluate_hiss_capture.py",
+    "scripts/ml/analyze_hiss_capture.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.010136582888662815
+}

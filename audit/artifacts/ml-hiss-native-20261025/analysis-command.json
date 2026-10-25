@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_hiss_capture.py",
+    "--evaluation",
+    "audit/artifacts/ml-hiss-native-20261025/capture-consequences.json",
+    "--initial",
+    "audit/artifacts/ml-hiss-native-20261025/capture-consequences-initial.json",
+    "--output",
+    "audit/artifacts/ml-hiss-native-20261025/independent-analysis.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.9409885830245912
+}
