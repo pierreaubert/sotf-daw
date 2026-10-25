@@ -1,0 +1,21 @@
+{"name": "fresh-00", "attempts": {"neural": 18, "analytic-only": 15}}
+{"name": "fresh-01", "attempts": {"neural": 21, "analytic-only": 15}}
+{"name": "fresh-02", "attempts": {"neural": 19, "analytic-only": 18}}
+{"name": "fresh-03", "attempts": {"neural": 15, "analytic-only": 18}}
+{"name": "fresh-04", "attempts": {"neural": 13, "analytic-only": 17}}
+{"name": "fresh-05", "attempts": {"neural": 16, "analytic-only": 21}}
+{"name": "fresh-06", "attempts": {"neural": 15, "analytic-only": 15}}
+{"name": "fresh-07", "attempts": {"neural": 16, "analytic-only": 20}}
+{"name": "fresh-08", "attempts": {"neural": 13, "analytic-only": 13}}
+{"name": "fresh-09", "attempts": {"neural": 17, "analytic-only": 17}}
+{"name": "fresh-10", "attempts": {"neural": 17, "analytic-only": 20}}
+{"name": "fresh-11", "attempts": {"neural": 17, "analytic-only": 14}}
+{"name": "rate-44100", "attempts": {"neural": 16, "analytic-only": 21}}
+{"name": "rate-96000", "attempts": {"neural": 19, "analytic-only": 19}}
+{"name": "rate-192000-six-channel", "attempts": {"neural": 21, "analytic-only": 12}}
+{"name": "fm-carrier", "attempts": {"neural": 17, "analytic-only": 12}}
+{"name": "square-carrier", "attempts": {"neural": 15, "analytic-only": 15}}
+{"name": "short-context", "attempts": {"neural": 24, "analytic-only": 15}}
+{"name": "long-context", "attempts": {"neural": 12, "analytic-only": 15}}
+{"name": "reference-noise", "attempts": {"neural": 20, "analytic-only": 16}}
+{"neural": {"waveform_qualified": 19, "total": 20, "median_attempts": 17.0, "median_seconds": 0.26338160410523415}, "analytic-only": {"waveform_qualified": 20, "total": 20, "median_attempts": 15.5, "median_seconds": 0.25201016606297344}}

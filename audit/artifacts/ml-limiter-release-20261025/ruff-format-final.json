@@ -1,0 +1,19 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/limiter_release.py",
+    "scripts/ml/limiter_release_cases.py",
+    "scripts/ml/train_limiter_release.py",
+    "scripts/ml/fit_limiter_release.py",
+    "scripts/ml/evaluate_limiter_release.py",
+    "scripts/ml/analyze_limiter_release.py",
+    "scripts/ml/verify_limiter_release_cli.py",
+    "scripts/ml/benchmark_limiter_release.py",
+    "scripts/ml/analyze_limiter_benchmark.py",
+    "scripts/ml/test_limiter_release.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.009400291135534644
+}

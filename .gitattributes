@@ -21,3 +21,5 @@ crates/sotf-plugins/models/compressor-static-fit/model.json -text
 audit/artifacts/ml-compressor-curve-20261025/** -text
 audit/artifacts/ml-loudness-preferences-20261025/** -text
 audit/artifacts/ml-limiter-native-20261025/** -text
+audit/artifacts/ml-limiter-release-20261025/** -text
+crates/sotf-plugins/models/limiter-release/model.json -text

@@ -1,0 +1,22 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_limiter_release.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-limiter-render",
+    "--model",
+    "/Volumes/home_tmp/tmp/ml-limiter-release-20261025/full/model.json",
+    "--model-sha256",
+    "3c43c23e701a252af29272c731fd6ab92475c717cf7b4b4d849648672de1d999",
+    "--training-report",
+    "/Volumes/home_tmp/tmp/ml-limiter-release-20261025/full/training-report.json",
+    "--work",
+    "/Volumes/home_tmp/tmp/ml-limiter-release-20261025/final",
+    "--output",
+    "audit/artifacts/ml-limiter-release-20261025/evaluation.json",
+    "--seed",
+    "20471026"
+  ],
+  "exit_code": 0,
+  "seconds": 29.502858666004613
+}

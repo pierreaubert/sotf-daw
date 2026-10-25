@@ -1,0 +1,339 @@
+{
+  "positive_admitted": 20,
+  "positive_total": 20,
+  "negative_admitted": 0,
+  "negative_total": 5,
+  "max_feature_error": 7.072120666862247e-14,
+  "max_torch_prediction_error_ms": 2.376054908381775e-11,
+  "max_raw_metric_error": 2.4980018054066022e-15,
+  "native_renders_independently_checked": 1582,
+  "native_samples_independently_checked": 652981308,
+  "methods": {
+    "neural": {
+      "waveform_qualified": 20,
+      "total": 20,
+      "median_attempts": 17.0
+    },
+    "classical-grid-and-analytic": {
+      "waveform_qualified": 20,
+      "total": 20,
+      "median_attempts": 23.0
+    }
+  },
+  "median_positive_initial_neural_log_error": 0.011540859906243652,
+  "median_positive_analytic_log_error": 0.0034116129224286123,
+  "rows": [
+    {
+      "name": "fresh-00",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 39.52803886147543,
+      "fitted_release_ms": 39.52885708790649,
+      "relative_release_error": 2.0699899479614814e-05,
+      "initial_neural_log_error": 0.003205649408467822,
+      "analytic_log_error": 0.0030846814102094486,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-01",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 18.03041642057063,
+      "fitted_release_ms": 18.030736585952695,
+      "relative_release_error": 1.7756959939108086e-05,
+      "initial_neural_log_error": 0.029984954930426484,
+      "analytic_log_error": 0.6995278727325603,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-02",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 43.73900773600393,
+      "fitted_release_ms": 43.74275795768804,
+      "relative_release_error": 8.574089532964457e-05,
+      "initial_neural_log_error": 0.014918765255704597,
+      "analytic_log_error": 0.006845388933059219,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-03",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 399.5220001942181,
+      "fitted_release_ms": 399.47478586404065,
+      "relative_release_error": 0.00011817704695737952,
+      "initial_neural_log_error": 0.01006589030625709,
+      "analytic_log_error": 0.0007929208964980049,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-04",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 66.3143454387291,
+      "fitted_release_ms": 66.31489026430312,
+      "relative_release_error": 8.215802635325176e-06,
+      "initial_neural_log_error": 0.007932409068417837,
+      "analytic_log_error": 0.004556871110210386,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-05",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 93.75485889571624,
+      "fitted_release_ms": 93.74712216608985,
+      "relative_release_error": 8.252083910653685e-05,
+      "initial_neural_log_error": 0.015265922960194083,
+      "analytic_log_error": 0.004010020894291645,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-06",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 196.15086113024807,
+      "fitted_release_ms": 196.10465661656443,
+      "relative_release_error": 0.0002355560073374896,
+      "initial_neural_log_error": 0.0035652546650818896,
+      "analytic_log_error": 0.0010434345683880278,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-07",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 449.62636773902244,
+      "fitted_release_ms": 449.702437141115,
+      "relative_release_error": 0.000169183587864552,
+      "initial_neural_log_error": 0.02733912889716938,
+      "analytic_log_error": 0.001981053171584679,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-08",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 53.678752293406355,
+      "fitted_release_ms": 53.68166179990385,
+      "relative_release_error": 5.4202200557629254e-05,
+      "initial_neural_log_error": 0.008460276635528388,
+      "analytic_log_error": 0.003738544434647776,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-09",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 704.2299501131708,
+      "fitted_release_ms": 704.3887829816935,
+      "relative_release_error": 0.0002255412007072799,
+      "initial_neural_log_error": 0.014835997502407022,
+      "analytic_log_error": 0.0016903886928913488,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-10",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 248.60199423710287,
+      "fitted_release_ms": 248.5160071029087,
+      "relative_release_error": 0.0003458827209252835,
+      "initial_neural_log_error": 0.01197841461678537,
+      "analytic_log_error": 0.0018256855618829118,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fresh-11",
+      "kind": "native-positive",
+      "accepted": true,
+      "true_release_ms": 118.68295353767887,
+      "fitted_release_ms": 118.67934921406649,
+      "relative_release_error": 3.0369345427772032e-05,
+      "initial_neural_log_error": 0.007690151777075575,
+      "analytic_log_error": 0.002840658959862908,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "rate-44100",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 17.058560562775696,
+      "fitted_release_ms": 17.058618876927554,
+      "relative_release_error": 3.418468495164362e-06,
+      "initial_neural_log_error": 0.029406238316411957,
+      "analytic_log_error": 0.009302742923174767,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "rate-96000",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 60.979844284539645,
+      "fitted_release_ms": 60.96579896644152,
+      "relative_release_error": 0.00023032722144367135,
+      "initial_neural_log_error": 0.008878855634554527,
+      "analytic_log_error": 0.005271086785441537,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "rate-192000-six-channel",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 966.3032453497843,
+      "fitted_release_ms": 972.2942716410533,
+      "relative_release_error": 0.006199944292953674,
+      "initial_neural_log_error": 0.006744196066496182,
+      "analytic_log_error": 0.0026842889455397523,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "fm-carrier",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 41.39107272476886,
+      "fitted_release_ms": 41.39502503353246,
+      "relative_release_error": 9.548698556050006e-05,
+      "initial_neural_log_error": 0.00010381814477341026,
+      "analytic_log_error": 0.008997353828676407,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "square-carrier",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 741.211490823691,
+      "fitted_release_ms": 740.2567181141924,
+      "relative_release_error": 0.0012881245384330775,
+      "initial_neural_log_error": 0.011103305195701933,
+      "analytic_log_error": 0.0004428275775415043,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "short-context",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 464.5658877221295,
+      "fitted_release_ms": 464.79837862864326,
+      "relative_release_error": 0.0005004476494254728,
+      "initial_neural_log_error": 0.307528777392434,
+      "analytic_log_error": 0.0009527166850339773,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "long-context",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 272.8757712790092,
+      "fitted_release_ms": 272.83069446430335,
+      "relative_release_error": 0.0001651917079137366,
+      "initial_neural_log_error": 0.22340976258250445,
+      "analytic_log_error": 0.0040633912777229995,
+      "relative_rms": 0.0,
+      "reasons": []
+    },
+    {
+      "name": "reference-noise",
+      "kind": "shift-positive",
+      "accepted": true,
+      "true_release_ms": 16.84507958841206,
+      "fitted_release_ms": 16.84459324058728,
+      "relative_release_error": 2.8871803319563405e-05,
+      "initial_neural_log_error": 0.017199384741106227,
+      "analytic_log_error": 0.9907962258121706,
+      "relative_rms": 0.0015258741072797812,
+      "reasons": []
+    },
+    {
+      "name": "silence",
+      "kind": "negative-control",
+      "accepted": false,
+      "true_release_ms": 100.0,
+      "fitted_release_ms": 10.0,
+      "relative_release_error": 0.9,
+      "initial_neural_log_error": 0.8445459219968399,
+      "analytic_log_error": 0.0,
+      "relative_rms": 0.0,
+      "reasons": [
+        "release ambiguous on sampled native objective"
+      ]
+    },
+    {
+      "name": "no-limiting",
+      "kind": "negative-control",
+      "accepted": false,
+      "true_release_ms": 100.0,
+      "fitted_release_ms": 10.0,
+      "relative_release_error": 0.9,
+      "initial_neural_log_error": 0.21891181007648441,
+      "analytic_log_error": 0.0,
+      "relative_rms": 0.0,
+      "reasons": [
+        "release ambiguous on sampled native objective"
+      ]
+    },
+    {
+      "name": "constant-clipping",
+      "kind": "negative-control",
+      "accepted": false,
+      "true_release_ms": 100.0,
+      "fitted_release_ms": 10.0,
+      "relative_release_error": 0.9,
+      "initial_neural_log_error": 0.9970519611227342,
+      "analytic_log_error": 0.0,
+      "relative_rms": 0.0,
+      "reasons": [
+        "release ambiguous on sampled native objective"
+      ]
+    },
+    {
+      "name": "impulse-silence",
+      "kind": "negative-control",
+      "accepted": false,
+      "true_release_ms": 100.0,
+      "fitted_release_ms": 10.0,
+      "relative_release_error": 0.9,
+      "initial_neural_log_error": 0.9996962567636793,
+      "analytic_log_error": 0.0,
+      "relative_rms": 0.0,
+      "reasons": [
+        "release ambiguous on sampled native objective"
+      ]
+    },
+    {
+      "name": "incompatible-reference",
+      "kind": "negative-control",
+      "accepted": false,
+      "true_release_ms": 100.0,
+      "fitted_release_ms": 681.1507503453691,
+      "relative_release_error": 5.811507503453692,
+      "initial_neural_log_error": 0.6568986552842411,
+      "analytic_log_error": 1.0,
+      "relative_rms": 0.34435215585972845,
+      "reasons": [
+        "native waveform mismatch",
+        "release ambiguous on sampled native objective"
+      ]
+    }
+  ],
+  "qualification": "Synthetic fixed-profile native evidence only. No claim of general ML benefit, hardware emulation, listener preference or real-time inference."
+}

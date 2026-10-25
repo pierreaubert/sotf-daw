@@ -1,0 +1,59 @@
+{
+  "purpose": "Frozen first full learned limiter release experiment; offline paired reference, deterministic native hard fully-wet ceiling unchanged.",
+  "tracking_issue": "http://192.168.1.32:3001/pierre/sotf-daw/issues/10",
+  "model": "32 features -> 32 tanh -> 1 tanh; release_ms=10**(2+output);1089 parameters; MSE on log10 release labels",
+  "training": {
+    "identities": 256,
+    "variants_per_identity": 2,
+    "development_identities": 48,
+    "seed": 20451026,
+    "development_seed": 20461026,
+    "epochs": 300,
+    "optimizer": "Adam lr0.003 batch64 gradient clip10",
+    "selection": "lowest development log10 MSE",
+    "sources": "Synthetic native 4-second stepped tone/multisine/noise probes at48k; no external audio; identity variants stay in split",
+    "license": "GPL-3.0-or-later"
+  },
+  "evaluation": {
+    "seed": 20471026,
+    "cases": 25,
+    "fresh_excited_positives": 12,
+    "shift_positives": 8,
+    "negative_controls": [
+      "silence",
+      "no limiting",
+      "constant clipping",
+      "impulse followed by silence",
+      "incompatible scaled reference"
+    ],
+    "shift_dimensions": [
+      "44.1/96/192k",
+      "six-channel full linking",
+      "FM/square carriers",
+      "2/8-second context",
+      "additive reference noise1e-4"
+    ]
+  },
+  "frozen_gates": {
+    "native_relative_rms": 0.002,
+    "native_max_absolute_error": 0.01,
+    "ambiguity": "Reject sampled native objective with another release at >=10% log separation and relative RMS within best+0.001;33 global log probes plus local +/-10%. Finite heuristic, not a continuous global identifiability proof.",
+    "native_sample_ceiling": "All full raw-output samples <=10**(threshold_db/20)+2e-6; no true peak certification",
+    "preset_reopen": "Native at changed callback257 (or17) must pass waveform gates"
+  },
+  "comparison": "Neural seeds/endpoints versus nine log-grid points plus analytic recovery seed; each <=24 attempted native evaluations; shared33-point ambiguity grid and reopen counted separately. Cache-miss/timing metrics include shared cache and must not be interpreted as isolated speed benchmarks.",
+  "scope": "Prototype supports native1x hard linked single release, no soft/ISP/dual/oversampling; each fixed profile control explicit. Other native modes remain separate validation work, not presumed supported.",
+  "sources": {
+    "scripts/ml/limiter_release.py": "2068b1e4e2151562ce09ad31c625f91c7e071b7a395557ec3bdb75dcb1172728",
+    "scripts/ml/limiter_release_cases.py": "69c12ded3804c67c4e2c72d8c292d2fcf6e484675e27a7bdad00589e224fab6c",
+    "scripts/ml/train_limiter_release.py": "7f7b996e20f3b5437e78aafcb99ce4a0e1f33b4c3db8c3674335b58bd374ad21",
+    "scripts/ml/fit_limiter_release.py": "4e89a376d3903bb3b476ab26330ea357b5b1778a6d4a60b7a8eb87e9e6ab5cbb",
+    "scripts/ml/evaluate_limiter_release.py": "5fc902850913ae316a08b32237358ea5fec4637d62ce312adb21bbd8a7eaca2c",
+    "scripts/ml/test_limiter_release.py": "bf0685a6b8f9c7dd75502f31d6440eec5f7acd642837967d49456bbe3abebf6d",
+    "scripts/ml/limiter_native.py": "6c1da2cb94adf4411ba3603588638c951fafd48ad3083e58db648a4c68ad8dd9"
+  },
+  "checkpoints": {
+    "smoke": "eceb52760e1b3d2f8c6a6fe91f617710c66358999aa59a1d27460140c4fa1d3c",
+    "full": "3c43c23e701a252af29272c731fd6ab92475c717cf7b4b4d849648672de1d999"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "format": "sotf-limiter-release-initializer-v1",
+  "weights": "model.json",
+  "weights_sha256": "3c43c23e701a252af29272c731fd6ab92475c717cf7b4b4d849648672de1d999",
+  "license": "GPL-3.0-or-later",
+  "origin": "Trained locally on synthetic dry/native-limiter pairs, with no external datasets or pretrained weights",
+  "architecture": {
+    "input_features": 32,
+    "hidden": 32,
+    "activation": "tanh",
+    "output": "10**(2+tanh(linear)) milliseconds",
+    "parameters": 1089
+  },
+  "training": {
+    "seed": 20451026,
+    "development_seed": 20461026,
+    "training_identities": 256,
+    "development_identities": 48,
+    "variants_per_identity": 2,
+    "selected_epoch": 299,
+    "development_log10_mse": 0.0005382014787755907,
+    "renderer_sha256": "033acdef7aed8a6573cf6158bd377c4e3fc144fb7241ec5ed264ad81f7b0d714",
+    "signal_seconds": 4,
+    "sample_rate": 48000
+  },
+  "runtime": "Offline NumPy initializer only; native scalar refinement and qualified preset export. No callback inference or native DSP change.",
+  "supported_profile": "1x hard fully wet fully linked single release, feed_forward true; no soft/ISP/true-peak/dual release. Explicit threshold[-20,0] and lookahead[0,20]ms; paired aligned raw f32 audio2\u20138s at44.1\u2013192kHz with1\u20138channels/max4M interleaved samples. Validation coverage is smaller than the admitted domain.",
+  "acceptance": "Native waveform relative RMS<=0.002, max absolute error<=0.01; sampled ambiguity rejection at>=10%release separation/best+0.001RMS; actual native sample ceiling check and different-callback preset reopen. Finite heuristic, not a global continuous identifiability guarantee.",
+  "evaluation": "audit/artifacts/ml-limiter-release-20261025",
+  "status": "experimental_offline_initializer_adoption_rejected",
+  "remaining": [
+    "Natural recorded material and independently set/calibrated tolerance/ambiguity coverage",
+    "Performance benefit over strong classical initialization must be assessed separately from synthetic fitting success",
+    "Other native limiter configurations, listening/user-reference acceptance, timing/memory and host/UI integration",
+    "Analog-limiter coloration and physical hardware matching are separate unimplemented requirements"
+  ],
+  "evaluation_results": {
+    "initial_native_qualified": 20,
+    "initial_excited_total": 20,
+    "negative_controls_admitted": 0,
+    "negative_controls_total": 5,
+    "fresh_equal_budget_analytic_only_qualified": 20,
+    "fresh_equal_budget_neural_qualified": 19,
+    "fresh_comparison_total": 20,
+    "median_analytic_attempts": 15.5,
+    "median_neural_attempts": 17
+  }
+}

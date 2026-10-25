@@ -1,0 +1,25 @@
+{"name": "fresh-00", "accepted": true, "true_release_ms": 39.52803886147543, "fitted_release_ms": 39.52885708790649, "reasons": []}
+{"name": "fresh-01", "accepted": true, "true_release_ms": 18.03041642057063, "fitted_release_ms": 18.030736585952695, "reasons": []}
+{"name": "fresh-02", "accepted": true, "true_release_ms": 43.73900773600393, "fitted_release_ms": 43.74275795768804, "reasons": []}
+{"name": "fresh-03", "accepted": true, "true_release_ms": 399.5220001942181, "fitted_release_ms": 399.47478586404065, "reasons": []}
+{"name": "fresh-04", "accepted": true, "true_release_ms": 66.3143454387291, "fitted_release_ms": 66.31489026430312, "reasons": []}
+{"name": "fresh-05", "accepted": true, "true_release_ms": 93.75485889571624, "fitted_release_ms": 93.74712216608985, "reasons": []}
+{"name": "fresh-06", "accepted": true, "true_release_ms": 196.15086113024807, "fitted_release_ms": 196.10465661656443, "reasons": []}
+{"name": "fresh-07", "accepted": true, "true_release_ms": 449.62636773902244, "fitted_release_ms": 449.702437141115, "reasons": []}
+{"name": "fresh-08", "accepted": true, "true_release_ms": 53.678752293406355, "fitted_release_ms": 53.68166179990385, "reasons": []}
+{"name": "fresh-09", "accepted": true, "true_release_ms": 704.2299501131708, "fitted_release_ms": 704.3887829816935, "reasons": []}
+{"name": "fresh-10", "accepted": true, "true_release_ms": 248.60199423710287, "fitted_release_ms": 248.5160071029087, "reasons": []}
+{"name": "fresh-11", "accepted": true, "true_release_ms": 118.68295353767887, "fitted_release_ms": 118.67934921406649, "reasons": []}
+{"name": "rate-44100", "accepted": true, "true_release_ms": 17.058560562775696, "fitted_release_ms": 17.058618876927554, "reasons": []}
+{"name": "rate-96000", "accepted": true, "true_release_ms": 60.979844284539645, "fitted_release_ms": 60.96579896644152, "reasons": []}
+{"name": "rate-192000-six-channel", "accepted": true, "true_release_ms": 966.3032453497843, "fitted_release_ms": 972.2942716410533, "reasons": []}
+{"name": "fm-carrier", "accepted": true, "true_release_ms": 41.39107272476886, "fitted_release_ms": 41.39502503353246, "reasons": []}
+{"name": "square-carrier", "accepted": true, "true_release_ms": 741.211490823691, "fitted_release_ms": 740.2567181141924, "reasons": []}
+{"name": "short-context", "accepted": true, "true_release_ms": 464.5658877221295, "fitted_release_ms": 464.79837862864326, "reasons": []}
+{"name": "long-context", "accepted": true, "true_release_ms": 272.8757712790092, "fitted_release_ms": 272.83069446430335, "reasons": []}
+{"name": "reference-noise", "accepted": true, "true_release_ms": 16.84507958841206, "fitted_release_ms": 16.84459324058728, "reasons": []}
+{"name": "silence", "accepted": false, "true_release_ms": 100.0, "fitted_release_ms": 10.0, "reasons": ["release ambiguous on sampled native objective"]}
+{"name": "no-limiting", "accepted": false, "true_release_ms": 100.0, "fitted_release_ms": 10.0, "reasons": ["release ambiguous on sampled native objective"]}
+{"name": "constant-clipping", "accepted": false, "true_release_ms": 100.0, "fitted_release_ms": 10.0, "reasons": ["release ambiguous on sampled native objective"]}
+{"name": "impulse-silence", "accepted": false, "true_release_ms": 100.0, "fitted_release_ms": 10.0, "reasons": ["release ambiguous on sampled native objective"]}
+{"name": "incompatible-reference", "accepted": false, "true_release_ms": 100.0, "fitted_release_ms": 681.1507503453691, "reasons": ["native waveform mismatch", "release ambiguous on sampled native objective"]}

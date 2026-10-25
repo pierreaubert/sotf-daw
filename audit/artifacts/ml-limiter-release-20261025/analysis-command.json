@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_limiter_release.py",
+    "--evaluation",
+    "audit/artifacts/ml-limiter-release-20261025/evaluation.json",
+    "--model",
+    "/Volumes/home_tmp/tmp/ml-limiter-release-20261025/full/model.json",
+    "--output",
+    "audit/artifacts/ml-limiter-release-20261025/independent-analysis.json"
+  ],
+  "exit_code": 0,
+  "seconds": 4.305257499916479
+}

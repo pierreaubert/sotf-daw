@@ -1,0 +1,8 @@
+{
+  "resolved_before_final_checks": [
+    "Marked shebang CLI scripts executable.",
+    "Added explicit subprocess check=False to the CLI verifier.",
+    "Moved benchmark objective into a per-method function to bind its evaluation state explicitly."
+  ],
+  "changes_after_initial_evaluation": "Added analytic-only comparison on fresh seed20481026. Model, feature extraction, primary fitter, quality/ambiguity gates and optimizer settings were unchanged. No weights or gates were tuned on either final evaluation."
+}

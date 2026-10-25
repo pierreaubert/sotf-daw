@@ -1,0 +1,54 @@
+{
+  "weights_sha256": "3c43c23e701a252af29272c731fd6ab92475c717cf7b4b4d849648672de1d999",
+  "renderer_sha256": "033acdef7aed8a6573cf6158bd377c4e3fc144fb7241ec5ed264ad81f7b0d714",
+  "all_frozen_sources_unchanged": true,
+  "checks": {
+    "smoke-train": 0,
+    "full-train": 0,
+    "evaluation-command": 0,
+    "analysis-command": 0,
+    "cli-command": 0,
+    "analytic-comparison-command": 0,
+    "analytic-analysis-command": 0,
+    "runtime-profile": 0,
+    "ruff-final": 0,
+    "ruff-format-final": 0,
+    "python-tests-final": 0,
+    "native-integration-final": 0
+  },
+  "initial_positive_admitted": [
+    20,
+    20
+  ],
+  "negative_admitted": [
+    0,
+    5
+  ],
+  "fresh_methods": {
+    "neural": {
+      "waveform_qualified": 19,
+      "total": 20,
+      "median_attempts": 17.0,
+      "median_seconds": 0.26338160410523415
+    },
+    "analytic-only": {
+      "waveform_qualified": 20,
+      "total": 20,
+      "median_attempts": 15.5,
+      "median_seconds": 0.25201016606297344
+    }
+  },
+  "adoption": "Reject general learned-initializer adoption: analytic-only qualifies20/20 versus neural19/20 and uses fewer median native evaluations15.5 versus17. Model remains an explicit offline experiment; native default unchanged.",
+  "independently_checked_native_renders": 2250,
+  "independently_checked_native_samples": 956733702,
+  "local_offline_cli_max_rss_bytes": 87900160,
+  "runtime_scope": "Single macOS offline process accounting with native subprocess/I/O; not concurrent process-tree or realtime/DAW budget",
+  "environment": {
+    "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
+    "platform": "macOS-27.0.1-arm64-arm-64bit",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "torch": "2.14.1"
+  },
+  "full_objective_status": "Active; Limiter proposal remains implementation_in_progress and broader ML ledger remains incomplete."
+}
