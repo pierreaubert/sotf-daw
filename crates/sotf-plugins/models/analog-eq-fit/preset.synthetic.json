@@ -1,0 +1,20 @@
+{
+  "plugin_type": "analog_eq",
+  "parameters": {
+    "low_freq": 100.0,
+    "low_gain": 2.2497777253450595,
+    "mid1_freq": 800.0,
+    "mid1_gain": 0.0,
+    "mid1_q": 1.0,
+    "mid2_freq": 3000.0,
+    "mid2_gain": 0.0,
+    "mid2_q": 1.0,
+    "high_freq": 10000.0,
+    "high_gain": -1.749765259254981,
+    "analog_model": "Static",
+    "analog_drive": 6.0,
+    "analog_color": 0.45000123977661133,
+    "analog_character": 0.3100000023841858,
+    "analog_trim": -1.0
+  }
+}

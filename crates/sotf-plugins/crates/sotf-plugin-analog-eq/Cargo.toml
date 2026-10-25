@@ -13,6 +13,14 @@ readme.workspace = true
 name = "sotf_plugin_analog_eq"
 path = "src/lib.rs"
 
+[features]
+qa = ["sotf-host/qa"]
+
+[[bin]]
+name = "qa-analog-eq-render"
+path = "bin/qa_analog_eq_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 sotf-plugin-analog-common = { workspace = true }

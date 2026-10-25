@@ -1,0 +1,43 @@
+   Compiling sotf-plugin-analog-common v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-common)
+   Compiling sotf-plugin-analog-limiter v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-limiter)
+   Compiling sotf-plugin-analog-compressor v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-compressor)
+   Compiling sotf-plugin-analog-eq v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-eq)
+   Compiling sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)
+   Compiling sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)
+error[E0599]: no method named `initialize` found for struct `AnalogEqPlugin` in the current scope
+   --> crates/sotf-plugins/src/factory/tests/analog_eq_fit.rs:24:19
+    |
+ 24 |         reference.initialize(f64::from(rate)).unwrap();
+    |                   ^^^^^^^^^^
+    |
+   ::: crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs:131:8
+    |
+131 |     fn initialize(&mut self, sample_rate: f64) -> PluginResult<()> {
+    |        ---------- the method is available for `AnalogEqPlugin` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: there is a method `initialize_with_mode` with a similar name, but with different arguments
+   --> crates/sotf-plugins/crates/sotf-host/src/parametric_in_place_plugin.rs:143:5
+    |
+143 | /     fn initialize_with_mode(
+144 | |         &mut self,
+145 | |         sample_rate: f64,
+146 | |         _mode: ProcessingMode,
+147 | |     ) -> PluginResult<()> {
+    | |_________________________^
+help: trait `ParametricInPlacePlugin` which provides `initialize` is implemented but not in scope; perhaps you want to import it
+    |
+  4 + use sotf_host::ParametricInPlacePlugin;
+    |
+
+error[E0599]: no method named `process` found for struct `AnalogEqPlugin` in the current scope
+  --> crates/sotf-plugins/src/factory/tests/analog_eq_fit.rs:36:14
+   |
+35 | /         reference
+36 | |             .process(&input, &mut expected, &ProcessContext::new(rate, frames))
+   | |             -^^^^^^^ method not found in `AnalogEqPlugin`
+   | |_____________|
+   |
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `sotf-plugins` (lib test) due to 2 previous errors

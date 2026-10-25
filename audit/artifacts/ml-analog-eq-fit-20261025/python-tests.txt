@@ -1,0 +1,14 @@
+test_candidate_is_frozen_before_held_reads_and_native_preset_reopens (test_analog_eq_hardware_fit.FitTests.test_candidate_is_frozen_before_held_reads_and_native_preset_reopens) ... ok
+test_candidate_tampering_aborts_before_preset_export (test_analog_eq_hardware_fit.FitTests.test_candidate_tampering_aborts_before_preset_export) ... ok
+test_out_of_family_waveform_retains_candidate_but_exports_no_preset (test_analog_eq_hardware_fit.FitTests.test_out_of_family_waveform_retains_candidate_but_exports_no_preset) ... ok
+test_preparation_rejects_identity_bounds_context_and_group_failures (test_analog_eq_hardware_fit.FitTests.test_preparation_rejects_identity_bounds_context_and_group_failures) ... ok
+test_actual_native_signal_flow_is_eq_then_shared_color_for_all_models (test_analog_eq_native.NativeTests.test_actual_native_signal_flow_is_eq_then_shared_color_for_all_models) ... ok
+test_independent_iir_waveform_and_json_callback_reopening (test_analog_eq_native.NativeTests.test_independent_iir_waveform_and_json_callback_reopening) ... ok
+test_native_identity_and_refusals (test_analog_eq_native.NativeTests.test_native_identity_and_refusals) ... ok
+test_all_numeric_controls_and_categorical_kernel_are_supported (test_analog_eq_native.SearchTests.test_all_numeric_controls_and_categorical_kernel_are_supported) ... ok
+test_posterior_reconstructs_training_observations_and_native_rounding_bounds (test_analog_eq_native.SearchTests.test_posterior_reconstructs_training_observations_and_native_rounding_bounds) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 1.796s
+
+OK

@@ -140,8 +140,27 @@
       "requirements": [
         "ML fitting is useful offline for matching measured hardware response/color; it is unnecessary for ordinary parametric EQ."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/fit_analog_eq_hardware.py",
+        "scripts/ml/analog_eq_fit.py",
+        "scripts/ml/analog_eq_native.py",
+        "scripts/ml/analog_eq_cases.py",
+        "scripts/ml/evaluate_analog_eq_fit.py",
+        "scripts/ml/analyze_analog_eq_fit.py",
+        "scripts/ml/test_analog_eq_hardware_fit.py",
+        "scripts/ml/test_analog_eq_native.py",
+        "crates/sotf-plugins/crates/sotf-plugin-analog-eq/bin/qa_analog_eq_render.rs",
+        "crates/sotf-plugins/src/factory/tests/analog_eq_fit.rs",
+        "crates/sotf-plugins/models/analog-eq-fit",
+        "audit/ml-analog-eq-fit-20261025.md",
+        "audit/artifacts/ml-analog-eq-fit-20261025"
+      ],
+      "remaining": [
+        "Fit and independently validate real calibrated hardware captures with verified rights, alignment, level and physical configuration evidence.",
+        "Broaden search-space/model coverage and configuration, rate, excitation and level shift tests; current equal-budget evaluation frees three controls across two models on generated targets only.",
+        "Establish perceptual suitability and any benefit over classical fitting; no general GP advantage, optimizer convergence or hardware knob identifiability is established."
+      ]
     },
     {
       "plugin_id": 8,

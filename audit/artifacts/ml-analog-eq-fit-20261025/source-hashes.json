@@ -1,0 +1,14 @@
+{
+  "scripts/ml/analog_eq_cases.py": "04e5d0111f44c96506fb0ded0a566c51ff1092575a7302d0c70c7b0e986b73f6",
+  "scripts/ml/analog_eq_fit.py": "d764f8dfbbab706b1a0476d849e0f98d533a6f5b86bd99f841650e7658d0605f",
+  "scripts/ml/analog_eq_native.py": "f2fe766e6a6db2c7371386d44dce24f434578cdac81b3f132f8b76f2ad629e58",
+  "scripts/ml/evaluate_analog_eq_fit.py": "188a4d566a2560fc997026177e3deda659307ed15f0189f3cfe6c39ad7d467b9",
+  "scripts/ml/fit_analog_eq_hardware.py": "a20d25acd857528f8e5f31412f369a818bd084edf61c8d47fdcbe942ad7edae3",
+  "scripts/ml/test_analog_eq_native.py": "4892ee043914a43550324c30ed6dd6dae046aa4620adf5cc79fdab0ca2a38ec4",
+  "scripts/ml/test_analog_eq_hardware_fit.py": "b333d59bc66b7ae509471480cfc0b5027a0a1d9a1f3b8f78e6089dc0a9f17a34",
+  "scripts/ml/analyze_analog_eq_fit.py": "bd20e842ed72d772890f34b84c0f9dff6db29cf31d8351f31ebc21d423712fe8",
+  "crates/sotf-plugins/crates/sotf-plugin-analog-eq/Cargo.toml": "946ac21690eea94090f6247fecc5bc574160de506b4cbbdcda00157ec7e945d0",
+  "crates/sotf-plugins/crates/sotf-plugin-analog-eq/bin/qa_analog_eq_render.rs": "1e6386dc61fd444948af30faccf924bf6d96848ca81028a01e1ae90545aa2e74",
+  "crates/sotf-plugins/src/factory/tests/analog_eq_fit.rs": "8b6c5eb9f10ff16e6e52badaf9a822c0fc9b70c6ce7c0d65f1e7049789999c67",
+  "crates/sotf-plugins/models/analog-eq-fit/preset.synthetic.json": "2561806451272fad861c1bb5097ad26e837af4dfa9a563a3e0b08932f706a4eb"
+}

@@ -1,0 +1,1 @@
+{"accepted": true, "reasons": [], "automatic_apply": false, "hardware_model_admitted": false}

@@ -1,0 +1,27 @@
+{
+  "format": "sotf-analog-eq-fit-evidence-v1",
+  "status": "synthetic_validation_only",
+  "deployment": false,
+  "runtime_inference": false,
+  "automatic_apply": false,
+  "hardware_model_admitted": false,
+  "preset": {
+    "file": "preset.synthetic.json",
+    "bytes": 473,
+    "sha256": "2561806451272fad861c1bb5097ad26e837af4dfa9a563a3e0b08932f706a4eb"
+  },
+  "provenance": {
+    "source": "project-generated native Analog EQ response pairs",
+    "license": "GPL-3.0-or-later",
+    "external_training_audio": false
+  },
+  "data": "12 source groups:8 train,2 validation,2 test; two generated transfer systems over the same sources",
+  "search": "14 numeric controls and6 native models supported; evaluation frees low/high shelf gain and color across Harmonics/Static only",
+  "baseline": "Sobol plus bounded Nelder-Mead,128 objective cap, same as GP comparator",
+  "limitations": [
+    "Both search refinements reached their evaluation limits",
+    "No real calibrated hardware captures or measured hardware matching validated",
+    "No general surrogate advantage or physical parameter recovery established",
+    "No model inference in the audio callback"
+  ]
+}

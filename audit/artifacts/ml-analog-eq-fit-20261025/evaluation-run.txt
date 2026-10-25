@@ -1,0 +1,235 @@
+{
+  "cases": [
+    {
+      "case": "matched",
+      "method": "classical",
+      "spec": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/matched-captures/fit-spec.json",
+      "report": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/matched-classical/report.json",
+      "accepted": true,
+      "reasons": [],
+      "evaluations": 127,
+      "training_loss": 1.3477254758299447e-09,
+      "held_relative_rms": [
+        4.018852760196397e-05,
+        4.137694858477847e-05,
+        4.199962184710531e-05,
+        4.1797790738062146e-05
+      ],
+      "reopen_max": 0.0,
+      "selected_parameters": {
+        "low_freq": 100.0,
+        "low_gain": 2.24990758188088,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.7506956758903844,
+        "analog_model": "Static",
+        "analog_drive": 6.0,
+        "analog_color": 0.44997742772102356,
+        "analog_character": 0.3100000023841858,
+        "analog_trim": -1.0
+      },
+      "refinement_result": {
+        "success": false,
+        "message": "Maximum number of function evaluations has been exceeded.",
+        "evaluations": 86
+      },
+      "generated_target_controls": {
+        "low_freq": 100.0,
+        "low_gain": 2.25,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.75,
+        "analog_model": "Static",
+        "analog_drive": 6,
+        "analog_color": 0.45,
+        "analog_character": 0.31,
+        "analog_trim": -1
+      }
+    },
+    {
+      "case": "matched",
+      "method": "surrogate",
+      "spec": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/matched-captures/fit-spec.json",
+      "report": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/matched-surrogate/report.json",
+      "accepted": true,
+      "reasons": [],
+      "evaluations": 127,
+      "training_loss": 1.8643733199321881e-10,
+      "held_relative_rms": [
+        1.4850328252867137e-05,
+        1.5313385983791066e-05,
+        1.567849367387048e-05,
+        1.570683783447298e-05
+      ],
+      "reopen_max": 0.0,
+      "selected_parameters": {
+        "low_freq": 100.0,
+        "low_gain": 2.2497777253450595,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.749765259254981,
+        "analog_model": "Static",
+        "analog_drive": 6.0,
+        "analog_color": 0.45000123977661133,
+        "analog_character": 0.3100000023841858,
+        "analog_trim": -1.0
+      },
+      "refinement_result": {
+        "success": false,
+        "message": "Maximum number of function evaluations has been exceeded.",
+        "evaluations": 86
+      },
+      "generated_target_controls": {
+        "low_freq": 100.0,
+        "low_gain": 2.25,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.75,
+        "analog_model": "Static",
+        "analog_drive": 6,
+        "analog_color": 0.45,
+        "analog_character": 0.31,
+        "analog_trim": -1
+      }
+    },
+    {
+      "case": "delay",
+      "method": "classical",
+      "spec": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/delay-captures/fit-spec.json",
+      "report": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/delay-classical/report.json",
+      "accepted": false,
+      "reasons": [
+        "test_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "evaluations": 126,
+      "training_loss": 0.9161584997210792,
+      "held_relative_rms": [
+        1.1217238882529657,
+        1.1742999729820733,
+        1.1951700222963395,
+        1.204939197233587
+      ],
+      "reopen_max": 0.0,
+      "selected_parameters": {
+        "low_freq": 100.0,
+        "low_gain": 4.0,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -4.0,
+        "analog_model": "Static",
+        "analog_drive": 6.0,
+        "analog_color": 0.2762224078178406,
+        "analog_character": 0.3100000023841858,
+        "analog_trim": -1.0
+      },
+      "refinement_result": {
+        "success": false,
+        "message": "Maximum number of function evaluations has been exceeded.",
+        "evaluations": 86
+      },
+      "generated_target_controls": {
+        "low_freq": 100.0,
+        "low_gain": 2.25,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.75,
+        "analog_model": "Static",
+        "analog_drive": 6,
+        "analog_color": 0.45,
+        "analog_character": 0.31,
+        "analog_trim": -1
+      }
+    },
+    {
+      "case": "delay",
+      "method": "surrogate",
+      "spec": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/delay-captures/fit-spec.json",
+      "report": "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/delay-surrogate/report.json",
+      "accepted": false,
+      "reasons": [
+        "test_waveform_mismatch",
+        "validation_waveform_mismatch"
+      ],
+      "evaluations": 127,
+      "training_loss": 0.9161584995528236,
+      "held_relative_rms": [
+        1.121724470109832,
+        1.1743006445027293,
+        1.1951707260313944,
+        1.2049399603899587
+      ],
+      "reopen_max": 0.0,
+      "selected_parameters": {
+        "low_freq": 100.0,
+        "low_gain": 4.0,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -4.0,
+        "analog_model": "Static",
+        "analog_drive": 6.0,
+        "analog_color": 0.2762296795845032,
+        "analog_character": 0.3100000023841858,
+        "analog_trim": -1.0
+      },
+      "refinement_result": {
+        "success": false,
+        "message": "Maximum number of function evaluations has been exceeded.",
+        "evaluations": 86
+      },
+      "generated_target_controls": {
+        "low_freq": 100.0,
+        "low_gain": 2.25,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.75,
+        "analog_model": "Static",
+        "analog_drive": 6,
+        "analog_color": 0.45,
+        "analog_character": 0.31,
+        "analog_trim": -1
+      }
+    }
+  ],
+  "scope": "Two generated transfer systems over the same12 source groups; no real hardware, calibrated parameter recovery, perceptual quality or general surrogate advantage claim."
+}

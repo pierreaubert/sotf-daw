@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/analog_eq_cases.py",
+    "scripts/ml/analog_eq_fit.py",
+    "scripts/ml/analog_eq_native.py",
+    "scripts/ml/evaluate_analog_eq_fit.py",
+    "scripts/ml/fit_analog_eq_hardware.py",
+    "scripts/ml/test_analog_eq_native.py",
+    "scripts/ml/test_analog_eq_hardware_fit.py",
+    "scripts/ml/analyze_analog_eq_fit.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.012288209050893784
+}

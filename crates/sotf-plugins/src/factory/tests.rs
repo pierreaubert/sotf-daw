@@ -25,6 +25,7 @@ use std::path::PathBuf;
 use tempfile::tempdir;
 
 mod ambisonics_preferences;
+mod analog_eq_fit;
 mod misc;
 
 #[test]

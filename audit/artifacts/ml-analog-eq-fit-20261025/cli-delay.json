@@ -1,0 +1,16 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/fit_analog_eq_hardware.py",
+    "--spec",
+    "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/cli-delay-spec.json",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-analog-eq-render",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-analog-eq-fit-20261025/cli-delay",
+    "--budget",
+    "40"
+  ],
+  "exit_code": 2,
+  "seconds": 4.107549416832626
+}

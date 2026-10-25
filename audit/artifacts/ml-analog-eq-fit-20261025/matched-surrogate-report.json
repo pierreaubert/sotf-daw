@@ -1,0 +1,3708 @@
+{
+  "accepted": true,
+  "parameters": {
+    "low_freq": 100.0,
+    "low_gain": 2.2497777253450595,
+    "mid1_freq": 800.0,
+    "mid1_gain": 0.0,
+    "mid1_q": 1.0,
+    "mid2_freq": 3000.0,
+    "mid2_gain": 0.0,
+    "mid2_q": 1.0,
+    "high_freq": 10000.0,
+    "high_gain": -1.749765259254981,
+    "analog_model": "Static",
+    "analog_drive": 6.0,
+    "analog_color": 0.45000123977661133,
+    "analog_character": 0.3100000023841858,
+    "analog_trim": -1.0
+  },
+  "reasons": [],
+  "data_origin": "synthetic_validation",
+  "context": {
+    "data_origin": "synthetic_validation",
+    "sample_rate": 48000,
+    "channels": 1,
+    "hardware": {
+      "manufacturer": "synthetic",
+      "model": "synthetic-analog-eq-matched",
+      "unit_id": "not-real-hardware",
+      "configuration_id": "synthetic-fixed-point",
+      "controls": {
+        "gain": 2,
+        "path": "synthetic"
+      }
+    },
+    "calibration": {
+      "calibration_id": "synthetic-level-reference",
+      "measurement_reference": "synthetic-only",
+      "reference": "full_scale_sine_rms_dbu",
+      "shared_clock": true,
+      "input_full_scale_dbu": 18.0,
+      "output_full_scale_dbu": 24.0,
+      "source_impedance_ohms": 100.0,
+      "load_impedance_ohms": 10000.0
+    },
+    "alignment": {
+      "paired_sample_aligned": true,
+      "maximum_residual_delay_samples": 0.0,
+      "maximum_residual_drift_ppm": 0.0,
+      "measurement_reference": "same-generated-sample-clock"
+    },
+    "rights": {
+      "license": "GPL-3.0-or-later",
+      "attribution": "project-generated synthetic fixture",
+      "reference": "local-generated-test",
+      "training_authorized": true
+    }
+  },
+  "policy": {
+    "minimum_train_groups": 8,
+    "minimum_validation_groups": 2,
+    "minimum_test_groups": 2,
+    "maximum_relative_rms": 0.01,
+    "maximum_abs_error": 0.01,
+    "maximum_sample_peak": 0.999,
+    "reopen_tolerance": 1e-07
+  },
+  "renderer_sha256": "6d9ed8d6c8513bc5e0c698c0fe1347896ebf96777ee532bdb8f15c3b2efafc97",
+  "capture_manifest_sha256": "cd4d66f3451ef87480464c2a9937857e13a93416d2430f7e4f7047ee5a751758",
+  "candidate_sha256": "2561806451272fad861c1bb5097ad26e837af4dfa9a563a3e0b08932f706a4eb",
+  "search": {
+    "method": "surrogate",
+    "budget": 128,
+    "evaluations": 127,
+    "best": {
+      "x": [
+        0.7812222156681324,
+        0.28127934259312737,
+        0.4500012372109665
+      ],
+      "model": "Static",
+      "parameters": {
+        "low_freq": 100.0,
+        "low_gain": 2.2497777253450595,
+        "mid1_freq": 800.0,
+        "mid1_gain": 0.0,
+        "mid1_q": 1.0,
+        "mid2_freq": 3000.0,
+        "mid2_gain": 0.0,
+        "mid2_q": 1.0,
+        "high_freq": 10000.0,
+        "high_gain": -1.749765259254981,
+        "analog_model": "Static",
+        "analog_drive": 6.0,
+        "analog_color": 0.45000123977661133,
+        "analog_character": 0.3100000023841858,
+        "analog_trim": -1.0
+      },
+      "loss": 1.8643733199321881e-10
+    },
+    "trace": [
+      {
+        "x": [
+          0.5,
+          0.5,
+          0.2
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.0,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 0.0,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.20000000298023224,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.09767082118199205
+      },
+      {
+        "x": [
+          0.5,
+          0.5,
+          0.2
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.0,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 0.0,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.20000000298023224,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.09767084542042173
+      },
+      {
+        "x": [
+          0.1162126176059246,
+          0.8340019406750798,
+          0.7789198039099574
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.070299059152603,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 2.6720155254006386,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.7789198160171509,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.17833074367788895
+      },
+      {
+        "x": [
+          0.8915557786822319,
+          0.34898765198886395,
+          0.46765555534511805
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.1324462294578552,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.2080987840890884,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.46765556931495667,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0013837049600856463
+      },
+      {
+        "x": [
+          0.7706166142597795,
+          0.9329795371741056,
+          0.19672129023820162
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.1649329140782356,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 3.463836297392845,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.19672128558158875,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.27546669415678515
+      },
+      {
+        "x": [
+          0.23723999876528978,
+          0.38284067530184984,
+          0.5098168915137649
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -2.1020800098776817,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -0.9372745975852013,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.5098168849945068,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.018762392376960684
+      },
+      {
+        "x": [
+          0.38111601397395134,
+          0.6049541961401701,
+          0.34057204984128475
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -0.9510718882083893,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 0.8396335691213608,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.3405720591545105,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.055015209439069956
+      },
+      {
+        "x": [
+          0.5954009518027306,
+          0.08606151957064867,
+          0.9060166664421558
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.7632076144218445,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.3115078434348106,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.9060166478157043,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.22772566473417183
+      },
+      {
+        "x": [
+          0.9650461887916522,
+          0.35529214611523163,
+          0.395517502973333
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.7203695103332173,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.157662831078147,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.395517498254776,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.006887834121569875
+      },
+      {
+        "x": [
+          0.8320517875627944,
+          0.3124034996730379,
+          0.5145510887090688
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.6564143005023553,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.500772002615697,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.5145511031150818,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.004045411371959453
+      },
+      {
+        "x": [
+          0.913222886474376,
+          0.4574727830981678,
+          0.5061247481999748
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.305783091795008,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -0.3402177352146576,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.50612473487854,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0073369503714594735
+      },
+      {
+        "x": [
+          0.8311817675814033,
+          0.3631111392640863,
+          0.4306278894820244
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.649454140651226,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.0951108858873098,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.43062788248062134,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.002151873293866123
+      },
+      {
+        "x": [
+          0.9224331561501902,
+          0.277632595419264,
+          0.4570333566275275
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.3794652492015214,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.778939236645888,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4570333659648895,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0010475682778177927
+      },
+      {
+        "x": [
+          0.9880755968254905,
+          0.1639315958834595,
+          0.5117661702383457
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.904604774603924,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.688547232932324,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.5117661952972412,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.009864578017813186
+      },
+      {
+        "x": [
+          0.8721391464065601,
+          0.14486851014629057,
+          0.2450662328308115
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.9771131712524808,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.8410519188296757,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.24506622552871704,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.03855904513750993
+      },
+      {
+        "x": [
+          0.0472053000703454,
+          0.8910779561847448,
+          0.9850689359009266
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.622357599437237,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 3.1286236494779587,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.9850689172744751,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.39767201161944055
+      },
+      {
+        "x": [
+          0.8324159774929285,
+          0.03836365696042776,
+          0.8476182641461492
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.659327819943428,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.693090744316578,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.8476182818412781,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.17965456306653682
+      },
+      {
+        "x": [
+          0.8603884506574108,
+          0.28296953768041444,
+          0.4258625873789018
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.883107605259286,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7362436985566845,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.425862580537796,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0009389828358472391
+      },
+      {
+        "x": [
+          0.038951869122684,
+          0.09163340739905834,
+          0.5565911531448364
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.688385047018528,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.2669327408075333,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.5565911531448364,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.046809419134920656
+      },
+      {
+        "x": [
+          0.05319285299628973,
+          0.1973368413746357,
+          0.17881160508841276
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.574457176029682,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.4213052690029144,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.17881160974502563,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.08621430692621201
+      },
+      {
+        "x": [
+          0.8688226927339605,
+          0.27462826243272764,
+          0.449260543503173
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.950581541871684,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.8029739005381789,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44926053285598755,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0003914527378565957
+      },
+      {
+        "x": [
+          0.8413655827257102,
+          0.16552825625041037,
+          0.4574318192188823
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.7309246618056813,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.6757739499967172,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.457431823015213,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0026454250281204585
+      },
+      {
+        "x": [
+          0.9127921699250698,
+          0.5848684026333459,
+          0.29729881508064393
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.3023373594005587,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 0.6789472210667675,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.2972988188266754,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.061947034999259395
+      },
+      {
+        "x": [
+          0.8818414198806639,
+          0.28304609742778175,
+          0.4756754600543223
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.054731359045311,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.735631220577746,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.47567546367645264,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0011358353607488552
+      },
+      {
+        "x": [
+          0.9341199057301677,
+          0.20940138718953177,
+          0.42058559214778624
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.4729592458413414,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.324788902483746,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.42058560252189636,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.002514993276128253
+      },
+      {
+        "x": [
+          0.8689879648841506,
+          0.24682823593896974,
+          0.44059478380256234
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.951903719073205,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.025374112488242,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44059479236602783,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0006241483946161628
+      },
+      {
+        "x": [
+          0.8162258118391037,
+          0.979413359425962,
+          0.6666905218735337
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.5298064947128296,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 3.8353068754076958,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.6666905283927917,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.13718409451656932
+      },
+      {
+        "x": [
+          1.0,
+          0.03582839973857321,
+          0.3177982077711119
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 4.0,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.7133728020914143,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.3177981972694397,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0219381017482222
+      },
+      {
+        "x": [
+          0.580159330740571,
+          0.04354795627295971,
+          0.029726664535701275
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.6412746459245682,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.6516163498163223,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.02972666546702385,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.15534906064576343
+      },
+      {
+        "x": [
+          0.9266436994075775,
+          0.7151252524927258,
+          0.896566504612565
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.41314959526062,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 1.7210020199418068,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.8965665102005005,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.22423029901237643
+      },
+      {
+        "x": [
+          0.06703926436603069,
+          0.7838890235871077,
+          0.15252436324954033
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.4636858850717545,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 2.2711121886968613,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.15252436697483063,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.24947738404826614
+      },
+      {
+        "x": [
+          0.6036282060667872,
+          0.4799399562180042,
+          0.546838266775012
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.8290256485342979,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -0.1604803502559662,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.5468382835388184,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.014640688696977627
+      },
+      {
+        "x": [
+          0.031166868284344673,
+          0.4006025977432728,
+          0.008262579329311848
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.7506650537252426,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -0.7951792180538177,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.008262579329311848,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.23976876586009413
+      },
+      {
+        "x": [
+          0.06498445570468903,
+          0.11801093444228172,
+          0.9643586007878184
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.480124354362488,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.055912524461746,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.9643586277961731,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.3095523542136657
+      },
+      {
+        "x": [
+          0.5541877606883645,
+          0.009358104318380356,
+          0.4961068704724312
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.43350208550691605,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.925135165452957,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4961068630218506,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.01776461250556359
+      },
+      {
+        "x": [
+          1.0,
+          0.16758524194168126,
+          0.2088207209246543
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 4.0,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.65931806446655,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.20882071554660797,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.05639138249575219
+      },
+      {
+        "x": [
+          0.06498445570468903,
+          0.11801093444228172,
+          0.9643586007878184
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -3.480124354362488,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.055912524461746,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.9643586277961731,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.30955255404187176
+      },
+      {
+        "x": [
+          0.580159330740571,
+          0.04354795627295971,
+          0.029726664535701275
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.6412746459245682,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -3.6516163498163223,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.02972666546702385,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.15534905996568898
+      },
+      {
+        "x": [
+          0.5320151848718524,
+          0.9416149146854877,
+          0.05202319845557213
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 0.2561214789748192,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 3.532919317483902,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.05202319845557213,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.4593688886100493
+      },
+      {
+        "x": [
+          0.830065772014983,
+          0.2841437287619324,
+          0.4677801875398034
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.640526176119864,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7268501699045409,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4677801728248596,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00041781056763108603
+      },
+      {
+        "x": [
+          0.9737465623321162,
+          0.0,
+          0.11194169068946913
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.7899724986569296,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -4.0,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.11194168776273727,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.10305128819074705
+      },
+      {
+        "x": [
+          0.3028832236304879,
+          0.9020143439993262,
+          0.13789095170795918
+        ],
+        "model": "Harmonics",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": -1.5769342109560966,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": 3.21611475199461,
+          "analog_model": "Harmonics",
+          "analog_drive": 6.0,
+          "analog_color": 0.13789094984531403,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.3253837178905482
+      },
+      {
+        "x": [
+          0.9488226927339605,
+          0.27462826243272764,
+          0.449260543503173
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.5905815418716838,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.8029739005381789,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44926053285598755,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0014234478481549404
+      },
+      {
+        "x": [
+          0.8688226927339605,
+          0.35462826243272766,
+          0.449260543503173
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.950581541871684,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.1629739005381787,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44926053285598755,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.001336611513040233
+      },
+      {
+        "x": [
+          0.8688226927339605,
+          0.27462826243272764,
+          0.529260543503173
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.950581541871684,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.8029739005381789,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.529260516166687,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.006853588137717398
+      },
+      {
+        "x": [
+          0.9221560260672937,
+          0.327961595766061,
+          0.36926054350317317
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.37724820853835,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.376307233871512,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.3692605495452881,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.009216416159225535
+      },
+      {
+        "x": [
+          0.8821560260672938,
+          0.28796159576606095,
+          0.48926054350317305
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.0572482085383506,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6963072338715124,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.48926055431365967,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0019791962018178583
+      },
+      {
+        "x": [
+          0.9088226927339604,
+          0.3146282624327277,
+          0.4092605435031731
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.2705815418716835,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.4829739005381786,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4092605412006378,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0031031940075741957
+      },
+      {
+        "x": [
+          0.8888226927339604,
+          0.29462826243272766,
+          0.46926054350317303
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 3.1105815418716833,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6429739005381787,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4692605435848236,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0008906030423585421
+      },
+      {
+        "x": [
+          0.8021560260672937,
+          0.3412949290993944,
+          0.46259387683650643
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.41724820853835,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.2696405672048447,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4625938832759857,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0006322822332109697
+      },
+      {
+        "x": [
+          0.8377115816228494,
+          0.25240604021050544,
+          0.47148276572539527
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.7016926529827954,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.9807516783159564,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4714827537536621,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0009134971897104201
+      },
+      {
+        "x": [
+          0.8454893594006272,
+          0.27796159576606094,
+          0.4659272101698397
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.7639148752050176,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7763072338715125,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.46592721343040466,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00046664937063692607
+      },
+      {
+        "x": [
+          0.7888226927339606,
+          0.30129492909939437,
+          0.4492605435031729
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.3105815418716844,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.589640567204845,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44926053285598755,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 7.716701183965052e-05
+      },
+      {
+        "x": [
+          0.7388226927339607,
+          0.30462826243272767,
+          0.4392605435031729
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 1.9105815418716858,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.5629739005381786,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4392605423927307,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0003661923877947386
+      },
+      {
+        "x": [
+          0.8666004705117385,
+          0.2279615957660609,
+          0.44703832128095056
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.932803764093908,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -2.176307233871513,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44703832268714905,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0008438865886988769
+      },
+      {
+        "x": [
+          0.8182671371784049,
+          0.31296159576606103,
+          0.4587049879476175
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.5461370974272395,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.4963072338715118,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45870497822761536,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00024272966941798552
+      },
+      {
+        "x": [
+          0.8051189890302568,
+          0.3146282624327278,
+          0.4388901731328025
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.4409519122420544,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.4829739005381777,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.43889015913009644,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00044662952091825963
+      },
+      {
+        "x": [
+          0.8152115816228493,
+          0.3054615957660611,
+          0.4456494323920618
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.5216926529827948,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.5563072338715114,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4456494450569153,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00020317253265687065
+      },
+      {
+        "x": [
+          0.7460449149561826,
+          0.33851715132161664,
+          0.45314943239206174
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 1.968359319649461,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.291862789427067,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4531494379043579,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.0006317861827705991
+      },
+      {
+        "x": [
+          0.838128248289516,
+          0.2906004846549499,
+          0.45023276572539517
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.7050259863161283,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6751961227604006,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45023277401924133,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00017077091893770183
+      },
+      {
+        "x": [
+          0.8098412112524791,
+          0.2852764105808759,
+          0.4380568397994691
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.478729690019833,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.717788715352993,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4380568265914917,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00020466801474206784
+      },
+      {
+        "x": [
+          0.8119476927339605,
+          0.29219770687717217,
+          0.4432188768365062
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.495581541871684,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6624183449826226,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4432188868522644,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00013362007967866355
+      },
+      {
+        "x": [
+          0.8107208408821085,
+          0.28393381798828327,
+          0.44949202498465435
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.485766727056868,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7285294560937339,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44949203729629517,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 4.4208171859721164e-05
+      },
+      {
+        "x": [
+          0.8084754705117381,
+          0.2731699290993944,
+          0.4514133212809506
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.4678037640939046,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.8146405672048447,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4514133334159851,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 5.35235827910535e-05
+      },
+      {
+        "x": [
+          0.7695325692771704,
+          0.29435048465494995,
+          0.4444148644908271
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.156260554217363,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6451961227604004,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4444148540496826,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 8.732232515691927e-05
+      },
+      {
+        "x": [
+          0.7674363758615325,
+          0.29418844761791285,
+          0.45222607848259677
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.1394910068922597,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6464924190566972,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45222607254981995,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.822773436513506e-05
+      },
+      {
+        "x": [
+          0.7451807174253184,
+          0.2951838179882832,
+          0.4567296793056421
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 1.9614457394025475,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6385294560937345,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4567296802997589,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 0.00012725766217296656
+      },
+      {
+        "x": [
+          0.8084540370412305,
+          0.2919276451487771,
+          0.4562375668227888
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.4676322963298443,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.664578838809783,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4562375545501709,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 7.551393909415402e-05
+      },
+      {
+        "x": [
+          0.8022514764559538,
+          0.27873834473725445,
+          0.4560432366901871
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.418011811647631,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7700932421019644,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4560432434082031,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.246594251391744e-05
+      },
+      {
+        "x": [
+          0.7784850917584993,
+          0.2793127617468566,
+          0.4489366599488367
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2278807340679947,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7654979060251472,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44893667101860046,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.5965774013063663e-06
+      },
+      {
+        "x": [
+          0.7635006191171336,
+          0.2730053200458964,
+          0.44528620651186057
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.108004952937069,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.8159574396328289,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44528621435165405,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.809303361212824e-05
+      },
+      {
+        "x": [
+          0.7688433958788063,
+          0.29288500683144736,
+          0.4443932722538714
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.1507471670304508,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.6569199453484211,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4443932771682739,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 7.984367819020223e-05
+      },
+      {
+        "x": [
+          0.793899456311667,
+          0.2822750102608027,
+          0.45313074558110816
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.3511956504933362,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7417999179135784,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4531307518482208,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.663413343762996e-05
+      },
+      {
+        "x": [
+          0.7491597750723573,
+          0.2865836617620982,
+          0.4533702976903735
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 1.9932782005788585,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7073307059032143,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4533703029155731,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.494845078988414e-05
+      },
+      {
+        "x": [
+          0.7953305744296707,
+          0.284596278931737,
+          0.45046159316108414
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.3626445954373656,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.723229768546104,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45046159625053406,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.1115721979133163e-05
+      },
+      {
+        "x": [
+          0.8110403724716925,
+          0.2699342530083514,
+          0.4494599206447558
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.48832297977354,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.840525975933189,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44945991039276123,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.698584436919103e-05
+      },
+      {
+        "x": [
+          0.7783373750140725,
+          0.2881248989655225,
+          0.45153453902313656
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.22669900011258,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.69500080827582,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45153453946113586,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 8.669258255622284e-06
+      },
+      {
+        "x": [
+          0.7742025711564946,
+          0.285747616168608,
+          0.4474911158409301
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.193620569251957,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.714019070651136,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4474911093711853,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.5178437168007797e-05
+      },
+      {
+        "x": [
+          0.7791267924452877,
+          0.2848794646916567,
+          0.4489010232759746
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2330143395623017,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7209642824667464,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4489010274410248,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 4.769998323204388e-06
+      },
+      {
+        "x": [
+          0.7619689317155692,
+          0.28361513800428684,
+          0.4491198883375478
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.095751453724554,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7310788959657053,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44911989569664,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.0483305281293304e-05
+      },
+      {
+        "x": [
+          0.7869901637511454,
+          0.2843509936998745,
+          0.4501261669552
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.295921310009163,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.725192050401004,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45012617111206055,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.087207895537357e-06
+      },
+      {
+        "x": [
+          0.7847306569558825,
+          0.27757058112673605,
+          0.44710802776353764
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.27784525564706,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7794353509861116,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44710803031921387,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 9.071417829054635e-06
+      },
+      {
+        "x": [
+          0.779935695499525,
+          0.2854863195058259,
+          0.45042791120823683
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2394855639962,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7161094439533926,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45042791962623596,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.0040722318856156e-06
+      },
+      {
+        "x": [
+          0.7844805082274923,
+          0.2812205852767147,
+          0.4507594687988743
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.275844065819938,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7502353177862826,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4507594704627991,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.0731923558472175e-06
+      },
+      {
+        "x": [
+          0.7871573661185944,
+          0.2793911455692437,
+          0.4516886915603242
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2972589289487555,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7648708354460503,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.451688677072525,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 5.937538239061228e-06
+      },
+      {
+        "x": [
+          0.7749440332391992,
+          0.2796621173197237,
+          0.44995652634876515
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.199552265913594,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7627030614422106,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499565362930298,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.298920498736875e-06
+      },
+      {
+        "x": [
+          0.7786707266506024,
+          0.27464399005637075,
+          0.4493405255227472
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2293658132048195,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.802848079549034,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4493405222892761,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 7.141215584718909e-06
+      },
+      {
+        "x": [
+          0.7796194532872944,
+          0.28277573714346216,
+          0.45015606478686443
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2369556262983554,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7377941028523027,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4501560628414154,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 5.220385082655598e-07
+      },
+      {
+        "x": [
+          0.786779335609658,
+          0.282543938791632,
+          0.4499449360076184
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2942346848772637,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7396484896669442,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44994494318962097,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.7674531059091176e-06
+      },
+      {
+        "x": [
+          0.7838205100170433,
+          0.2818234834236549,
+          0.4499478335929051
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2705640801363467,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.745412132610761,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499478340148926,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.8317766344607017e-07
+      },
+      {
+        "x": [
+          0.7867952225960542,
+          0.2845671088156979,
+          0.45163891817025925
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2943617807684333,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7234631294744167,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4516389071941376,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 4.581728028698378e-06
+      },
+      {
+        "x": [
+          0.780562624467888,
+          0.2806263485140669,
+          0.44961222450419236
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2445009957431044,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7549892118874646,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44961223006248474,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.7816526845286786e-07
+      },
+      {
+        "x": [
+          0.7781878836206585,
+          0.28226312744407467,
+          0.4490512797904337
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.225503068965268,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7418949804474027,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44905129075050354,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.776579939645921e-06
+      },
+      {
+        "x": [
+          0.7829073520757839,
+          0.28148122081855464,
+          0.4503324215467641
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.263258816606271,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7481502334515628,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4503324329853058,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.2759767030365315e-07
+      },
+      {
+        "x": [
+          0.7852408710865157,
+          0.2798449646940555,
+          0.44977225497570994
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.281926968692126,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.761240282447556,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44977226853370667,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.1463160408965222e-06
+      },
+      {
+        "x": [
+          0.7810248077370998,
+          0.28204304403111047,
+          0.45006011233407583
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2481984618967985,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7436556477511163,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.450060099363327,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.054726919066534e-07
+      },
+      {
+        "x": [
+          0.7791760128368047,
+          0.2809435921521664,
+          0.45005533866378317
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2334081026944377,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7524512627826687,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.450055330991745,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.3152469933334412e-07
+      },
+      {
+        "x": [
+          0.7803371371318644,
+          0.2811635649700386,
+          0.45002846239606364
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.242697097054915,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7506914802396913,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4500284492969513,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 4.334552409313053e-08
+      },
+      {
+        "x": [
+          0.778375694148784,
+          0.2810740841915893,
+          0.44946811127612385
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2270055531902724,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7514073264672856,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44946810603141785,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.50941906668821e-07
+      },
+      {
+        "x": [
+          0.7817744375940339,
+          0.2813794366618133,
+          0.45011634397910405
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.254195500752271,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7489645067054935,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4501163363456726,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.51993476013027e-08
+      },
+      {
+        "x": [
+          0.7815282971741107,
+          0.2824310152612413,
+          0.4505243879686367
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2522263773928852,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7405518779100695,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45052438974380493,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.7042914440742823e-07
+      },
+      {
+        "x": [
+          0.7808040426444437,
+          0.28107751520086055,
+          0.4498402653703034
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2464323411555496,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7513798783931156,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4498402774333954,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.267328965764556e-08
+      },
+      {
+        "x": [
+          0.7809189371764615,
+          0.2803706338573645,
+          0.4499299354962383
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2473514974116924,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.757034929141084,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499299228191376,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.2772350527243853e-07
+      },
+      {
+        "x": [
+          0.7809983400969402,
+          0.281624941487674,
+          0.4500275681246164
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.247986720775522,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7470004680986082,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45002755522727966,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.655332749739748e-08
+      },
+      {
+        "x": [
+          0.7820474097584142,
+          0.28155769726352664,
+          0.44996098925328565
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.256379278067314,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7475384218917869,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44996097683906555,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 5.0989294321243474e-08
+      },
+      {
+        "x": [
+          0.7807647052885018,
+          0.2812620980434106,
+          0.4500115941103692
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2461176423080147,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.749903215652715,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45001158118247986,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.1764250188209833e-08
+      },
+      {
+        "x": [
+          0.7815542793418736,
+          0.2817668022610714,
+          0.4502634054390897
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.252434234734989,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7458655819114286,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4502634108066559,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 8.615167273025497e-08
+      },
+      {
+        "x": [
+          0.7809916018188012,
+          0.28124983696591327,
+          0.4499460503875
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.24793281455041,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7500013042726938,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499460458755493,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.047795851747259e-09
+      },
+      {
+        "x": [
+          0.781355489703951,
+          0.2809693062930842,
+          0.45002175752669904
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2508439176316077,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7522455496553264,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45002174377441406,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.6447999046042715e-08
+      },
+      {
+        "x": [
+          0.7803000936134687,
+          0.28094139087312553,
+          0.44986992403727466
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.24240074890775,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7524688730149958,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44986993074417114,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.447098630821864e-08
+      },
+      {
+        "x": [
+          0.7814058515988926,
+          0.28126992521464134,
+          0.4500547389936467
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.251246812791141,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7498405982828693,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45005473494529724,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.909253589816765e-09
+      },
+      {
+        "x": [
+          0.7807526161001794,
+          0.28155193385622596,
+          0.4499864981343116
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2460209288014354,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7475845291501924,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499864876270294,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.0097280561228207e-08
+      },
+      {
+        "x": [
+          0.7812047713030081,
+          0.28111496318386964,
+          0.45001294267860215
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.249638170424065,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.751080294529043,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4500129520893097,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.856236033577768e-09
+      },
+      {
+        "x": [
+          0.7816367778586331,
+          0.2811610521995389,
+          0.44999756059613016
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2530942228690645,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7507115824036887,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44999757409095764,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 8.888839937182827e-09
+      },
+      {
+        "x": [
+          0.7814187597161002,
+          0.28118631366050684,
+          0.4500010689746899
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2513500777288016,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7505094907159453,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.450001060962677,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.1866664804412056e-09
+      },
+      {
+        "x": [
+          0.7816946532598663,
+          0.28113096440676527,
+          0.45009978337712575
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2535572260789305,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7509522847458778,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45009979605674744,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.5020466332583498e-08
+      },
+      {
+        "x": [
+          0.7811673646790676,
+          0.2812201188261263,
+          0.44998448363490645
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2493389174325404,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7502390493909896,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44998449087142944,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 5.862065561279844e-10
+      },
+      {
+        "x": [
+          0.7811214121998913,
+          0.2810776718990272,
+          0.44994425786515235
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2489712975991303,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7513786248077823,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44994425773620605,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 6.538374770325136e-09
+      },
+      {
+        "x": [
+          0.7813347417491423,
+          0.28122186188573783,
+          0.4500271187115231
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2506779339931384,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7502251049140973,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45002710819244385,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.4151075792455359e-09
+      },
+      {
+        "x": [
+          0.781409139459865,
+          0.2813038997310443,
+          0.4499955048688108
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.25127311567892,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7495688021516456,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499955177307129,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.7802406858513664e-09
+      },
+      {
+        "x": [
+          0.7811887375426163,
+          0.28131093996809875,
+          0.4500036691688037
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2495099003409305,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.74951248025521,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4500036835670471,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 8.170853555758701e-10
+      },
+      {
+        "x": [
+          0.7810514231873524,
+          0.28119804738893095,
+          0.4500146761413448
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2484113854988195,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7504156208885524,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4500146806240082,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 2.781900085536851e-09
+      },
+      {
+        "x": [
+          0.7813197103917369,
+          0.28127743664551597,
+          0.4500002976869443
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.250557683133895,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7497805068358723,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4500002861022949,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.5451195288859137e-10
+      },
+      {
+        "x": [
+          0.7811157999931382,
+          0.2813171350740895,
+          0.44996518161557975
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2489263999451055,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.749462919407284,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.4499651789665222,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 3.48041506386072e-09
+      },
+      {
+        "x": [
+          0.7812800063101413,
+          0.28124568018282575,
+          0.4500116344375373
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.25024005048113,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.750034558537394,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45001164078712463,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.9508500647140213e-10
+      },
+      {
+        "x": [
+          0.7813226500446808,
+          0.28118455046821333,
+          0.449993941337455
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2505812003574466,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.7505235962542933,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.44999393820762634,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 9.814439851303586e-10
+      },
+      {
+        "x": [
+          0.7812222156681324,
+          0.28127934259312737,
+          0.4500012372109665
+        ],
+        "model": "Static",
+        "parameters": {
+          "low_freq": 100.0,
+          "low_gain": 2.2497777253450595,
+          "mid1_freq": 800.0,
+          "mid1_gain": 0.0,
+          "mid1_q": 1.0,
+          "mid2_freq": 3000.0,
+          "mid2_gain": 0.0,
+          "mid2_q": 1.0,
+          "high_freq": 10000.0,
+          "high_gain": -1.749765259254981,
+          "analog_model": "Static",
+          "analog_drive": 6.0,
+          "analog_color": 0.45000123977661133,
+          "analog_character": 0.3100000023841858,
+          "analog_trim": -1.0
+        },
+        "loss": 1.8643733199321881e-10
+      }
+    ],
+    "refinement_result": {
+      "success": false,
+      "message": "Maximum number of function evaluations has been exceeded.",
+      "evaluations": 86
+    },
+    "policy": {
+      "seed": 20261109,
+      "global_proposals": 42,
+      "kernel": "categorical-independent Matern5/2",
+      "length_scale": 0.25,
+      "diagonal_jitter": 1e-06,
+      "acquisition": "expected improvement in normalized log10 loss",
+      "refinement": "bounded Nelder-Mead within best observed model",
+      "uncertainty": "Search heuristic, not calibrated parameter/population confidence"
+    }
+  },
+  "qualification": [
+    {
+      "id": "record-8",
+      "source_group": "source-8",
+      "split": "validation",
+      "metrics": {
+        "relative_rms": 1.4850328252867137e-05,
+        "max_abs": 1.8738210201263428e-06,
+        "sample_peak": 0.13782253861427307
+      },
+      "template_baseline": {
+        "relative_rms": 0.31576591535566906,
+        "max_abs": 0.05609164200723171,
+        "sample_peak": 0.11256860196590424
+      },
+      "reopen_error": 0.0,
+      "observation_peak": 0.13782253861427307,
+      "input_sha256": "4711bfe11e15e2920e658295b3072dfe7d59f99be4fe5976ac17415c8e283947",
+      "output_sha256": "a17e39a4af81a46b67412402169ea5a452d48e8d7d37b46ea91baaa2c441b7dd"
+    },
+    {
+      "id": "record-9",
+      "source_group": "source-9",
+      "split": "validation",
+      "metrics": {
+        "relative_rms": 1.5313385983791066e-05,
+        "max_abs": 1.903623342514038e-06,
+        "sample_peak": 0.14401158690452576
+      },
+      "template_baseline": {
+        "relative_rms": 0.3227167749240911,
+        "max_abs": 0.05447256565093994,
+        "sample_peak": 0.1286436915397644
+      },
+      "reopen_error": 0.0,
+      "observation_peak": 0.14401158690452576,
+      "input_sha256": "40262c135b93f110ca98e67b759440967c0aa0e12602de146b7c5eafc6f63c94",
+      "output_sha256": "d0905e8382ef7967b37f0fdf0ac2cc0a51dcaddd3c063af4ca26d295887ff2fa"
+    },
+    {
+      "id": "record-10",
+      "source_group": "source-10",
+      "split": "test",
+      "metrics": {
+        "relative_rms": 1.567849367387048e-05,
+        "max_abs": 2.0936131477355957e-06,
+        "sample_peak": 0.12796959280967712
+      },
+      "template_baseline": {
+        "relative_rms": 0.3224275340942604,
+        "max_abs": 0.05355648323893547,
+        "sample_peak": 0.13265585899353027
+      },
+      "reopen_error": 0.0,
+      "observation_peak": 0.12796959280967712,
+      "input_sha256": "e84ab060b86ef7fb78d86190fab06d7784469cf777b307e3ce5319ce7da738ff",
+      "output_sha256": "caa926eaf1d4b6ad8d7d7a3b07089a7f6e6cd16b9bb56479129a8293aa50a392"
+    },
+    {
+      "id": "record-11",
+      "source_group": "source-11",
+      "split": "test",
+      "metrics": {
+        "relative_rms": 1.570683783447298e-05,
+        "max_abs": 2.1830201148986816e-06,
+        "sample_peak": 0.1473539024591446
+      },
+      "template_baseline": {
+        "relative_rms": 0.320533882945828,
+        "max_abs": 0.051775023341178894,
+        "sample_peak": 0.1384955793619156
+      },
+      "reopen_error": 0.0,
+      "observation_peak": 0.1473539024591446,
+      "input_sha256": "3c44a2c9685876fed86bfab10b0803c805528caf3f167f4822bba7670e0460ca",
+      "output_sha256": "4b7ad3fd5ec9681011a665147a38a33ca14cecacd1dd1e9c939a31d78b87d0cf"
+    }
+  ],
+  "training_summary": {
+    "context": {
+      "data_origin": "synthetic_validation",
+      "sample_rate": 48000,
+      "channels": 1,
+      "hardware": {
+        "manufacturer": "synthetic",
+        "model": "synthetic-analog-eq-matched",
+        "unit_id": "not-real-hardware",
+        "configuration_id": "synthetic-fixed-point",
+        "controls": {
+          "gain": 2,
+          "path": "synthetic"
+        }
+      },
+      "calibration": {
+        "calibration_id": "synthetic-level-reference",
+        "measurement_reference": "synthetic-only",
+        "reference": "full_scale_sine_rms_dbu",
+        "shared_clock": true,
+        "input_full_scale_dbu": 18.0,
+        "output_full_scale_dbu": 24.0,
+        "source_impedance_ohms": 100.0,
+        "load_impedance_ohms": 10000.0
+      },
+      "alignment": {
+        "paired_sample_aligned": true,
+        "maximum_residual_delay_samples": 0.0,
+        "maximum_residual_drift_ppm": 0.0,
+        "measurement_reference": "same-generated-sample-clock"
+      },
+      "rights": {
+        "license": "GPL-3.0-or-later",
+        "attribution": "project-generated synthetic fixture",
+        "reference": "local-generated-test",
+        "training_authorized": true
+      }
+    },
+    "captures": [
+      {
+        "id": "record-0",
+        "source_group": "source-0",
+        "split": "train",
+        "frames": 12001,
+        "dry_sha256": "903d4a8f06f16973d8b4ed0be0130c5276ffbb096347a1730a8fecad18a00893",
+        "wet_sha256": "347d579efdd057e38479dfaf05c79ede9949374b4fd73c3cc091e455d77d1e7c",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -36.69418653008077,
+            "peak": 0.04831940680742264,
+            "rms_dbu": -15.683886573440958
+          },
+          "wet": {
+            "rms_dbfs": -34.54715761862085,
+            "peak": 0.0867425724864006,
+            "rms_dbu": -7.536857661981038
+          }
+        }
+      },
+      {
+        "id": "record-1",
+        "source_group": "source-1",
+        "split": "train",
+        "frames": 12008,
+        "dry_sha256": "091d644ecea5cf1565e6c45055289f0b960fa07a25cfcdc07c8e0dd31b3b98c2",
+        "wet_sha256": "29cd031f47c2227deaefee19a3690607661aa1894e5f8c545a24b02b7a6cd9ea",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -35.932144713034766,
+            "peak": 0.05794733017683029,
+            "rms_dbu": -14.921844756394947
+          },
+          "wet": {
+            "rms_dbfs": -34.115366955044436,
+            "peak": 0.08424229919910431,
+            "rms_dbu": -7.105066998404624
+          }
+        }
+      },
+      {
+        "id": "record-2",
+        "source_group": "source-2",
+        "split": "train",
+        "frames": 12015,
+        "dry_sha256": "aa5045d06819f22c9ea5d62f60b0491fdeeb8ed39e6ee4ecc87bcd4e5d164b44",
+        "wet_sha256": "0f8368e01db3ecb0aeeb53b8e4dfe903d95fa25fb47e722cf56afdaf8bc08b16",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -35.0760586485628,
+            "peak": 0.06542108952999115,
+            "rms_dbu": -14.065758691922987
+          },
+          "wet": {
+            "rms_dbfs": -33.58588661202174,
+            "peak": 0.0883621945977211,
+            "rms_dbu": -6.575586655381922
+          }
+        }
+      },
+      {
+        "id": "record-3",
+        "source_group": "source-3",
+        "split": "train",
+        "frames": 12022,
+        "dry_sha256": "0da1958f8e50aa290d7a2235508d129b4bd5ae4120f6f211f4ef0fc201d5b057",
+        "wet_sha256": "8386a604927dc24b45d45adb8b90dc57a8f7ea1fd37a673f244e6a001f8f98e4",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -34.42694127833553,
+            "peak": 0.07390858978033066,
+            "rms_dbu": -13.416641321695721
+          },
+          "wet": {
+            "rms_dbfs": -33.23459417633631,
+            "peak": 0.08849384635686874,
+            "rms_dbu": -6.224294219696496
+          }
+        }
+      },
+      {
+        "id": "record-4",
+        "source_group": "source-4",
+        "split": "train",
+        "frames": 12029,
+        "dry_sha256": "47bad01b23d5a7ab3e436c0f53265025c2c8b78e396cb8ede2e37392e3df6ee9",
+        "wet_sha256": "71e3e16dc099f551a8f8ecd8941adde2833e8d0dc1011fc2f3537dc2d91d88db",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -33.518170425487696,
+            "peak": 0.08435437828302383,
+            "rms_dbu": -12.50787046884789
+          },
+          "wet": {
+            "rms_dbfs": -32.50143645725577,
+            "peak": 0.09176470339298248,
+            "rms_dbu": -5.4911365006159585
+          }
+        }
+      },
+      {
+        "id": "record-5",
+        "source_group": "source-5",
+        "split": "train",
+        "frames": 12036,
+        "dry_sha256": "b373b01304a8afb8229e4a4ff242dda3c624635a9046910a0a19f3c49c0c5286",
+        "wet_sha256": "5725d1f58738bed8ae88f4970af3048cd3d230e29acdabc68e4edd4cf2dc115f",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -32.8882986506416,
+            "peak": 0.08800914138555527,
+            "rms_dbu": -11.877998694001793
+          },
+          "wet": {
+            "rms_dbfs": -32.04295563232928,
+            "peak": 0.10685594379901886,
+            "rms_dbu": -5.0326556756894725
+          }
+        }
+      },
+      {
+        "id": "record-6",
+        "source_group": "source-6",
+        "split": "train",
+        "frames": 12043,
+        "dry_sha256": "64e4d1789a1763a4fc33ce9431d5e19ab36c5a94b8d5d3426fa7fbf1da7e23d2",
+        "wet_sha256": "1ec5eb3925e75af53dd4c883272d77b7c791013ab70f27ca84986f0cca840f14",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -32.24960230753474,
+            "peak": 0.09720834344625473,
+            "rms_dbu": -11.239302350894924
+          },
+          "wet": {
+            "rms_dbfs": -31.647116064986275,
+            "peak": 0.1199711263179779,
+            "rms_dbu": -4.636816108346462
+          }
+        }
+      },
+      {
+        "id": "record-7",
+        "source_group": "source-7",
+        "split": "train",
+        "frames": 12050,
+        "dry_sha256": "54910c1f98e641cba293cb3ae076d829944b7b272fac51b0015293ae4eb02f49",
+        "wet_sha256": "4157865c7ee9397f578bb59e1f20ed994a5de38046bf1ede8495065915a9efb3",
+        "levels": {
+          "dry": {
+            "rms_dbfs": -31.555416749744303,
+            "peak": 0.10539289563894272,
+            "rms_dbu": -10.54511679310449
+          },
+          "wet": {
+            "rms_dbfs": -31.000242302094875,
+            "peak": 0.13264131546020508,
+            "rms_dbu": -3.989942345455063
+          }
+        }
+      }
+    ],
+    "hardware_origin_declared": false,
+    "scope": "Calibration, alignment, hardware identity and rights are declarations that require capture evidence. No alignment, gain fitting, resampling or hardware-model admission was performed."
+  },
+  "native_objective_calls": 127,
+  "equivalent_observed_candidates": 16,
+  "parameter_recovery_claim": false,
+  "hardware_model_admitted": false,
+  "automatic_apply": false,
+  "scope": "Offline native preset matching within the declared search box and tested calibrated source/level/context. GP uncertainty is an optimization heuristic. No physical knob identity, learned runtime, general hardware fidelity or admission claim."
+}
