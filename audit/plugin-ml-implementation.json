@@ -547,8 +547,24 @@
         "Classical calibrated equal-loudness compensation is preferable to a learned black box.",
         "ML can fit a user's preference curve from controlled listening data, with uncertainty and gain bounds; it cannot infer acoustic calibration from PCM alone."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/loudness_preferences.py",
+        "scripts/ml/fit_loudness_preferences.py",
+        "scripts/ml/loudness_preference_native.py",
+        "scripts/ml/evaluate_loudness_preferences.py",
+        "scripts/ml/analyze_loudness_preferences.py",
+        "scripts/ml/test_loudness_preferences.py",
+        "crates/sotf-plugins/crates/sotf-plugin-loudness-compensation/bin/qa_loudness_preference.rs",
+        "crates/sotf-plugins/models/loudness-preferences",
+        "audit/artifacts/ml-loudness-preferences-20261025"
+      ],
+      "remaining": [
+        "Controlled real listener/chain/position calibration and preference sessions; current fixtures and fresh validation are synthetic, with self-reported protocol metadata only.",
+        "Calibrate admission/uncertainty bands and assess repeatability, material/device/level shifts and stronger preference baselines; fixed-prior conditional intervals do not establish human confidence.",
+        "Application review/import and any live volume-dependent user curve integration with explicit physical calibration; the current tool exports a manual shape candidate at one supplied level.",
+        "Real host/platform and contextual/perceptual acceptance; normative ISO/Auto processing remains unchanged."
+      ]
     },
     {
       "plugin_id": 32,

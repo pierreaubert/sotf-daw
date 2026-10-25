@@ -1,0 +1,17 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "sotf-plugin-loudness-compensation",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2"
+  ],
+  "exit_code": 0,
+  "seconds": 71.22950929077342
+}

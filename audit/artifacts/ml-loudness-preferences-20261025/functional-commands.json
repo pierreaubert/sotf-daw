@@ -1,0 +1,102 @@
+[
+  {
+    "case": "consistent",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/consistent-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/consistent-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/consistent"
+    ],
+    "exit_code": 0,
+    "seconds": 1.426885416964069,
+    "output": "{\"accepted\": true, \"reasons\": []}\n"
+  },
+  {
+    "case": "contradictory",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/contradictory-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/contradictory-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/contradictory"
+    ],
+    "exit_code": 2,
+    "seconds": 1.1593401250429451,
+    "output": "{\"accepted\": false, \"reasons\": [\"held_programme_preferences_inconsistent\", \"uncertainty_too_large\", \"uncertainty_interval_exceeds_gain_bounds\"]}\n"
+  },
+  {
+    "case": "uncertain",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/uncertain-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/uncertain-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/uncertain"
+    ],
+    "exit_code": 2,
+    "seconds": 1.0221729590557516,
+    "output": "{\"accepted\": false, \"reasons\": [\"uncertainty_too_large\"]}\n"
+  },
+  {
+    "case": "outside",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/outside-session.json",
+      "--level-db-spl",
+      "40",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/outside-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/outside"
+    ],
+    "exit_code": 2,
+    "seconds": 1.5171556661371142,
+    "output": "{\"accepted\": false, \"reasons\": [\"requested_level_outside_observed_reference_span\"]}\n"
+  },
+  {
+    "case": "reference",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/reference-session.json",
+      "--level-db-spl",
+      "83",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/reference-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/reference"
+    ],
+    "exit_code": 0,
+    "seconds": 1.5116904999595135,
+    "output": "{\"accepted\": true, \"reasons\": []}\n"
+  }
+]

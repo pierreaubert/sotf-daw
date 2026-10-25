@@ -1,0 +1,388 @@
+{
+  "format": "sotf-loudness-preferences-v1",
+  "data_origin": "synthetic_validation",
+  "context": {
+    "listener_id": "synthetic-listener",
+    "playback_chain_id": "synthetic-chain",
+    "position_id": "synthetic-position",
+    "session_id": "synthetic-20441026-consistent",
+    "presentation": "stereo_speakers",
+    "sample_rate": 48000
+  },
+  "calibration": {
+    "level_basis": "identity_reference_signal_at_listening_position",
+    "weighting": "Z",
+    "confirmed": true,
+    "measurement_id": "synthetic-only",
+    "method": "synthetic_fixture",
+    "reference_level_db_spl": 83
+  },
+  "protocol": {
+    "blinded": true,
+    "randomized_order": true,
+    "reference_identity_anchor": true,
+    "headroom_policy": "native_peak_normalized",
+    "external_level_matching_method": "synthetic_control",
+    "maximum_level_mismatch_db": 0.1
+  },
+  "filter_shape": {
+    "low_freq": 100,
+    "mid_freq": 3500,
+    "mid_q": 0.707,
+    "high_freq": 8000
+  },
+  "observations": [
+    {
+      "id": "observation-0-50",
+      "programme_id": "programme-0",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.9668277860101937,
+        -0.5831033259877718,
+        0.9591904022666446
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-0-60",
+      "programme_id": "programme-0",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.433172389150719,
+        -0.39044788069165287,
+        0.686651815127553
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-0-70",
+      "programme_id": "programme-0",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.5026927498504201,
+        -0.18467122030637562,
+        0.37829212442997423
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-0-83",
+      "programme_id": "programme-0",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-1-50",
+      "programme_id": "programme-1",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.814645787719394,
+        -0.7807779502786439,
+        1.2035741874080457
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-1-60",
+      "programme_id": "programme-1",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.2295114271941086,
+        -0.5263561594627951,
+        0.8625621501851068
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-1-70",
+      "programme_id": "programme-1",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.4368231485837026,
+        -0.2866478206489699,
+        0.48164557745985853
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-1-83",
+      "programme_id": "programme-1",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-2-50",
+      "programme_id": "programme-2",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.946412217202545,
+        -0.6010039762247215,
+        1.1673015385089613
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-2-60",
+      "programme_id": "programme-2",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.3919425877210108,
+        -0.3926355453512251,
+        0.764958721116003
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-2-70",
+      "programme_id": "programme-2",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.5472519723794773,
+        -0.28754260310294943,
+        0.43085717201372375
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-2-83",
+      "programme_id": "programme-2",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-3-50",
+      "programme_id": "programme-3",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.698203389191507,
+        -0.6016763890800445,
+        1.066193086821298
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-3-60",
+      "programme_id": "programme-3",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.2393435797154386,
+        -0.4612542744772106,
+        0.6831436538373336
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-3-70",
+      "programme_id": "programme-3",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.4719049375814954,
+        -0.23151140289757421,
+        0.42944547114032416
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-3-83",
+      "programme_id": "programme-3",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-4-50",
+      "programme_id": "programme-4",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.5750658767623507,
+        -0.47674772623936534,
+        1.282494793255744
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-4-60",
+      "programme_id": "programme-4",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.12782521636159,
+        -0.3825901999987934,
+        0.748009447314685
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-4-70",
+      "programme_id": "programme-4",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.4143004669703267,
+        -0.227624464661353,
+        0.4211980546162934
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-4-83",
+      "programme_id": "programme-4",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-5-50",
+      "programme_id": "programme-5",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.9900640222183994,
+        -0.5198569599162617,
+        1.0724263832398
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-5-60",
+      "programme_id": "programme-5",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.433989615855456,
+        -0.41066944111529446,
+        0.7700187864998564
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-5-70",
+      "programme_id": "programme-5",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.5616605431787176,
+        -0.21045269495322338,
+        0.4631867169712429
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-5-83",
+      "programme_id": "programme-5",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-6-50",
+      "programme_id": "programme-6",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.7902419120314716,
+        -0.6454421090715632,
+        1.0850006360882332
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-6-60",
+      "programme_id": "programme-6",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.315353410185016,
+        -0.287927356369045,
+        0.7556584863616587
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-6-70",
+      "programme_id": "programme-6",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.4308070259252736,
+        -0.16446409511657523,
+        0.4643332299484898
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-6-83",
+      "programme_id": "programme-6",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-7-50",
+      "programme_id": "programme-7",
+      "level_db_spl": 50,
+      "preferred_gains_db": [
+        2.8921015231594196,
+        -0.5904365145357375,
+        1.172600212048794
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-7-60",
+      "programme_id": "programme-7",
+      "level_db_spl": 60,
+      "preferred_gains_db": [
+        2.414768514993153,
+        -0.4302721407119429,
+        0.7526970533023079
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-7-70",
+      "programme_id": "programme-7",
+      "level_db_spl": 70,
+      "preferred_gains_db": [
+        1.5796206969120459,
+        -0.20826429117076128,
+        0.4298062088108334
+      ],
+      "uncertainty_db": 0.1
+    },
+    {
+      "id": "observation-7-83",
+      "programme_id": "programme-7",
+      "level_db_spl": 83,
+      "preferred_gains_db": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "uncertainty_db": 0.1
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+[
+  {
+    "case": "uncalibrated",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/uncalibrated-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/uncalibrated-export",
+      "--work",
+      "audit/artifacts/ml-loudness-preferences-20261025/uncalibrated-work"
+    ],
+    "exit_code": 1,
+    "seconds": 0.5105190419126302,
+    "output": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_loudness_preferences.py\", line 67, in <module>\n    main()\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_loudness_preferences.py\", line 29, in main\n    report = fit(data, args.level_db_spl)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/loudness_preferences.py\", line 177, in fit\n    reference, cells = validate(data)\n                       ^^^^^^^^^^^^^^\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/loudness_preferences.py\", line 75, in validate\n    raise ValueError(\"Explicit identity-reference SPL measurement is required\")\nValueError: Explicit identity-reference SPL measurement is required\n",
+    "no_output_created": true
+  },
+  {
+    "case": "wrong-quantity",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/wrong-quantity-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/wrong-quantity-export",
+      "--work",
+      "audit/artifacts/ml-loudness-preferences-20261025/wrong-quantity-work"
+    ],
+    "exit_code": 1,
+    "seconds": 0.5111404999624938,
+    "output": "Traceback (most recent call last):\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_loudness_preferences.py\", line 67, in <module>\n    main()\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/fit_loudness_preferences.py\", line 29, in main\n    report = fit(data, args.level_db_spl)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/loudness_preferences.py\", line 177, in fit\n    reference, cells = validate(data)\n                       ^^^^^^^^^^^^^^\n  File \"/Volumes/home_tmp/src/all_of_sotf/sotf-daw/scripts/ml/loudness_preferences.py\", line 75, in validate\n    raise ValueError(\"Explicit identity-reference SPL measurement is required\")\nValueError: Explicit identity-reference SPL measurement is required\n",
+    "no_output_created": true
+  },
+  {
+    "case": "existing-output",
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/fit_loudness_preferences.py",
+      "--session",
+      "audit/artifacts/ml-loudness-preferences-20261025/consistent-session.json",
+      "--level-db-spl",
+      "55",
+      "--renderer",
+      "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-loudness-preference",
+      "--output",
+      "audit/artifacts/ml-loudness-preferences-20261025/consistent-export",
+      "--work",
+      "/Volumes/home_tmp/tmp/ml-loudness-preferences-20261025/consistent"
+    ],
+    "exit_code": 1,
+    "existing_preset_preserved": true
+  }
+]

@@ -1,0 +1,47 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/loudness_preferences.py",
+      "scripts/ml/loudness_preference_cases.py",
+      "scripts/ml/loudness_preference_native.py",
+      "scripts/ml/fit_loudness_preferences.py",
+      "scripts/ml/evaluate_loudness_preferences.py",
+      "scripts/ml/analyze_loudness_preferences.py",
+      "scripts/ml/test_loudness_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.06845850008539855,
+    "output": "All checks passed!\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/loudness_preferences.py",
+      "scripts/ml/loudness_preference_cases.py",
+      "scripts/ml/loudness_preference_native.py",
+      "scripts/ml/fit_loudness_preferences.py",
+      "scripts/ml/evaluate_loudness_preferences.py",
+      "scripts/ml/analyze_loudness_preferences.py",
+      "scripts/ml/test_loudness_preferences.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.017051625065505505,
+    "output": "7 files already formatted\n"
+  },
+  {
+    "command": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-loudness-compensation/bin/qa_loudness_preference.rs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.06750179105438292,
+    "output": ""
+  }
+]

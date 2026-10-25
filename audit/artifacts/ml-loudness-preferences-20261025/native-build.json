@@ -1,0 +1,45 @@
+[
+  {
+    "command": [
+      "cargo",
+      "build",
+      "-p",
+      "sotf-plugin-loudness-compensation",
+      "--bin",
+      "qa-loudness-preference",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2"
+    ],
+    "exit_code": 0,
+    "seconds": 8.346055417088792,
+    "output": "   Compiling sotf-plugin-loudness-compensation v0.5.5 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation)\n    Finished `release` profile [optimized] target(s) in 8.29s\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "clippy",
+      "-p",
+      "sotf-plugin-loudness-compensation",
+      "--bin",
+      "qa-loudness-preference",
+      "--features",
+      "qa",
+      "--release",
+      "--offline",
+      "--locked",
+      "-j",
+      "2",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0,
+    "seconds": 0.9370098749641329,
+    "output": "    Checking sotf-plugin-loudness-compensation v0.5.5 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-loudness-compensation)\n    Finished `release` profile [optimized] target(s) in 0.85s\n"
+  }
+]

@@ -1,0 +1,32 @@
+{
+  "policy": {
+    "lengthscale_db": 10.0,
+    "prior_std_db": 3.0,
+    "noise_floor_db": 0.25,
+    "minimum_programmes": 8,
+    "minimum_levels": 3,
+    "minimum_groups_per_level": 4,
+    "bootstrap_samples": 200,
+    "bootstrap_seed": 20261026,
+    "maximum_lopo_rmse_db": 1.0,
+    "maximum_within_cell_spread_db": 1.5,
+    "maximum_interval_halfwidth_db": 1.5,
+    "maximum_abs_gain_db": 6.0,
+    "maximum_dense_abs_response_db": 12.0
+  },
+  "final_seed": 20441026,
+  "final_sessions": 8,
+  "queries_db_spl": [
+    55,
+    75
+  ],
+  "source_sha256": {
+    "scripts/ml/loudness_preferences.py": "d32842febed9804ec7a195af4c288be020573d0c31e9bde73cf13639a3e23dae",
+    "scripts/ml/loudness_preference_cases.py": "285ef7543627aa4236972d50326682594f8933f69df0725acfd66aa4f6d2cef8",
+    "scripts/ml/loudness_preference_native.py": "bb3ff0a0551eaec2826293670e5d484e7e29b73ea21d162b512395e614618baa",
+    "scripts/ml/fit_loudness_preferences.py": "ca2a10276bc6b9f878443deda8c472a20f78956f6ed657f77261275ae995cb31"
+  },
+  "renderer_sha256": "97bc8482c01d7e0a8a56f7b88b72bd6a3b89daa9b72849778f4a2f8a82740b26",
+  "qualification": "All observations generated synthetically; no physical calibration, listening benefit or human-confidence calibration claim",
+  "evaluation_source_sha256": "cbbb4c89d6d4f32ac21cda5a962f2b7546a67aad2a38c6f17cb5aa4c7dfc09ac"
+}

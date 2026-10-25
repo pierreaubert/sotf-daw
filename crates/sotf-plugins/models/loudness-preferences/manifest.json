@@ -1,0 +1,19 @@
+{
+  "format": "sotf-loudness-preference-assistant-v1",
+  "model": "RBF Gaussian process conditioned to zero at explicit reference",
+  "weights": "per-session posterior coefficients and cells in report; no pretrained model",
+  "execution": "offline NumPy/SciPy only; actual native manual impulse qualification",
+  "output": "native manual fixed-shape curve proposal at one supplied playback level",
+  "status": "experimental_requires_real_listening_and_uncertainty_calibration",
+  "license": "GPL-3.0-or-later",
+  "data": "user supplied controlled spectral preference observations; committed validation is synthetic only",
+  "source": "scripts/ml/fit_loudness_preferences.py",
+  "validation": "audit/artifacts/ml-loudness-preferences-20261025",
+  "not_inferred": [
+    "acoustic calibration",
+    "digital-volume-to-SPL map",
+    "phon/sone/LUFS",
+    "absolute preferred listening level",
+    "confidence calibrated to humans"
+  ]
+}

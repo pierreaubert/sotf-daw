@@ -1,0 +1,19 @@
+{
+  "low_freq": 100,
+  "mid_freq": 3500,
+  "mid_q": 0.707,
+  "high_freq": 8000,
+  "low_gain": 2.717343699546088,
+  "mid_gain": -0.4948053568620826,
+  "high_gain": 1.147090093406061,
+  "mid_enabled": true,
+  "mode": 0,
+  "channel_params": [],
+  "auto_gain_enabled": false,
+  "auto_gain_position": "disabled",
+  "headroom_normalized": true,
+  "auto_calibrated": false,
+  "playback_level_db": 55.0,
+  "reference_level_db": 83.0,
+  "playback_volume_db": 0.0
+}

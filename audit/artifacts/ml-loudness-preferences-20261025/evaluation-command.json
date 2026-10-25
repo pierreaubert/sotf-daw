@@ -1,0 +1,11 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_loudness_preferences.py",
+    "--artifacts",
+    "audit/artifacts/ml-loudness-preferences-20261025"
+  ],
+  "exit_code": 0,
+  "seconds": 0.6420711250975728,
+  "output": "{\"queries\": 16, \"accepted_consistent_queries\": 16, \"accepted_contradictory_or_uncertain\": 0, \"median_gp_rmse_db\": 0.04380641525353797, \"median_linear_rmse_db\": 0.09007184274216953, \"qualification\": \"Synthetic known-mean checks only; correlated query pairs are not independent listener data or calibrated confidence coverage\"}\n"
+}
