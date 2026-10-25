@@ -9428,7 +9428,9 @@ dependencies = [
  "math-dsp",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
+ "sotf-plugin-analog-common",
 ]
 
 [[package]]

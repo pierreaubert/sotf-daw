@@ -80,9 +80,59 @@ pub struct SaturationPlugin {
 
     pub(super) cached_parameters: Vec<Parameter>,
     pub(super) initialized: bool,
+    #[cfg(feature = "qa")]
+    qa_candidate: Option<Box<crate::candidate::SaturationCandidate>>,
+    #[cfg(feature = "qa")]
+    qa_has_input: bool,
 }
 
 impl SaturationPlugin {
+    /// Install an explicit capture-bound model on the control thread.
+    ///
+    /// `None` prepares missing-model fallback. Selection starts disabled. The
+    /// model replaces only the wet nonlinear stage; native DC/output/mix follow.
+    /// A wet-control mismatch latches classical fallback until reset, preventing
+    /// host block sizes from changing model reentry during a smoothing ramp.
+    ///
+    /// # Errors
+    /// Requires initialized mono, integer 44.1–192 kHz, no accepted input, valid
+    /// model/hash/context and exact `capture_controls_sha256` binding.
+    #[cfg(feature = "qa")]
+    pub fn install_qa_candidate(
+        &mut self,
+        bytes: Option<&[u8]>,
+        sha: &str,
+        context: &[u8],
+    ) -> PluginResult<()> {
+        if !self.initialized
+            || self.channels != 1
+            || self.qa_has_input
+            || !(44100.0..=192000.0).contains(&self.sample_rate)
+            || self.sample_rate != f64::from(self.sample_rate as u32)
+        {
+            return Err("prepare saturation candidate before input in initialized mono at an integer capture clock".into());
+        }
+        let candidate = crate::candidate::SaturationCandidate::new(self, bytes, sha, context)?;
+        self.qa_candidate = Some(Box::new(candidate));
+        Ok(())
+    }
+
+    /// Toggle immediate QA selection without clearing either history.
+    #[cfg(feature = "qa")]
+    pub fn set_qa_candidate_enabled(&mut self, enabled: bool) {
+        if let Some(candidate) = &mut self.qa_candidate {
+            candidate.enabled = enabled;
+        }
+    }
+
+    /// Copy native candidate selection counters without allocation.
+    #[cfg(feature = "qa")]
+    pub fn qa_candidate_counters(
+        &self,
+    ) -> Option<sotf_plugin_analog_common::hardware_candidate::CandidateCounters> {
+        self.qa_candidate.as_ref().map(|c| c.stream.counters())
+    }
+
     pub fn new(channels: usize) -> Self {
         let sr = 44_100.0;
         let drive = default_drive();
@@ -147,6 +197,10 @@ impl SaturationPlugin {
 
             cached_parameters: Vec::new(),
             initialized: false,
+            #[cfg(feature = "qa")]
+            qa_candidate: None,
+            #[cfg(feature = "qa")]
+            qa_has_input: false,
         };
 
         p.rebuild_cached_parameters();
@@ -911,6 +965,14 @@ impl ParametricInPlacePlugin for SaturationPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        {
+            self.qa_has_input = false;
+            if let Some(candidate) = &mut self.qa_candidate {
+                candidate.stream.reset();
+                candidate.context_valid = true;
+            }
+        }
         // Reset crossovers
         for xo in &mut self.crossovers {
             xo.reset();
@@ -969,6 +1031,23 @@ impl ParametricInPlacePlugin for SaturationPlugin {
         }
 
         // Save dry signal for mix
+        #[cfg(feature = "qa")]
+        if nf != 0 && self.qa_candidate.is_some() {
+            if buffer[..total]
+                .iter()
+                .any(|v| !v.is_finite() || v.abs() > 64.0)
+            {
+                return Err("candidate qualification requires finite input bounded by64".into());
+            }
+            let matches = self.qa_candidate.as_ref().is_some_and(|c| c.matches(self));
+            if let Some(candidate) = &mut self.qa_candidate {
+                candidate.context_valid &= matches;
+            }
+        }
+        #[cfg(feature = "qa")]
+        {
+            self.qa_has_input |= nf != 0;
+        }
         self.dry_buf[..total].copy_from_slice(&buffer[..total]);
 
         let mode = self.mode;
@@ -1030,6 +1109,18 @@ impl ParametricInPlacePlugin for SaturationPlugin {
         }
 
         // DC blocker on the wet signal (removes saturation-induced DC offset).
+        #[cfg(feature = "qa")]
+        if let Some(candidate) = &mut self.qa_candidate {
+            for (input, wet) in self.dry_buf[..total].iter().zip(&mut buffer[..total]) {
+                *wet = candidate.stream.select(
+                    *input,
+                    *wet,
+                    self.sample_rate as u32,
+                    candidate.enabled,
+                    candidate.context_valid,
+                );
+            }
+        }
         if self.dc_blocker_enabled {
             self.dc_blocker.process_block_interleaved(buffer, nc, nf);
         }

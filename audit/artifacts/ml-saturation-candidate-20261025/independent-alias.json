@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_saturation_alias.py",
+    "--native-log",
+    "audit/artifacts/ml-saturation-candidate-20261025/native-candidate-tests-retry.txt",
+    "--output",
+    "audit/artifacts/ml-saturation-candidate-20261025/independent-alias-report.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.20075554098002613
+}

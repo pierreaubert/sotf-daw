@@ -940,8 +940,20 @@
       "requirements": [
         "Neural emulation is useful for a measured nonlinear target, with alias and parameter-sweep tests rather than waveform similarity alone."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-saturation/src/candidate.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-saturation/tests/candidate.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-analog-common/src/hardware_candidate.rs",
+        "scripts/ml/analyze_saturation_alias.py",
+        "audit/ml-saturation-candidate-20261025.md",
+        "audit/artifacts/ml-saturation-candidate-20261025"
+      ],
+      "remaining": [
+        "No trained or admitted measured-hardware Saturation model: calibrated identified-target captures and disjoint fitting/validation sources remain.",
+        "Alias/target comparisons for fitted models and oversampled learned-route design; current direct-tanh fixtures are untrained boundary probes.",
+        "DC-switch/activation semantics, full memory/runtime/contended budgets, stereo and cross-platform DAW validation."
+      ]
     },
     {
       "plugin_id": 39,

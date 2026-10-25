@@ -1,0 +1,8 @@
+{
+  "crates/sotf-plugins/crates/sotf-plugin-analog-common/src/hardware_candidate.rs": "5aaf71421372b6e8de1c746c85ef213e80242f3ae8e53f942146f72018bb022a",
+  "crates/sotf-plugins/crates/sotf-plugin-saturation/src/candidate.rs": "db3a79da2b0914dc517eebbee8a309246f2af89dca53c4b16857bcf379fcac73",
+  "crates/sotf-plugins/crates/sotf-plugin-saturation/src/lib/saturation_plugin.rs": "c33e3be9224fd9bbed6b8e3d60f45fa82eedb21510180b67f206b16b70538818",
+  "crates/sotf-plugins/crates/sotf-plugin-saturation/tests/candidate.rs": "507155335dc783e655d195e7afd726dcc886dd59f1e44044b247288cb07374c3",
+  "crates/sotf-plugins/models/analog-hardware/candidate.synthetic.json": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44",
+  "scripts/ml/analyze_saturation_alias.py": "dd3f640d6f57531d34db15eb13e14a7c0b618680e9e21ecff98d52decefa4bc8"
+}

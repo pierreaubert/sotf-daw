@@ -14,7 +14,7 @@ name = "sotf_plugin_saturation"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sotf-plugin-analog-common", "sotf-plugin-analog-common/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-saturation"
@@ -26,3 +26,5 @@ sotf-host = { workspace = true }
 math-dsp = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sotf-plugin-analog-common = { path = "../sotf-plugin-analog-common", optional = true }
+sha2 = { workspace = true, optional = true }

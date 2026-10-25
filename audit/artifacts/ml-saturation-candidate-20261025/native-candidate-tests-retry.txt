@@ -1,0 +1,120 @@
+
+running 41 tests
+test params::tests::mode_indices_are_append_only ... ok
+test params::tests::bool_params_serialize_as_booleans ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test params::tests::param_index_coverage ... ok
+test tests::low_sample_rate_rejects_exciter_at_or_above_conservative_nyquist ... ok
+test params::tests::saturation_primary_includes_output_and_is_pinned ... ok
+test tests::bulk_parameter_updates_reject_unknown_enums_atomically ... ok
+test params::tests::roundtrip_serde ... ok
+test params::tests::bool_params_accept_legacy_numeric_presets ... ok
+test tests::make::test_flush_denormals_limited_to_valid_samples ... ok
+test tests::asymmetric_processing_does_not_allocate ... ok
+test tests::continuous_bulk_automation_does_not_allocate_or_rebuild_metadata ... ok
+test tests::fallible_constructor_rejects_invalid_configuration ... ok
+test tests::graph_owned_oversampling_has_no_internal_latency ... ok
+test tests::make::test_drive_smoother_ramps_across_block ... ok
+test tests::make::test_dynamic_saturation_bounded_no_pumping ... ok
+test tests::dynamic_exciter_keeps_low_band_topology ... ok
+test tests::make::test_exciter_with_oversampling_processes ... ok
+test tests::oversize_block_is_rejected_without_growing_scratch_buffers ... ok
+test tests::make::test_no_lufs_auto_gain_on_passthrough ... ok
+test tests::make::test_oversampling_processes ... ok
+test tests::make::test_saturation_passthrough ... ok
+test tests::dynamic_exciter_is_applied_inside_oversampled_topology ... ok
+test tests::make::test_short_buffer_returns_error ... ok
+test tests::make::test_exciter_large_block_no_panic ... ok
+test tests::make::test_tube_adaa_matches_direct_when_tone_not_one ... ok
+test tests::make::test_tape_saturation ... ok
+test tests::reset_settles_parameter_smoothers ... ok
+test tests::make::test_soft_clip_limits_output ... ok
+test tests::structural_bulk_update_is_atomic_after_initialization ... ok
+test tests::test_get_parameter_after_from_params ... ok
+test tests::test_get_parameter_output_gain_and_tone ... ok
+test tests::test_saturation_default_f64_is_false ... ok
+test tests::tube_curve_is_explicitly_odd_symmetric ... ok
+test tests::test_get_parameter_sota_params ... ok
+test tests::test_get_parameter_unknown_returns_none ... ok
+test tests::test_parameter_roundtrip ... ok
+test tests::test_saturation_declares_oversampling ... ok
+test tests::test_set_parameter_sota_roundtrip ... ok
+test tests::test_set_parameter_sota_updates_envelope_followers ... ok
+test tests::test_exciter_only_affects_hf ... ok
+
+test result: ok. 41 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 2 tests
+test preparing_a_new_rate_discards_old_dc_and_control_history ... ok
+test cold_audio_automation_and_reset_follow_the_same_clock_for_every_mode ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+
+
+running 2 tests
+test soft_clip_adaa_matches_numerical_interval_integral_from_cold_start ... ok
+test dc_blocker_removes_steady_offset_for_every_mode_and_adaa_setting ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.33s
+
+
+running 3 tests
+test soft_clip_adaa_reduces_folded_energy_at_high_drive ... ok
+test small_signal_adaa_and_parallel_mix_include_the_fractional_sample_response ... ok
+maximum spectral RMS error=1.3942951451318178e-6; largest native folded power=1.2272575140463651e-1
+test all_modes_match_converged_oversampled_harmonic_references ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.59s
+
+
+running 6 tests
+test binding_install_and_input_validation_are_transactional ... ok
+test disabled_missing_and_clock_mismatch_keep_native_output ... ok
+test analytic_fixture_sweeps_match_reference_reset_and_callback_boundaries ... ok
+test native_dc_output_and_mix_remain_after_neural_wet_selection ... ok
+test invalid_history_controls_and_disable_preserve_classical_adaa ... ok
+{"alias_parameter_sweep":[{"alias_bins":[1289,487,315,1117,1919,1375,573,229,1031,1833,1461,659,143],"drive":1.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":4699.21875,"fundamental_bin":401,"learned_folded_to_fundamental_db":-82.69422509087363,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-93.6985473788417,"sample_rate":48000},{"alias_bins":[1099,899,1199,799,1299,699,1399,599,1499,499,1599,399,1699,299,1799],"drive":1.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":11707.03125,"fundamental_bin":999,"learned_folded_to_fundamental_db":-28.768168691640696,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-53.883593820123664,"sample_rate":48000},{"alias_bins":[1289,487,315,1117,1919,1375,573,229,1031,1833,1461,659,143],"drive":4.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":4699.21875,"fundamental_bin":401,"learned_folded_to_fundamental_db":-31.617077372454713,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-41.70476296153776,"sample_rate":48000},{"alias_bins":[1099,899,1199,799,1299,699,1399,599,1499,499,1599,399,1699,299,1799],"drive":4.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":11707.03125,"fundamental_bin":999,"learned_folded_to_fundamental_db":-12.476720087875028,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-27.49052813758816,"sample_rate":48000},{"alias_bins":[1289,487,315,1117,1919,1375,573,229,1031,1833,1461,659,143],"drive":12.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":4699.21875,"fundamental_bin":401,"learned_folded_to_fundamental_db":-16.646273303945872,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-27.442618987339205,"sample_rate":48000},{"alias_bins":[1099,899,1199,799,1299,699,1399,599,1499,499,1599,399,1699,299,1799],"drive":12.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":11707.03125,"fundamental_bin":999,"learned_folded_to_fundamental_db":-8.147145725882131,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-20.31311056169482,"sample_rate":48000},{"alias_bins":[1289,487,315,1117,1919,1375,573,229,1031,1833,1461,659,143],"drive":20.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":4699.21875,"fundamental_bin":401,"learned_folded_to_fundamental_db":-14.117278371554846,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-25.51668439941745,"sample_rate":48000},{"alias_bins":[1099,899,1199,799,1299,699,1399,599,1499,499,1599,399,1699,299,1799],"drive":20.0,"fixture":"untrained direct tanh; not measured hardware","frequency_hz":11707.03125,"fundamental_bin":999,"learned_folded_to_fundamental_db":-7.390350746969183,"model_added_lookahead_samples":0,"native_adaa_folded_to_fundamental_db":-19.53747218665827,"sample_rate":48000}],"deployment_admitted":false}
+test analytic_neural_fixtures_expose_folded_harmonics_in_parameter_sweeps ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+
+running 20 tests
+test asymmetric_mode_matches_independent_normalized_curve_oracle ... ok
+test asymmetric_stereo_channels_are_independent ... ok
+test boolean_state_from_params ... ok
+test bypass_mix_zero_passthrough ... ok
+test drive_automation_is_callback_partition_invariant_for_every_topology ... ok
+test asymmetric_even_harmonics_and_dc_blocker_have_measured_contracts ... ok
+test host_wraps_exactly_once_and_aligns_dry_wet_in_one_time_domain ... ok
+test four_x_host_oversampling_reduces_out_of_band_harmonic_aliases ... ok
+test initialize_changes_sample_rate ... ok
+test instantiate_and_declare_metadata ... ok
+test legacy_float_booleans_are_accepted ... ok
+test mode_switch_and_oversampling_state ... ok
+test output_gain_affects_level ... ok
+test parameter_roundtrip ... ok
+test process_error_when_buffer_too_short ... ok
+test process_soft_clip_bounds_output ... ok
+test reset_leaves_plugin_ready ... ok
+test set_parameter_type_mismatch_rejected ... ok
+test set_parameter_unknown_rejected ... ok
+test dynamic_control_survives_every_mode_and_actual_host_oversampling_factor ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Compiling sotf-plugin-saturation v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation)
+    Finished `release` profile [optimized] target(s) in 2m 24s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_saturation-e766d215f32b39cc)
+     Running unittests bin/qa_saturation.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_saturation-516673bc7791df13)
+     Running tests/audit_lifecycle.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_lifecycle-7aeda0e098eb3c98)
+     Running tests/audit_signal_contract.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_signal_contract-c7b8144034b2a93a)
+     Running tests/audit_spectrum.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_spectrum-4bad5eb94f55ae37)
+     Running tests/candidate.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/candidate-2f1e461abbe0cfb4)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-399fb487abe03fa8)

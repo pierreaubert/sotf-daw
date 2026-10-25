@@ -445,6 +445,92 @@ pub struct CandidateCounters {
     pub numerical: u64,
 }
 
+/// Fixed-storage candidate selection with caller-owned deterministic fallback.
+///
+/// The caller must continuously compute its own classical sample. Unsupported
+/// clocks or controls invalidate the affected neural history windows. Disabled
+/// selection still records valid input history. No model replacement is exposed.
+#[derive(Debug)]
+pub struct ExternalFallbackQualification {
+    candidate: Option<Stream>,
+    sample_rate: u32,
+    counters: CandidateCounters,
+}
+
+impl ExternalFallbackQualification {
+    /// Prepare a candidate stream for an immutable capture clock.
+    ///
+    /// # Errors
+    /// Rejects unsupported clocks or a candidate captured at another rate.
+    pub fn new(
+        candidate: Option<HardwareCandidate>,
+        sample_rate: u32,
+    ) -> Result<Self, CandidateError> {
+        if !(44100..=192000).contains(&sample_rate)
+            || candidate
+                .as_ref()
+                .is_some_and(|c| c.sample_rate != sample_rate)
+        {
+            return Err(error("external fallback needs a matching capture clock"));
+        }
+        Ok(Self {
+            candidate: candidate.map(Stream::new),
+            sample_rate,
+            counters: CandidateCounters::default(),
+        })
+    }
+
+    /// Clear candidate history and counters without replacing its capture.
+    pub fn reset(&mut self) {
+        if let Some(candidate) = &mut self.candidate {
+            candidate.reset();
+        }
+        self.counters = CandidateCounters::default();
+    }
+
+    /// Copy per-sample selection decisions without allocation.
+    pub fn counters(&self) -> CandidateCounters {
+        self.counters
+    }
+
+    /// Select a neural sample or preserve the caller's exact classical sample.
+    ///
+    /// Validity belongs to the entire tapped history. A clock/control mismatch
+    /// stamps an invalid input rather than allowing stale-context history to be
+    /// reused on return. This does not constrain the caller's fallback output.
+    pub fn select(
+        &mut self,
+        input: f32,
+        classical: f32,
+        rate: u32,
+        enabled: bool,
+        controls_match: bool,
+    ) -> f32 {
+        let valid_context = rate == self.sample_rate && controls_match;
+        let neural = self
+            .candidate
+            .as_mut()
+            .and_then(|c| c.sample(if valid_context { input } else { f32::NAN }, enabled));
+        if !enabled {
+            self.counters.disabled = self.counters.disabled.saturating_add(1);
+        } else if self.candidate.is_none() {
+            self.counters.unavailable = self.counters.unavailable.saturating_add(1);
+        } else {
+            match neural {
+                Some(Ok(output)) => {
+                    self.counters.neural = self.counters.neural.saturating_add(1);
+                    return output;
+                }
+                Some(Err(())) => {
+                    self.counters.numerical = self.counters.numerical.saturating_add(1)
+                }
+                None => self.counters.out_of_domain = self.counters.out_of_domain.saturating_add(1),
+            }
+        }
+        classical
+    }
+}
+
 /// Explicit QA-only candidate stream with continuously prepared classical fallback.
 pub struct HardwareQualification {
     classical: AnalogColorStage,

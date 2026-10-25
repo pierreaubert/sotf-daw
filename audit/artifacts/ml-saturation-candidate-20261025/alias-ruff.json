@@ -1,0 +1,9 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "check",
+    "scripts/ml/analyze_saturation_alias.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.013487917138263583
+}

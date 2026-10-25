@@ -17,3 +17,5 @@ mod tests;
 pub use saturation_mode::*;
 pub use saturation_plugin::*;
 pub use saturation_plugin_params::*;
+#[cfg(feature = "qa")]
+pub mod candidate;
