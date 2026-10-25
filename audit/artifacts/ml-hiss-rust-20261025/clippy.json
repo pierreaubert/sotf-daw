@@ -1,0 +1,23 @@
+{
+  "argv": [
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugin-hiss-reducer",
+    "--release",
+    "--offline",
+    "--locked",
+    "--features",
+    "qa,interval-proposals",
+    "--all-targets",
+    "--jobs",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 1.7007797500118613
+}

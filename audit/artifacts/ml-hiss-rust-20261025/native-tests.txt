@@ -1,0 +1,11 @@
+   Compiling sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
+    Finished `release` profile [optimized] target(s) in 10.19s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_hiss_reducer-a78cd30dbfa14510)
+
+running 4 tests
+test interval_proposals::tests::extreme_finite_parameters_refuse_numeric_overflow ... ok
+test interval_proposals::tests::incomplete_nonfinite_and_unexcited_physical_channels_abstain ... ok
+test interval_proposals::tests::integrity_schema_policy_and_context_are_enforced ... ok
+test interval_proposals::tests::python_parity_across_rates_channels_and_odd_fft_size ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s

@@ -20,5 +20,11 @@
     "Causal worker/source-clock/reset/staleness/overload lifecycle and explicit profile application",
     "Listener/host/resource/cross-platform validation"
   ],
-  "license": "GPL-3.0-or-later"
+  "license": "GPL-3.0-or-later",
+  "rust_inference": {
+    "feature": "interval-proposals",
+    "module": "sotf_plugin_hiss_reducer::interval_proposals",
+    "thread_contract": "Allocating control/background-thread API only; no worker or plugin integration yet",
+    "evidence": "audit/artifacts/ml-hiss-rust-20261025"
+  }
 }

@@ -6,6 +6,22 @@ starts native capture, writes a profile/preset or changes stored/active profiles
 The existing explicit interval selection remains necessary. Worker/host
 integration is still open; this implementation is offline.
 
+The Hiss crate also exposes `interval_proposals` behind the opt-in
+`interval-proposals` Cargo feature. `IntervalModel::from_bytes` verifies bounded
+model bytes, an explicit SHA256, policy and exact `IntervalContext` before use.
+`evaluate` extracts features and returns review scores for exactly one second of
+interleaved PCM. Both operations allocate and belong on a control/background
+thread. This feature adds no plugin parameter, default model, worker or capture
+action. Finite parameters that overflow inference arithmetic return an error.
+Ten deterministic Python/Rust reference probes cover 44.1/48/96/192 kHz,
+one/two/eight channels, and the odd 883-point FFT at 44150 Hz. PCM byte hashes,
+all features, main/bootstrap scores, support distances and decisions match;
+numeric comparisons use absolute tolerance `1e-10`. Out-of-context probes test
+arithmetic only; public evaluation rejects their context. This is not additional
+classifier quality evidence. References can be regenerated with
+`python scripts/ml/hiss_rust_parity.py`; native validation is recorded in
+`audit/artifacts/ml-hiss-rust-20261025`.
+
 No default model is installed. `model.synthetic.json` is an explicitly named
 functional example, SHA256
 `bae4c80e241f85e98edda3d017bc48a964e9496d10cd436b58dad9fe978c32de`.

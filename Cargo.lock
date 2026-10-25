@@ -9298,8 +9298,10 @@ version = "0.5.8"
 dependencies = [
  "hound",
  "plugins-denoiser",
+ "rustfft",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
 ]
 

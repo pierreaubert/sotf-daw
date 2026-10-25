@@ -1,0 +1,8 @@
+{
+  "exit_code": 101,
+  "diagnostics": [
+    "sha2 0.11 digest array does not implement LowerHex; fixed explicit per-byte encoding",
+    "serde_json Value does not implement generic TryInto<IntervalContext>; fixed from_value"
+  ],
+  "stage": "compile; no tests ran"
+}

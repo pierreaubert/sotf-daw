@@ -14,6 +14,7 @@ path = "src/lib.rs"
 
 [features]
 qa = ["sotf-host/qa"]
+interval-proposals = ["dep:rustfft", "dep:sha2"]
 
 [[bin]]
 name = "qa-hiss-reducer"
@@ -25,6 +26,8 @@ plugins-denoiser = { workspace = true }
 sotf-host = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+rustfft = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
 
 [dev-dependencies]
 hound = { workspace = true }

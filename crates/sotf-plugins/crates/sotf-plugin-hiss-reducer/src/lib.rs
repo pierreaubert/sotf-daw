@@ -1,3 +1,5 @@
+#[cfg(feature = "interval-proposals")]
+pub mod interval_proposals;
 pub mod params;
 pub mod profile;
 pub mod snapshot;

@@ -579,12 +579,16 @@
         "scripts/ml/analyze_hiss_intervals.py",
         "scripts/ml/test_hiss_intervals.py",
         "crates/sotf-plugins/models/hiss-intervals/manifest.json",
-        "audit/artifacts/ml-hiss-intervals-20261025"
+        "audit/artifacts/ml-hiss-intervals-20261025",
+        "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_proposals.rs",
+        "scripts/ml/hiss_rust_parity.py",
+        "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/tests/fixtures/interval-parity.json",
+        "audit/artifacts/ml-hiss-rust-20261025"
       ],
       "remaining": [
         "Review-only logistic interval model now fits explicit grouped labels with bootstrap/support abstention. Current synthetic functional data show no improvement over the classical baseline, and identical noise PCM used as desired programme still receives a review proposal. Explicitly capturing that counterfactual attenuates it by9.59dB. No automatic-capture or general semantic-safety claim.",
         "Collect adequate real whole-source labels, compare stronger classical baselines and calibrate source-shift/abstention behavior. The current score lower bound is heuristic, not calibrated probability, and cannot resolve identical-audio intended-use ambiguity.",
-        "Validate worker/source-clock provenance, discontinuity/reset, stale/overloaded/unavailable-model behavior, explicit application and host/profile lifecycle off the audio critical path.",
+        "Rust model loading, feature extraction and scoring now match Python arithmetic under an explicit opt-in feature; these allocating operations are restricted to control/background threads. Still implement and validate worker/source-clock provenance, discontinuity/reset, stale/overloaded/unavailable-model behavior, explicit application and host/profile lifecycle off the audio critical path.",
         "Quantify native noise reduction and programme damage with all declared backend/threshold settings; current controlled capture contamination raises the floor by19.72dB and increases spectral speech high-band loss from0.785 to3.815dB at the default threshold. This is development-only conditional attenuation, not classification accuracy.",
         "Real held-out noise/music/multilingual recordings, level/rate/layout shifts, listening and host/resource/cross-platform acceptance remain open."
       ]

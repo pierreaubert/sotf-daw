@@ -1,0 +1,54 @@
+[
+  {
+    "argv": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/interval_proposals.rs"
+    ],
+    "exit_code": 0,
+    "output": ""
+  },
+  {
+    "argv": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "--config",
+      "skip_children=true",
+      "crates/sotf-plugins/crates/sotf-plugin-hiss-reducer/src/lib.rs"
+    ],
+    "exit_code": 0,
+    "output": ""
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/hiss_rust_parity.py"
+    ],
+    "exit_code": 0,
+    "output": "All checks passed!\n"
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/hiss_rust_parity.py"
+    ],
+    "exit_code": 0,
+    "output": "1 file already formatted\n"
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "output": ""
+  }
+]
