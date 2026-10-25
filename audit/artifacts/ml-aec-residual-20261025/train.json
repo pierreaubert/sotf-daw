@@ -1,0 +1,15 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_aec_residual.py",
+    "train",
+    "--data",
+    "/Volumes/home_tmp/tmp/ml-aec-residual-20261025/corpus",
+    "--output",
+    "crates/sotf-plugins/models/aec-residual",
+    "--epochs",
+    "200"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 16.230032920837402
+}

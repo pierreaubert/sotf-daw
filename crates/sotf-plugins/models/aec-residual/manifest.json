@@ -1,0 +1,35 @@
+{
+  "format": "sotf_aec_residual_manifest_v1",
+  "license": "GPL-3.0-or-later",
+  "training_data": "Project-generated causal voiced/noise scenes through independent sparse time-domain echo paths. No external recordings, device captures or pretrained weights.",
+  "split_scene_counts": {
+    "train": 32,
+    "development": 16,
+    "holdout": 16
+  },
+  "unique_input_hashes": 64,
+  "model_sha256": "2c39c23a5015cecbde5ea950381f80c18907558e897ce2a93ad4df8f72b42752",
+  "model_bytes": 7007,
+  "parameters": 337,
+  "float32_weight_bytes": 1348,
+  "native_feature_packet_bytes": 768,
+  "bounded_gain_range": [
+    0.25,
+    1.0
+  ],
+  "input_contract": "16 bands x12 bounded causal features; native256-frame AEC blocks,512 FFT,16..48kHz;feature_version1",
+  "runtime_integration": "Not connected to live AecPlugin audio yet. Native immutable inference API and allocation-checked parity executable only. Enabling neural-residual feature alone leaves existing audio unchanged.",
+  "adoption_recommended": false,
+  "quality_evidence": "audit/artifacts/ml-aec-residual-20261025/independent-quality.json",
+  "remaining": [
+    "Bounded live worker integration with stale endpoint/generation rejection, reset/drain and explicit host configuration.",
+    "Improve dev-only hybrid proposal selection before adopting; fresh final holdout for any new model.",
+    "Natural speech and nonlinear physical-device/domain validation, near-end listening and platform runtime budgets."
+  ],
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "versions": {
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "torch_training_only": "2.14.1"
+  }
+}

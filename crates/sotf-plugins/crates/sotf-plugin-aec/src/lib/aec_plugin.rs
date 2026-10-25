@@ -429,6 +429,28 @@ impl Plugin for AecPlugin {
 }
 
 impl AecPlugin {
+    /// Borrow the latest complete adaptive block for explicit QA collection.
+    ///
+    /// Returns `None` before input, after EOF, or within a partial native block.
+    /// This view precedes residual suppression and does not advance DSP state.
+    #[cfg(feature = "qa")]
+    pub fn residual_training_analysis(
+        &self,
+    ) -> Option<crate::residual_features::TrainingAnalysis<'_>> {
+        if !self.drain_state.has_input
+            || self.drain_state.remaining.is_some()
+            || self.input_fill != 0
+        {
+            return None;
+        }
+        Some(crate::residual_features::TrainingAnalysis {
+            error: &self.mic_buffer,
+            error_spectrum: &self.aec.last_error_freq()[..self.block_size + 1],
+            echo_spectrum: &self.aec.last_echo_estimate_freq()[..self.block_size + 1],
+            reference: &self.ref_buffer,
+        })
+    }
+
     pub fn post_filter_mix(&self) -> f32 {
         self.post_filter_mix
     }

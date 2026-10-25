@@ -1,0 +1,19 @@
+{
+  "command": [
+    "cargo",
+    "check",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j",
+    "2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "-p",
+    "sotf-plugin-aec",
+    "--no-default-features",
+    "--lib"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 2.758601188659668
+}

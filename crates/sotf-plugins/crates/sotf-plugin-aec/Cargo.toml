@@ -14,11 +14,22 @@ name = "sotf_plugin_aec"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
+neural-residual = ["dep:sha2"]
 
 [[bin]]
 name = "qa-aec"
 path = "bin/qa_aec.rs"
+required-features = ["qa"]
+
+[[bin]]
+name = "qa-aec-residual-infer"
+path = "bin/qa_aec_residual_infer.rs"
+required-features = ["qa", "neural-residual"]
+
+[[bin]]
+name = "qa-aec-residual-corpus"
+path = "bin/qa_aec_residual_corpus.rs"
 required-features = ["qa"]
 
 [dependencies]
@@ -27,3 +38,4 @@ rustfft = { workspace = true }
 realfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true, optional = true }

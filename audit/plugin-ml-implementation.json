@@ -40,8 +40,21 @@
       "requirements": [
         "A small neural residual-echo suppressor/nonlinear front end is a credible hybrid candidate [hybrid AEC research][R3]; keep adaptive cancellation and safe bypass operational without inference."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_features.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-aec/src/residual_model.rs",
+        "crates/sotf-plugins/models/aec-residual",
+        "scripts/ml/train_aec_residual.py",
+        "scripts/ml/verify_aec_residual.py",
+        "scripts/ml/analyze_aec_residual.py",
+        "audit/artifacts/ml-aec-residual-20261025"
+      ],
+      "remaining": [
+        "Wire an explicit optional native worker into the plugin with bounded queues, source generation/endpoint freshness checks, fallback, reset/EOF and host serialization. This checkpoint exposes model/analysis APIs only; it does not alter live audio.",
+        "Improve or combine the prototype using development data; classical post-filter wins 10/12 steady echo comparisons, and 48 kHz double-talk onset residual echo remains unacceptable for adoption. New model selection requires a fresh final holdout.",
+        "Natural speech, nonlinear device, delay/drift and near-end listening validation beyond generated voiced/noise scenes; held-out user recordings and cross-platform hosts are still unavailable."
+      ]
     },
     {
       "plugin_id": 4,
@@ -541,9 +554,14 @@
   "program_candidates": [
     {
       "candidate": "Hybrid AEC",
-      "status": "implementation_pending",
+      "status": "implementation_in_progress",
       "acceptance_experiment": "Compare adaptive-only and neural-assisted paths under double-talk, nonlinear playback and delay changes; report near-end damage as well as echo reduction.",
-      "deployment_boundary": "Small bounded inference task with stale-result rejection; adaptive fallback stays active."
+      "deployment_boundary": "Small bounded inference task with stale-result rejection; adaptive fallback stays active.",
+      "evidence": [
+        "audit/artifacts/ml-aec-residual-20261025",
+        "crates/sotf-plugins/models/aec-residual"
+      ],
+      "remaining": "Bounded live worker/stale-result integration and stronger real-world quality acceptance; native prototype alone does not complete this candidate."
     },
     {
       "candidate": "Hardware compressor emulation",

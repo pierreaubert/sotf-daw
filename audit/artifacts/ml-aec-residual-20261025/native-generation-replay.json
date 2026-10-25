@@ -1,0 +1,29 @@
+{
+  "original_binary_sha256": "9aeec98164486ba3ef8c4d1a7e50ad7b352b41b5338f968c7d42fb4b61ad194b",
+  "current_binary_sha256": "4c87f13790d8bbf71df369bbffa5e5f52f7c3bdd8dd3babc53d034a958de6f47",
+  "change": "Replace constant chunks_exact with as_chunks to satisfy Clippy; add separately gated model API. No arithmetic or output changes.",
+  "rows": [
+    {
+      "id": "train_000",
+      "rate": 16000,
+      "exact_native_hash_matches": {
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "classical": true,
+        "adaptive": true
+      }
+    },
+    {
+      "id": "train_009",
+      "rate": 48000,
+      "exact_native_hash_matches": {
+        "features": true,
+        "targets": true,
+        "error_spectra": true,
+        "classical": true,
+        "adaptive": true
+      }
+    }
+  ]
+}

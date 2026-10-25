@@ -1,0 +1,13 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/train_aec_residual.py",
+    "generate",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-aec-residual-corpus",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-aec-residual-20261025/corpus"
+  ],
+  "exit_code": 0,
+  "elapsed_seconds": 4.426086902618408
+}

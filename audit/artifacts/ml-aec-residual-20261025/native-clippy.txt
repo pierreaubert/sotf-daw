@@ -1,0 +1,20 @@
+    Checking sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)
+error: using `chunks_exact` with a constant chunk size
+  --> crates/sotf-plugins/crates/sotf-plugin-aec/bin/qa_aec_residual_corpus.rs:79:10
+   |
+79 |         .chunks_exact(4)
+   |          ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<4>().0.iter()`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks
+   = note: `-D clippy::chunks-exact-to-as-chunks` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::chunks_exact_to_as_chunks)]`
+
+error: using `chunks_exact` with a constant chunk size
+   --> crates/sotf-plugins/crates/sotf-plugin-aec/bin/qa_aec_residual_corpus.rs:146:18
+    |
+146 |                 .chunks_exact(2)
+    |                  ^^^^^^^^^^^^^^^ help: consider using `as_chunks` instead: `as_chunks::<2>().0.iter()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#chunks_exact_to_as_chunks
+
+error: could not compile `sotf-plugin-aec` (bin "qa-aec-residual-corpus") due to 2 previous errors
