@@ -179,6 +179,37 @@ impl PreparedProposal {
 }
 
 impl XtcPlugin {
+    /// Read the prepared analysis window for independent offline reconstruction.
+    pub fn proposal_analysis_window(&self) -> &[f32] {
+        &self.fft.analysis_window
+    }
+
+    /// Read native IFFT/COLA scaling for independent offline reconstruction.
+    pub fn proposal_output_scale(&self) -> f32 {
+        self.fft.output_scale
+    }
+
+    /// Read an accepted native or learned matrix coefficient without allocation.
+    pub fn prepared_filter_coefficient(
+        &self,
+        bin: usize,
+        speaker: usize,
+        input: usize,
+    ) -> Option<[f32; 2]> {
+        let f = &self.filter_state.cached_current_filters;
+        if f.speaker_filters.is_some() {
+            return None;
+        }
+        let vector = match (speaker, input) {
+            (0, 0) => &f.filter_ll,
+            (0, 1) => &f.filter_lr,
+            (1, 0) => f.filter_rl.as_ref().unwrap_or(&f.filter_lr),
+            (1, 1) => f.filter_rr.as_ref().unwrap_or(&f.filter_ll),
+            _ => return None,
+        };
+        vector.get(bin).map(|v| [v.re, v.im])
+    }
+
     /// Install a prepared QA matrix before accepted input, off the audio thread.
     ///
     /// Reset retains this resource. Successful initialize restores the configured

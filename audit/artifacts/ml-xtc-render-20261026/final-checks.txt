@@ -1,0 +1,11 @@
+All checks passed!
+4 files already formatted
+test_actual_proposal_waveforms_match_independent_wola_and_callbacks (test_xtc_proposal_native.NativeTests.test_actual_proposal_waveforms_match_independent_wola_and_callbacks) ... ok
+test_rejected_proposal_matches_actual_native_fallback (test_xtc_proposal_native.NativeTests.test_rejected_proposal_matches_actual_native_fallback) ... ok
+test_identity_and_nonsymmetric_constant_matrix_reconstruct_delayed_source (test_xtc_proposal_native.ReferenceTests.test_identity_and_nonsymmetric_constant_matrix_reconstruct_delayed_source) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.291s
+
+OK
+{"native_hashes_verified": 114, "maximum_wola_sample_error": 4.712280517182865e-09, "deployment_admitted": false}

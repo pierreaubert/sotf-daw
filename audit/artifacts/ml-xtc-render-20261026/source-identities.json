@@ -1,0 +1,12 @@
+{
+  "scripts/ml/xtc_proposal_native.py": "5d252a714b3f324e002eae5354b800cb9d89d1c94dd1355cc2a8456a0a8cbb0c",
+  "scripts/ml/test_xtc_proposal_native.py": "b1c4b07ed0c3ca9a2a5e8ed9960c5f60a210b946a9cad6690f193d6278d30ca6",
+  "scripts/ml/evaluate_xtc_rendered.py": "d71db626d6c587ee6adcb1baa3e35d3abcb2a5c52df5074f13dd5732b2b69ad1",
+  "scripts/ml/analyze_xtc_rendered.py": "91ae93fe93fd63089d9090718bf1cd34b0889584131b0a36880481142888e5b9",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/bin/qa_xtc_proposal_render.rs": "dc6c569903581c3140e831d1e06569a21a7b93b49d0150a202eb1a84a0a99c8f",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/learned_proposal.rs": "f7e98be013c0394885acf6945c37648835f27792eff94eede83118990614a0a0",
+  "scripts/ml/xtc_transfer_model.py": "6c24eab8ce0eb933a9d29de8fbbd39091ba9da8f24caaf9a3a4554422aeff8d0",
+  "Cargo.lock": "b395dfb170c1f52f41c6868852bbcfd7228809361ec68c04e90b3c9bd60d5b8d",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/Cargo.toml": "3a0ddf963694dde5884dc01b89ed02d7f2722d9ccb9db482735cdd918537e3e6",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs": "e8496a8f2814c569fbd6c3aa8afa7223e46482ae91cfe503a7f6dda3f41316e8"
+}

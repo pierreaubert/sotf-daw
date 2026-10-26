@@ -1,0 +1,8 @@
+test_actual_proposal_waveforms_match_independent_wola_and_callbacks (test_xtc_proposal_native.NativeTests.test_actual_proposal_waveforms_match_independent_wola_and_callbacks) ... ok
+test_rejected_proposal_matches_actual_native_fallback (test_xtc_proposal_native.NativeTests.test_rejected_proposal_matches_actual_native_fallback) ... ok
+test_identity_and_nonsymmetric_constant_matrix_reconstruct_delayed_source (test_xtc_proposal_native.ReferenceTests.test_identity_and_nonsymmetric_constant_matrix_reconstruct_delayed_source) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.327s
+
+OK

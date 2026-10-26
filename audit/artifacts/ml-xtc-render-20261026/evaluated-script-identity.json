@@ -1,0 +1,5 @@
+{
+  "path": "scripts/ml/evaluate_xtc_rendered.py",
+  "sha256": "0f232517312985c840ede94fda71ad81d3b60fbd199c24a7f177629b4d3033b5",
+  "post_run_cleanup": "Unused local bindings only; numerical evaluation unchanged."
+}

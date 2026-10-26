@@ -1096,11 +1096,18 @@
         "crates/sotf-plugins/crates/sotf-plugin-xtc/src/learned_proposal.rs",
         "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/learned_proposal.rs",
         "audit/ml-xtc-native-proposal-20261026.md",
-        "audit/artifacts/ml-xtc-native-proposal-20261026"
+        "audit/artifacts/ml-xtc-native-proposal-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-xtc/bin/qa_xtc_proposal_render.rs",
+        "scripts/ml/xtc_proposal_native.py",
+        "scripts/ml/evaluate_xtc_rendered.py",
+        "scripts/ml/analyze_xtc_rendered.py",
+        "scripts/ml/test_xtc_proposal_native.py",
+        "audit/ml-xtc-render-20261026.md",
+        "audit/artifacts/ml-xtc-render-20261026"
       ],
       "remaining": [
         "Offline measured-direction candidate remains unadmitted: learned separation reaches-22.26dB and intended gain-28.61dB; improve on development data and evaluate new final material, with measured mismatch and listener acceptance.",
-        "QA-only native prepared-proposal integration passes bounded transactional/lifecycle, latency and heap checks; actual frequency-dependent WOLA and measured-plant rendered cancellation, true-peak and product activation validation remain.",
+        "QA-only native import and38 waveforms pass independent WOLA/fallback checks;224 measured-ear projections expose negative separation at+/-20deg and severe90deg fixed-filter mismatch. Improve transfer/phase robustness using development data, then freeze new final material; broader profiles, transient/broadband ear artifacts, true peaks and product activation remain.",
         "Only one measured mannequin and horizontal/fixed-radius coverage; human calibration, position uncertainty, full memory/worker/contention/platform budgets and product activation remain."
       ]
     }

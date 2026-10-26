@@ -20,6 +20,11 @@ name = "qa-xtc"
 path = "bin/qa_xtc.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-xtc-proposal-render"
+path = "bin/qa_xtc_proposal_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 math-dsp = { workspace = true }

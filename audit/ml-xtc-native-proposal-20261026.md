@@ -67,9 +67,9 @@ full-suite compile failed on a relative fixture path, and the first Clippy run
 reported constant-sized chunk iteration in tests; corrected runs and first
 failures are preserved under `audit/artifacts/ml-xtc-native-proposal-20261026`.
 
-Remaining: compare actual native WOLA output against an independent reference
-for the frequency-dependent proposal; render and assess measured-plant
-cancellation rather than relying on ideal matrix products; improve the severe
+The subsequent rendered qualification is in `audit/ml-xtc-render-20261026.md`:
+38 native waveforms pass independent WOLA parity, while224 measured-ear
+projections retain severe fixed-filter mismatch failures. Remaining: improve the severe
 desired-gain loss and negative separation on development data, then freeze new
 final material. Complete true-peak, memory/contended-host/platform, human
 calibration/listening and product activation validation remain open. Full

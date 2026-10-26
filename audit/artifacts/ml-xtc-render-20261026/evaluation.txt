@@ -1,0 +1,1 @@
+{"native_waveforms": 38, "measured_ear_projections": 224, "maximum_wola_sample_error": 4.712280517182865e-09, "maximum_hann_transfer_error": 2.3509568101394024e-07, "deployment_admitted": false}

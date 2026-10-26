@@ -1,0 +1,75 @@
+[
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/xtc_proposal_native.py",
+      "scripts/ml/test_xtc_proposal_native.py",
+      "scripts/ml/evaluate_xtc_rendered.py",
+      "scripts/ml/analyze_xtc_rendered.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.010504082776606083
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/xtc_proposal_native.py",
+      "scripts/ml/test_xtc_proposal_native.py",
+      "scripts/ml/evaluate_xtc_rendered.py",
+      "scripts/ml/analyze_xtc_rendered.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.010008957935497165
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_xtc_proposal_native.py",
+      "-v"
+    ],
+    "exit_code": 0,
+    "seconds": 0.3522690418176353
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/analyze_xtc_rendered.py",
+      "--report",
+      "audit/artifacts/ml-xtc-render-20261026/report.json",
+      "--output",
+      "audit/artifacts/ml-xtc-render-20261026/analysis.json"
+    ],
+    "exit_code": 0,
+    "seconds": 0.07128316699527204
+  },
+  {
+    "argv": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-xtc/bin/qa_xtc_proposal_render.rs",
+      "crates/sotf-plugins/crates/sotf-plugin-xtc/src/learned_proposal.rs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.04052804107777774
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.020066208206117153
+  }
+]

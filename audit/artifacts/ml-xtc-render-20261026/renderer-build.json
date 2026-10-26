@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "build",
+    "-p",
+    "sotf-plugin-xtc",
+    "--bin",
+    "qa-xtc-proposal-render",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 15.710921540856361
+}
