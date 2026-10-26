@@ -1051,8 +1051,21 @@
       "requirements": [
         "ML source masks are a meaningful optional improvement only with measured extra latency, leakage/artifact metrics and graceful fallback."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/upmixer_source_mask.py",
+        "scripts/ml/upmixer_mask_cases.py",
+        "scripts/ml/train_upmixer_mask.py",
+        "scripts/ml/test_upmixer_source_mask.py",
+        "crates/sotf-plugins/models/upmixer-source-mask",
+        "audit/ml-upmixer-mask-20261026.md",
+        "audit/artifacts/ml-upmixer-mask-20261026"
+      ],
+      "remaining": [
+        "Native optional source-mask integration with exact streaming/reset/fallback and measured extra latency; existing vocal probability is not a source mask.",
+        "Frozen generated-stem candidate fails hard-pan retention and correlated-bed leakage; improve on development data and freeze a fresh final holdout. Full rendered multichannel artifacts and recorded/perceptual acceptance remain.",
+        "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
+      ]
     },
     {
       "plugin_id": 44,

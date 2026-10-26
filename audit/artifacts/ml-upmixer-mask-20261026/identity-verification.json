@@ -1,0 +1,9 @@
+{
+  "disjoint_training_validation_final_seed_sets": true,
+  "held_source_hashes_reproduced": 128,
+  "all_residual_reconstruction_errors_below": 1e-15,
+  "model_sha256": "2ca743740f6adeaa40738a82066c25f65d20633a9bc8a237692aa156818c6d6a",
+  "numpy": "2.5.4",
+  "scipy": "1.18.1",
+  "python": "3.12.10"
+}

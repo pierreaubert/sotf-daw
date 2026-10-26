@@ -1,0 +1,51 @@
+[
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/upmixer_source_mask.py",
+      "scripts/ml/upmixer_mask_cases.py",
+      "scripts/ml/train_upmixer_mask.py",
+      "scripts/ml/test_upmixer_source_mask.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.018031457904726267
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/upmixer_source_mask.py",
+      "scripts/ml/upmixer_mask_cases.py",
+      "scripts/ml/train_upmixer_mask.py",
+      "scripts/ml/test_upmixer_source_mask.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.01009849994443357
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_upmixer_source_mask.py",
+      "-v"
+    ],
+    "exit_code": 0,
+    "seconds": 0.3089956669136882
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.03206150000914931
+  }
+]
