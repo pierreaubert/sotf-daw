@@ -936,11 +936,16 @@
         "scripts/ml/analyze_pnd_comparison.py",
         "scripts/ml/test_pnd_comparison.py",
         "audit/ml-pnd-matched-20261026.md",
-        "audit/artifacts/ml-pnd-matched-20261026"
+        "audit/artifacts/ml-pnd-matched-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/src/ort_pitch.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/ort_pitch.rs",
+        "scripts/ml/verify_pnd_ort_native.py",
+        "audit/ml-pnd-ort-native-20261026.md",
+        "audit/artifacts/ml-pnd-ort-native-20261026"
       ],
       "remaining": [
         "Matched16-case generated classical/CREPE comparison is implemented; classical wins accepted raw pitch error in all14 supported cases and assisted output regresses in12/14. Broaden sources/rates/SNR and improve/calibrate on separate development material before fresh final/recorded acceptance; no general adoption. Lone-octave controls preserve exact classical output.",
-        "Independent held-out material and real DAW contention/latency/memory acceptance",
+        "Independent held-out material and real DAW contention/latency/memory acceptance remain. QA-only native ORT CPU/CoreML alternatives now qualify numerical source preprocessing, actual bounded-worker/reset/fallback/drain behavior and native delegation locally; controlled completion is not a paced deadline budget.",
         "Native UI and application build coverage"
       ]
     },
@@ -1240,9 +1245,14 @@
         "scripts/ml/test_crepe_runtime.py",
         "scripts/ml/crepe-runtime-requirements.txt",
         "audit/ml-crepe-runtime-20261026.md",
-        "audit/artifacts/ml-crepe-runtime-20261026"
+        "audit/artifacts/ml-crepe-runtime-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/src/ort_pitch.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/ort_pitch.rs",
+        "scripts/ml/verify_pnd_ort_native.py",
+        "audit/ml-pnd-ort-native-20261026.md",
+        "audit/artifacts/ml-pnd-ort-native-20261026"
       ],
-      "remaining": "Paced native real-model contention baseline and same-network32-frame/three-round runtime comparison are implemented. ORT CPU and CoreML CPU-only pass activation/policy parity; GPU-allowed CoreML fails2e-5 activation tolerance. CoreML CPU-only is faster warm but has larger whole-process memory/startup costs in this local wrapper experiment. Native alternative-runtime worker/preprocessing/lifecycle integration, decision-boundary/material acceptance, complete worker/system memory/CPU/freshness, repeated device/real-track contention, actual GPU-device proof/load, cross-platform builds and product selection remain; no runtime winner is selected."
+      "remaining": "Native QA-only ORT CPU/CoreML CPU-only workers now share the existing source preprocessing, decoder, queue and fallback. Actual-library qualification passes64 activation frames and100 cross-rate windows plus lifecycle/placement/heap checks; native CPU/CoreML delegation is observed. Existing matched runtime costs and paced Tract chain evidence remain distinct. Paced alternative-backend/queue comparisons, full worker/foreign/system memory/CPU/freshness, app-global initializer ownership and library packaging, repeated device contention, actual GPU-device proof/load, cross-platform builds and product selection remain. Pitch-quality regressions are unchanged and no production runtime winner is selected."
     }
   ],
   "local_audit_source": "audit-20261018.md (existing user-owned untracked file; not modified or staged)"

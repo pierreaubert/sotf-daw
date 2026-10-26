@@ -15,6 +15,10 @@ path = "src/lib.rs"
 [features]
 qa = ["sotf-host/qa"]
 neural-pitch = ["dep:tract-onnx", "dep:plugins-inference", "dep:sha2"]
+# QA-only alternative: explicit dynamic-library binding, never downloaded at build time.
+neural-pitch-ort = ["neural-pitch", "qa", "dep:ort"]
+# Avoid linking both large standalone benchmark tools for every integration test.
+qa-neural-tools = ["qa", "neural-pitch"]
 
 [[bin]]
 name = "qa-pnd"
@@ -24,12 +28,12 @@ required-features = ["qa"]
 [[bin]]
 name = "qa-pnd-neural-compare"
 path = "bin/qa_pnd_neural_compare.rs"
-required-features = ["qa", "neural-pitch"]
+required-features = ["qa-neural-tools"]
 
 [[bin]]
 name = "qa-crepe-runtime"
 path = "bin/qa_crepe_runtime.rs"
-required-features = ["qa", "neural-pitch"]
+required-features = ["qa-neural-tools"]
 
 [dependencies]
 sotf-host = { workspace = true }
@@ -39,6 +43,7 @@ rustfft = { workspace = true }
 tract-onnx = { workspace = true, optional = true }
 plugins-inference = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
+ort = { version = "=2.0.0-rc.12", default-features = false, features = ["std", "load-dynamic", "api-23", "coreml"], optional = true }
 
 [dev-dependencies]
 hound = { workspace = true }

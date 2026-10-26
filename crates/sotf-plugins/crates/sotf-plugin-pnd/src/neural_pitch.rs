@@ -18,6 +18,12 @@ const MAX_SOURCE_SAMPLES: usize = 12_288;
 const PITCH_BINS: usize = 360;
 type Runnable = TypedRunnableModel<TypedModel>;
 
+enum ActivationModel {
+    Tract(Box<Runnable>),
+    #[cfg(feature = "neural-pitch-ort")]
+    Ort(Box<crate::ort_pitch::OrtPitchModel>),
+}
+
 struct SourceFrame {
     samples: [f32; MAX_SOURCE_SAMPLES],
     end_sample: u64,
@@ -36,12 +42,29 @@ pub struct PitchObservation {
 
 /// Fixed-shape pretrained pitch model, prepared exclusively on a control thread.
 pub struct CrepeModel {
-    model: Runnable,
+    model: ActivationModel,
     resampling: Vec<Vec<(usize, f64)>>,
     source_len: usize,
 }
 
+impl std::fmt::Debug for CrepeModel {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CrepeModel")
+            .field("backend", &self.backend_name())
+            .field("source_len", &self.source_len)
+            .finish_non_exhaustive()
+    }
+}
+
 impl CrepeModel {
+    /// Identify the selected execution path without exposing foreign runtime handles.
+    pub fn backend_name(&self) -> &'static str {
+        match &self.model {
+            ActivationModel::Tract(_) => "tract",
+            #[cfg(feature = "neural-pitch-ort")]
+            ActivationModel::Ort(model) => model.backend_name(),
+        }
+    }
     /// Load and verify an exported CREPE model at the actual source rate.
     ///
     /// # Errors
@@ -114,7 +137,30 @@ impl CrepeModel {
             }
         }
         let mut result = Self {
-            model,
+            model: ActivationModel::Tract(Box::new(model)),
+            resampling: resampling_weights(sample_rate),
+            source_len: (MODEL_SAMPLES as f64 * sample_rate / MODEL_RATE).ceil() as usize,
+        };
+        result.activations(&[0.0; MODEL_SAMPLES])?;
+        Ok(result)
+    }
+
+    /// Prepare a QA alternative using the identical source preprocessing and decoder.
+    ///
+    /// # Errors
+    /// Rejects unsupported rates, model/library identity, session or metadata failures.
+    #[cfg(feature = "neural-pitch-ort")]
+    pub fn load_ort(
+        config: &NeuralPitchConfig,
+        sample_rate: f64,
+        runtime: &crate::ort_pitch::OrtPitchConfig,
+    ) -> Result<Self, String> {
+        if !sample_rate.is_finite() || !(16_000.0..=192_000.0).contains(&sample_rate) {
+            return Err("Neural pitch supports source rates from16 to192kHz".into());
+        }
+        let model = crate::ort_pitch::OrtPitchModel::load(config, runtime)?;
+        let mut result = Self {
+            model: ActivationModel::Ort(Box::new(model)),
             resampling: resampling_weights(sample_rate),
             source_len: (MODEL_SAMPLES as f64 * sample_rate / MODEL_RATE).ceil() as usize,
         };
@@ -181,11 +227,13 @@ impl CrepeModel {
         if frame.iter().any(|v| !v.is_finite()) {
             return Err("Non-finite CREPE input".into());
         }
+        let model = match &mut self.model {
+            ActivationModel::Tract(model) => model,
+            #[cfg(feature = "neural-pitch-ort")]
+            ActivationModel::Ort(model) => return model.activations(frame),
+        };
         let input = Tensor::from_shape(&[1, MODEL_SAMPLES], frame).map_err(|e| e.to_string())?;
-        let output = self
-            .model
-            .run(tvec!(input.into()))
-            .map_err(|e| e.to_string())?;
+        let output = model.run(tvec!(input.into())).map_err(|e| e.to_string())?;
         let view = output[0]
             .to_array_view::<f32>()
             .map_err(|e| e.to_string())?;
@@ -285,12 +333,43 @@ pub struct NeuralPitchAssistant {
     max_age: u64,
 }
 
+impl std::fmt::Debug for NeuralPitchAssistant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NeuralPitchAssistant")
+            .field("source_window", &self.ring.len())
+            .field("source_clock", &self.clock)
+            .field("hop", &self.hop)
+            .finish_non_exhaustive()
+    }
+}
+
 impl NeuralPitchAssistant {
     /// Prepare a model and fixed-size buffers before audio starts.
     ///
     /// # Errors
     /// Rejects invalid policy, unavailable models, unsupported rates, or spawn errors.
     pub fn new(config: NeuralPitchConfig, sample_rate: f64) -> Result<Self, String> {
+        Self::validate_policy(&config)?;
+        let model = CrepeModel::load(&config, sample_rate)?;
+        Self::from_model(config, sample_rate, model)
+    }
+
+    /// Prepare a QA alternative on the same bounded worker/framing/policy path.
+    ///
+    /// # Errors
+    /// Rejects invalid policy or model/library/session initialization failures.
+    #[cfg(feature = "neural-pitch-ort")]
+    pub fn new_ort(
+        config: NeuralPitchConfig,
+        sample_rate: f64,
+        runtime: &crate::ort_pitch::OrtPitchConfig,
+    ) -> Result<Self, String> {
+        Self::validate_policy(&config)?;
+        let model = CrepeModel::load_ort(&config, sample_rate, runtime)?;
+        Self::from_model(config, sample_rate, model)
+    }
+
+    fn validate_policy(config: &NeuralPitchConfig) -> Result<(), String> {
         if !config.min_confidence.is_finite()
             || !(0.0..=1.0).contains(&config.min_confidence)
             || config.min_confidence == 0.0
@@ -301,7 +380,14 @@ impl NeuralPitchAssistant {
         {
             return Err("Invalid neural pitch confidence, age, or drift policy".into());
         }
-        let model = CrepeModel::load(&config, sample_rate)?;
+        Ok(())
+    }
+
+    fn from_model(
+        config: NeuralPitchConfig,
+        sample_rate: f64,
+        model: CrepeModel,
+    ) -> Result<Self, String> {
         let window = (MODEL_SAMPLES as f64 * sample_rate / MODEL_RATE).ceil() as usize;
         let hop = (sample_rate / 100.0).round() as usize;
         let max_age = (sample_rate * 0.001 * f64::from(config.max_age_ms)) as u64;

@@ -1,0 +1,808 @@
+{
+  "library_sha256": "92500010659b052368797e30c1841956b0efd699a8061ef8b3b25f27449c86e7",
+  "maximum_confidence_difference": 4.172325134277344e-7,
+  "maximum_pitch_difference_cents": 0.000290172169607995,
+  "rows": [
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 3.5762786865234375e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 3.5762786865234375e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.000290172169607995,
+      "provider": "cpu",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 2.384185791015625e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0001601707562847885,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 2.980232238769531e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 3.5762786865234375e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 8.940696716308594e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.00014508221245941632,
+      "provider": "cpu",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.000160170770892412,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 4.172325134277344e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 2.980232238769531e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.00014507985356934918,
+      "provider": "cpu",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 8.381903171539307e-9,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 16000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 6.379559636116028e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 44100.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 2.384185791015625e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 4.172325134277344e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 4.7031790018081665e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 48000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.4901161193847656e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 96000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 82.41,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 220.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.960464477539063e-8,
+      "hz": 440.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.1920928955078125e-7,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 0.0,
+      "hz": 880.0,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": true
+    },
+    {
+      "confidence_difference": 1.7881393432617188e-7,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.0,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": false
+    },
+    {
+      "confidence_difference": 5.168840289115906e-8,
+      "hz": 1318.51,
+      "pitch_difference_cents": 0.00014507985356934918,
+      "provider": "core_ml_cpu_only",
+      "rate": 192000.0,
+      "weak": true
+    }
+  ],
+  "scope": "same preprocessing/decoder, actual model, two CPU providers; controlled worker completion is not a paced deadline budget"
+}

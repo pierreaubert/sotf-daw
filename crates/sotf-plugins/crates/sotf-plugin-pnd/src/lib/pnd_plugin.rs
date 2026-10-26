@@ -71,6 +71,8 @@ pub struct PndPlugin {
     neural_pitch_used: bool,
     #[cfg(feature = "neural-pitch")]
     neural_pitch: Option<crate::neural_pitch::NeuralPitchAssistant>,
+    #[cfg(feature = "neural-pitch-ort")]
+    qa_ort_pitch: Option<crate::ort_pitch::OrtPitchConfig>,
     received_input: bool,
     input_phase: usize,
     drain_remaining: Option<usize>,
@@ -110,6 +112,22 @@ impl PndPlugin {
 }
 
 impl PndPlugin {
+    /// Choose a QA alternative before initialization; existing presets remain Tract.
+    ///
+    /// # Errors
+    /// Rejects changes after initialization or without an explicit neural model.
+    #[cfg(feature = "neural-pitch-ort")]
+    pub fn configure_qa_ort_pitch(
+        &mut self,
+        runtime: crate::ort_pitch::OrtPitchConfig,
+    ) -> PluginResult<()> {
+        if self.initialized || self.neural_pitch_config.is_none() {
+            return Err("QA ORT pitch requires a neural model and an uninitialized plugin".into());
+        }
+        self.qa_ort_pitch = Some(runtime);
+        Ok(())
+    }
+
     pub fn new(channels: usize) -> Self {
         let mut p = Self {
             channels,
@@ -161,6 +179,8 @@ impl PndPlugin {
             neural_pitch_used: false,
             #[cfg(feature = "neural-pitch")]
             neural_pitch: None,
+            #[cfg(feature = "neural-pitch-ort")]
+            qa_ort_pitch: None,
             received_input: false,
             input_phase: 0,
             drain_remaining: None,
@@ -795,6 +815,14 @@ impl Plugin for PndPlugin {
             .neural_pitch_config
             .as_ref()
             .map(|config| {
+                #[cfg(feature = "neural-pitch-ort")]
+                if let Some(runtime) = &self.qa_ort_pitch {
+                    return crate::neural_pitch::NeuralPitchAssistant::new_ort(
+                        config.clone(),
+                        sample_rate,
+                        runtime,
+                    );
+                }
                 crate::neural_pitch::NeuralPitchAssistant::new(config.clone(), sample_rate)
             })
             .transpose()?;

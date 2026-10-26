@@ -2,6 +2,8 @@ pub use config::{NeuralPitchConfig, PndPluginParams};
 
 #[cfg(feature = "neural-pitch")]
 pub mod neural_pitch;
+#[cfg(feature = "neural-pitch-ort")]
+pub mod ort_pitch;
 
 pub mod analysis;
 mod config;

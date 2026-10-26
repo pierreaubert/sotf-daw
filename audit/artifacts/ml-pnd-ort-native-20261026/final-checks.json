@@ -1,0 +1,68 @@
+[
+  {
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-pnd",
+      "--features",
+      "neural-pitch-ort",
+      "--test",
+      "ort_pitch",
+      "--",
+      "--include-ignored",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 2 tests\ntest invalid_resources_and_policy_fail_without_loading_a_runtime ... ok\ntest actual_runtime_parity_workers_fallback_and_transactional_lifecycle ... ok\n\ntest result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.33s\n\n",
+    "stderr": "   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n    Finished `release` profile [optimized] target(s) in 4m 47s\n     Running tests/ort_pitch.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/ort_pitch-8fa7b37ac26337db)\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-pnd",
+      "--features",
+      "neural-pitch-ort",
+      "--test",
+      "neural_pitch",
+      "--test",
+      "qa_pitch_snapshot"
+    ],
+    "exit_code": 0,
+    "stdout": "\nrunning 6 tests\ntest model_hash_shape_and_policy_fail_before_audio ... ok\ntest tract_matches_independent_pytorch_activations ... ok\ntest worker_reset_discards_old_source_and_publishes_real_pitch ... ok\ntest plugin_neural_silence_fallback_matches_classical_and_preserves_latency ... ok\ntest actual_model_cross_rate_pitch_and_weak_fundamental_characterization ... ok\ntest plugin_adopts_actual_neural_observations_and_freezes_at_eof ... ok\n\ntest result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.62s\n\n\nrunning 1 test\ntest snapshots_are_heap_free_read_only_and_clear_on_reset ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+    "stderr": "   Compiling sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\n    Finished `release` profile [optimized] target(s) in 6m 03s\n     Running tests/neural_pitch.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/neural_pitch-68a4ba53b3f3b7bd)\n     Running tests/qa_pitch_snapshot.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_pitch_snapshot-048488f880f7d294)\n"
+  },
+  {
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-pnd",
+      "--features",
+      "neural-pitch-ort",
+      "--lib",
+      "--test",
+      "ort_pitch",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 101,
+    "stdout": "",
+    "stderr": "    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)\n    Checking sotf-plugin-pnd v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-pnd)\nerror: large size difference between variants\n  --> crates/sotf-plugins/crates/sotf-plugin-pnd/src/neural_pitch.rs:21:1\n   |\n21 | / enum ActivationModel {\n22 | |     Tract(Runnable),\n   | |     --------------- the largest variant contains at least 272 bytes\n23 | |     #[cfg(feature = \"neural-pitch-ort\")]\n24 | |     Ort(Box<crate::ort_pitch::OrtPitchModel>),\n   | |     ----------------------------------------- the second-largest variant contains at least 8 bytes\n25 | | }\n   | |_^ the entire enum is at least 272 bytes\n   |\n   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#large_enum_variant\n   = note: `-D clippy::large-enum-variant` implied by `-D warnings`\n   = help: to override `-D warnings` add `#[allow(clippy::large_enum_variant)]`\nhelp: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum\n   |\n22 -     Tract(Runnable),\n22 +     Tract(Box<Runnable>),\n   |\n\nerror: needlessly taken reference of left operand\n   --> crates/sotf-plugins/crates/sotf-plugin-pnd/src/ort_pitch.rs:225:12\n    |\n225 |         if &shape[..] != [1, 360]\n    |            ----------^^^^^^^^^^^^\n    |            |\n    |            help: use the left value directly: `shape[..]`\n    |\n    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.99.0/index.html#op_ref\n    = note: `-D clippy::op-ref` implied by `-D warnings`\n    = help: to override `-D warnings` add `#[allow(clippy::op_ref)]`\n\nerror: could not compile `sotf-plugin-pnd` (lib) due to 2 previous errors\n"
+  }
+]
