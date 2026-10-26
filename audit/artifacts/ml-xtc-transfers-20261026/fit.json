@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/fit_xtc_transfers.py",
+    "--sofa",
+    "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/fixtures/kemar/mit_kemar_normal_pinna.sofa",
+    "--manifest",
+    "crates/sotf-plugins/crates/sotf-plugin-binaural/tests/fixtures/kemar/manifest.json",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-xtc-transfers-20261026"
+  ],
+  "exit_code": 0,
+  "seconds": 0.709920666180551
+}

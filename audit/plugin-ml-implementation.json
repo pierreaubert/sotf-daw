@@ -1084,8 +1084,21 @@
       "requirements": [
         "ML can estimate position or personalize transfer functions off the critical path; constrain the inverse filter's gain and retain measured validation."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "scripts/ml/xtc_transfer_model.py",
+        "scripts/ml/fit_xtc_transfers.py",
+        "scripts/ml/analyze_xtc_transfers.py",
+        "scripts/ml/test_xtc_transfer_model.py",
+        "crates/sotf-plugins/models/xtc-horizontal-transfer",
+        "audit/ml-xtc-transfers-20261026.md",
+        "audit/artifacts/ml-xtc-transfers-20261026"
+      ],
+      "remaining": [
+        "Offline measured-direction candidate remains unadmitted: learned separation reaches-22.26dB and intended gain-28.61dB; improve on development data and evaluate new final material, with measured mismatch and listener acceptance.",
+        "Native prepared-resource integration with transactional fallback, causal waveform/latency and true-peak validation; existing native XTC remains unchanged.",
+        "Only one measured mannequin and horizontal/fixed-radius coverage; human calibration, position uncertainty, full memory/worker/contention/platform budgets and product activation remain."
+      ]
     }
   ],
   "program_candidates": [

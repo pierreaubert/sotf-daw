@@ -1,0 +1,95 @@
+{
+  "model_sha256": "157b1f395717fcebb669d57e61450214823695f520dcef83545d35ce7c161248",
+  "dataset_sha256": "e7035994f5fd754058424c061380ee92b1d5ed58fccef2887a4266916616acdf",
+  "direction_partition_sizes": [
+    18,
+    18,
+    36
+  ],
+  "final_pairs_verified_against_measured_positions": 36,
+  "proposal_maximum_operator_gain": 4.000000000000002,
+  "proposal_independent_inverse_max_error": 5.157759701249372e-15,
+  "centered_measured_dft_metric_max_error_db": 4.163780431554187e-12,
+  "final_mean_relative_squared_hrir_error": 0.37646254283428376,
+  "methods": {
+    "learned": {
+      "normalized_separation_db": {
+        "finite_rows": 504,
+        "minimum": -22.25943030990129,
+        "median": 29.55927752363107,
+        "maximum": 67.65944614335542,
+        "negative_rows": 29,
+        "nonfinite_rows": 0
+      },
+      "intended_gain_db": {
+        "finite_rows": 504,
+        "minimum": -28.608441004249677,
+        "median": -0.8045450895817866,
+        "maximum": 9.794115330473739,
+        "negative_rows": 270,
+        "nonfinite_rows": 0
+      },
+      "raw_crosstalk_attenuation_db": {
+        "finite_rows": 504,
+        "minimum": -27.197308129968086,
+        "median": 29.82546834033889,
+        "maximum": 54.59477487816886,
+        "negative_rows": 38,
+        "nonfinite_rows": 0
+      }
+    },
+    "nearest_training": {
+      "normalized_separation_db": {
+        "finite_rows": 504,
+        "minimum": -35.79228365794139,
+        "median": 16.98270790870577,
+        "maximum": 44.43868460093546,
+        "negative_rows": 60,
+        "nonfinite_rows": 0
+      },
+      "intended_gain_db": {
+        "finite_rows": 504,
+        "minimum": -30.770386877022688,
+        "median": -2.0342660239462376,
+        "maximum": 11.847006001762088,
+        "negative_rows": 376,
+        "nonfinite_rows": 0
+      },
+      "raw_crosstalk_attenuation_db": {
+        "finite_rows": 504,
+        "minimum": -34.33770909085516,
+        "median": 13.439396805067263,
+        "maximum": 43.42309763162626,
+        "negative_rows": 55,
+        "nonfinite_rows": 0
+      }
+    },
+    "measured_oracle": {
+      "normalized_separation_db": {
+        "finite_rows": 504,
+        "minimum": -0.9267549016317211,
+        "median": 49.48789903077281,
+        "maximum": 76.90806328162131,
+        "negative_rows": 1,
+        "nonfinite_rows": 0
+      },
+      "intended_gain_db": {
+        "finite_rows": 504,
+        "minimum": -27.492075655771735,
+        "median": -0.3000585087981012,
+        "maximum": -0.004658555580571682,
+        "negative_rows": 504,
+        "nonfinite_rows": 0
+      },
+      "raw_crosstalk_attenuation_db": {
+        "finite_rows": 504,
+        "minimum": 5.888958552618108,
+        "median": 45.019602815157114,
+        "maximum": 83.07680172491297,
+        "negative_rows": 0,
+        "nonfinite_rows": 0
+      }
+    }
+  },
+  "deployment_admitted": false
+}

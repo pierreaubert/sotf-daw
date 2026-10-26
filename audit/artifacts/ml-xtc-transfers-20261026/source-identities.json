@@ -1,0 +1,6 @@
+{
+  "scripts/ml/xtc_transfer_model.py": "6c24eab8ce0eb933a9d29de8fbbd39091ba9da8f24caaf9a3a4554422aeff8d0",
+  "scripts/ml/fit_xtc_transfers.py": "e189aae3ad0d994e3635e7ca45b04b3f3800697501f69d09d0c1b141648f3747",
+  "scripts/ml/analyze_xtc_transfers.py": "55c61b86e2dae8c0b4f379fbde69d37e88d745da69a8c6bdccb6de8aa2bf3846",
+  "scripts/ml/test_xtc_transfer_model.py": "8089689c52a852ff13cb52f202592896489965de08d23f4cd5165f79fec3939a"
+}
