@@ -9395,6 +9395,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sotf-host",
+ "sotf-restoration-mask",
 ]
 
 [[package]]
@@ -9440,7 +9441,9 @@ dependencies = [
  "math-dsp",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
+ "sotf-restoration-mask",
 ]
 
 [[package]]
@@ -9630,6 +9633,15 @@ version = "0.1.0"
 source = "git+https://github.com/pierreaubert/sotf-3rdparties#9b7c2134cb5831391c7863f584cd631c63719fd5"
 dependencies = [
  "sotf-derive_refineable",
+]
+
+[[package]]
+name = "sotf-restoration-mask"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

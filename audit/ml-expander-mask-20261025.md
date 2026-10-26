@@ -115,3 +115,10 @@ calibration and remedy for clean-material failure; complete measured heap memory
 then recorded material and cross-platform DAW/contended deadline validation.
 Product controls and click-free activation require an independently demonstrated
 quality benefit. No production admission or full audit completion is claimed.
+
+On2026-10-26 the evaluator moved to `sotf-restoration-mask`, with compatibility
+reexports at the original public path. All166 expander tests pass. All39 frozen
+native waveform outputs, gain traces and metadata replay identically after the
+extraction. See `audit/ml-spectral-restoration-20261026.md` and its artifact
+directory for exact replay identities. Training/model bytes and admission status
+are unchanged.

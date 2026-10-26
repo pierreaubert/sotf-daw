@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "check",
+    "-p",
+    "sotf-plugin-spectral-compressor",
+    "--features",
+    "qa",
+    "--release",
+    "--offline",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 3.3635505409911275
+}

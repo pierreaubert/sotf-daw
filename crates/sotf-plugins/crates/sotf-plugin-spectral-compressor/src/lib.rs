@@ -15,3 +15,9 @@ mod tests;
 
 pub use spectral_compressor_plugin::*;
 pub use spectral_compressor_plugin_params::*;
+/// Shared unadmitted model contract for explicit QA restoration selection.
+#[cfg(feature = "qa")]
+pub mod restoration {
+    #[doc(inline)]
+    pub use sotf_restoration_mask::{DenoisingCounters, DenoisingMask, features};
+}

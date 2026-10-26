@@ -42,6 +42,7 @@ members = [
     "crates/sotf-plugins/crates/sotf-plugin-resampler",
     "crates/sotf-plugins/crates/sotf-plugin-saturation",
     "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor",
+    "crates/sotf-plugins/crates/sotf-restoration-mask",
     "crates/sotf-plugins/crates/sotf-plugin-stereo-imager",
     "crates/sotf-plugins/crates/sotf-plugin-transient-shaper",
     "crates/sotf-plugins/crates/sotf-plugin-upmixer",

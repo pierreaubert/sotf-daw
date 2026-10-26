@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "--check",
+    "crates/sotf-plugins/crates/sotf-restoration-mask/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/denoising.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/tests/restoration.rs"
+  ],
+  "exit_code": 0,
+  "seconds": 0.06729633407667279
+}

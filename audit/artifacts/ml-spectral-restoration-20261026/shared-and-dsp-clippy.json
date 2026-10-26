@@ -1,0 +1,28 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-restoration-mask",
+    "-p",
+    "sotf-plugin-multiband-expander",
+    "-p",
+    "sotf-plugin-spectral-compressor",
+    "--features",
+    "sotf-plugin-multiband-expander/qa,sotf-plugin-spectral-compressor/qa",
+    "--all-targets",
+    "--locked",
+    "--release",
+    "--offline",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 6.231314749922603
+}

@@ -1608,12 +1608,12 @@ impl MultibandExpanderPlugin {
             // windowed audio and do not create an additional recursive tail.
             #[cfg(feature = "qa")]
             if let Some(mode) = &mut self.denoising {
-                mode.draining = true;
+                mode.set_draining(true);
             }
             let result = self.process_stream(&mut cache[..samples], &drain_context);
             #[cfg(feature = "qa")]
             if let Some(mode) = &mut self.denoising {
-                mode.draining = false;
+                mode.set_draining(false);
             }
             let ss = self
                 .spectral

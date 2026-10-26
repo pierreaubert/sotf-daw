@@ -904,7 +904,9 @@
         "scripts/ml/test_expander_mask.py",
         "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/bin/qa_expander_mask_render.rs",
         "crates/sotf-plugins/models/expander-denoising-mask/manifest.json",
-        "scripts/ml/analyze_expander_artifacts.py"
+        "scripts/ml/analyze_expander_artifacts.py",
+        "crates/sotf-plugins/crates/sotf-restoration-mask/src/lib.rs",
+        "audit/artifacts/ml-spectral-restoration-20261026/expander-frozen-replay-report.json"
       ],
       "remaining": [
         "Synthetic candidate remains unadmitted: severe clean-material mask failure and output damage; confidence calibration and perceptual/artifact acceptance remain. Descriptive onset/modulation/spectral-isolation diagnostics are recorded.",
@@ -963,8 +965,20 @@
       "requirements": [
         "A learned target mask is plausible for a separate restoration mode; compare latency and artifacts to the classical compressor first."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-restoration-mask/src/lib.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/tests/restoration.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs",
+        "audit/ml-spectral-restoration-20261026.md",
+        "audit/artifacts/ml-spectral-restoration-20261026",
+        "scripts/ml/replay_restoration_extraction.py"
+      ],
+      "remaining": [
+        "Native spectral-compressor waveform renderer, independent conditional WOLA/stem comparison, artifacts and matched-attenuation controls against this classical compressor.",
+        "Cross-plugin use of the frozen expander mask is not new training or admission; its severe clean-material failure requires calibration/remedy and independent recorded validation.",
+        "Runtime/complete heap/contended platform budgets, perceptual/DAW validation and product activation/selector semantics."
+      ]
     },
     {
       "plugin_id": 41,

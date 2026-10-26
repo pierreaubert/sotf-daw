@@ -1,0 +1,11 @@
+{
+  "Cargo.toml": "305e2f9f9cda20bd6e1af9f96cacbc88dcdcd11c4ce9b6529d54e4cf48e42ce7",
+  "Cargo.lock": "9295ae3b082e6e4737db3ace5e09cea1a987ee032a1c5ad6fc607a4a81c36caf",
+  "crates/sotf-plugins/crates/sotf-restoration-mask/src/lib.rs": "c828c0c9a9d77960134a9d3d340e3026f83ca8aad8ce18c1dce8ab9edc14fe75",
+  "crates/sotf-plugins/crates/sotf-restoration-mask/Cargo.toml": "4330f3357efb089ac5fb9723874af12b4be4feae02654b3bdf620bba8e630fd1",
+  "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/denoising.rs": "f4e4746b0f2a7f7fb868008548a3bdd9b074fd06caec3a23905a09fe4ee2f72f",
+  "crates/sotf-plugins/crates/sotf-plugin-multiband-expander/src/lib/multiband_expander_plugin.rs": "17d326c3d93ecf650a02ab8f429fb42bdb0f7ef866bfab925406f4d4a2520fbf",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs": "34fedf8c684e6749600e35af665ea1fe91c3cc75234a6214e454591103cdf0c8",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/tests/restoration.rs": "22d4a8df58d9dad830191df81bb7320ca020645d39dfe0e39a1d8cb720d52230",
+  "scripts/ml/replay_restoration_extraction.py": "b41971ea8a6bc0a2c91e05910ae32edaa080df198a16772ef98cb93f7cece5f8"
+}

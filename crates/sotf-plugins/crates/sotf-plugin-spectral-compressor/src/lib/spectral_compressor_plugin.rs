@@ -65,9 +65,59 @@ pub struct SpectralCompressorPlugin {
 
     // Cached parameter list
     pub(super) cached_parameters: Vec<Parameter>,
+    #[cfg(feature = "qa")]
+    restoration: Option<Box<sotf_restoration_mask::DenoisingState>>,
+    #[cfg(feature = "qa")]
+    qa_initialized: bool,
 }
 
 impl SpectralCompressorPlugin {
+    /// Prepare an explicit experimental restoration mode before accepting audio.
+    ///
+    /// The shared synthetic model remains unadmitted. Learned linked gains
+    /// replace synthesis only; classical compression histories remain independent.
+    /// `None` selects exact classical fallback within the bounded QA input domain.
+    ///
+    /// # Errors
+    /// Requires initialized mono/stereo FFT1024, with no accepted input or drain.
+    #[cfg(feature = "qa")]
+    pub fn configure_restoration(
+        &mut self,
+        model: Option<sotf_restoration_mask::DenoisingMask>,
+    ) -> PluginResult<()> {
+        if !self.qa_initialized
+            || self.has_input
+            || self.drain_remaining.is_some()
+            || !(1..=2).contains(&self.channels)
+            || self.fft_size != 1024
+        {
+            return Err(
+                "prepare restoration before input in initialized mono/stereo FFT1024".into(),
+            );
+        }
+        self.restoration = Some(Box::new(sotf_restoration_mask::DenoisingState::new(model)));
+        Ok(())
+    }
+
+    /// Copy source-hop and linked model-bin counters without allocation.
+    #[cfg(feature = "qa")]
+    pub fn restoration_counters(&self) -> Option<sotf_restoration_mask::DenoisingCounters> {
+        self.restoration.as_ref().map(|s| s.counters())
+    }
+
+    /// Inspect independent envelope, adaptive-average and component-mask histories.
+    #[cfg(feature = "qa")]
+    pub fn classical_restoration_state(&self) -> impl Iterator<Item = f32> + '_ {
+        self.stft
+            .bin_envelopes
+            .iter()
+            .flatten()
+            .chain(self.stft.adaptive_avg.iter().flatten())
+            .chain(self.stft.tonal_mask.iter().flatten())
+            .chain(self.stft.transient_mask.iter().flatten())
+            .copied()
+    }
+
     pub fn try_from_params(
         channels: usize,
         params: SpectralCompressorPluginParams,
@@ -171,6 +221,10 @@ impl SpectralCompressorPlugin {
             mix_smoother: Smoother::new(params.mix, 20.0, sample_rate),
 
             cached_parameters: Vec::new(),
+            #[cfg(feature = "qa")]
+            restoration: None,
+            #[cfg(feature = "qa")]
+            qa_initialized: false,
         };
         plugin.rebuild_cached_parameters();
         plugin
@@ -301,6 +355,22 @@ impl SpectralCompressorPlugin {
             }
         }
 
+        #[cfg(feature = "qa")]
+        if let Some(restoration) = &mut self.restoration {
+            if fft_size == 1024 && channels <= 2 {
+                let mut linked = [0.0_f32; 513];
+                for spectrum in &self.stft.fft_processors {
+                    for (norm, bin) in linked.iter_mut().zip(&spectrum.freq_buffer) {
+                        *norm = norm.max(bin.norm());
+                    }
+                }
+                let window_sum = self.stft.analysis_window.iter().sum();
+                restoration.prepare(&linked, window_sum, self.sample_rate);
+            } else {
+                restoration.prepare(&[], 1.0, self.sample_rate);
+            }
+        }
+
         // Envelope, frequency smoothing, gain, and synthesis phase.
         for ch in 0..channels {
             for k in 0..num_bins {
@@ -361,6 +431,19 @@ impl SpectralCompressorPlugin {
 
             for k in 0..num_bins {
                 let envelope_db = self.stft.gains_scratch[k];
+                #[cfg(feature = "qa")]
+                if let Some(restoration) = &self.restoration {
+                    let classical = if envelope_db > 0.001 {
+                        10.0_f32.powf(-envelope_db / 20.0)
+                    } else {
+                        1.0
+                    };
+                    let gain = restoration.gain(k, classical);
+                    if gain != 1.0 {
+                        self.stft.fft_processors[ch].freq_buffer[k] *= gain;
+                    }
+                    continue;
+                }
                 if envelope_db > 0.001 {
                     let gain_linear = 10.0_f32.powf(-envelope_db / 20.0);
                     self.stft.fft_processors[ch].freq_buffer[k] *= gain_linear;
@@ -917,10 +1000,21 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
         self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, sample_rate);
         self.mix_smoother = Smoother::new(self.mix, 20.0, sample_rate);
         self.clear_drain();
+        #[cfg(feature = "qa")]
+        {
+            self.qa_initialized = true;
+            if let Some(state) = &mut self.restoration {
+                state.reset();
+            }
+        }
         Ok(())
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        if let Some(state) = &mut self.restoration {
+            state.reset();
+        }
         self.clear_drain();
         self.stft.reset();
         self.threshold_smoother = Smoother::new(self.threshold_db, 20.0, self.sample_rate);
@@ -938,6 +1032,10 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
         buffer: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<usize> {
+        #[cfg(feature = "qa")]
+        if self.restoration.is_some() && buffer.iter().any(|v| !v.is_finite() || v.abs() > 64.0) {
+            return Err("restoration requires finite QA input bounded by64".into());
+        }
         if context.num_frames > 0 && self.drain_remaining.is_some() {
             return Err(
                 "Reset spectral compressor before processing input after drain starts".into(),
@@ -995,10 +1093,18 @@ impl ParametricInPlacePlugin for SpectralCompressorPlugin {
             let frames = remaining.min(hop);
             let mut scratch = std::mem::take(&mut self.drain_output);
             scratch[..frames * self.channels].fill(0.0);
+            #[cfg(feature = "qa")]
+            if let Some(state) = &mut self.restoration {
+                state.set_draining(true);
+            }
             let result = self.process_audio(
                 &mut scratch[..frames * self.channels],
                 &ProcessContext::new(self.sample_rate, frames),
             );
+            #[cfg(feature = "qa")]
+            if let Some(state) = &mut self.restoration {
+                state.set_draining(false);
+            }
             // Restore owned storage even if a future process validation fails.
             self.drain_output = scratch;
             result?;

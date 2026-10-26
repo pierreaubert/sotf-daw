@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/ruff",
+    "format",
+    "--check",
+    "scripts/ml/replay_restoration_extraction.py"
+  ],
+  "exit_code": 0,
+  "seconds": 0.012175249867141247
+}

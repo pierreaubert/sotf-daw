@@ -1,0 +1,5 @@
+    Checking sotf-restoration-mask v0.1.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-restoration-mask)
+    Checking sotf-host v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-host)
+    Checking sotf-plugin-multiband-expander v0.5.26 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-multiband-expander)
+    Checking sotf-plugin-spectral-compressor v0.5.25 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-spectral-compressor)
+    Finished `release` profile [optimized] target(s) in 6.09s

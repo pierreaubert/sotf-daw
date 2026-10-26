@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/replay_restoration_extraction.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-expander-mask-render",
+    "--report",
+    "audit/artifacts/ml-expander-mask-20261025/waveform-evaluation.json",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-restoration-extraction-replay-20261026"
+  ],
+  "exit_code": 0,
+  "seconds": 1.4609167911112309
+}
