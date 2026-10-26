@@ -69,6 +69,8 @@ pub struct PndPlugin {
     pub(super) initialized: bool,
     neural_pitch_config: Option<super::config::NeuralPitchConfig>,
     neural_pitch_used: bool,
+    #[cfg(feature = "qa")]
+    neural_decision_evidence: Option<NeuralPitchDecisionEvidence>,
     #[cfg(feature = "neural-pitch")]
     neural_pitch: Option<crate::neural_pitch::NeuralPitchAssistant>,
     #[cfg(feature = "neural-pitch-ort")]
@@ -78,6 +80,27 @@ pub struct PndPlugin {
     drain_remaining: Option<usize>,
     drain_pitch: f32,
     drain_zeros: Vec<f32>,
+}
+
+/// Source evidence copied from the neural result selected at a control decision.
+///
+/// The source clocks restart on reset. Their difference measures source lag,
+/// not wall-clock inference duration or time since worker publication. Distinct
+/// end clocks identify distinct selected source windows within one reset epoch;
+/// unselected or overwritten completed jobs are not counted.
+#[cfg(feature = "qa")]
+#[derive(Debug, Clone, Copy, serde::Serialize, PartialEq)]
+pub struct NeuralPitchDecisionEvidence {
+    /// Exclusive end of the model's observed source window.
+    pub observation_end_sample: u64,
+    /// Exclusive source clock when this observation drove a control decision.
+    pub decision_source_sample: u64,
+    /// Entire causal source window, included in the admission age.
+    pub window_samples: u64,
+    /// Selected model fundamental before reference-ratio conversion.
+    pub frequency_hz: f32,
+    /// Selected model activation before the plugin's confidence threshold.
+    pub confidence: f32,
 }
 
 /// Exact current control state for QA observation without the throttled UI cache.
@@ -96,13 +119,17 @@ pub struct PitchDecisionSnapshot {
     pub neural_pitch_used: bool,
     /// Prepared worker backend identity, independent of whether it was selected.
     pub neural_backend: Option<&'static str>,
+    /// Evidence for the last neural-selected decision; absent for classical fallback.
+    ///
+    /// Repeated snapshots retain the same evidence until another control decision.
+    pub neural_decision: Option<NeuralPitchDecisionEvidence>,
 }
 
 #[cfg(feature = "qa")]
 impl PndPlugin {
     /// Copy the exact last decision and current control ratio without allocation.
     ///
-    /// This does not expose the worker observation's source timestamp or confidence.
+    /// Evidence is captured at selection; this does not read a newer worker result.
     pub fn pitch_decision_snapshot(&self) -> PitchDecisionSnapshot {
         #[cfg(feature = "neural-pitch")]
         let neural_backend = self.neural_pitch.as_ref().map(|n| n.backend_name());
@@ -114,6 +141,7 @@ impl PndPlugin {
             correction_ratio: self.current_ratio,
             neural_pitch_used: self.neural_pitch_used,
             neural_backend,
+            neural_decision: self.neural_decision_evidence,
         }
     }
 }
@@ -184,6 +212,8 @@ impl PndPlugin {
             initialized: false,
             neural_pitch_config: None,
             neural_pitch_used: false,
+            #[cfg(feature = "qa")]
+            neural_decision_evidence: None,
             #[cfg(feature = "neural-pitch")]
             neural_pitch: None,
             #[cfg(feature = "neural-pitch-ort")]
@@ -424,11 +454,25 @@ impl PndPlugin {
                     };
                     #[cfg(feature = "neural-pitch")]
                     let observation = {
-                        let neural = self.neural_pitch.as_ref().and_then(|n| {
-                            n.estimate_against_reference(self.reference_frequency_hz)
-                        });
+                        let neural = self
+                            .neural_pitch
+                            .as_ref()
+                            .and_then(|n| n.accepted_estimate(self.reference_frequency_hz));
+                        #[cfg(feature = "qa")]
+                        {
+                            self.neural_decision_evidence =
+                                neural.map(|p| NeuralPitchDecisionEvidence {
+                                    observation_end_sample: p.observation.end_sample,
+                                    decision_source_sample: p.source_clock,
+                                    window_samples: p.window_samples,
+                                    frequency_hz: p.observation.frequency_hz,
+                                    confidence: p.observation.confidence,
+                                });
+                        }
                         self.neural_pitch_used = neural.is_some();
-                        neural.unwrap_or(observation)
+                        neural
+                            .map(|p| (p.ratio, p.observation.confidence))
+                            .unwrap_or(observation)
                     };
                     let (drift_ratio, new_confidence) = observation;
                     confidence = new_confidence;
@@ -996,6 +1040,10 @@ impl Plugin for PndPlugin {
         }
         self.received_input = false;
         self.neural_pitch_used = false;
+        #[cfg(feature = "qa")]
+        {
+            self.neural_decision_evidence = None;
+        }
         self.input_phase = 0;
         self.drain_remaining = None;
         self.drain_pitch = 1.0;

@@ -259,6 +259,18 @@ fn actual_runtime_parity_workers_fallback_and_transactional_lifecycle() {
         }
         assert!(active.pitch_decision_snapshot().neural_pitch_used);
         let frozen = active.pitch_decision_snapshot();
+        let evidence = frozen.neural_decision.unwrap();
+        assert_eq!(evidence.window_samples, 3072);
+        assert!(evidence.observation_end_sample <= evidence.decision_source_sample);
+        let age = evidence.decision_source_sample - evidence.observation_end_sample
+            + evidence.window_samples;
+        assert!(age <= 7200);
+        assert!(evidence.confidence >= config().min_confidence);
+        assert!((1200.0 * (evidence.frequency_hz / 440.0).log2()).abs() <= 100.0);
+        // Publication can continue while the source is stationary. Snapshots
+        // must retain the evidence used at selection, not query a newer result.
+        std::thread::sleep(Duration::from_millis(5));
+        assert_eq!(active.pitch_decision_snapshot(), frozen);
         let mut completed = false;
         for _ in 0..128 {
             let mut result = None;
@@ -276,6 +288,13 @@ fn actual_runtime_parity_workers_fallback_and_transactional_lifecycle() {
         }
         assert!(completed);
         assert_eq!(active.pitch_decision_snapshot(), frozen);
+        assert_no_allocs_or_deallocs("ORT selected-evidence reset", || active.reset());
+        let reset = active.pitch_decision_snapshot();
+        assert!(reset.neural_decision.is_none());
+        assert!(!reset.neural_pitch_used);
+        assert_eq!(reset.neural_backend, frozen.neural_backend);
+        std::thread::sleep(Duration::from_millis(5));
+        assert_eq!(active.pitch_decision_snapshot(), reset);
     }
     // A different canonical path is refused even when its bytes are identical.
     let path = std::env::temp_dir().join(format!("sotf-ort-binding-{}.dylib", std::process::id()));

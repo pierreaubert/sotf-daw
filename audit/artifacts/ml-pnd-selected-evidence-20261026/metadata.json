@@ -1,0 +1,16 @@
+{
+  "base_commit": "ebfe20e4",
+  "snapshot_scope": "selected source evidence; not a timing run",
+  "standalone_harness_clippy": {
+    "exit_code": 0,
+    "features": "qa-neural-tools,neural-pitch-ort",
+    "warning_policy": "deny"
+  },
+  "queued_renderer_sha256": "193a16bc540791ef1afa04bfdad8b0cf268651c13c769c2ffaf278d7cb363c2f",
+  "source_sha256": {
+    "crates/sotf-plugins/crates/sotf-plugin-pnd/src/neural_pitch.rs": "8bcdc4de89a8d88c4927d65252181daea772693472e7d5a78236b7d52a55f345",
+    "crates/sotf-plugins/crates/sotf-plugin-pnd/src/lib/pnd_plugin.rs": "b8e81ff44779b40c74cfc30e362c9e524e2fc0108928f006c9c32324210e3542",
+    "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/qa_pitch_snapshot.rs": "3bb4fe9a11944da4f0ee47b98e83009c12d64a480d0711e4bd2beb66d47a7e64",
+    "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/ort_pitch.rs": "3d104742e8c20116696b04b4f21264b55cdef9690c28102b175a1a0295a0b970"
+  }
+}

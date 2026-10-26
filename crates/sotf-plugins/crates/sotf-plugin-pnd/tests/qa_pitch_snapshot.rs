@@ -32,6 +32,8 @@ fn snapshots_are_heap_free_read_only_and_clear_on_reset() {
             let first = observed.pitch_decision_snapshot();
             assert_eq!(first, observed.pitch_decision_snapshot());
             assert!(!first.neural_pitch_used);
+            assert!(first.neural_backend.is_none());
+            assert!(first.neural_decision.is_none());
             assert!(first.drift_ratio.is_finite() && first.correction_ratio.is_finite());
         });
     }
@@ -42,4 +44,5 @@ fn snapshots_are_heap_free_read_only_and_clear_on_reset() {
     assert_eq!(state.drift_ratio, 1.0);
     assert_eq!(state.correction_ratio, 1.0);
     assert!(!state.neural_pitch_used);
+    assert!(state.neural_decision.is_none());
 }

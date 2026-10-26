@@ -40,6 +40,17 @@ pub struct PitchObservation {
     pub end_sample: u64,
 }
 
+/// One policy-accepted result copied during a single nonblocking worker read.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct AcceptedPitch {
+    pub ratio: f32,
+    pub observation: PitchObservation,
+    #[cfg(feature = "qa")]
+    pub source_clock: u64,
+    #[cfg(feature = "qa")]
+    pub window_samples: u64,
+}
+
 /// Fixed-shape pretrained pitch model, prepared exclusively on a control thread.
 pub struct CrepeModel {
     model: ActivationModel,
@@ -440,6 +451,11 @@ impl NeuralPitchAssistant {
 
     /// Read a fresh, supported drift observation; otherwise retain classical analysis.
     pub fn estimate_against_reference(&self, reference_hz: f32) -> Option<(f32, f32)> {
+        self.accepted_estimate(reference_hz)
+            .map(|p| (p.ratio, p.observation.confidence))
+    }
+
+    pub(crate) fn accepted_estimate(&self, reference_hz: f32) -> Option<AcceptedPitch> {
         self.worker
             .with_latest(|p| {
                 accepted_ratio(
@@ -450,6 +466,14 @@ impl NeuralPitchAssistant {
                     reference_hz,
                     &self.config,
                 )
+                .map(|(ratio, _)| AcceptedPitch {
+                    ratio,
+                    observation: *p,
+                    #[cfg(feature = "qa")]
+                    source_clock: self.clock,
+                    #[cfg(feature = "qa")]
+                    window_samples: self.ring.len() as u64,
+                })
             })
             .flatten()
     }
