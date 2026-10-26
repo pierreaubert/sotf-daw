@@ -1,0 +1,8 @@
+test_invalid_native_geometry_rejects_before_output (test_upmixer_mask_native.GeometryTests.test_invalid_native_geometry_rejects_before_output) ... ok
+test_bad_hash_keeps_complete_actual_native_output (test_upmixer_mask_native.NativeMaskTests.test_bad_hash_keeps_complete_actual_native_output) ... ok
+test_native_features_network_timing_and_callback_independence (test_upmixer_mask_native.NativeMaskTests.test_native_features_network_timing_and_callback_independence) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.144s
+
+OK

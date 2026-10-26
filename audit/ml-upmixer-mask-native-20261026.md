@@ -65,8 +65,11 @@ compile failed because the selected SHA library digest does not implement
 LowerHex; per-byte formatting fixed it. That failure and subsequent passing runs
 are retained under `audit/artifacts/ml-upmixer-mask-native-20261026`.
 
-Remaining: native per-frame feature/export parity over complete source corpora,
-actual multichannel desired-source leakage and artifact measurements, complete
+The subsequent export qualification is in
+`audit/ml-upmixer-mask-render-20261026.md`:200 cases expose20 direct-only feature
+parity failures in very quiet bands despite exact inference parity on native
+features. These failures remain open. Remaining: fix that numerical feature
+policy on development data, actual multichannel desired-source leakage and artifact measurements, complete
 heap/CPU accounting and contended/platform host budgets. Improve the model on
 development data before evaluating fresh final material. Independent recorded
 music, listening and production selection/activation semantics remain open.

@@ -23,6 +23,11 @@ path = "bin/qa_upmixer.rs"
 required-features = ["qa"]
 
 [[bin]]
+name = "qa-upmixer-mask-render"
+path = "bin/qa_upmixer_mask_render.rs"
+required-features = ["qa"]
+
+[[bin]]
 name = "generate-upmixer-golden"
 path = "bin/generate_upmixer_golden.rs"
 

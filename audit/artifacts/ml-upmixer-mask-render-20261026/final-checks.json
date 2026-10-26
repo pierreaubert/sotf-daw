@@ -1,0 +1,76 @@
+[
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/upmixer_mask_native.py",
+      "scripts/ml/evaluate_upmixer_mask_native.py",
+      "scripts/ml/analyze_upmixer_mask_native.py",
+      "scripts/ml/test_upmixer_mask_native.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.012914999853819609
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/upmixer_mask_native.py",
+      "scripts/ml/evaluate_upmixer_mask_native.py",
+      "scripts/ml/analyze_upmixer_mask_native.py",
+      "scripts/ml/test_upmixer_mask_native.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.008759292075410485
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_upmixer_mask_native.py",
+      "-v"
+    ],
+    "exit_code": 0,
+    "seconds": 0.39769295789301395
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "scripts/ml/analyze_upmixer_mask_native.py",
+      "--report",
+      "audit/artifacts/ml-upmixer-mask-render-20261026/report.json",
+      "--model",
+      "crates/sotf-plugins/models/upmixer-source-mask/model.synthetic.json",
+      "--output",
+      "audit/artifacts/ml-upmixer-mask-render-20261026/analysis.json"
+    ],
+    "exit_code": 0,
+    "seconds": 1.0022614588961005
+  },
+  {
+    "argv": [
+      "rustfmt",
+      "--edition",
+      "2024",
+      "--check",
+      "crates/sotf-plugins/crates/sotf-plugin-upmixer/bin/qa_upmixer_mask_render.rs"
+    ],
+    "exit_code": 0,
+    "seconds": 0.049563208827748895
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.0330718751065433
+  }
+]

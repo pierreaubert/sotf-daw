@@ -1063,10 +1063,17 @@
         "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/source_mask.rs",
         "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/source_masks.rs",
         "audit/ml-upmixer-mask-native-20261026.md",
-        "audit/artifacts/ml-upmixer-mask-native-20261026"
+        "audit/artifacts/ml-upmixer-mask-native-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-upmixer/bin/qa_upmixer_mask_render.rs",
+        "scripts/ml/upmixer_mask_native.py",
+        "scripts/ml/evaluate_upmixer_mask_native.py",
+        "scripts/ml/analyze_upmixer_mask_native.py",
+        "scripts/ml/test_upmixer_mask_native.py",
+        "audit/ml-upmixer-mask-render-20261026.md",
+        "audit/artifacts/ml-upmixer-mask-render-20261026"
       ],
       "remaining": [
-        "Native source-mask boundary is QA-only; full-corpus native feature/export parity and actual multichannel leakage/artifact measurements remain. Unsupported modes retain ordinary native decomposition.",
+        "Native source-mask export qualification exposes20 direct-only absolute-feature parity failures in very quiet FFT bands, despite exact network parity on native features. Fix the numerical-excitation policy and/or train on actual native features using development sources and a new frozen final holdout; conditional multichannel leakage/artifact measurements remain.",
         "Frozen generated-stem candidate fails hard-pan retention and correlated-bed leakage; improve on development data and freeze a fresh final holdout. Full rendered multichannel artifacts and recorded/perceptual acceptance remain.",
         "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
       ]
