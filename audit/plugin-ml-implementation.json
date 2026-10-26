@@ -1075,11 +1075,19 @@
         "scripts/ml/analyze_upmixer_excitation.py",
         "scripts/ml/test_upmixer_excitation.py",
         "audit/ml-upmixer-excitation-20261026.md",
-        "audit/artifacts/ml-upmixer-excitation-20261026"
+        "audit/artifacts/ml-upmixer-excitation-20261026",
+        "scripts/ml/upmixer_source_mask_v2.py",
+        "scripts/ml/train_upmixer_native.py",
+        "scripts/ml/evaluate_upmixer_v2.py",
+        "scripts/ml/analyze_upmixer_v2.py",
+        "scripts/ml/test_upmixer_v2.py",
+        "crates/sotf-plugins/models/upmixer-source-mask-v2",
+        "audit/ml-upmixer-v2-20261026.md",
+        "audit/artifacts/ml-upmixer-v2-20261026"
       ],
       "remaining": [
-        "Native v1 qualification retains20 direct-only absolute-feature parity failures in quiet FFT bands. A new96-case development search rejects clipped excitation and proposes a60dB raw-power reliability policy, with exact v1 output preservation. Bind the proposal to a new model contract and native-feature training, freeze a candidate and evaluate a fresh final holdout including threshold boundaries; conditional multichannel leakage/artifact measurements remain.",
-        "Frozen generated-stem candidate fails hard-pan retention and correlated-bed leakage; improve on development data and freeze a fresh final holdout. Full rendered multichannel artifacts and recorded/perceptual acceptance remain.",
+        "Explicit v2 raw-power contract and native-feature candidate pass all192 fresh final numerical cases at unchanged tolerances; preserved v1 reports still contain their20 quiet-band failures. Maintain numerical qualification for future candidates and measure conditional complete-chain multichannel leakage/artifacts.",
+        "V2 converges and improves some conditional mask diagnostics, but hard-pan desired-source attenuation remains worse than the scalar analytic diagnostic and degrades to-13.44dB after a-40dB level shift; correlated-bed leakage remains high. Improve level robustness/desired-source retention on development sources, then freeze another candidate and a fresh final holdout. Full rendered/perceptual and recorded acceptance remain.",
         "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
       ]
     },

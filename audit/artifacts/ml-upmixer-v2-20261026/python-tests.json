@@ -1,0 +1,14 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "scripts/ml/test_upmixer_v2.py",
+    "scripts/ml/test_upmixer_excitation.py",
+    "scripts/ml/test_upmixer_source_mask.py",
+    "scripts/ml/test_upmixer_mask_native.py"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "................\n----------------------------------------------------------------------\nRan 16 tests in 1.228s\n\nOK\n"
+}

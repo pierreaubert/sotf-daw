@@ -1,0 +1,25 @@
+{
+  "command": [
+    "cargo",
+    "clippy",
+    "--offline",
+    "--locked",
+    "--release",
+    "-j2",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--features",
+    "qa",
+    "--lib",
+    "--test",
+    "source_masks",
+    "--bin",
+    "qa-upmixer-mask-render",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "    Checking sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)\n    Finished `release` profile [optimized] target(s) in 0.81s\n"
+}

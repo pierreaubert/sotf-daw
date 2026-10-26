@@ -208,6 +208,33 @@ fn malformed_or_unadmitted_contracts_do_not_load() {
 }
 
 #[test]
+fn v2_contract_requires_exact_excitation_and_native_training_provenance() {
+    let mut doc: serde_json::Value = serde_json::from_slice(MODEL).unwrap();
+    doc["format"] = serde_json::json!("sotf-upmixer-direct-ambient-mask-v2");
+    doc["policy"]["fallback"] = serde_json::json!("ordinary_native_decomposition");
+    doc["policy"]["excitation"] = serde_json::json!({
+        "band_power_interval_exclusive": [1e-16, 1e12],
+        "relative_to_peak_band_min": 1e-6,
+        "power_scale": "reference_fft", "dc_nyquist": "excluded"
+    });
+    doc["provenance"]["training_features"] = serde_json::json!("native_f32_fft_f64_covariance");
+    let bytes = serde_json::to_vec(&doc).unwrap();
+    assert!(SourceMaskModel::from_json(&bytes, &sha(&bytes)).is_ok());
+    for changed in [serde_json::json!(1e-5), serde_json::json!(true)] {
+        let mut invalid = doc.clone();
+        invalid["policy"]["excitation"]["relative_to_peak_band_min"] = changed;
+        let bytes = serde_json::to_vec(&invalid).unwrap();
+        assert!(SourceMaskModel::from_json(&bytes, &sha(&bytes)).is_err());
+    }
+    doc["provenance"]
+        .as_object_mut()
+        .unwrap()
+        .remove("training_features");
+    let bytes = serde_json::to_vec(&doc).unwrap();
+    assert!(SourceMaskModel::from_json(&bytes, &sha(&bytes)).is_err());
+}
+
+#[test]
 fn impulse_measures_no_added_audio_latency_and_preserves_native_tail_bound() {
     for source in [0, 1] {
         let mut x = vec![0.0; 2049 * 2];

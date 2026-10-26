@@ -1,0 +1,126 @@
+{
+  "cases": 192,
+  "verified_raw_hashes": 1152,
+  "eligible_band_frames": 441747,
+  "numerical_gate_failures": 0,
+  "maximum_selected_feature_error": 1.798019354267698e-05,
+  "maximum_native_network_error": 2.9802119994037923e-08,
+  "minimum_retained_reference_band_energy_fraction": 0.9999993540383363,
+  "conditional_spectral_summary_at_original_level": {
+    "ambient_only": {
+      "learned": {
+        "selected_band_mask_mse": 0.003523617889929694,
+        "conditional_spectral_direct_retention_db": null,
+        "conditional_spectral_ambient_leakage_db": -17.918202731466458,
+        "conditional_direct_mask_relative_rms_damage": null
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.11416955813212411,
+        "conditional_spectral_direct_retention_db": null,
+        "conditional_spectral_ambient_leakage_db": -9.685056024994275,
+        "conditional_direct_mask_relative_rms_damage": null
+      }
+    },
+    "antiphase_bed": {
+      "learned": {
+        "selected_band_mask_mse": 0.006574777904356228,
+        "conditional_spectral_direct_retention_db": -7.314062236761642,
+        "conditional_spectral_ambient_leakage_db": -15.584594915131628,
+        "conditional_direct_mask_relative_rms_damage": 0.6548645207261885
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.004352460082614499,
+        "conditional_spectral_direct_retention_db": -5.987140262523642,
+        "conditional_spectral_ambient_leakage_db": -12.635285438666264,
+        "conditional_direct_mask_relative_rms_damage": 0.5727434649587829
+      }
+    },
+    "correlated_bed": {
+      "learned": {
+        "selected_band_mask_mse": 0.1328994614990382,
+        "conditional_spectral_direct_retention_db": -0.2572875303816702,
+        "conditional_spectral_ambient_leakage_db": -2.172614502958533,
+        "conditional_direct_mask_relative_rms_damage": 0.058711904021272625
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.9336245843670903,
+        "conditional_spectral_direct_retention_db": -0.5840573990602085,
+        "conditional_spectral_ambient_leakage_db": -0.14414004770735162,
+        "conditional_direct_mask_relative_rms_damage": 0.07192769023916601
+      }
+    },
+    "direct_only": {
+      "learned": {
+        "selected_band_mask_mse": 8.382253048412155e-06,
+        "conditional_spectral_direct_retention_db": -0.016916926763813067,
+        "conditional_spectral_ambient_leakage_db": null,
+        "conditional_direct_mask_relative_rms_damage": 0.0021100068513354346
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.011371511907632723,
+        "conditional_spectral_direct_retention_db": -0.8602384000522028,
+        "conditional_spectral_ambient_leakage_db": null,
+        "conditional_direct_mask_relative_rms_damage": 0.09269825368084092
+      }
+    },
+    "hard_pan": {
+      "learned": {
+        "selected_band_mask_mse": 0.005785459378500493,
+        "conditional_spectral_direct_retention_db": -2.9169952000286665,
+        "conditional_spectral_ambient_leakage_db": -9.607771656700631,
+        "conditional_direct_mask_relative_rms_damage": 0.41328976155790487
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.1031767200618724,
+        "conditional_spectral_direct_retention_db": -2.2210047173894205,
+        "conditional_spectral_ambient_leakage_db": -6.456858645817433,
+        "conditional_direct_mask_relative_rms_damage": 0.3147492691800106
+      }
+    },
+    "level_shift": {
+      "learned": {
+        "selected_band_mask_mse": 0.011719444043280201,
+        "conditional_spectral_direct_retention_db": -7.2555125387610815,
+        "conditional_spectral_ambient_leakage_db": -15.92056634749288,
+        "conditional_direct_mask_relative_rms_damage": 0.7351180393856656
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.10599074440317321,
+        "conditional_spectral_direct_retention_db": -3.950737269474919,
+        "conditional_spectral_ambient_leakage_db": -7.7276031112815975,
+        "conditional_direct_mask_relative_rms_damage": 0.43870489098899734
+      }
+    },
+    "matched": {
+      "learned": {
+        "selected_band_mask_mse": 0.003359214368995441,
+        "conditional_spectral_direct_retention_db": -4.812992834058743,
+        "conditional_spectral_ambient_leakage_db": -11.891380187021408,
+        "conditional_direct_mask_relative_rms_damage": 0.5299462660833538
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": 0.1059907459298212,
+        "conditional_spectral_direct_retention_db": -3.9507372678465833,
+        "conditional_spectral_ambient_leakage_db": -7.727603097217155,
+        "conditional_direct_mask_relative_rms_damage": 0.4387048910144613
+      }
+    },
+    "silence": {
+      "learned": {
+        "selected_band_mask_mse": null,
+        "conditional_spectral_direct_retention_db": null,
+        "conditional_spectral_ambient_leakage_db": null,
+        "conditional_direct_mask_relative_rms_damage": null
+      },
+      "scalar_analytic_diagnostic": {
+        "selected_band_mask_mse": null,
+        "conditional_spectral_direct_retention_db": null,
+        "conditional_spectral_ambient_leakage_db": null,
+        "conditional_direct_mask_relative_rms_damage": null
+      }
+    }
+  },
+  "quality_summary_scope": "conditional spectral metrics recomputed from regenerated known stems and native masks; excludes nonlinear multichannel routing",
+  "report_sha256": "8b1bbb389b1c5102466c6dcebd231ef29840648170646e3f88d77d6dcd51ca1e",
+  "deployment_admitted": false
+}

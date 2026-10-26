@@ -18,6 +18,7 @@ pub const BANDS: usize = 32;
 #[derive(Debug, Clone)]
 pub struct SourceMaskModel {
     coefficients: [f64; 65],
+    raw_power_policy: bool,
 }
 
 #[derive(Deserialize)]
@@ -47,19 +48,30 @@ impl SourceMaskModel {
             return Err("source-mask size/hash mismatch".into());
         }
         let doc: Document = serde_json::from_slice(bytes).map_err(|e| e.to_string())?;
-        let policy = serde_json::json!({
+        let raw_power_policy = doc.format == "sotf-upmixer-direct-ambient-mask-v2";
+        let mut policy = serde_json::json!({
             "sample_rates": [48000], "fft_size": 512, "hop_size": 256,
             "band_bins": 8, "features": 6, "hidden": 8,
             "window": "periodic_sqrt_hann", "model_lookahead_samples": 0,
             "label": "generated_direct_stem_power_fraction",
             "fallback": "analytic_directness", "mask_bounds": [0.0, 1.0]
         });
-        let provenance = serde_json::json!({
+        let mut provenance = serde_json::json!({
             "origin": "project-generated panned direct and stereo diffuse stems",
             "license": "GPL-3.0-or-later", "recorded_sources": false,
             "speech_identity": false
         });
-        if doc.format != "sotf-upmixer-direct-ambient-mask-v1"
+        if raw_power_policy {
+            policy["fallback"] = serde_json::json!("ordinary_native_decomposition");
+            policy["excitation"] = serde_json::json!({
+                "band_power_interval_exclusive": [1e-16, 1e12],
+                "relative_to_peak_band_min": 1e-6,
+                "power_scale": "reference_fft",
+                "dc_nyquist": "excluded"
+            });
+            provenance["training_features"] = serde_json::json!("native_f32_fft_f64_covariance");
+        }
+        if (!raw_power_policy && doc.format != "sotf-upmixer-direct-ambient-mask-v1")
             || doc.policy != policy
             || doc.provenance != provenance
             || doc.deployment_admitted
@@ -74,7 +86,10 @@ impl SourceMaskModel {
             .coefficients
             .try_into()
             .map_err(|_| "source-mask needs65 coefficients")?;
-        Ok(Self { coefficients })
+        Ok(Self {
+            coefficients,
+            raw_power_policy,
+        })
     }
 
     /// Infer a bounded direct fraction from six normalized features without allocation.
@@ -212,6 +227,20 @@ impl SourceMasks {
                     state.band_power[band] = Some(power);
                     state.features[band] = features;
                 }
+            }
+        }
+        let peak_power = state
+            .band_power
+            .iter()
+            .flatten()
+            .copied()
+            .fold(0.0, f64::max);
+        for band in 0..BANDS {
+            let eligible = self.model.as_ref().is_some_and(|model| {
+                !model.raw_power_policy
+                    || state.band_power[band].is_some_and(|power| power >= peak_power * 1e-6)
+            });
+            if eligible {
                 state.masks[band] = state.features[band]
                     .as_ref()
                     .and_then(|f| self.model.as_ref()?.predict(f));
@@ -258,7 +287,7 @@ impl crate::UpmixerPlugin {
 
 #[cfg(test)]
 mod tests {
-    use super::band_observation;
+    use super::{SourceMaskModel, SourceMasks, band_observation};
     use rustfft::num_complex::Complex;
 
     #[test]
@@ -277,5 +306,36 @@ mod tests {
         }
         let invalid = [Complex::new(f32::NAN, 0.0); 9];
         assert!(band_observation(&invalid, &invalid, 1, 9, 2.0).is_none());
+    }
+
+    #[test]
+    fn v2_reliability_mask_tracks_actual_power_on_both_sides_of_cutoff() {
+        let mut left = [Complex::new(0.0, 0.0); 257];
+        let right = left;
+        left[1..9].fill(Complex::new(1.0, 0.0));
+        // Neighboring f32 amplitudes straddle the declared 60 dB power cutoff.
+        let boundary = 0.001_f32;
+        for amplitude in [f32::from_bits(boundary.to_bits() - 1), boundary] {
+            left[9..17].fill(Complex::new(amplitude, 0.0));
+            for guarded in [false, true] {
+                let mut masks = SourceMasks {
+                    model: Some(SourceMaskModel {
+                        coefficients: [0.0; 65],
+                        raw_power_policy: guarded,
+                    }),
+                    ..SourceMasks::default()
+                };
+                masks.update(&left, &right, true);
+                let snapshot = &masks.snapshot;
+                assert_eq!(snapshot.masks[0], Some(0.5));
+                let expected = !guarded
+                    || snapshot.band_power[1].unwrap() >= snapshot.band_power[0].unwrap() * 1e-6;
+                assert_eq!(snapshot.masks[1].is_some(), expected);
+                assert_eq!(snapshot.masks[1].is_some(), !guarded || amplitude == boundary);
+                assert!(snapshot.features[1].is_some());
+                assert!(snapshot.masks[2..].iter().all(Option::is_none));
+                assert_eq!(snapshot.selected_bands + snapshot.fallback_bands, 32);
+            }
+        }
     }
 }
