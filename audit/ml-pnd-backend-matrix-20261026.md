@@ -57,6 +57,12 @@ All six0.25s functional smoke processes pass and report the correct prepared/raw
 backend identities. Smoke timing is unqualified because unrelated compilation
 was active. The full96-case qualification is pending a compiler/test-free window;
 no deadline, memory or service comparison is scored at this checkpoint.
+The bounded1800s quiet-window wait exited with external compilation still active.
+No case started and no full-matrix output directory was created. Task validation
+also ran during part of the wait; it did not replace the queued executable.
+`timing-deferred.json` records the terminal outcome. Rerun the unchanged protocol
+when a quiet window is available; do not interpret this deferral as a failed
+neural service or audio-quality gate.
 
 Evidence: `audit/artifacts/ml-pnd-backend-matrix-20261026`. Raw smoke files remain
 in `/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026`. The pending runner targets
