@@ -941,7 +941,12 @@
         "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/ort_pitch.rs",
         "scripts/ml/verify_pnd_ort_native.py",
         "audit/ml-pnd-ort-native-20261026.md",
-        "audit/artifacts/ml-pnd-ort-native-20261026"
+        "audit/artifacts/ml-pnd-ort-native-20261026",
+        "scripts/ml/run_pnd_backend_matrix.py",
+        "scripts/ml/analyze_pnd_backend_matrix.py",
+        "scripts/ml/test_pnd_backend_matrix.py",
+        "audit/ml-pnd-backend-matrix-20261026.md",
+        "audit/artifacts/ml-pnd-backend-matrix-20261026"
       ],
       "remaining": [
         "Matched16-case generated classical/CREPE comparison is implemented; classical wins accepted raw pitch error in all14 supported cases and assisted output regresses in12/14. Broaden sources/rates/SNR and improve/calibrate on separate development material before fresh final/recorded acceptance; no general adoption. Lone-octave controls preserve exact classical output.",
@@ -1180,7 +1185,12 @@
         "scripts/ml/analyze_pnd_comparison.py",
         "scripts/ml/test_pnd_comparison.py",
         "audit/ml-pnd-matched-20261026.md",
-        "audit/artifacts/ml-pnd-matched-20261026"
+        "audit/artifacts/ml-pnd-matched-20261026",
+        "scripts/ml/run_pnd_backend_matrix.py",
+        "scripts/ml/analyze_pnd_backend_matrix.py",
+        "scripts/ml/test_pnd_backend_matrix.py",
+        "audit/ml-pnd-backend-matrix-20261026.md",
+        "audit/artifacts/ml-pnd-backend-matrix-20261026"
       ],
       "remaining": "Finite generated estimator/worker/waveform comparison fails general learned adoption. Independent natural/held-out material, policy improvement on development data, per-job age/worker memory and real DAW/platform evidence, plus application/UI acceptance remain."
     },
@@ -1250,7 +1260,12 @@
         "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/ort_pitch.rs",
         "scripts/ml/verify_pnd_ort_native.py",
         "audit/ml-pnd-ort-native-20261026.md",
-        "audit/artifacts/ml-pnd-ort-native-20261026"
+        "audit/artifacts/ml-pnd-ort-native-20261026",
+        "scripts/ml/run_pnd_backend_matrix.py",
+        "scripts/ml/analyze_pnd_backend_matrix.py",
+        "scripts/ml/test_pnd_backend_matrix.py",
+        "audit/ml-pnd-backend-matrix-20261026.md",
+        "audit/artifacts/ml-pnd-backend-matrix-20261026"
       ],
       "remaining": "Native QA-only ORT CPU/CoreML CPU-only workers now share the existing source preprocessing, decoder, queue and fallback. Actual-library qualification passes64 activation frames and100 cross-rate windows plus lifecycle/placement/heap checks; native CPU/CoreML delegation is observed. Existing matched runtime costs and paced Tract chain evidence remain distinct. Paced alternative-backend/queue comparisons, full worker/foreign/system memory/CPU/freshness, app-global initializer ownership and library packaging, repeated device contention, actual GPU-device proof/load, cross-platform builds and product selection remain. Pitch-quality regressions are unchanged and no production runtime winner is selected."
     }

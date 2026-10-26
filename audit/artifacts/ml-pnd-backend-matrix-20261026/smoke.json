@@ -1,0 +1,243 @@
+{
+  "smoke": true,
+  "timing_qualified": false,
+  "reason": "functional run during external compilation",
+  "renderer_sha256": "193a16bc540791ef1afa04bfdad8b0cf268651c13c769c2ffaf278d7cb363c2f",
+  "model_sha256": "57209bf565bce9de445b31a175294dd2f297432864599c6aa237a895353918d3",
+  "cases": [
+    {
+      "backend": "tract",
+      "cpu_workers": 2,
+      "exit_code": 0,
+      "prepared_worker_backend": "tract",
+      "raw_crepe_backend": "tract",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/neural.f32le",
+          "sha256": "924ac4266226d3cbdc37aa7f73395fcb30affdc7dc4a393419319321964fb6b3"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/native.json",
+          "sha256": "13dc72bb8e7ffecfe4ea7e13bb869e14556de04f152de9bb3a66774d6dcd19fc"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/request.json",
+          "sha256": "d5bfea38810dcc2a4778bb593d1f0cb8dae0a8f8f2de3d05ce169ff0bf27a036"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/stderr.txt",
+          "sha256": "bc390f51dfe9c8bdf3f04166083e870ea5f61ba008d7d9b7083a2bfb9d8070b4"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/0/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "backend": "ort_cpu",
+      "cpu_workers": 0,
+      "exit_code": 0,
+      "prepared_worker_backend": "ort_cpu",
+      "raw_crepe_backend": "ort_cpu",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/neural.f32le",
+          "sha256": "bed6879c312ea087ebddadb89382487f1d3ea3c284a6d499e91f6bff83762442"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/native.json",
+          "sha256": "cb8c078b6d638baa0331587b74fa2916f9676c5156d34f79b732523ad4508475"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/request.json",
+          "sha256": "e855f0519a0a1d571addc378a8de2657366ab9455977094bc561d35242fbc97b"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/stderr.txt",
+          "sha256": "934ebc8275850c457f4c528e3b7879b67cd1c5d4b84a236ab4d204fdbbbca1a9"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/1/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "backend": "ort_coreml_cpu_only",
+      "cpu_workers": 0,
+      "exit_code": 0,
+      "prepared_worker_backend": "ort_coreml_cpu_only",
+      "raw_crepe_backend": "ort_coreml_cpu_only",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/neural.f32le",
+          "sha256": "77a594cd69f52dcb2f3dab4f571423cc35da20c9691e60427bca97214c4aa7ab"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/native.json",
+          "sha256": "bb5c8130301d1091173f4128073939b10d022f8f6fbde01d41d4d852a0dc1b2f"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/request.json",
+          "sha256": "98f3ca9b5c298ed62a022048bc2f6a3937610f164cf04684503c6a75fac9275f"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/stderr.txt",
+          "sha256": "1fb53b756437c2f3163ec5ab5ee0b374e599acfeaccb4a80f08cb3297ad4333a"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/2/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "backend": "tract",
+      "cpu_workers": 0,
+      "exit_code": 0,
+      "prepared_worker_backend": "tract",
+      "raw_crepe_backend": "tract",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/neural.f32le",
+          "sha256": "77a594cd69f52dcb2f3dab4f571423cc35da20c9691e60427bca97214c4aa7ab"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/native.json",
+          "sha256": "55c1042b13ae84a101719c2afa5f2537dda2df73ab98e37af12bf6eac1264b5a"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/request.json",
+          "sha256": "fb4391c83515e45f9ff22aa40549d12648cb884298c0f7f407e37009305c7151"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/stderr.txt",
+          "sha256": "5cce03aeca7805ea0e830bd5c7b8626dc76956d7a0b49e56a1b68431ed452844"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/3/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "backend": "ort_coreml_cpu_only",
+      "cpu_workers": 2,
+      "exit_code": 0,
+      "prepared_worker_backend": "ort_coreml_cpu_only",
+      "raw_crepe_backend": "ort_coreml_cpu_only",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/neural.f32le",
+          "sha256": "8fe42f6b4595891d25f325946a0aa5d9f362cf2dee29edf4ff381af6ff7baedd"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/native.json",
+          "sha256": "d0263f0ffb46a40a0af0c7de1f8d68034b2d3fe5ce54adc123a8962b5975edbe"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/request.json",
+          "sha256": "e0e3324d79247b258c0c6a9728c2d198e648ddcdb9ccd99a611b04a9a07d6f9c"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/stderr.txt",
+          "sha256": "95465ef90014291a7f0629dd2f8f777c98c76ecd997cedb38d7a242502fa78fc"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/4/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    },
+    {
+      "backend": "ort_cpu",
+      "cpu_workers": 2,
+      "exit_code": 0,
+      "prepared_worker_backend": "ort_cpu",
+      "raw_crepe_backend": "ort_cpu",
+      "source_frames": 12017,
+      "paired_callbacks": 94,
+      "artifact_hashes": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/input.f32le",
+          "sha256": "b3a206950a26c3bc171adc04af9e04518d77ec7327f3c51face986cd5dbafaea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/classical.f32le",
+          "sha256": "2c4aa012d262c38ec8dd2f45d649507e15df5035ae1273e583eb0c5664455ea0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/neural.f32le",
+          "sha256": "98f8041d8d147398f964e491721590a5f124f1df86515cd6884e024bf813c307"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/native.json",
+          "sha256": "003c3d1a7bfce50aa119716c0d8e97b766a8aa78163507ee57430b05d4167bf0"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/request.json",
+          "sha256": "ed6056d985165b9f7ce6e7df3321a272ff08a004f8e7e3f60ef0716ea0a5539c"
+        },
+        "stderr.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/stderr.txt",
+          "sha256": "59e76962526ea52a4e6de2a026ce9a12aa4458054c722a00457c7aa7f0e2c665"
+        },
+        "stdout.txt": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-backend-smoke-20261026/5/stdout.txt",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      }
+    }
+  ]
+}

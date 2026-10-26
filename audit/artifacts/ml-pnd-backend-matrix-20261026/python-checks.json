@@ -1,0 +1,30 @@
+[
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_pnd*.py"
+    ],
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "........\n----------------------------------------------------------------------\nRan 8 tests in 0.168s\n\nOK\n"
+  },
+  {
+    "command": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/run_pnd_backend_matrix.py",
+      "scripts/ml/analyze_pnd_backend_matrix.py",
+      "scripts/ml/test_pnd_backend_matrix.py",
+      "scripts/ml/analyze_pnd_comparison.py"
+    ],
+    "exit_code": 0,
+    "stdout": "All checks passed!\n",
+    "stderr": ""
+  }
+]

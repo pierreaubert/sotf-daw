@@ -94,6 +94,8 @@ pub struct PitchDecisionSnapshot {
     ///
     /// Repeated snapshots do not imply distinct completed inference jobs.
     pub neural_pitch_used: bool,
+    /// Prepared worker backend identity, independent of whether it was selected.
+    pub neural_backend: Option<&'static str>,
 }
 
 #[cfg(feature = "qa")]
@@ -102,11 +104,16 @@ impl PndPlugin {
     ///
     /// This does not expose the worker observation's source timestamp or confidence.
     pub fn pitch_decision_snapshot(&self) -> PitchDecisionSnapshot {
+        #[cfg(feature = "neural-pitch")]
+        let neural_backend = self.neural_pitch.as_ref().map(|n| n.backend_name());
+        #[cfg(not(feature = "neural-pitch"))]
+        let neural_backend = None;
         PitchDecisionSnapshot {
             analysis_generation: self.last_analysis_generation,
             drift_ratio: self.last_drift_ratio,
             correction_ratio: self.current_ratio,
             neural_pitch_used: self.neural_pitch_used,
+            neural_backend,
         }
     }
 }

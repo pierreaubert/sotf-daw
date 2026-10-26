@@ -331,6 +331,7 @@ pub struct NeuralPitchAssistant {
     hop: usize,
     until_hop: usize,
     max_age: u64,
+    backend_name: &'static str,
 }
 
 impl std::fmt::Debug for NeuralPitchAssistant {
@@ -394,6 +395,7 @@ impl NeuralPitchAssistant {
         if max_age < window as u64 {
             return Err("Neural pitch age limit is shorter than one source window".into());
         }
+        let backend_name = model.backend_name();
         Ok(Self {
             worker: AsyncInference::spawn(WorkerModel(model), 2, "pnd-crepe")?,
             config,
@@ -403,7 +405,13 @@ impl NeuralPitchAssistant {
             hop,
             until_hop: window,
             max_age,
+            backend_name,
         })
+    }
+
+    /// Identify the prepared worker model without querying the foreign runtime.
+    pub fn backend_name(&self) -> &'static str {
+        self.backend_name
     }
 
     /// Return the explicitly configured source channel.

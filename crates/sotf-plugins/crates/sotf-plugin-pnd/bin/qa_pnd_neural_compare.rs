@@ -13,6 +13,11 @@ use sotf_plugin_pnd::{NeuralPitchConfig, PitchDecisionSnapshot, PndPlugin, PndPl
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::PathBuf;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 #[global_allocator]
@@ -30,6 +35,54 @@ struct Request {
     reference_hz: f32,
     model: NeuralPitchConfig,
     neural_first: bool,
+    #[serde(default)]
+    cpu_workers: usize,
+    #[serde(default)]
+    ort_runtime: Option<OrtRequest>,
+}
+
+#[cfg(feature = "neural-pitch-ort")]
+type OrtRequest = sotf_plugin_pnd::ort_pitch::OrtPitchConfig;
+#[cfg(not(feature = "neural-pitch-ort"))]
+type OrtRequest = serde_json::Value;
+
+struct CpuLoad {
+    stop: Arc<AtomicBool>,
+    workers: Vec<JoinHandle<()>>,
+}
+impl CpuLoad {
+    fn new(count: usize) -> Result<Self, std::io::Error> {
+        let mut load = Self {
+            stop: Arc::new(AtomicBool::new(false)),
+            workers: Vec::with_capacity(count),
+        };
+        for _ in 0..count {
+            let stop = Arc::clone(&load.stop);
+            load.workers
+                .push(
+                    thread::Builder::new()
+                        .name("pnd-qa-load".into())
+                        .spawn(move || {
+                            let mut value = 0.123_f64;
+                            while !stop.load(Ordering::Acquire) {
+                                for _ in 0..10000 {
+                                    value = (value.sin() + 0.1234567).cos();
+                                }
+                                std::hint::black_box(value);
+                            }
+                        })?,
+                );
+        }
+        Ok(load)
+    }
+}
+impl Drop for CpuLoad {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        for worker in self.workers.drain(..) {
+            let _ = worker.join();
+        }
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -114,8 +167,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         || !r.reference_hz.is_finite()
         || !(65.0..=1000.0).contains(&r.reference_hz)
         || r.model.source_channel != 0
+        || r.cpu_workers > 8
     {
         return Err("unsupported bounded mono PND geometry".into());
+    }
+    #[cfg(not(feature = "neural-pitch-ort"))]
+    if r.ort_runtime.is_some() {
+        return Err("ORT selection requires neural-pitch-ort feature".into());
     }
     bytes.clear();
     File::open(&r.input)?
@@ -152,7 +210,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut raw_crepe = Vec::with_capacity(r.frames / 480);
     let window = (0.064 * f64::from(r.sample_rate)).ceil() as usize;
     let hop = (f64::from(r.sample_rate) / 100.0).round() as usize;
+    #[cfg(feature = "neural-pitch-ort")]
+    let mut model = match &r.ort_runtime {
+        Some(runtime) => CrepeModel::load_ort(&r.model, f64::from(r.sample_rate), runtime)?,
+        None => CrepeModel::load(&r.model, f64::from(r.sample_rate))?,
+    };
+    #[cfg(not(feature = "neural-pitch-ort"))]
     let mut model = CrepeModel::load(&r.model, f64::from(r.sample_rate))?;
+    let raw_crepe_backend = model.backend_name();
     for end in (window..=r.frames).step_by(hop) {
         let p = model.analyze_window(&input[end - window..end], end as u64)?;
         raw_crepe.push(RawPitch {
@@ -179,8 +244,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..params.clone()
         },
     )?;
+    #[cfg(feature = "neural-pitch-ort")]
+    if let Some(runtime) = &r.ort_runtime {
+        neural.configure_qa_ort_pitch(runtime.clone())?;
+    }
     classical.initialize(f64::from(r.sample_rate))?;
     neural.initialize(f64::from(r.sample_rate))?;
+    if neural.pitch_decision_snapshot().neural_backend != Some(raw_crepe_backend) {
+        return Err("prepared worker differs from requested/raw backend".into());
+    }
     assert_no_allocs_or_deallocs("PND matched reset", || {
         classical.reset();
         neural.reset();
@@ -193,6 +265,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut ab = [0.0_f32; 128];
     let mut bb = ab;
     let mut traces = Vec::with_capacity(r.frames.div_ceil(128));
+    let cpu_load = CpuLoad::new(r.cpu_workers)?;
     let clock = Instant::now();
     let mut accepted = 0;
     for source in input.chunks(128) {
@@ -233,6 +306,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
     drain(&mut classical, &mut a, r.sample_rate)?;
     drain(&mut neural, &mut b, r.sample_rate)?;
+    drop(cpu_load);
     if a.len() != b.len() || a.iter().chain(&b).any(|v| !v.is_finite()) {
         return Err("output geometry or finite-domain mismatch".into());
     }
@@ -240,7 +314,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let bytes: Vec<u8> = audio.iter().flat_map(|x| x.to_le_bytes()).collect();
         exclusive(path, &bytes)?;
     }
-    let report = serde_json::json!({"sample_rate": r.sample_rate, "source_frames": r.frames, "output_frames": a.len(), "latency_samples": 2047, "callback_frames": 128, "params": params, "neural_config": r.model, "neural_first": r.neural_first, "raw_classical": raw_classical, "raw_crepe": raw_crepe, "trace": traces, "worker_timestamp_available": false, "scope": "paced mono native pair; raw synchronous estimates separate; no device scheduling or inference-job age telemetry"});
+    let report = serde_json::json!({"sample_rate": r.sample_rate, "source_frames": r.frames, "output_frames": a.len(), "latency_samples": 2047, "callback_frames": 128, "params": params, "neural_config": r.model, "neural_first": r.neural_first, "cpu_workers": r.cpu_workers, "ort_runtime": r.ort_runtime, "raw_crepe_backend": raw_crepe_backend, "prepared_worker_backend": neural.pitch_decision_snapshot().neural_backend, "raw_classical": raw_classical, "raw_crepe": raw_crepe, "trace": traces, "worker_timestamp_available": false, "scope": "paced mono native pair; CPU load starts after raw estimates and initialization; raw synchronous estimates separate; no device scheduling or inference-job age telemetry"});
     exclusive(&r.report, &serde_json::to_vec_pretty(&report)?)?;
     Ok(())
 }

@@ -1,0 +1,32 @@
+{
+  "release_build": {
+    "exit_code": 0,
+    "features": "qa-neural-tools,neural-pitch-ort",
+    "target": "qa-pnd-neural-compare"
+  },
+  "strict_clippy": {
+    "exit_code": 0,
+    "features": "qa-neural-tools,neural-pitch-ort",
+    "targets": [
+      "lib",
+      "qa-pnd-neural-compare"
+    ]
+  },
+  "snapshot_regression": {
+    "exit_code": 0,
+    "features": "neural-pitch-ort",
+    "test": "qa_pitch_snapshot",
+    "passed": 1
+  },
+  "qa_without_neural": {
+    "exit_code": 0,
+    "features": "qa",
+    "target": "lib"
+  },
+  "original_dataset_reverification": {
+    "cases": 16,
+    "verified_raw_hashes": 80,
+    "probe_failures": 0
+  },
+  "notes": "Transcribed from successful tool results; original stdout for these commands was returned in the conversation. Python checks retain captured stdout/stderr separately."
+}

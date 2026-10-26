@@ -84,8 +84,9 @@ def raw_metrics(rows, cents, rate, reference, supported, confidence):
     }
 
 
-def analyze(root):
-    report = json.loads((root / "report.json").read_text())
+def analyze(root, report=None):
+    if report is None:
+        report = json.loads((root / "report.json").read_text())
     if report["smoke"]:
         raise ValueError("Smoke output cannot establish the full comparison matrix")
     if (
