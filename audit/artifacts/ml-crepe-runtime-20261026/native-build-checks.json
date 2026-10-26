@@ -1,0 +1,40 @@
+{
+  "source": "completed tool-call output",
+  "build": {
+    "command": [
+      "cargo",
+      "build",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-pnd",
+      "--features",
+      "qa,neural-pitch",
+      "--bin",
+      "qa-crepe-runtime"
+    ],
+    "exit_code": 0
+  },
+  "clippy": {
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-pnd",
+      "--features",
+      "qa,neural-pitch",
+      "--bin",
+      "qa-crepe-runtime",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0
+  }
+}

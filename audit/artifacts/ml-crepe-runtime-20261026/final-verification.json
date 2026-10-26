@@ -1,0 +1,4707 @@
+{
+  "smoke": false,
+  "verified_raw_hashes": 75,
+  "activation_tolerance": 2e-05,
+  "accepted_pitch_tolerance_cents": 0.1,
+  "policy_disagreement_tolerance": 0,
+  "results": [
+    {
+      "profile": "tract_native",
+      "trial": 0,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213294744491577,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252047300338745,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747888565063,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527345418930054,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.644029974937439,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.793509840965271,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867658495903015,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154573440551758,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097504377365112,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597761154175,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042835235596,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.913409948348999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209288358688354,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294437646865845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777638435364,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258378505706787,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.880063533782959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693996071815491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881566524505615,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913065195083618,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707006812095642,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211618781089783,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.0982297956943512,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 27410432,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.4397295,
+        "p99_ms": 0.48867999000000006,
+        "maximum_ms": 0.546584,
+        "model_load_ms": 12.363458,
+        "ready_from_entry_ms": 12.526542,
+        "first_inference_ms": 0.435
+      }
+    },
+    {
+      "profile": "ort_cpu",
+      "trial": 0,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 7.450580596923828e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 3.2782554626464844e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295340538025,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252050876617432,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.8743019104003906e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747292518616,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527347207069397,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440300345420837,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935096025466919,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867655515670776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154572248458862,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.172325134277344e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097506761550903,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552595376968384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593491077423096,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909044027328491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098291397095,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8932449817657471,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287166595459,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294434666633606,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777042388916,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258379101753235,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.888156533241272,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913005590438843,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09706991910934448,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211550235748291,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 7.450580596923828e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09823009371757507,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 64339968,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 2.7743335,
+        "p99_ms": 3.0644705,
+        "maximum_ms": 3.152625,
+        "model_load_ms": 3.719291,
+        "ready_from_entry_ms": 49.871084,
+        "first_inference_ms": 2.927042
+      }
+    },
+    {
+      "profile": "coreml_gpu_allowed",
+      "trial": 0,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0008252859115600586,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.009249195455567887,
+        "peak_disagreements": 0,
+        "gate_pass": false,
+        "frames": [
+          {
+            "maximum_activation_error": 0.00033161044120788574,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.821104884147644,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0004035780597769728
+          },
+          {
+            "maximum_activation_error": 0.0003153085708618164,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8250299096107483,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.004852630749110339
+          },
+          {
+            "maximum_activation_error": 0.00029394030570983887,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8255109190940857,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0018112139359128165
+          },
+          {
+            "maximum_activation_error": 0.00030940771102905273,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7524968981742859,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0006434321403503418,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6435134410858154,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0005725473165512085,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7934650182723999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00024953484535217285,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16847610473632812,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0004254579544067383,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8151209354400635,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008964138296086919
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.910397469997406,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.005407815404892215
+          },
+          {
+            "maximum_activation_error": 0.00041991472244262695,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8093955516815186,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.009249195455567887
+          },
+          {
+            "maximum_activation_error": 0.0003165900707244873,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8550198674201965,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008971116542602157
+          },
+          {
+            "maximum_activation_error": 0.0004953145980834961,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.758981466293335,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00036132335662841797,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7905833125114441,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.467825293540955e-05,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07851485908031464,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00029309093952178955,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9259122610092163,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0007200641559205828
+          },
+          {
+            "maximum_activation_error": 0.0008252859115600586,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6734761595726013,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00038936734199523926,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8986605405807495,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00583224347974916
+          },
+          {
+            "maximum_activation_error": 0.00028833746910095215,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9132499694824219,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00023996590884827127
+          },
+          {
+            "maximum_activation_error": 0.00034108757972717285,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8930949568748474,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.007075752625356479
+          },
+          {
+            "maximum_activation_error": 0.00021789968013763428,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9208034873008728,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0011946318315212052
+          },
+          {
+            "maximum_activation_error": 0.00023380666971206665,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.1629505157470703,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00021401047706604004,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9186385273933411,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.000959687248133355
+          },
+          {
+            "maximum_activation_error": 1.902785152196884e-05,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005560880992561579,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00046432018280029297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8254703879356384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.006366238890858843
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.879841685295105,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0031989099105175526
+          },
+          {
+            "maximum_activation_error": 0.00018692761659622192,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693242073059082,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031936791213535697
+          },
+          {
+            "maximum_activation_error": 0.00030410289764404297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8879099488258362,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031916095972525833
+          },
+          {
+            "maximum_activation_error": 0.00023492053151130676,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09423846751451492,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.465800106525421e-05,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013977723196148872,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00013963133096694946,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09720064699649811,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0001806393265724182,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11196359246969223,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 8.892640471458435e-05,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09831633418798447,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 87408640,
+      "qualified_for_runtime_comparison": false,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.872396,
+        "p99_ms": 1.9151423600000002,
+        "maximum_ms": 3.759125,
+        "model_load_ms": 33.166667,
+        "ready_from_entry_ms": 78.674666,
+        "first_inference_ms": 9.665958
+      }
+    },
+    {
+      "profile": "coreml_cpu",
+      "trial": 0,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 5.960464477539062e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295936584473,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252048492431641,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257749080657959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527346611022949,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440301537513733,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.9371509552001953e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935097217559814,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867651045322418,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154574036598206,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 9.095571407158332e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464982032776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097503185272217,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 8.473955404042499e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597165107727,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042239189148,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.499490261077881e-08,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859381288290024,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 5.960464477539062e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743018627166748,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987801671028137,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098887443542,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1926385923288763e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 7.934841050882824e-08,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287762641907,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7136335372924805e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294428706169128,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187776446342468,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1128321375508676e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005543701816350222,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258374929428101,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881563544273376,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1175870895385742e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09444486349821091,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4156103134155273e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913143426179886,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707015752792358,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1688098311424255e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211623251438141,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.60770320892334e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09822995215654373,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 82264064,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.251667,
+        "p99_ms": 0.31569388000000004,
+        "maximum_ms": 0.353,
+        "model_load_ms": 21.563458,
+        "ready_from_entry_ms": 67.411375,
+        "first_inference_ms": 0.684792
+      }
+    },
+    {
+      "profile": "coreml_gpu_allowed",
+      "trial": 1,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0008252859115600586,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.009249195455567887,
+        "peak_disagreements": 0,
+        "gate_pass": false,
+        "frames": [
+          {
+            "maximum_activation_error": 0.00033161044120788574,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.821104884147644,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0004035780597769728
+          },
+          {
+            "maximum_activation_error": 0.0003153085708618164,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8250299096107483,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.004852630749110339
+          },
+          {
+            "maximum_activation_error": 0.00029394030570983887,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8255109190940857,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0018112139359128165
+          },
+          {
+            "maximum_activation_error": 0.00030940771102905273,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7524968981742859,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0006434321403503418,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6435134410858154,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0005725473165512085,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7934650182723999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00024953484535217285,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16847610473632812,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0004254579544067383,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8151209354400635,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008964138296086919
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.910397469997406,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.005407815404892215
+          },
+          {
+            "maximum_activation_error": 0.00041991472244262695,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8093955516815186,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.009249195455567887
+          },
+          {
+            "maximum_activation_error": 0.0003165900707244873,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8550198674201965,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008971116542602157
+          },
+          {
+            "maximum_activation_error": 0.0004953145980834961,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.758981466293335,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00036132335662841797,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7905833125114441,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.467825293540955e-05,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07851485908031464,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00029309093952178955,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9259122610092163,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0007200641559205828
+          },
+          {
+            "maximum_activation_error": 0.0008252859115600586,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6734761595726013,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00038936734199523926,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8986605405807495,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00583224347974916
+          },
+          {
+            "maximum_activation_error": 0.00028833746910095215,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9132499694824219,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00023996590884827127
+          },
+          {
+            "maximum_activation_error": 0.00034108757972717285,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8930949568748474,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.007075752625356479
+          },
+          {
+            "maximum_activation_error": 0.00021789968013763428,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9208034873008728,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0011946318315212052
+          },
+          {
+            "maximum_activation_error": 0.00023380666971206665,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.1629505157470703,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00021401047706604004,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9186385273933411,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.000959687248133355
+          },
+          {
+            "maximum_activation_error": 1.902785152196884e-05,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005560880992561579,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00046432018280029297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8254703879356384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.006366238890858843
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.879841685295105,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0031989099105175526
+          },
+          {
+            "maximum_activation_error": 0.00018692761659622192,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693242073059082,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031936791213535697
+          },
+          {
+            "maximum_activation_error": 0.00030410289764404297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8879099488258362,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031916095972525833
+          },
+          {
+            "maximum_activation_error": 0.00023492053151130676,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09423846751451492,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.465800106525421e-05,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013977723196148872,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00013963133096694946,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09720064699649811,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0001806393265724182,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11196359246969223,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 8.892640471458435e-05,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09831633418798447,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 87703552,
+      "qualified_for_runtime_comparison": false,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.8895,
+        "p99_ms": 2.2438548700000016,
+        "maximum_ms": 2.713833,
+        "model_load_ms": 32.3585,
+        "ready_from_entry_ms": 79.023,
+        "first_inference_ms": 9.593417
+      }
+    },
+    {
+      "profile": "ort_cpu",
+      "trial": 1,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 7.450580596923828e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 3.2782554626464844e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295340538025,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252050876617432,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.8743019104003906e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747292518616,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527347207069397,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440300345420837,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935096025466919,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867655515670776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154572248458862,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.172325134277344e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097506761550903,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552595376968384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593491077423096,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909044027328491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098291397095,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8932449817657471,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287166595459,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294434666633606,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777042388916,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258379101753235,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.888156533241272,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913005590438843,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09706991910934448,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211550235748291,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 7.450580596923828e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09823009371757507,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 64176128,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 2.7445625,
+        "p99_ms": 3.1021727500000003,
+        "maximum_ms": 3.656209,
+        "model_load_ms": 3.741792,
+        "ready_from_entry_ms": 51.003042,
+        "first_inference_ms": 2.784667
+      }
+    },
+    {
+      "profile": "coreml_cpu",
+      "trial": 1,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 5.960464477539062e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295936584473,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252048492431641,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257749080657959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527346611022949,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440301537513733,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.9371509552001953e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935097217559814,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867651045322418,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154574036598206,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 9.095571407158332e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464982032776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097503185272217,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 8.473955404042499e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597165107727,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042239189148,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.499490261077881e-08,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859381288290024,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 5.960464477539062e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743018627166748,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987801671028137,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098887443542,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1926385923288763e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 7.934841050882824e-08,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287762641907,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7136335372924805e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294428706169128,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187776446342468,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1128321375508676e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005543701816350222,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258374929428101,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881563544273376,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1175870895385742e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09444486349821091,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4156103134155273e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913143426179886,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707015752792358,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1688098311424255e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211623251438141,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.60770320892334e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09822995215654373,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 83607552,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.250604,
+        "p99_ms": 0.3412468800000001,
+        "maximum_ms": 0.38075,
+        "model_load_ms": 23.370875,
+        "ready_from_entry_ms": 69.636041,
+        "first_inference_ms": 0.762958
+      }
+    },
+    {
+      "profile": "tract_native",
+      "trial": 1,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213294744491577,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252047300338745,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747888565063,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527345418930054,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.644029974937439,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.793509840965271,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867658495903015,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154573440551758,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097504377365112,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597761154175,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042835235596,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.913409948348999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209288358688354,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294437646865845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777638435364,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258378505706787,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.880063533782959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693996071815491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881566524505615,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913065195083618,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707006812095642,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211618781089783,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.0982297956943512,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 28540928,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.451083,
+        "p99_ms": 0.53303723,
+        "maximum_ms": 0.601208,
+        "model_load_ms": 9.000166,
+        "ready_from_entry_ms": 9.101958,
+        "first_inference_ms": 0.450708
+      }
+    },
+    {
+      "profile": "tract_native",
+      "trial": 2,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213294744491577,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252047300338745,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747888565063,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527345418930054,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.644029974937439,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.793509840965271,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867658495903015,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154573440551758,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097504377365112,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597761154175,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042835235596,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.913409948348999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209288358688354,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294437646865845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777638435364,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258378505706787,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.880063533782959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693996071815491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881566524505615,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913065195083618,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707006812095642,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211618781089783,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.0982297956943512,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 27394048,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.4516875,
+        "p99_ms": 0.48108438,
+        "maximum_ms": 0.49325,
+        "model_load_ms": 8.382709,
+        "ready_from_entry_ms": 8.474625,
+        "first_inference_ms": 0.469083
+      }
+    },
+    {
+      "profile": "ort_cpu",
+      "trial": 2,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 7.450580596923828e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 3.2782554626464844e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295340538025,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252050876617432,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.8743019104003906e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747292518616,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527347207069397,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440300345420837,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935096025466919,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867655515670776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154572248458862,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.172325134277344e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097506761550903,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552595376968384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593491077423096,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909044027328491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098291397095,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8932449817657471,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287166595459,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294434666633606,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777042388916,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258379101753235,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.888156533241272,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913005590438843,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09706991910934448,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211550235748291,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 7.450580596923828e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09823009371757507,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 64225280,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 2.597833,
+        "p99_ms": 2.9393140100000004,
+        "maximum_ms": 3.220916,
+        "model_load_ms": 3.670792,
+        "ready_from_entry_ms": 50.671917,
+        "first_inference_ms": 2.795792
+      }
+    },
+    {
+      "profile": "coreml_gpu_allowed",
+      "trial": 2,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0008252859115600586,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.009249195455567887,
+        "peak_disagreements": 0,
+        "gate_pass": false,
+        "frames": [
+          {
+            "maximum_activation_error": 0.00033161044120788574,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.821104884147644,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0004035780597769728
+          },
+          {
+            "maximum_activation_error": 0.0003153085708618164,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8250299096107483,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.004852630749110339
+          },
+          {
+            "maximum_activation_error": 0.00029394030570983887,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8255109190940857,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0018112139359128165
+          },
+          {
+            "maximum_activation_error": 0.00030940771102905273,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7524968981742859,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0006434321403503418,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6435134410858154,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0005725473165512085,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7934650182723999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00024953484535217285,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16847610473632812,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0004254579544067383,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8151209354400635,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008964138296086919
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.910397469997406,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.005407815404892215
+          },
+          {
+            "maximum_activation_error": 0.00041991472244262695,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8093955516815186,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.009249195455567887
+          },
+          {
+            "maximum_activation_error": 0.0003165900707244873,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8550198674201965,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008971116542602157
+          },
+          {
+            "maximum_activation_error": 0.0004953145980834961,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.758981466293335,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00036132335662841797,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7905833125114441,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.467825293540955e-05,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07851485908031464,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00029309093952178955,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9259122610092163,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0007200641559205828
+          },
+          {
+            "maximum_activation_error": 0.0008252859115600586,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6734761595726013,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00038936734199523926,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8986605405807495,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00583224347974916
+          },
+          {
+            "maximum_activation_error": 0.00028833746910095215,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9132499694824219,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00023996590884827127
+          },
+          {
+            "maximum_activation_error": 0.00034108757972717285,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8930949568748474,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.007075752625356479
+          },
+          {
+            "maximum_activation_error": 0.00021789968013763428,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9208034873008728,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0011946318315212052
+          },
+          {
+            "maximum_activation_error": 0.00023380666971206665,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.1629505157470703,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00021401047706604004,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9186385273933411,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.000959687248133355
+          },
+          {
+            "maximum_activation_error": 1.902785152196884e-05,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005560880992561579,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00046432018280029297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8254703879356384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.006366238890858843
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.879841685295105,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0031989099105175526
+          },
+          {
+            "maximum_activation_error": 0.00018692761659622192,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693242073059082,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031936791213535697
+          },
+          {
+            "maximum_activation_error": 0.00030410289764404297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8879099488258362,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031916095972525833
+          },
+          {
+            "maximum_activation_error": 0.00023492053151130676,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09423846751451492,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.465800106525421e-05,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013977723196148872,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00013963133096694946,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09720064699649811,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0001806393265724182,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11196359246969223,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 8.892640471458435e-05,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09831633418798447,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 87244800,
+      "qualified_for_runtime_comparison": false,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.940708,
+        "p99_ms": 2.4867401400000007,
+        "maximum_ms": 2.605583,
+        "model_load_ms": 33.462792,
+        "ready_from_entry_ms": 78.085083,
+        "first_inference_ms": 9.464
+      }
+    },
+    {
+      "profile": "coreml_cpu",
+      "trial": 2,
+      "placement_only": false,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 5.960464477539062e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295936584473,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252048492431641,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257749080657959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527346611022949,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440301537513733,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.9371509552001953e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935097217559814,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867651045322418,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154574036598206,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 9.095571407158332e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464982032776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097503185272217,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 8.473955404042499e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597165107727,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042239189148,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.499490261077881e-08,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859381288290024,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 5.960464477539062e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743018627166748,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987801671028137,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098887443542,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1926385923288763e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 7.934841050882824e-08,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287762641907,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7136335372924805e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294428706169128,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187776446342468,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1128321375508676e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005543701816350222,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258374929428101,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881563544273376,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1175870895385742e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09444486349821091,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4156103134155273e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913143426179886,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707015752792358,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1688098311424255e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211623251438141,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.60770320892334e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09822995215654373,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 82100224,
+      "qualified_for_runtime_comparison": true,
+      "timing": {
+        "measured_calls": 640,
+        "median_ms": 0.2486045,
+        "p99_ms": 0.3171876400000002,
+        "maximum_ms": 0.343041,
+        "model_load_ms": 20.855708,
+        "ready_from_entry_ms": 66.401667,
+        "first_inference_ms": 0.722375
+      }
+    },
+    {
+      "profile": "ort_cpu",
+      "trial": null,
+      "placement_only": true,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 7.450580596923828e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 3.2782554626464844e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295340538025,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252050876617432,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.8743019104003906e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257747292518616,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527347207069397,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440300345420837,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935096025466919,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867655515670776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154572248458862,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464385986328,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.172325134277344e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097506761550903,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552595376968384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593491077423096,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909044027328491,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859379053115845,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743014454841614,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987802267074585,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098291397095,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8932449817657471,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287166595459,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294434666633606,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187777042388916,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.0055436789989471436,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258379101753235,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 4.76837158203125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.888156533241272,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.0944448709487915,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913005590438843,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09706991910934448,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.854534149169922e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211550235748291,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 7.450580596923828e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09823009371757507,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 67010560,
+      "qualified_for_runtime_comparison": true,
+      "node_kernel_events_by_provider": {
+        "CPUExecutionProvider": 759
+      },
+      "actual_gpu_execution_proven": false
+    },
+    {
+      "profile": "coreml_cpu",
+      "trial": null,
+      "placement_only": true,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 5.960464477539062e-07,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.0,
+        "peak_disagreements": 0,
+        "gate_pass": true,
+        "frames": [
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.8213295936584473,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8252048492431641,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8257749080657959,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.4901161193847656e-07,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7527346611022949,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6440301537513733,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.9371509552001953e-07,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7935097217559814,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16867651045322418,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8154574036598206,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 9.095571407158332e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.9106464982032776,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8097503185272217,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 8.473955404042499e-08,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8552597165107727,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.384185791015625e-07,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.7593492269515991,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7909042239189148,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.499490261077881e-08,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07859381288290024,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9260434508323669,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 5.960464477539062e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6743018627166748,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8987801671028137,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.086162567138672e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9134098887443542,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1926385923288763e-07,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.893245279788971,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 7.934841050882824e-08,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9209287762641907,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7136335372924805e-07,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.16294428706169128,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.682209014892578e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9187776446342468,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1128321375508676e-07,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005543701816350222,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 3.5762786865234375e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8258374929428101,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1920928955078125e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.8800634145736694,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.7881393432617188e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693995475769043,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 2.980232238769531e-07,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8881563544273376,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0
+          },
+          {
+            "maximum_activation_error": 1.1175870895385742e-07,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09444486349821091,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.4156103134155273e-07,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013913143426179886,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.043081283569336e-07,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09707015752792358,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 1.1688098311424255e-07,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11211623251438141,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 2.60770320892334e-07,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09822995215654373,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 80855040,
+      "qualified_for_runtime_comparison": true,
+      "node_kernel_events_by_provider": {
+        "CoreMLExecutionProvider": 33
+      },
+      "actual_gpu_execution_proven": false
+    },
+    {
+      "profile": "coreml_gpu_allowed",
+      "trial": null,
+      "placement_only": true,
+      "exit_code": 0,
+      "parity": {
+        "maximum_activation_error": 0.0008252859115600586,
+        "policy_disagreements": 0,
+        "maximum_accepted_pitch_error_cents": 0.009249195455567887,
+        "peak_disagreements": 0,
+        "gate_pass": false,
+        "frames": [
+          {
+            "maximum_activation_error": 0.00033161044120788574,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8213294744491577,
+            "candidate_confidence": 0.821104884147644,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0004035780597769728
+          },
+          {
+            "maximum_activation_error": 0.0003153085708618164,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8252047300338745,
+            "candidate_confidence": 0.8250299096107483,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.004852630749110339
+          },
+          {
+            "maximum_activation_error": 0.00029394030570983887,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.8257747888565063,
+            "candidate_confidence": 0.8255109190940857,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0018112139359128165
+          },
+          {
+            "maximum_activation_error": 0.00030940771102905273,
+            "reference_peak": 62,
+            "candidate_peak": 62,
+            "reference_confidence": 0.7527345418930054,
+            "candidate_confidence": 0.7524968981742859,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0006434321403503418,
+            "reference_peak": 61,
+            "candidate_peak": 61,
+            "reference_confidence": 0.644029974937439,
+            "candidate_confidence": 0.6435134410858154,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0005725473165512085,
+            "reference_peak": 63,
+            "candidate_peak": 63,
+            "reference_confidence": 0.793509840965271,
+            "candidate_confidence": 0.7934650182723999,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00024953484535217285,
+            "reference_peak": 136,
+            "candidate_peak": 136,
+            "reference_confidence": 0.16867658495903015,
+            "candidate_confidence": 0.16847610473632812,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0004254579544067383,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8154573440551758,
+            "candidate_confidence": 0.8151209354400635,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008964138296086919
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.9106464385986328,
+            "candidate_confidence": 0.910397469997406,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.005407815404892215
+          },
+          {
+            "maximum_activation_error": 0.00041991472244262695,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.8097504377365112,
+            "candidate_confidence": 0.8093955516815186,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.009249195455567887
+          },
+          {
+            "maximum_activation_error": 0.0003165900707244873,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.8552597761154175,
+            "candidate_confidence": 0.8550198674201965,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.008971116542602157
+          },
+          {
+            "maximum_activation_error": 0.0004953145980834961,
+            "reference_peak": 168,
+            "candidate_peak": 168,
+            "reference_confidence": 0.7593492269515991,
+            "candidate_confidence": 0.758981466293335,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00036132335662841797,
+            "reference_peak": 169,
+            "candidate_peak": 169,
+            "reference_confidence": 0.7909042835235596,
+            "candidate_confidence": 0.7905833125114441,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 9.467825293540955e-05,
+            "reference_peak": 148,
+            "candidate_peak": 148,
+            "reference_confidence": 0.07859379053115845,
+            "candidate_confidence": 0.07851485908031464,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00029309093952178955,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9260434508323669,
+            "candidate_confidence": 0.9259122610092163,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0007200641559205828
+          },
+          {
+            "maximum_activation_error": 0.0008252859115600586,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.6743014454841614,
+            "candidate_confidence": 0.6734761595726013,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00038936734199523926,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.8987802267074585,
+            "candidate_confidence": 0.8986605405807495,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00583224347974916
+          },
+          {
+            "maximum_activation_error": 0.00028833746910095215,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.913409948348999,
+            "candidate_confidence": 0.9132499694824219,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00023996590884827127
+          },
+          {
+            "maximum_activation_error": 0.00034108757972717285,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.893245279788971,
+            "candidate_confidence": 0.8930949568748474,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.007075752625356479
+          },
+          {
+            "maximum_activation_error": 0.00021789968013763428,
+            "reference_peak": 228,
+            "candidate_peak": 228,
+            "reference_confidence": 0.9209288358688354,
+            "candidate_confidence": 0.9208034873008728,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0011946318315212052
+          },
+          {
+            "maximum_activation_error": 0.00023380666971206665,
+            "reference_peak": 190,
+            "candidate_peak": 190,
+            "reference_confidence": 0.16294437646865845,
+            "candidate_confidence": 0.1629505157470703,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00021401047706604004,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.9187777638435364,
+            "candidate_confidence": 0.9186385273933411,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.000959687248133355
+          },
+          {
+            "maximum_activation_error": 1.902785152196884e-05,
+            "reference_peak": 272,
+            "candidate_peak": 272,
+            "reference_confidence": 0.0055436789989471436,
+            "candidate_confidence": 0.005560880992561579,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00046432018280029297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8258378505706787,
+            "candidate_confidence": 0.8254703879356384,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.006366238890858843
+          },
+          {
+            "maximum_activation_error": 0.00033417344093322754,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.880063533782959,
+            "candidate_confidence": 0.879841685295105,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.0031989099105175526
+          },
+          {
+            "maximum_activation_error": 0.00018692761659622192,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8693996071815491,
+            "candidate_confidence": 0.8693242073059082,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031936791213535697
+          },
+          {
+            "maximum_activation_error": 0.00030410289764404297,
+            "reference_peak": 323,
+            "candidate_peak": 323,
+            "reference_confidence": 0.8881566524505615,
+            "candidate_confidence": 0.8879099488258362,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": 0.00031916095972525833
+          },
+          {
+            "maximum_activation_error": 0.00023492053151130676,
+            "reference_peak": 97,
+            "candidate_peak": 97,
+            "reference_confidence": 0.0944448709487915,
+            "candidate_confidence": 0.09423846751451492,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 6.465800106525421e-05,
+            "reference_peak": 359,
+            "candidate_peak": 359,
+            "reference_confidence": 0.013913065195083618,
+            "candidate_confidence": 0.013977723196148872,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.00013963133096694946,
+            "reference_peak": 2,
+            "candidate_peak": 2,
+            "reference_confidence": 0.09707006812095642,
+            "candidate_confidence": 0.09720064699649811,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 0.0001806393265724182,
+            "reference_peak": 263,
+            "candidate_peak": 263,
+            "reference_confidence": 0.11211618781089783,
+            "candidate_confidence": 0.11196359246969223,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          },
+          {
+            "maximum_activation_error": 8.892640471458435e-05,
+            "reference_peak": 298,
+            "candidate_peak": 298,
+            "reference_confidence": 0.0982297956943512,
+            "candidate_confidence": 0.09831633418798447,
+            "policy_disagreement": false,
+            "accepted_pitch_error_cents": null
+          }
+        ]
+      },
+      "whole_process_peak_rss_bytes": 86933504,
+      "qualified_for_runtime_comparison": false,
+      "node_kernel_events_by_provider": {
+        "CoreMLExecutionProvider": 33
+      },
+      "actual_gpu_execution_proven": false
+    }
+  ],
+  "report_sha256": "f99e764ffe846ed3f0d9beeeb10f4b6aa6948347341301a104cbb505bd6f6c82",
+  "scope": "operational native/Python wrappers and whole-process memory; same graph/input; differing startup/validation/threading boundaries; no runtime winner or actual GPU-device proof",
+  "deployment_admitted": false
+}

@@ -1,0 +1,36 @@
+{
+  "source": "completed tool-call commands",
+  "runs": {
+    "full": {
+      "command": [
+        "/private/tmp/sotf-ml-venv/bin/python",
+        "scripts/ml/run_crepe_runtime_matrix.py",
+        "--renderer",
+        "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-crepe-runtime",
+        "--model-dir",
+        "crates/sotf-plugins/models/crepe-tiny",
+        "--output",
+        "/Volumes/home_tmp/tmp/ml-crepe-runtime-matrix-20261026"
+      ],
+      "exit_code": 0
+    },
+    "verification": {
+      "command": [
+        "/private/tmp/sotf-ml-venv/bin/python",
+        "scripts/ml/analyze_crepe_runtime.py",
+        "--root",
+        "/Volumes/home_tmp/tmp/ml-crepe-runtime-matrix-20261026",
+        "--output",
+        "audit/artifacts/ml-crepe-runtime-20261026/final-verification.json"
+      ],
+      "exit_code": 0
+    }
+  },
+  "environment": {
+    "TMPDIR": "/Volumes/home_tmp/tmp",
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  },
+  "timeout_cleanup": "Final orchestrator kills its own POSIX process group on timeout; measured pre-hardening source frozen separately; no measured run timed out."
+}

@@ -1,0 +1,59 @@
+{
+  "backend": "ort_cpu",
+  "model_sha256": "57209bf565bce9de445b31a175294dd2f297432864599c6aa237a895353918d3",
+  "frames": 32,
+  "warmup_cycles": 5,
+  "measured_cycles": 20,
+  "model_load_ns": 3797458,
+  "ready_from_entry_ns": 49419708,
+  "first_inference_ns": 2996125,
+  "timings_ns": [],
+  "measurement_wall_ns": null,
+  "onnxruntime_version": "1.23.2",
+  "numpy_version": "2.5.4",
+  "requested_providers": [
+    "CPUExecutionProvider"
+  ],
+  "registered_providers": [
+    "CPUExecutionProvider"
+  ],
+  "provider_options": {
+    "CPUExecutionProvider": {}
+  },
+  "placement_only": true,
+  "thread_policy": "ORT sequential, intra_op=1 inter_op=1; CoreML device scheduling is outside this control",
+  "scope": "Python public activation wrapper includes input finite check, feed view/dict, output domain check/copy; no normalization/resampling/worker/audio",
+  "node_kernel_events_by_provider": {
+    "CPUExecutionProvider": 759
+  },
+  "kernel_names_by_provider": {
+    "CPUExecutionProvider": [
+      "BatchNormalization_11_kernel_time",
+      "BatchNormalization_15_kernel_time",
+      "BatchNormalization_19_kernel_time",
+      "BatchNormalization_23_kernel_time",
+      "BatchNormalization_3_kernel_time",
+      "BatchNormalization_7_kernel_time",
+      "Clip_29_kernel_time",
+      "FusedConv_31_kernel_time",
+      "FusedConv_32_kernel_time",
+      "FusedConv_33_kernel_time",
+      "FusedConv_34_kernel_time",
+      "FusedConv_35_kernel_time",
+      "FusedConv_36_kernel_time",
+      "MaxPool_12_kernel_time",
+      "MaxPool_16_kernel_time",
+      "MaxPool_20_kernel_time",
+      "MaxPool_24_kernel_time",
+      "MaxPool_4_kernel_time",
+      "MaxPool_8_kernel_time",
+      "Reshape_0_kernel_time",
+      "Reshape_26_kernel_time",
+      "Transpose_25_kernel_time",
+      "fused _kernel_time"
+    ]
+  },
+  "profile_file": "/Volumes/home_tmp/tmp/ml-crepe-runtime-matrix-20261026/12/placement_2026-10-26_06-50-34.json",
+  "profile_sha256": "bb27e6cb3f3be8cf8976a85fbdbd4394bc74ceb37d86e5a69cb93866e2318d8a",
+  "actual_gpu_execution_proven": false
+}

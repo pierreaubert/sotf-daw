@@ -1231,9 +1231,18 @@
         "scripts/ml/analyze_runtime_contention.py",
         "scripts/ml/test_runtime_contention.py",
         "audit/ml-runtime-contention-20261026.md",
-        "audit/artifacts/ml-runtime-contention-20261026"
+        "audit/artifacts/ml-runtime-contention-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/bin/qa_crepe_runtime.rs",
+        "scripts/ml/crepe_runtime_corpus.py",
+        "scripts/ml/ort_crepe_runtime.py",
+        "scripts/ml/run_crepe_runtime_matrix.py",
+        "scripts/ml/analyze_crepe_runtime.py",
+        "scripts/ml/test_crepe_runtime.py",
+        "scripts/ml/crepe-runtime-requirements.txt",
+        "audit/ml-crepe-runtime-20261026.md",
+        "audit/artifacts/ml-crepe-runtime-20261026"
       ],
-      "remaining": "Implemented paced native graph-track/bus CPU-contention baseline with real RNNoise/DeepFilterNet2/CREPE combinations and serving-aware raw deadline traces. Longer repeated varied-material trials, matched-network alternative-runtime parity, GPU contention, full worker/memory accounting, device/parallel-track scheduling and cross-platform DAW evidence remain; no runtime winner is selected."
+      "remaining": "Paced native real-model contention baseline and same-network32-frame/three-round runtime comparison are implemented. ORT CPU and CoreML CPU-only pass activation/policy parity; GPU-allowed CoreML fails2e-5 activation tolerance. CoreML CPU-only is faster warm but has larger whole-process memory/startup costs in this local wrapper experiment. Native alternative-runtime worker/preprocessing/lifecycle integration, decision-boundary/material acceptance, complete worker/system memory/CPU/freshness, repeated device/real-track contention, actual GPU-device proof/load, cross-platform builds and product selection remain; no runtime winner is selected."
     }
   ],
   "local_audit_source": "audit-20261018.md (existing user-owned untracked file; not modified or staged)"

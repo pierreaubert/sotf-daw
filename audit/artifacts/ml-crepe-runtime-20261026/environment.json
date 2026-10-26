@@ -1,0 +1,47 @@
+{
+  "tract_lock_entries": [
+    {
+      "name": "sotf-tract-core",
+      "version": "0.22.4",
+      "source": "git+https://github.com/pierreaubert/sotf-3rdparties#9b7c2134cb5831391c7863f584cd631c63719fd5"
+    },
+    {
+      "name": "sotf-tract-linalg",
+      "version": "0.22.4",
+      "source": "git+https://github.com/pierreaubert/sotf-3rdparties#9b7c2134cb5831391c7863f584cd631c63719fd5"
+    },
+    {
+      "name": "sotf-tract-onnx",
+      "version": "0.22.4",
+      "source": "git+https://github.com/pierreaubert/sotf-3rdparties#9b7c2134cb5831391c7863f584cd631c63719fd5"
+    },
+    {
+      "name": "tract-core",
+      "version": "0.18.3-pre",
+      "source": "git+https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7eadc84b345318b042f134602ed743879d"
+    },
+    {
+      "name": "tract-linalg",
+      "version": "0.18.3-pre",
+      "source": "git+https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7eadc84b345318b042f134602ed743879d"
+    },
+    {
+      "name": "tract-onnx",
+      "version": "0.18.3-pre",
+      "source": "git+https://github.com/sonos/tract?rev=ed00ff7eadc84b345318b042f134602ed743879d#ed00ff7eadc84b345318b042f134602ed743879d"
+    }
+  ],
+  "cargo_lock_sha256": "b395dfb170c1f52f41c6868852bbcfd7228809361ec68c04e90b3c9bd60d5b8d",
+  "onnxruntime": "1.23.2",
+  "provider_documentation": "https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html",
+  "apple_compute_units_documentation": "https://developer.apple.com/documentation/coreml/mlcomputeunits/cpuandgpu",
+  "coreml_scope": "CPUAndGPU permits CPU/GPU; profiles prove CoreML delegation, not actual GPU device use",
+  "native_pnd_dependency": {
+    "workspace_alias": "tract-onnx",
+    "package": "sotf-tract-onnx",
+    "version_requirement": "0.22",
+    "git": "https://github.com/pierreaubert/sotf-3rdparties",
+    "note": "Unprefixed0.18.3-pre entries belong to a separate runtime dependency; native PND uses the sotf-prefixed package."
+  },
+  "python_version": "3.12.10"
+}
