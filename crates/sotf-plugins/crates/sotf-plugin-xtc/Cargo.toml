@@ -13,7 +13,7 @@ name = "sotf_plugin_xtc"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-xtc"
@@ -27,6 +27,7 @@ realfft = { workspace = true }
 rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true, optional = true }
 symphonia = { workspace = true }
 symphonia-core = { workspace = true }
 symphonia-format-riff = { workspace = true }

@@ -365,6 +365,8 @@ pub(super) struct XtcDiagnostics {
 /// - Contiguous ring drain/copy/clear operations
 /// - Asynchronous filter recomputation to avoid audio glitches
 pub struct XtcPlugin {
+    #[cfg(feature = "qa")]
+    pub(super) qa_proposal: Option<crate::learned_proposal::PreparedProposal>,
     /// Configuration parameters
     pub(super) params: XtcPluginParams,
 
@@ -688,6 +690,8 @@ impl XtcPlugin {
                 cached_parameters: Vec::new(),
             },
             initialized: false,
+            #[cfg(feature = "qa")]
+            qa_proposal: None,
         };
         p.rebuild_cached_parameters();
         Ok(p)
@@ -1089,6 +1093,10 @@ impl XtcPlugin {
     }
 
     pub(super) fn adopt_pending_filters(&mut self) {
+        #[cfg(feature = "qa")]
+        if self.qa_proposal.is_some() {
+            return;
+        }
         self.retire_completed_filter_snapshot();
         let state = &mut self.filter_state;
         let Ok(mut exchange) = state.exchange.try_lock() else {
@@ -1687,6 +1695,14 @@ impl Plugin for XtcPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        #[cfg(feature = "qa")]
+        if self.qa_proposal.is_some() && id.as_str() != "enabled" {
+            return if self.parameter_unchanged(&id, &value) {
+                Ok(())
+            } else {
+                Err("initialize native XTC before changing the fixed QA proposal profile".into())
+            };
+        }
         if self.drain_state.remaining.is_some() {
             return if self.parameter_unchanged(&id, &value) {
                 Ok(())
@@ -1963,6 +1979,10 @@ impl Plugin for XtcPlugin {
             .pending = None;
 
         self.initialized = true;
+        #[cfg(feature = "qa")]
+        {
+            self.qa_proposal = None;
+        }
         // A new initialized clock starts the same meter cadence as a fresh
         // instance. Failed preparation never reaches this epoch boundary.
         self.diagnostics.auto_gain_frames = 0;

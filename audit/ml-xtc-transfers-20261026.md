@@ -2,7 +2,8 @@
 
 Issue10/plugin44. This checkpoint implements an off-thread learned horizontal
 HRIR model and gain-bounded inverse-filter proposal. It does not add inference to
-the audio callback, replace native XTC filters or enable a production selector.
+the audio callback or enable a production selector. The subsequent QA-only native
+prepared-resource path is documented in `audit/ml-xtc-native-proposal-20261026.md`.
 
 The calibration source is the checked-in normal-pinna KEMAR SOFA file, SHA256
 `e7035994f5fd754058424c061380ee92b1d5ed58fccef2887a4266916616acdf`.

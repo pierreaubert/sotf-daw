@@ -1,7 +1,8 @@
 # Measured horizontal HRIR model
 
 Offline unadmitted kernel-regression candidate for XTC transfer preparation.
-No production/native filter selects this model. Elevation0, radius1.4m,
+No production filter selects this model. A QA-only native prepared-proposal import
+is documented in `audit/ml-xtc-native-proposal-20261026.md`. Elevation0, radius1.4m,
 sample rate44.1kHz and512-sample HRIRs are the only calibrated geometry.
 
 `model.measured.json` SHA256:

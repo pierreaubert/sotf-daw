@@ -28,6 +28,8 @@ pub use config::*;
 
 mod config;
 mod filters;
+#[cfg(feature = "qa")]
+pub mod learned_proposal;
 pub mod params;
 mod reflections;
 pub mod validation;

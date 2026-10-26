@@ -14,6 +14,73 @@ use std::time::Duration;
 
 const TIMEOUT: Duration = Duration::from_secs(10);
 
+#[cfg(feature = "qa")]
+#[test]
+fn delayed_native_worker_cannot_replace_a_prepared_learned_proposal() {
+    use crate::learned_proposal::PreparedProposal;
+    use sha2::{Digest, Sha256};
+    let bytes =
+        include_bytes!("../../../../../../audit/artifacts/ml-xtc-transfers-20261026/proposal.json");
+    let sha: String = Sha256::digest(bytes)
+        .iter()
+        .map(|v| format!("{v:02x}"))
+        .collect();
+    let proposal = PreparedProposal::from_json(
+        bytes,
+        &sha,
+        "157b1f395717fcebb669d57e61450214823695f520dcef83545d35ce7c161248",
+    )
+    .unwrap();
+    let mut p = XtcPlugin::new(
+        XtcPluginParams {
+            distance_m: 1.4,
+            auto_gain_enabled: false,
+            ..Default::default()
+        },
+        48000,
+    )
+    .unwrap();
+    p.initialize(48000.0).unwrap();
+    let (checked_tx, checked_rx) = mpsc::sync_channel(1);
+    let (release_tx, release_rx) = mpsc::sync_channel(1);
+    let (published_tx, published_rx) = mpsc::sync_channel(1);
+    let (finish_tx, finish_rx) = mpsc::sync_channel(1);
+    p.filter_state.worker_test_barrier = Some(Arc::new(WorkerBarrier {
+        armed: AtomicBool::new(true),
+        checked: checked_tx,
+        release_publication: Mutex::new(release_rx),
+        published: published_tx,
+        release_worker: Mutex::new(finish_rx),
+    }));
+    p.set_parameter("kappa_target".into(), ParameterValue::Float(23.0))
+        .unwrap();
+    let old = checked_rx.recv_timeout(TIMEOUT).unwrap();
+    p.initialize(44100.0).unwrap();
+    p.install_learned_proposal(proposal).unwrap();
+    let selected = Arc::clone(&p.filter_state.cached_current_filters);
+    assert_ne!(
+        old.generation,
+        p.filter_state
+            .filter_update_generation
+            .load(Ordering::Acquire)
+    );
+    release_tx.send(()).unwrap();
+    published_rx.recv_timeout(TIMEOUT).unwrap();
+    let x = vec![0.001; 1024];
+    let mut out = vec![0.0; 1024];
+    let counts = callback_counts(|| {
+        p.process(&x, &mut out, &ProcessContext::new(44100, 512))
+            .unwrap();
+    });
+    assert_eq!(counts, (0, 0));
+    assert!(Arc::ptr_eq(
+        &selected,
+        &p.filter_state.cached_current_filters
+    ));
+    assert_eq!(p.learned_proposal_sha256(), Some(sha.as_str()));
+    finish_tx.send(()).unwrap();
+}
+
 pub(super) struct WorkerBarrier {
     armed: AtomicBool,
     checked: mpsc::SyncSender<Arc<PendingFilterUpdate>>,

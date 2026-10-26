@@ -1092,11 +1092,15 @@
         "scripts/ml/test_xtc_transfer_model.py",
         "crates/sotf-plugins/models/xtc-horizontal-transfer",
         "audit/ml-xtc-transfers-20261026.md",
-        "audit/artifacts/ml-xtc-transfers-20261026"
+        "audit/artifacts/ml-xtc-transfers-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-xtc/src/learned_proposal.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/learned_proposal.rs",
+        "audit/ml-xtc-native-proposal-20261026.md",
+        "audit/artifacts/ml-xtc-native-proposal-20261026"
       ],
       "remaining": [
         "Offline measured-direction candidate remains unadmitted: learned separation reaches-22.26dB and intended gain-28.61dB; improve on development data and evaluate new final material, with measured mismatch and listener acceptance.",
-        "Native prepared-resource integration with transactional fallback, causal waveform/latency and true-peak validation; existing native XTC remains unchanged.",
+        "QA-only native prepared-proposal integration passes bounded transactional/lifecycle, latency and heap checks; actual frequency-dependent WOLA and measured-plant rendered cancellation, true-peak and product activation validation remain.",
         "Only one measured mannequin and horizontal/fixed-radius coverage; human calibration, position uncertainty, full memory/worker/contention/platform budgets and product activation remain."
       ]
     }

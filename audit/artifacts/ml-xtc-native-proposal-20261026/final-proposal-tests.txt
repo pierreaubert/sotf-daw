@@ -1,0 +1,20 @@
+
+running 9 tests
+LEARNED_XTC_CONSTANT_MATRIX maximum_error=9.313226e-10
+test selected_resource_preserves_exact_aligned_disabled_output ... ok
+test frozen_proposal_has_bounded_f32_gain_and_correct_coefficient_ownership ... ok
+test constant_matrix_matches_closed_form_delayed_stereo_without_cross_column_swaps ... ok
+LEARNED_XTC_IMPULSE input=0 onset=2048 peak=2048 declared=2048
+test initialize_restores_native_and_unsupported_automation_cannot_replace_proposal ... ok
+test rejected_live_or_wrong_profile_installation_preserves_native_state ... ok
+test failed_initialize_retains_prepared_selection_and_populated_audio_history ... ok
+test native_render_and_reset_are_callback_independent_without_heap ... ok
+LEARNED_XTC_IMPULSE input=1 onset=2048 peak=2048 declared=2048
+test learned_impulses_preserve_declared_startup_and_finite_tail_geometry ... ok
+test strict_import_rejects_gain_geometry_identity_and_complex_endpoints ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Compiling sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)
+    Finished `release` profile [optimized] target(s) in 14.58s
+     Running tests/learned_proposal.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/learned_proposal-77d106c531b6222d)

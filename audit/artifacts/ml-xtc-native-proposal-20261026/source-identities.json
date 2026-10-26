@@ -1,0 +1,9 @@
+{
+  "Cargo.lock": "b395dfb170c1f52f41c6868852bbcfd7228809361ec68c04e90b3c9bd60d5b8d",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/Cargo.toml": "ab8da2f4357129b51f0b0e654a8ea715acf5341f073daa909bf19c99b06bdb55",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib.rs": "2e3e8e4f5847cefde3f8d75ed3e3cb6a35a1be66cefb534a514f8df3feb51362",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/learned_proposal.rs": "b82cbfcd7e9f3673cbb252d07bdf97cd471b4d503547932b42f05e97fb615455",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/xtc_plugin.rs": "e8496a8f2814c569fbd6c3aa8afa7223e46482ae91cfe503a7f6dda3f41316e8",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/src/lib/generation_tests.rs": "f0abc6f57bb23f8dd63cb2a0a980e123b3157f839680b3ef75b43ce448e50a41",
+  "crates/sotf-plugins/crates/sotf-plugin-xtc/tests/learned_proposal.rs": "9240fef4a0c8817281224d31e5d228d4533a70b49e9c47e86076db7d65f92f45"
+}
