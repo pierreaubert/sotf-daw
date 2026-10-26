@@ -57,9 +57,50 @@ pub struct TransientShaperPlugin {
     pub(super) monitor_extreme_gain: f32,
 
     pub(super) cached_parameters: Vec<Parameter>,
+    #[cfg(feature = "qa")]
+    onset: Option<Box<crate::onset::OnsetAssist>>,
+    #[cfg(feature = "qa")]
+    qa_initialized: bool,
+    #[cfg(feature = "qa")]
+    qa_has_input: bool,
 }
 
 impl TransientShaperPlugin {
+    /// Prepare explicit bounded onset assistance before accepting audio.
+    ///
+    /// A missing model keeps the exact native attack control. Native envelopes
+    /// remain independent; only the smoothed attack amount may be multiplied by
+    /// [0.75,1.25], then clamped to its existing [-1,1] range.
+    ///
+    /// # Errors
+    /// Requires initialized mono/stereo with no accepted input since reset.
+    #[cfg(feature = "qa")]
+    pub fn configure_onset_assist(
+        &mut self,
+        model: Option<crate::onset::OnsetModel>,
+    ) -> PluginResult<()> {
+        if !self.qa_initialized || self.qa_has_input || !(1..=2).contains(&self.channels) {
+            return Err("prepare onset assist before input in initialized mono/stereo".into());
+        }
+        self.onset = Some(Box::new(crate::onset::OnsetAssist::new(
+            model,
+            self.sample_rate,
+        )));
+        Ok(())
+    }
+
+    /// Copy analysis decisions and the bounded attack multiplier without allocation.
+    #[cfg(feature = "qa")]
+    pub fn onset_assist_snapshot(&self) -> Option<crate::onset::OnsetSnapshot> {
+        self.onset.as_ref().map(|s| s.snapshot())
+    }
+
+    /// Inspect independent native fast/slow histories for qualification.
+    #[cfg(feature = "qa")]
+    pub fn onset_classical_envelopes(&self) -> (&[f32], &[f32]) {
+        (&self.fast_env, &self.slow_env)
+    }
+
     pub fn new(channels: usize) -> Self {
         let sr = 44_100.0;
         let mut p = Self {
@@ -90,6 +131,12 @@ impl TransientShaperPlugin {
             monitor_peak_sustain: 0.0,
             monitor_extreme_gain: 1.0,
             cached_parameters: Vec::new(),
+            #[cfg(feature = "qa")]
+            onset: None,
+            #[cfg(feature = "qa")]
+            qa_initialized: false,
+            #[cfg(feature = "qa")]
+            qa_has_input: false,
         };
         p.rebuild_cached_parameters();
         p
@@ -391,10 +438,24 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
         // Keep audio envelopes continuous, but start the new rate's diagnostic
         // interval at zero rather than reinterpreting old-rate sample counts.
         self.cache_samples = 0;
+        #[cfg(feature = "qa")]
+        {
+            self.qa_initialized = true;
+            if let Some(onset) = &mut self.onset {
+                onset.retime(sample_rate);
+            }
+        }
         Ok(())
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        {
+            self.qa_has_input = false;
+            if let Some(onset) = &mut self.onset {
+                onset.reset();
+            }
+        }
         self.fast_env.fill(0.0);
         self.slow_env.fill(0.0);
         // Reset smoothers to their current targets so a transport-loop restart
@@ -438,6 +499,14 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
             ));
         }
 
+        #[cfg(feature = "qa")]
+        {
+            if self.onset.is_some() && buffer.iter().any(|v| !v.is_finite() || v.abs() > 64.0) {
+                return Err("onset assistance requires finite QA input bounded by64".into());
+            }
+            self.qa_has_input |= num_frames != 0;
+        }
+
         // Hoist env slice references to help the compiler promote them into
         // registers and avoid repeated &mut self borrows inside the inner loop.
         let fast_env = &mut self.fast_env;
@@ -476,6 +545,16 @@ impl ParametricInPlacePlugin for TransientShaperPlugin {
             }
 
             // One linked detector gain preserves inter-channel ratios and image.
+            #[cfg(feature = "qa")]
+            let attack_amt = if let Some(onset) = &mut self.onset {
+                let peak = buffer[frame * ch..(frame + 1) * ch]
+                    .iter()
+                    .map(|v| v.abs())
+                    .fold(0.0_f32, f32::max);
+                (attack_amt * onset.step(peak, linked_fast, linked_slow)).clamp(-1.0, 1.0)
+            } else {
+                attack_amt
+            };
             let transient = Self::attack_component(linked_fast, linked_slow);
             let gain = if linked_slow > threshold_lin {
                 let transient_ratio = (transient / linked_slow.max(EPSILON)).clamp(0.0, 1.0);

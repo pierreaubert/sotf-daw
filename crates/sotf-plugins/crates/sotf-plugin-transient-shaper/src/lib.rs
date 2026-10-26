@@ -15,3 +15,5 @@ mod types;
 
 pub use transient_shaper_plugin::*;
 pub use types::*;
+#[cfg(feature = "qa")]
+pub mod onset;

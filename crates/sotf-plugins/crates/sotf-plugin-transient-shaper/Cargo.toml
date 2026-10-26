@@ -14,7 +14,7 @@ name = "sotf_plugin_transient_shaper"
 path = "src/lib.rs"
 
 [features]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-transient-shaper"
@@ -25,6 +25,7 @@ required-features = ["qa"]
 sotf-host = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true, optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

@@ -1024,8 +1024,18 @@
         "Initialize updates coefficients but reset clears history; callers must not assume reinitialize resets learned envelope state.",
         "ML onset classification can assist difficult material, but should only modulate bounded controls with an independent deterministic fallback."
       ],
-      "status": "implementation_pending",
-      "evidence": []
+      "status": "implementation_in_progress",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/onset.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/tests/onset.rs",
+        "audit/ml-onset-assist-20261026.md",
+        "audit/artifacts/ml-onset-assist-20261026"
+      ],
+      "remaining": [
+        "No trained classifier yet: source-disjoint causal onset labels, fitting and frozen model with Python/native parity remain.",
+        "Actual waveform/event-time quality, false/missed-onset, automation/confidence/domain-shift and perceptual comparisons against native fallback.",
+        "Complete memory and callback/contended host budgets, recorded material, DAW/platform and product activation/selector validation."
+      ]
     },
     {
       "plugin_id": 43,
