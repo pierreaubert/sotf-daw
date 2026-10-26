@@ -1,0 +1,17 @@
+{
+  "policy": {
+    "format": "sotf-upmixer-excitation-policy-proposal-v1",
+    "absolute_band_power_over_fft_db": null,
+    "feature_valid_band_power_interval": [
+      1e-16,
+      1000000000000.0
+    ],
+    "power_source": "unclipped_band_power",
+    "dynamic_range_below_peak_band_db": 60,
+    "fallback": "ordinary_native_decomposition",
+    "deployment_admitted": false
+  },
+  "development_report_sha256": "61a8edde6e4515534fc5e488745099b7eb617b0958acb18569ad02bf53fba57a",
+  "status": "development proposal only; no model v2 training, native activation or final holdout yet",
+  "deployment_admitted": false
+}

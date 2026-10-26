@@ -1,0 +1,4927 @@
+{
+  "scope": "development only; v1 exports; no changed runtime or final holdout",
+  "renderer_sha256": "6934b232d3f51439d592e851c5557ba6ff6b480f510469e01aee8ddcd4a703c0",
+  "model_sha256": "2ca743740f6adeaa40738a82066c25f65d20633a9bc8a237692aa156818c6d6a",
+  "source_sha256": {
+    "develop_upmixer_excitation.py": "5194622a3656c68b1d7f9c32fd6c33b056f0e3c13a67ff976a06db73390b53d5",
+    "upmixer_mask_cases.py": "72022230f016d5c46d49409213aaf5be09e1fe027e2afe0ae394eb6f56d02e30",
+    "upmixer_mask_native.py": "35a8c4de9e0ca5622286a7defbef71d6de24d903a6db6da4665e923f269a695b",
+    "upmixer_source_mask.py": "13b2f4ed47b971f89eb735d490958cf51637a43a189e1f3db403702564f7a4e2"
+  },
+  "analysis_source_sha256": "5194622a3656c68b1d7f9c32fd6c33b056f0e3c13a67ff976a06db73390b53d5",
+  "power_source": "unclipped_band_power",
+  "feature_tolerance": 0.0001,
+  "minimum_retained_reference_band_energy_fraction": 0.999,
+  "selection_rule": "largest predeclared dynamic range passing every development case",
+  "proposed_policy": {
+    "format": "sotf-upmixer-excitation-policy-proposal-v1",
+    "absolute_band_power_over_fft_db": null,
+    "feature_valid_band_power_interval": [
+      1e-16,
+      1000000000000.0
+    ],
+    "power_source": "unclipped_band_power",
+    "dynamic_range_below_peak_band_db": 60,
+    "fallback": "ordinary_native_decomposition",
+    "deployment_admitted": false
+  },
+  "cases": [
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b004377b038f4d8aee3c53224cb6e95a659fc3452b89be6003ef32728c66db64",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/0/input.f32le",
+          "sha256": "3a15cc9b3ccc1f8a088a0212542530cbe4d051dace86eef3b4e5a6b569ea1204"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/0/output.f32le",
+          "sha256": "7eb3da6147ac9436674f9f5727f2ffa1a8759cefe54453c2dca633a7ad7474c5"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/0/features.json",
+          "sha256": "403247ddcbeff2c1c4f0b5bdda3d398f0f4f7bf9441e70664b27d2f3b59b71e0"
+        }
+      },
+      "v1_maximum_feature_error": 4.758619112865681e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.0091282990085677e-06,
+          "retained_reference_band_energy_fraction": 0.9999844425984574,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.758619112865681e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.758619112865681e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b004377b038f4d8aee3c53224cb6e95a659fc3452b89be6003ef32728c66db64",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/1/input.f32le",
+          "sha256": "4b703159b98e24a9187e0bf325b376c1bfb92e192029123f01fe4d49c1b00439"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/1/output.f32le",
+          "sha256": "2977c9b1cdc46fd7ec905b3534220387816250fd8695b064df64328a700875b7"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/1/features.json",
+          "sha256": "980fbe5731b842480472d34682a8ec34b7bd3014fc7aeebaa08288ad8f26637c"
+        }
+      },
+      "v1_maximum_feature_error": 4.002326863927763e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.8004222769606457e-06,
+          "retained_reference_band_energy_fraction": 0.9999844425964851,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.002326863927763e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.002326863927763e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b004377b038f4d8aee3c53224cb6e95a659fc3452b89be6003ef32728c66db64",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/2/input.f32le",
+          "sha256": "0cfb361637c9f0cb996300210ca24ec8d590fda71229d4a607bed35701efe85b"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/2/output.f32le",
+          "sha256": "6def68d48e94d99bad94fbf5903a9f93688db6ad31816eaa41679cf76ff7320f"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/2/features.json",
+          "sha256": "8fc92e880e57533b54a9f9a30f43fa0abcff2707613fee23069528dbfd027ec1"
+        }
+      },
+      "v1_maximum_feature_error": 4.166370370650707e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.166370370650707e-06,
+          "retained_reference_band_energy_fraction": 0.9999844425961785,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.166370370650707e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.166370370650707e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "ceef399afe1f685714dabe5eb4136e77248f420d2aa62c2f6eb153ed5ed0d957",
+        "direct_sha256": "6b1647b36c84e7f23aab190117c78aaaa483613e0cb7ffcbbe7b2ee6ef1a23d9",
+        "ambient_sha256": "c8e874286b08e677ce16bf121106591a1e2c8c57bad2c1cee45d1a0fce36c513"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/3/input.f32le",
+          "sha256": "f57f9bfeeaf6e3232a1ff0353cd51ff4a3b4cccb89b80263085bedd3a261928b"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/3/output.f32le",
+          "sha256": "c104c8c617ea2e6eebde9de5aa9be796d040956d44bf2d945ba2537f1fb6287b"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/3/features.json",
+          "sha256": "1c4c54cf8cf81335f30f011253fc1cca7c3b856339dba1ac1c54525477ae7768"
+        }
+      },
+      "v1_maximum_feature_error": 4.09493974162789e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2929,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.09493974162789e-06,
+          "retained_reference_band_energy_fraction": 0.999987289390422,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.09493974162789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.09493974162789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "ceef399afe1f685714dabe5eb4136e77248f420d2aa62c2f6eb153ed5ed0d957",
+        "direct_sha256": "6b1647b36c84e7f23aab190117c78aaaa483613e0cb7ffcbbe7b2ee6ef1a23d9",
+        "ambient_sha256": "c8e874286b08e677ce16bf121106591a1e2c8c57bad2c1cee45d1a0fce36c513"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/4/input.f32le",
+          "sha256": "b3fafd0d6f9834fb5654ae9406b4300d278e07425914aff13cbedeaa0ecac375"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/4/output.f32le",
+          "sha256": "35ace136d5237f04c1dd72ca0e23df28a7806d88f28d92d40c8d3a44ca54f0bf"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/4/features.json",
+          "sha256": "ab5e2af16d9f72c6ac6449bb89d6ef990a0b044d3d72cf8fa12fab11e03e6e8e"
+        }
+      },
+      "v1_maximum_feature_error": 4.532768142717636e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2929,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.532768142717636e-06,
+          "retained_reference_band_energy_fraction": 0.999987289390231,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.532768142717636e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.532768142717636e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "ceef399afe1f685714dabe5eb4136e77248f420d2aa62c2f6eb153ed5ed0d957",
+        "direct_sha256": "6b1647b36c84e7f23aab190117c78aaaa483613e0cb7ffcbbe7b2ee6ef1a23d9",
+        "ambient_sha256": "c8e874286b08e677ce16bf121106591a1e2c8c57bad2c1cee45d1a0fce36c513"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/5/input.f32le",
+          "sha256": "d98688922470a477c6d9b1e34de1e45d0c43b7988a182fb8f332993569d5f6fe"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/5/output.f32le",
+          "sha256": "39f1eda46d4135e332a1980287c9e76630af1b2454898bb4af0f6c7373a3277a"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/5/features.json",
+          "sha256": "bad047b5c7fb2d8ee04fafed550ea89c03f7f4cd114eb1a1b5c9c404539b2dc4"
+        }
+      },
+      "v1_maximum_feature_error": 6.456797218740845e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2929,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.456797218740845e-06,
+          "retained_reference_band_energy_fraction": 0.9999872893892263,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.456797218740845e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.456797218740845e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b7646e34e63ee03ed95eff0b19aed783af65d132f061f029878c14dd4ccb5733",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "95f15b63114870d907bb49718090120e8c4e8a58cf90443d1392da5840abf937"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/6/input.f32le",
+          "sha256": "a229b2e44b0efe3ef4a9530fcf88aefc5620626dc1d0b93f12b655b1bc6eec74"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/6/output.f32le",
+          "sha256": "5778ffd938d4baa5be34385f37129f291964393f5853e2944c2bd199a4df09f8"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/6/features.json",
+          "sha256": "a54c8873872633c17d8e67835f54fb5e0151f5ef50e2be7b42b7bdbbaa2c7472"
+        }
+      },
+      "v1_maximum_feature_error": 6.030754344675964e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.195788357441255e-06,
+          "retained_reference_band_energy_fraction": 0.9999832449274968,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.030754344675964e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.030754344675964e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b7646e34e63ee03ed95eff0b19aed783af65d132f061f029878c14dd4ccb5733",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "95f15b63114870d907bb49718090120e8c4e8a58cf90443d1392da5840abf937"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/7/input.f32le",
+          "sha256": "6981ade89ecf95107ca876bf9d84a60f72ebc41541d0f80238a09b0cdefa9791"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/7/output.f32le",
+          "sha256": "599ccffb4e381c6eccf6910546c26a717d1090d3e53de631e03b98adff6c4829"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/7/features.json",
+          "sha256": "ab45837d358e13ee0204776d98c5ae6be5b147c6f7deb9ef64f682bd5a17fdd4"
+        }
+      },
+      "v1_maximum_feature_error": 4.6533619776603814e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.974665805113711e-06,
+          "retained_reference_band_energy_fraction": 0.9999832449254865,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.6533619776603814e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.6533619776603814e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "b7646e34e63ee03ed95eff0b19aed783af65d132f061f029878c14dd4ccb5733",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "95f15b63114870d907bb49718090120e8c4e8a58cf90443d1392da5840abf937"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/8/input.f32le",
+          "sha256": "e78608d167884895c735963bb3191b1eb960f8590207907edda35ea2c61d8ff9"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/8/output.f32le",
+          "sha256": "5555ff968dcae46c1568bf2c80d717a550fb4b6070c25660f2dd333ca3fe8ddf"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/8/features.json",
+          "sha256": "b03bfc9bcb99f19adea092e6fc5eb17af0739f7281894ee66a64d671e65766a5"
+        }
+      },
+      "v1_maximum_feature_error": 4.168077048367447e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.320683813234453e-06,
+          "retained_reference_band_energy_fraction": 0.9999832449284486,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.168077048367447e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.168077048367447e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "f648d57c9ab7e49716043bcaa753a50eea454776dabc0d03e409ef7552c79589",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "68e949855ed7af595c535d6adabd68101e42c3c553de6b38675f103212f263c8"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/9/input.f32le",
+          "sha256": "85f1ab98346a147e5bc272d1c852ac4044b688e5e8f52b03c6a4226a849e73bf"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/9/output.f32le",
+          "sha256": "7ff9af4a05622780dd60ce30cc497fda35a354ddd995fe4de9c717e16ccf694c"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/9/features.json",
+          "sha256": "dbd617640884b323936bca82c6884bfdfc86f8d11350dd7e8cfcf57fe0c4135f"
+        }
+      },
+      "v1_maximum_feature_error": 4.366778978120796e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.2529827095979026e-06,
+          "retained_reference_band_energy_fraction": 0.9999829048262345,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.366778978120796e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.366778978120796e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "f648d57c9ab7e49716043bcaa753a50eea454776dabc0d03e409ef7552c79589",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "68e949855ed7af595c535d6adabd68101e42c3c553de6b38675f103212f263c8"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/10/input.f32le",
+          "sha256": "254ebbc62f65b5e9618c8de9fe53cc12fbb0e2759846195dd05061a4fa321d35"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/10/output.f32le",
+          "sha256": "5a8c88fd0b4f6ecc8e3bd864dd674a98f3188f20549420ab1ebd98a68d20cf36"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/10/features.json",
+          "sha256": "3a97d8ac14e938b994ed487b07b31593321cfeb03093c3c4ee7c06e87b53a8cc"
+        }
+      },
+      "v1_maximum_feature_error": 4.4664870817787676e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.318849989059376e-06,
+          "retained_reference_band_energy_fraction": 0.9999829048240528,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.4664870817787676e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.4664870817787676e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "f648d57c9ab7e49716043bcaa753a50eea454776dabc0d03e409ef7552c79589",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "68e949855ed7af595c535d6adabd68101e42c3c553de6b38675f103212f263c8"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/11/input.f32le",
+          "sha256": "64ab8c78cc341d82f87af51916f63cea290e90677439aef9f2a162ed50e08253"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/11/output.f32le",
+          "sha256": "1d65aed1d11c289f773cbb6f44e02d8bb19761d9c0fd2edd2efc5a1fbb8a4b54"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/11/features.json",
+          "sha256": "6fed3c97ebd210bd947d3f46aab7d875aea25e8a95b648180c75d2a369c1aaf3"
+        }
+      },
+      "v1_maximum_feature_error": 5.1893858712165515e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2912,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.897829164646327e-06,
+          "retained_reference_band_energy_fraction": 0.999982904825666,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.1893858712165515e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.1893858712165515e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/12/input.f32le",
+          "sha256": "f46737527e4642916507057302bd0f8b830b54fc9421a742671aa7ffcd55a6cc"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/12/output.f32le",
+          "sha256": "1f7381c9102a5998204178fc89f98c7a4b85d14f97dfff1f3cfe00b428305cdb"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/12/features.json",
+          "sha256": "d3b1c8e0b432389a6bb24bac15551795f0cbb24734850821184418628ba3c59e"
+        }
+      },
+      "v1_maximum_feature_error": 0.037511417859263235,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 491,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.4997773657154934e-06,
+          "retained_reference_band_energy_fraction": 0.9999986738851179,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 492,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.981818079172971e-06,
+          "retained_reference_band_energy_fraction": 0.9999987332098011,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 564,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.2980986239835568e-05,
+          "retained_reference_band_energy_fraction": 0.9999996794600731,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/13/input.f32le",
+          "sha256": "4066ac6daf4199fe7106d6c6568d115f084f4950d4d4b2d4a3c1b44b8a287d03"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/13/output.f32le",
+          "sha256": "488095413f7535045243d7a30e6ddce350263e8e05874ad0c4333ffec8a2c19a"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/13/features.json",
+          "sha256": "955211da9827298d1cad2c8dff61aebdae422d990012a9537450bb141d015671"
+        }
+      },
+      "v1_maximum_feature_error": 0.05151633736781508,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 491,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.3771173117453542e-06,
+          "retained_reference_band_energy_fraction": 0.9999986738849866,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 492,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.3771173117453542e-06,
+          "retained_reference_band_energy_fraction": 0.9999987332096976,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 564,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.3549683888280928e-05,
+          "retained_reference_band_energy_fraction": 0.999999679460065,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "direct_sha256": "de625c413da7bdbd089453a04459b7977f6d7cac79aa3f351671a48cc6011ad2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/14/input.f32le",
+          "sha256": "4e033105f1d91de13da6f4de21594fdf96a19bbab31054aa988340b51d88e06e"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/14/output.f32le",
+          "sha256": "876d01a43b1fc0948db05ab70183fffb3d7b18c003fb7bd03ff2852c57c1ca78"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/14/features.json",
+          "sha256": "cf0ccadbf17d844998670f8225de80a23260d0001152ed89ff8795ab6cfc44ee"
+        }
+      },
+      "v1_maximum_feature_error": 0.10142397485205795,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 491,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.1128960002437793e-06,
+          "retained_reference_band_energy_fraction": 0.9999986738850984,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 492,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.720880525941549e-06,
+          "retained_reference_band_energy_fraction": 0.9999987332098187,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 564,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.413789350204558e-05,
+          "retained_reference_band_energy_fraction": 0.999999679460148,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/15/input.f32le",
+          "sha256": "63ce777a0d5f2aaedeca1e58e3966aad7408ccfcafeda3196a3d10fbe28d71e6"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/15/output.f32le",
+          "sha256": "094c297140010d18e10aa1c3551ad09353a9d523fff04e1cb2a976988824902b"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/15/features.json",
+          "sha256": "94bf0bf1321fbea3ac31e934da54ef0c56badd098d5ad43bbade2d880e493fbd"
+        }
+      },
+      "v1_maximum_feature_error": 4.179861067307722e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.179861067307722e-06,
+          "retained_reference_band_energy_fraction": 0.9999998055953774,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.179861067307722e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.179861067307722e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/16/input.f32le",
+          "sha256": "e887d6eea3b9d96b9db88763a9230c4f617dd38f802143db3da1e77bb46523ac"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/16/output.f32le",
+          "sha256": "8712faa2a191ab1d0a98bc5503fdb5e4d5b7123ff84086191eb66d678668b12c"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/16/features.json",
+          "sha256": "f450ad0d9215ff65218fb7d9663b4532c829664fcaf5b5dec5c48ac54723cfe1"
+        }
+      },
+      "v1_maximum_feature_error": 4.04750930449449e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.04750930449449e-06,
+          "retained_reference_band_energy_fraction": 0.9999998055955002,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.04750930449449e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.04750930449449e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "3d75a5dd56d32c3c22e41b0ebc79fe84dc6490e912d3cb091a57a923036d2e24"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/17/input.f32le",
+          "sha256": "782b30ab081c4d4e3cec84b4c528cf42bd61d7b33bd61c543ae78c432b946137"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/17/output.f32le",
+          "sha256": "34dafe562d3956db6f4d93c66b5b5e7ea550e4415898fad35c7a2d0630551420"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/17/features.json",
+          "sha256": "73b026bf1e4a0205f184f33e2b6fdbd0cadf590da161636731cdc569342017a4"
+        }
+      },
+      "v1_maximum_feature_error": 4.089967552300955e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.089967552300955e-06,
+          "retained_reference_band_energy_fraction": 0.9999998055955415,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.089967552300955e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.089967552300955e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "761974fe812f61f1f96c62d1a6ecd7091a454cbf26950d375498af8308fcc52d",
+        "direct_sha256": "160ea1fd2b2e34500c4f0368fe6854dc81ecdbe080d715f632863e130ec05c96",
+        "ambient_sha256": "f1b1949d357e9abf7d49a416d7dacae5d2c6b24b434cebf2e1cdbf24d0679bb5"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/18/input.f32le",
+          "sha256": "4b703159b98e24a9187e0bf325b376c1bfb92e192029123f01fe4d49c1b00439"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/18/output.f32le",
+          "sha256": "2977c9b1cdc46fd7ec905b3534220387816250fd8695b064df64328a700875b7"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/18/features.json",
+          "sha256": "980fbe5731b842480472d34682a8ec34b7bd3014fc7aeebaa08288ad8f26637c"
+        }
+      },
+      "v1_maximum_feature_error": 4.002326863927763e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.8004222769606457e-06,
+          "retained_reference_band_energy_fraction": 0.9999844425964851,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.002326863927763e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.002326863927763e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "761974fe812f61f1f96c62d1a6ecd7091a454cbf26950d375498af8308fcc52d",
+        "direct_sha256": "160ea1fd2b2e34500c4f0368fe6854dc81ecdbe080d715f632863e130ec05c96",
+        "ambient_sha256": "f1b1949d357e9abf7d49a416d7dacae5d2c6b24b434cebf2e1cdbf24d0679bb5"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/19/input.f32le",
+          "sha256": "9544b3176a3a56fb9350abaa5858aa32a5238567d4359276ecb507ca434694c0"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/19/output.f32le",
+          "sha256": "163c63e15cf8cd2431b34bb6d78e69ec4aff39bc9c95ae026ca93c087367a322"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/19/features.json",
+          "sha256": "ce63a7d9d5de09229427118ed646d31e2a3897047c5e918ee17617a8fa3d83e3"
+        }
+      },
+      "v1_maximum_feature_error": 6.581031673752458e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.011366767891044e-06,
+          "retained_reference_band_energy_fraction": 0.999984442598706,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.581031673752458e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.581031673752458e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "761974fe812f61f1f96c62d1a6ecd7091a454cbf26950d375498af8308fcc52d",
+        "direct_sha256": "160ea1fd2b2e34500c4f0368fe6854dc81ecdbe080d715f632863e130ec05c96",
+        "ambient_sha256": "f1b1949d357e9abf7d49a416d7dacae5d2c6b24b434cebf2e1cdbf24d0679bb5"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/20/input.f32le",
+          "sha256": "e9a6e4e3a029885967718bee55ba0c1e1a707ae1cc61134ee240de1131821050"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/20/output.f32le",
+          "sha256": "6bdf101cc0a25f4dfa5928b0ddede6734c48e5fa7db25ce49b7ba949a857da8c"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/20/features.json",
+          "sha256": "bea2f28aea82640269c852886381d35d96224ef7d7d64597b6bb70a5b674db92"
+        }
+      },
+      "v1_maximum_feature_error": 4.627069464413491e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2917,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.595394472672876e-06,
+          "retained_reference_band_energy_fraction": 0.9999844425988067,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.627069464413491e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.627069464413491e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/21/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/21/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/21/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/22/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/22/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/22/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301120,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.21572438581690723,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/23/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/23/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/23/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "41cda3d01f861838f59779edded5057e7451b896ecf84072c8983ff91dbd612c",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/24/input.f32le",
+          "sha256": "dba358afe512b5359a20a5e41a1bbbad32693d2b1f2aa8e47303cbd80c71cc3b"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/24/output.f32le",
+          "sha256": "c5b75b0712faa96f1e0c6cd376ded43dd66c4716232a7cdad24df9deedad1569"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/24/features.json",
+          "sha256": "e0619300d5011535e4cc9cebf2e19345690a75e2c0a4ae822788dd03d128ee93"
+        }
+      },
+      "v1_maximum_feature_error": 4.5110528246461445e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.5045614082119805e-06,
+          "retained_reference_band_energy_fraction": 0.999975193342205,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.5110528246461445e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.5110528246461445e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "41cda3d01f861838f59779edded5057e7451b896ecf84072c8983ff91dbd612c",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/25/input.f32le",
+          "sha256": "9213403874c3598452d7fa58c55c3972ab1ac30a4985740896461d50bcf4cc62"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/25/output.f32le",
+          "sha256": "9ec31555c12b7bbe39210d14c1aeb24af6726e5c34ed338050dcbf1a70fe0df1"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/25/features.json",
+          "sha256": "58729442df66cfb98a67a6c6b53ffe8cf1e3b0c04e5fbe96545272c237d6e1ee"
+        }
+      },
+      "v1_maximum_feature_error": 4.638050325800336e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.4024495349505024e-06,
+          "retained_reference_band_energy_fraction": 0.9999751933454807,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.638050325800336e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.638050325800336e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "41cda3d01f861838f59779edded5057e7451b896ecf84072c8983ff91dbd612c",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/26/input.f32le",
+          "sha256": "0d5a23519ffdaf481fa8f96ed572b70d676d066d544d83874513a0de11fe950d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/26/output.f32le",
+          "sha256": "5d0fd66eb8e3ad970519fea2e49c10ccb8d1925fcab9af9f46418fd40fd303e0"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/26/features.json",
+          "sha256": "c576ce69a682bf893abc0f37ee5c8f8d3e4f6806e3c613b54beaf91abcbf210e"
+        }
+      },
+      "v1_maximum_feature_error": 5.384753717196933e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.388052495306715e-06,
+          "retained_reference_band_energy_fraction": 0.9999751933456634,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.384753717196933e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.384753717196933e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "9f4f1a3f5e52d5a719f810a98a0eb507d91a85b81b7b1a76eb0ede1ab9431da2",
+        "direct_sha256": "c07f3990d351d3ed07f58fb98e996d1157dde9e9e030486a8fa99cb92851cd24",
+        "ambient_sha256": "e9b6207c37661ab036d78b10581867f86b336b020b6217c7216b0ec3dbfc2758"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/27/input.f32le",
+          "sha256": "b536249d014fcc41b4d0fe8d302c97075df30b9d951c020a67d157c206a6eae6"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/27/output.f32le",
+          "sha256": "87658754b895ae73657968721708b1646e8c732b7289a7ba6e897e49f49f75c5"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/27/features.json",
+          "sha256": "2f8d7161126f2f73ca2274bda632385c51cb303751244643c9eabab1f2506be2"
+        }
+      },
+      "v1_maximum_feature_error": 3.86992048853705e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2904,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.543133563293054e-06,
+          "retained_reference_band_energy_fraction": 0.9999833280937845,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.86992048853705e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.86992048853705e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "9f4f1a3f5e52d5a719f810a98a0eb507d91a85b81b7b1a76eb0ede1ab9431da2",
+        "direct_sha256": "c07f3990d351d3ed07f58fb98e996d1157dde9e9e030486a8fa99cb92851cd24",
+        "ambient_sha256": "e9b6207c37661ab036d78b10581867f86b336b020b6217c7216b0ec3dbfc2758"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/28/input.f32le",
+          "sha256": "d26f1f8249a6da6122d3db8394fdc5a525fe3f8e177f7869aceae9df068783be"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/28/output.f32le",
+          "sha256": "36c1e881a3b5a24766f7061f08c4d4e0285c5a6bc2d9284823461a796c953c2a"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/28/features.json",
+          "sha256": "eb379b4ac473772ea9fa57d62385a14ac69350e101cd740533e89b881e664b39"
+        }
+      },
+      "v1_maximum_feature_error": 4.522960376951435e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2904,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.207900411528186e-06,
+          "retained_reference_band_energy_fraction": 0.9999833280947769,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.522960376951435e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.522960376951435e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "9f4f1a3f5e52d5a719f810a98a0eb507d91a85b81b7b1a76eb0ede1ab9431da2",
+        "direct_sha256": "c07f3990d351d3ed07f58fb98e996d1157dde9e9e030486a8fa99cb92851cd24",
+        "ambient_sha256": "e9b6207c37661ab036d78b10581867f86b336b020b6217c7216b0ec3dbfc2758"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/29/input.f32le",
+          "sha256": "a3423c8384b9a2ac7abfddaab3ba8b6b34c67744339f87985ca422955ac566c1"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/29/output.f32le",
+          "sha256": "ee0609be6b0416b443c51899fab6fa7b4519d9ebff5cee3b7922a9abcaaa858a"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/29/features.json",
+          "sha256": "926d94c4d817e2b3c9d7a16c2cc0fc52ba4aa1913a25e41fbdf0617b3b6870c2"
+        }
+      },
+      "v1_maximum_feature_error": 5.679743279314586e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2904,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.582593427615578e-06,
+          "retained_reference_band_energy_fraction": 0.9999833280921214,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.679743279314586e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.679743279314586e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "cbbd92f221e562d1b9208d2df428cb15a1e5d80516efbb2ae402ddad37461877",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "10fd38ceaf0fb4839c5196c01f21da450fad68d380ed3f0f5e1691e4adff214a"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/30/input.f32le",
+          "sha256": "6dfa00720c9985ccdd468f06f853944422e0a3e29f28d6c78a82137274f23341"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/30/output.f32le",
+          "sha256": "e73d585b8876a054788e588d0d27e912152de9e5b9a833749e5e8a599e98dbe7"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/30/features.json",
+          "sha256": "c60b9628a53b280f39bfc38c8d7665b60b9003022888d92745dc42fbe8d9e5d1"
+        }
+      },
+      "v1_maximum_feature_error": 5.604372294320219e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2880,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.2334335386064236e-06,
+          "retained_reference_band_energy_fraction": 0.9999746548084207,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.604372294320219e-06,
+          "retained_reference_band_energy_fraction": 0.9999999108920669,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.604372294320219e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "cbbd92f221e562d1b9208d2df428cb15a1e5d80516efbb2ae402ddad37461877",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "10fd38ceaf0fb4839c5196c01f21da450fad68d380ed3f0f5e1691e4adff214a"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/31/input.f32le",
+          "sha256": "250c3b138a322dae37fe332d4b8312962190897f85c64c248385e36f0dd2080b"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/31/output.f32le",
+          "sha256": "430e70bfe3da14ce642858975a010695ec2054c9950e14387c3d878b6a993aa5"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/31/features.json",
+          "sha256": "92502009ee4350698c3bb57d6a31e089fdc0decfef9199ba6489a772c88036d9"
+        }
+      },
+      "v1_maximum_feature_error": 4.53400290224414e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2880,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.923207052202192e-06,
+          "retained_reference_band_energy_fraction": 0.9999746548106203,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.53400290224414e-06,
+          "retained_reference_band_energy_fraction": 0.9999999108921407,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.53400290224414e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "cbbd92f221e562d1b9208d2df428cb15a1e5d80516efbb2ae402ddad37461877",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "10fd38ceaf0fb4839c5196c01f21da450fad68d380ed3f0f5e1691e4adff214a"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/32/input.f32le",
+          "sha256": "ba787cabe2f3486c91b64790f514c1582d6e11710db321654fb9df38c4172af5"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/32/output.f32le",
+          "sha256": "453b8214e901a47e5263dd74a5cfdb32e7147531f92807b22ea0c4aa3e5627cb"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/32/features.json",
+          "sha256": "fde1429074c1c08799b568f7043aeb950618483dd711668d58702c5097c91e72"
+        }
+      },
+      "v1_maximum_feature_error": 4.332506870369907e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2880,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.1073979658333073e-06,
+          "retained_reference_band_energy_fraction": 0.9999746548101366,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.332506870369907e-06,
+          "retained_reference_band_energy_fraction": 0.9999999108920079,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.332506870369907e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "bbe5880cc46f2eb04a7c16b69ce3e222963a0975d24215687410dc8601ce1130",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "06a38a88dc2e6c21453111f7903a99b07af429e149f2b2d9a394360f12d4f0a1"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/33/input.f32le",
+          "sha256": "e1120abdb59a163a0de91c8c9a872efe00a63b3157ccf1007733329a1e21b2a9"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/33/output.f32le",
+          "sha256": "eb67e153dacad59e0d5d6f4a750686fec02d159ea23c95e3a46b57bf8a4fe95f"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/33/features.json",
+          "sha256": "a249a259c581fb2ba9df8618be880fbb7f53753e7d46684c6ae9319438e3a3b9"
+        }
+      },
+      "v1_maximum_feature_error": 5.596183325994866e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2876,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.369382122328087e-06,
+          "retained_reference_band_energy_fraction": 0.9999747693521198,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.596183325994866e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.596183325994866e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "bbe5880cc46f2eb04a7c16b69ce3e222963a0975d24215687410dc8601ce1130",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "06a38a88dc2e6c21453111f7903a99b07af429e149f2b2d9a394360f12d4f0a1"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/34/input.f32le",
+          "sha256": "696ec1b45e5d859660b5c6da3c938d19f61225ce93bbf68394a5cf2066409c4a"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/34/output.f32le",
+          "sha256": "f976c51799f791de2ec7756c9f7112971d5d285c12b0f3cd8b270bdb4309b062"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/34/features.json",
+          "sha256": "5f08541ef36daaedcb6cb65c965dddc5b6e9b42fba35a8db803718bd96fffa43"
+        }
+      },
+      "v1_maximum_feature_error": 4.799378769297962e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2876,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.5003054447765406e-06,
+          "retained_reference_band_energy_fraction": 0.9999747693536943,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.799378769297962e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.799378769297962e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "bbe5880cc46f2eb04a7c16b69ce3e222963a0975d24215687410dc8601ce1130",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "06a38a88dc2e6c21453111f7903a99b07af429e149f2b2d9a394360f12d4f0a1"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/35/input.f32le",
+          "sha256": "37eba8fd02764d08efaf94ba35472dfb6c4f6458150684b50d568b3c7be9919a"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/35/output.f32le",
+          "sha256": "fcd3314ccc23e432302a37976141484107bcd25b92e0baa4e67530a59988dbfc"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/35/features.json",
+          "sha256": "79dc08af2aa3d957fe5b7eccf471033601e6183361e4fb87bf66603bf9e7a241"
+        }
+      },
+      "v1_maximum_feature_error": 4.316799614528681e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2876,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.189108895797343e-06,
+          "retained_reference_band_energy_fraction": 0.9999747693543686,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.316799614528681e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.316799614528681e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/36/input.f32le",
+          "sha256": "53038878971b8e7cd8c1d905a6371915df222be5552c1c15a28fbe840d3f97af"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/36/output.f32le",
+          "sha256": "bd34f1e855357cb30d8054e71333a429a521905af3a055909553e37def88055f"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/36/features.json",
+          "sha256": "2402482ddd3adfbbe88679a4a129e6c5acc70b31452eabf1d02e16d33593a67e"
+        }
+      },
+      "v1_maximum_feature_error": 0.014339597348508162,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 308,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.1808013932190775e-06,
+          "retained_reference_band_energy_fraction": 0.9999482734110146,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.5617029989201114e-06,
+          "retained_reference_band_energy_fraction": 0.999998861848007,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 432,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.659312571657196e-06,
+          "retained_reference_band_energy_fraction": 0.9999993001150521,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/37/input.f32le",
+          "sha256": "140465d41a5f01457e7e8c815034d4cbbb58f035005f5f6ec5d4454e777e6d4e"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/37/output.f32le",
+          "sha256": "e0be16dab8aaed9d0eabf30544c51277c0c7e9bdbaddbed68c7e5238fe6bfa3d"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/37/features.json",
+          "sha256": "0edc6361f30f6c2cf1e62e7125ee8ac1222f6515ba86b88913bf063048046313"
+        }
+      },
+      "v1_maximum_feature_error": 0.0066196353371065966,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 308,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.3712602434236202e-06,
+          "retained_reference_band_energy_fraction": 0.9999482734110468,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.726382707503694e-06,
+          "retained_reference_band_energy_fraction": 0.9999988618480694,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 432,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.7304846741256506e-05,
+          "retained_reference_band_energy_fraction": 0.9999993001150552,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "direct_sha256": "350fe2862a28a8df89a3c8677e06d49bc23d260bd495337ca4facdca47c095cc",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/38/input.f32le",
+          "sha256": "b5fb994262be84b50a603cb9395a283a3d569fde6392146036f3cbd8b2dc1edd"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/38/output.f32le",
+          "sha256": "0ff59886c63d3d8c920078e8d14d3886801181cb86dcc94668d92b3bd4c1a1aa"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/38/features.json",
+          "sha256": "75fe98fdd4a1069a4ff1af6fc1ca5726428cd5e5de407e0ea38041a791b013c2"
+        }
+      },
+      "v1_maximum_feature_error": 0.005995795450460161,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 308,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.048865180760953e-07,
+          "retained_reference_band_energy_fraction": 0.9999482734123221,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.6814420351211535e-06,
+          "retained_reference_band_energy_fraction": 0.9999988618480068,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 432,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.04389730224421e-05,
+          "retained_reference_band_energy_fraction": 0.9999993001150558,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/39/input.f32le",
+          "sha256": "871ba61ef722f1d10028e09a1136f6603d5456f50a968347c3c97f4a22018a82"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/39/output.f32le",
+          "sha256": "8a56f9188c5caced449f08aac94ff63fe08c6dea91346b968de4f5c7bd17eb3e"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/39/features.json",
+          "sha256": "60a5e63dbe8a2e65fb87ff571875407aa6eae22f8374305245640c041a3fde73"
+        }
+      },
+      "v1_maximum_feature_error": 5.110464863899988e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2970,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.110464863899988e-06,
+          "retained_reference_band_energy_fraction": 0.9999989147329963,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.110464863899988e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.110464863899988e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/40/input.f32le",
+          "sha256": "51d31ec3daf2438b6d1d67322e67f7dcbc3fa0a72021f3e1dcc2b07d77f61c3d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/40/output.f32le",
+          "sha256": "5c7248aaf096cedd3c830e67fd45cbb22e874e498d335af17fd8957befad90fb"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/40/features.json",
+          "sha256": "f01197df5874fd3da3fe85524bfdd1c1c04c745988f95105d4dd14e7ddcd21f1"
+        }
+      },
+      "v1_maximum_feature_error": 5.063617712047774e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2970,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.063617712047774e-06,
+          "retained_reference_band_energy_fraction": 0.9999989147332305,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.063617712047774e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.063617712047774e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "4d725c9f13cb4c9ed3b8c0a1cd9f50248e8141a183cb544888c92a15d0be0c7e"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/41/input.f32le",
+          "sha256": "36893c9dfe2d885a52a28e05a5e4d6eebd2380c9600037e0a146711b0dcc5e81"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/41/output.f32le",
+          "sha256": "df06fbe60a647374cc71bc5ecee2a645a9850b65b15ed7ccee7366dd5c1500c6"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/41/features.json",
+          "sha256": "5c016c552c7e402b1f14a8c9415f0c5ca25c39a4a33772669c046b8b03a4979a"
+        }
+      },
+      "v1_maximum_feature_error": 5.181963334127682e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2970,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.3097398482183635e-06,
+          "retained_reference_band_energy_fraction": 0.9999989147334113,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.181963334127682e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.181963334127682e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "ee3965cb947afe92e5c052bd1fab7efdbdc3dfd0024a27312fce19f2ce6ef46b",
+        "direct_sha256": "4d922dcf99ae9ae94374d9fd8eb543d8ae9ebd63445dd11d40ef25ed89f9a831",
+        "ambient_sha256": "bbbdaebc111d36d061ad2df627e7da3096192a3a70dd9f97446446f817deb8e4"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/42/input.f32le",
+          "sha256": "9213403874c3598452d7fa58c55c3972ab1ac30a4985740896461d50bcf4cc62"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/42/output.f32le",
+          "sha256": "9ec31555c12b7bbe39210d14c1aeb24af6726e5c34ed338050dcbf1a70fe0df1"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/42/features.json",
+          "sha256": "58729442df66cfb98a67a6c6b53ffe8cf1e3b0c04e5fbe96545272c237d6e1ee"
+        }
+      },
+      "v1_maximum_feature_error": 4.638050325800336e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.4024495349505024e-06,
+          "retained_reference_band_energy_fraction": 0.9999751933454807,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.638050325800336e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.638050325800336e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "ee3965cb947afe92e5c052bd1fab7efdbdc3dfd0024a27312fce19f2ce6ef46b",
+        "direct_sha256": "4d922dcf99ae9ae94374d9fd8eb543d8ae9ebd63445dd11d40ef25ed89f9a831",
+        "ambient_sha256": "bbbdaebc111d36d061ad2df627e7da3096192a3a70dd9f97446446f817deb8e4"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/43/input.f32le",
+          "sha256": "f9825039d11316e336e4f45e5ad2811166fd16b30d1200fe8bbbd73645037821"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/43/output.f32le",
+          "sha256": "938f77a40cfb34f3084f2f62c5464a0eebc29ab79dad0aae78c78092f6183b59"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/43/features.json",
+          "sha256": "0e4990b326cc9c537af54e17567ac185485509cce6fcb0b60c1913b1e68adb5e"
+        }
+      },
+      "v1_maximum_feature_error": 4.959796291281737e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.357893231913488e-06,
+          "retained_reference_band_energy_fraction": 0.9999751933425068,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.959796291281737e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.959796291281737e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "ee3965cb947afe92e5c052bd1fab7efdbdc3dfd0024a27312fce19f2ce6ef46b",
+        "direct_sha256": "4d922dcf99ae9ae94374d9fd8eb543d8ae9ebd63445dd11d40ef25ed89f9a831",
+        "ambient_sha256": "bbbdaebc111d36d061ad2df627e7da3096192a3a70dd9f97446446f817deb8e4"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/44/input.f32le",
+          "sha256": "15d2f9bb37102020710834e4ddbba0b618486ebebc4f532aa0070b2341b53404"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/44/output.f32le",
+          "sha256": "276366b5bf54f35c296fd67ffe0967634932d9f30d9ff99770d64cddc171663d"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/44/features.json",
+          "sha256": "8e56675e2ee41bf383d2f649d83be662de104ce2e9dd30a1262eac972a2867a5"
+        }
+      },
+      "v1_maximum_feature_error": 6.004410177590236e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2886,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.894161427486775e-06,
+          "retained_reference_band_energy_fraction": 0.9999751933443577,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.004410177590236e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.004410177590236e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/45/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/45/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/45/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/46/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/46/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/46/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301121,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.4490803151180663,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/47/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/47/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/47/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "6843987302a90be17b14557ed5dc9f82fb85fbb82760aa41c2660dc0dc8ee43d",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/48/input.f32le",
+          "sha256": "c46077520e035e2c35d16b61502fd6b506f2e84b4c422e8236ab3c4b1af1f8a7"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/48/output.f32le",
+          "sha256": "02f5846d1f14d3e7c8a1cb73efde54e133964fc8556c643c3bae09c8fb183997"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/48/features.json",
+          "sha256": "18df50f80bdeae02b5f65cae37cb03f45abaeb408f53e30be8bc29b6826ee191"
+        }
+      },
+      "v1_maximum_feature_error": 7.408068528391709e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.33519920017733e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680721833,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.213157596606344e-06,
+          "retained_reference_band_energy_fraction": 0.9999992891385509,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.408068528391709e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "6843987302a90be17b14557ed5dc9f82fb85fbb82760aa41c2660dc0dc8ee43d",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/49/input.f32le",
+          "sha256": "575dc95546f96be008a645c99d1f55343d498f8a442493daa7ecdaeee9e4df14"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/49/output.f32le",
+          "sha256": "10f66b651d409c172c8942c52c98ec4f43f4c6c16eaed4ee599a4771d459393b"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/49/features.json",
+          "sha256": "38d9e6096e8667a1734f1c3c67f067559965b0576b9e50433044069f79581418"
+        }
+      },
+      "v1_maximum_feature_error": 7.0929916606843335e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.075886263386284e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680713657,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.117092453461481e-06,
+          "retained_reference_band_energy_fraction": 0.9999992891384656,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.0929916606843335e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "6843987302a90be17b14557ed5dc9f82fb85fbb82760aa41c2660dc0dc8ee43d",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/50/input.f32le",
+          "sha256": "701ef4add977e013a69073b28be62dcddb3f6e7256dc5e3e7709c4ca2b3a7e84"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/50/output.f32le",
+          "sha256": "346e46d5c14150787c408c4e81509a542210fd74624bf3531d8c23d260120866"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/50/features.json",
+          "sha256": "577d1b112b4a870df74ba92944ae46b4b097586b2923fd20109c97d5f0cf9628"
+        }
+      },
+      "v1_maximum_feature_error": 8.050318165364612e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.7918566866680372e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680692306,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.7839973099382824e-06,
+          "retained_reference_band_energy_fraction": 0.9999992891381907,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.050318165364612e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "d48837d662799d2dba7ac05998aad78e78a99fba789596f3702c5a7a86595c5c",
+        "direct_sha256": "c4f304ac721321f676c2a6c967822c7e584080070b9da9a093733e8756d95197",
+        "ambient_sha256": "0d5c01a4c5f3248c75289bb6468a7ac2d9b4244f4cbdaa68e89f299df9199afe"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/51/input.f32le",
+          "sha256": "fcd53e03e3c607832f3e8feab9cce76eb000307344ca8eb497be75ea1a32cdf6"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/51/output.f32le",
+          "sha256": "76b544cc1d51963a40362f111e8bb457c51884f5b3d3ccdaca38d7afc35f074f"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/51/features.json",
+          "sha256": "a58912c87a53590d6c8225fe60d4a8dd372f0f9abaaf8442927ac8daa91ee563"
+        }
+      },
+      "v1_maximum_feature_error": 6.161079338484754e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2865,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.607051732272936e-06,
+          "retained_reference_band_energy_fraction": 0.9999706979933107,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.161079338484754e-06,
+          "retained_reference_band_energy_fraction": 0.9999999044022037,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.161079338484754e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "d48837d662799d2dba7ac05998aad78e78a99fba789596f3702c5a7a86595c5c",
+        "direct_sha256": "c4f304ac721321f676c2a6c967822c7e584080070b9da9a093733e8756d95197",
+        "ambient_sha256": "0d5c01a4c5f3248c75289bb6468a7ac2d9b4244f4cbdaa68e89f299df9199afe"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/52/input.f32le",
+          "sha256": "e23229237386a6bd21f631d5c8ef331a4cf12f7caf72479b32d25fb2c69a7975"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/52/output.f32le",
+          "sha256": "8d3d02fdeff6df9cb867838cce4108ff745623449d3cc89bcfac810eac2fad66"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/52/features.json",
+          "sha256": "3167c39c61dc8449ff66f66e9bbc2610f52c25ca0c1d0bd696b7beaeab3f3d1e"
+        }
+      },
+      "v1_maximum_feature_error": 6.56549033256279e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2865,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.894292545075784e-06,
+          "retained_reference_band_energy_fraction": 0.9999706979947326,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.56549033256279e-06,
+          "retained_reference_band_energy_fraction": 0.999999904402285,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.56549033256279e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "d48837d662799d2dba7ac05998aad78e78a99fba789596f3702c5a7a86595c5c",
+        "direct_sha256": "c4f304ac721321f676c2a6c967822c7e584080070b9da9a093733e8756d95197",
+        "ambient_sha256": "0d5c01a4c5f3248c75289bb6468a7ac2d9b4244f4cbdaa68e89f299df9199afe"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/53/input.f32le",
+          "sha256": "3822082f79ea56f1a8d7cfdb452f69c982c73d060158cf5be24d43a0d0fb8642"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/53/output.f32le",
+          "sha256": "2094ce2b6152f601b226c9cda6e0952b171d9dea4c1ba342496bd741a5023a6e"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/53/features.json",
+          "sha256": "df424b87cc74b7c33d881e51deea65f88d6363875f2a14cd1a9b86c166295d82"
+        }
+      },
+      "v1_maximum_feature_error": 7.87302092851265e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2865,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.5739273331049084e-06,
+          "retained_reference_band_energy_fraction": 0.999970697992683,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.87302092851265e-06,
+          "retained_reference_band_energy_fraction": 0.9999999044023204,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.87302092851265e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "990af3b2a379913c8fe3d995c54059f0451a6b942ad83603b42cd142256359d3",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "717c39af170880722275f52e39a99b84329ceb3b4a16cf43cc2e875ce9574898"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/54/input.f32le",
+          "sha256": "7dc3dc0731f190a807c4450b7e5ee0c78bcdffd7f08dd309859f7e687b55187a"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/54/output.f32le",
+          "sha256": "632321a1fdf5efc3f3be9c6db34935df0c39ed72a708580bc9ce05d978917d41"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/54/features.json",
+          "sha256": "b6ccae0787e1cb698419c6578fb0063e7004e8d1c11541204aea43befd52feba"
+        }
+      },
+      "v1_maximum_feature_error": 7.335523134409513e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.9162761776140055e-06,
+          "retained_reference_band_energy_fraction": 0.9999551504159353,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2957,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.268823802518936e-06,
+          "retained_reference_band_energy_fraction": 0.9999985964564699,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.335523134409513e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "990af3b2a379913c8fe3d995c54059f0451a6b942ad83603b42cd142256359d3",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "717c39af170880722275f52e39a99b84329ceb3b4a16cf43cc2e875ce9574898"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/55/input.f32le",
+          "sha256": "c7a180a046596252d731967c4a3354aa72e881e3a54ad070baed38993bdfe0c7"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/55/output.f32le",
+          "sha256": "2c5269cf2359e5ed2442f5330763c140572c5cb8d9904cc25b4921b0b071d768"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/55/features.json",
+          "sha256": "15a712e9f3280fe53da991bd99bd9226b6005195e166584fccd4e8268540e710"
+        }
+      },
+      "v1_maximum_feature_error": 6.484473865186017e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.8441273459540623e-06,
+          "retained_reference_band_energy_fraction": 0.999955150419277,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2957,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.674427443719976e-06,
+          "retained_reference_band_energy_fraction": 0.9999985964563148,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.484473865186017e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "990af3b2a379913c8fe3d995c54059f0451a6b942ad83603b42cd142256359d3",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "717c39af170880722275f52e39a99b84329ceb3b4a16cf43cc2e875ce9574898"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/56/input.f32le",
+          "sha256": "da3c670cf148db8d857774c0c467e4eaa5ea9067bf2a3e962f8e6fe4d51bdcf1"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/56/output.f32le",
+          "sha256": "212aa62d0686800677a51b15b80b8b6d9fdc9c8726642c52746612554e5d7050"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/56/features.json",
+          "sha256": "5117c7e509ae4e8df228a1e36c92a9601041c08f013684466ad93dfcd28aeaca"
+        }
+      },
+      "v1_maximum_feature_error": 7.355039553512063e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.9982786003034515e-06,
+          "retained_reference_band_energy_fraction": 0.9999551504141824,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2957,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.858029574618234e-06,
+          "retained_reference_band_energy_fraction": 0.9999985964558551,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.355039553512063e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "acff25c78030a1a86b3ee5e4678e34849b35e2f2ffa0425e556edf0358d9ba2b",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "b961b5fd77100ee2aa95e487a18a3d3df509a4ed5dc772bf68a9f8670ef26c69"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/57/input.f32le",
+          "sha256": "44db65190dca7982d438f04eadf8ea5b1b9b41b9a876177951a4b31969e95ee5"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/57/output.f32le",
+          "sha256": "178dc9a4b8b7185f60532ed336c99b1829e4a01dd21127d32845b1bec4b38652"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/57/features.json",
+          "sha256": "4b32ba835f2c3866d77c9c7496490f28f64b61cc0bb338168bb89c9fd3900d00"
+        }
+      },
+      "v1_maximum_feature_error": 1.0802525470749239e-05,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.8749818053773815e-06,
+          "retained_reference_band_energy_fraction": 0.9999557606911784,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2961,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.159667648038649e-06,
+          "retained_reference_band_energy_fraction": 0.9999989832021915,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.0802525470749239e-05,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "acff25c78030a1a86b3ee5e4678e34849b35e2f2ffa0425e556edf0358d9ba2b",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "b961b5fd77100ee2aa95e487a18a3d3df509a4ed5dc772bf68a9f8670ef26c69"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/58/input.f32le",
+          "sha256": "f9b9f9d41d4e23500cdfda31e84125be55d85c4762c91f60f673580685d8f63e"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/58/output.f32le",
+          "sha256": "41fc3b9596fd37761dd9f2c6e9733baf0e3cb8c2fd79a30ad01557b20fe6ea20"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/58/features.json",
+          "sha256": "2e9a218aa16d8d00c2221b85b858d2ca434bd9271d3ca10df4fadb531808b1c6"
+        }
+      },
+      "v1_maximum_feature_error": 8.867607321333274e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.0131976144007098e-06,
+          "retained_reference_band_energy_fraction": 0.999955760693354,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2961,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.158814752797568e-06,
+          "retained_reference_band_energy_fraction": 0.9999989832023164,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.867607321333274e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "acff25c78030a1a86b3ee5e4678e34849b35e2f2ffa0425e556edf0358d9ba2b",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "b961b5fd77100ee2aa95e487a18a3d3df509a4ed5dc772bf68a9f8670ef26c69"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/59/input.f32le",
+          "sha256": "10f195f906a7d21a67f8a87f1b7cb0ad70d8170a19953bbda9e72f86c1ae4fab"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/59/output.f32le",
+          "sha256": "b51ce2e24a5562bee53f59d36e0a1aabfb80905be4c84f343239bc79573b8254"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/59/features.json",
+          "sha256": "61396155096f7c9287a2e55118e9ad9f6b0dede5cfb24bd5fc977dc0227e8304"
+        }
+      },
+      "v1_maximum_feature_error": 8.199371599417003e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2819,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.8384103111010837e-06,
+          "retained_reference_band_energy_fraction": 0.9999557606889322,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2961,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.199371599417003e-06,
+          "retained_reference_band_energy_fraction": 0.9999989832018721,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.199371599417003e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/60/input.f32le",
+          "sha256": "be7d3c7010dc04592c766be918b49fc4c24fe27c00327eba2a18b96c6fad89bc"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/60/output.f32le",
+          "sha256": "fa8202356bec0da4c1a6d05d15e0395aeb17de21604da2457b265a92e0262bfd"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/60/features.json",
+          "sha256": "a8935bd61eed7668f1b81d2fb304d958287f4c715bd3d7268e360d6096592454"
+        }
+      },
+      "v1_maximum_feature_error": 0.03828355559353362,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 465,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.7304939405256914e-07,
+          "retained_reference_band_energy_fraction": 0.9999987365582407,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 466,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.539385988633159e-06,
+          "retained_reference_band_energy_fraction": 0.99999875517742,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 558,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.0356646266136337e-05,
+          "retained_reference_band_energy_fraction": 0.9999996726309418,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/61/input.f32le",
+          "sha256": "4bd930f9c84c19d3180822c01c550f33e8857e83e35d37d36ed4852115cc14b2"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/61/output.f32le",
+          "sha256": "1d777d2c64010a5acf69cebed209887320f2108748266a3ea1b76a6aac2144fc"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/61/features.json",
+          "sha256": "a9a160f527b1523e33ed8d8a9089816becefe8e0969ee02d331271e131a33929"
+        }
+      },
+      "v1_maximum_feature_error": 0.02805806778347142,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 465,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.3727558587739677e-07,
+          "retained_reference_band_energy_fraction": 0.999998736558051,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 466,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.7601370695358699e-06,
+          "retained_reference_band_energy_fraction": 0.9999987551772296,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 558,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.300848660335506e-05,
+          "retained_reference_band_energy_fraction": 0.9999996726309954,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "direct_sha256": "5a95e5debd47e2c0d5cc375e082b0aa86a5e7f6773efd48bcd9cdeb1f7f73b82",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/62/input.f32le",
+          "sha256": "a4e6ab91ea73fd6e921307f462eaca05b3e8a3f89434fd7c6097b0ba4c7c5f94"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/62/output.f32le",
+          "sha256": "764ab9d3473e2d04d1d26c253001d8e10716707e10f98e7b621e73e765b79959"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/62/features.json",
+          "sha256": "8a1c3d2490966bd89d5b9119b8adfe8e0423db1652551b34de14e4cad3fb03a1"
+        }
+      },
+      "v1_maximum_feature_error": 0.11726965804599052,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 465,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.6130102464817497e-07,
+          "retained_reference_band_energy_fraction": 0.9999987365578906,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 466,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.077067109082973e-07,
+          "retained_reference_band_energy_fraction": 0.9999987551770505,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 558,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.0049042900844442e-05,
+          "retained_reference_band_energy_fraction": 0.9999996726308864,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/63/input.f32le",
+          "sha256": "7b3b6dd7572e420f707779f9b560f98772aec3e40db14ecb080146f5089c2906"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/63/output.f32le",
+          "sha256": "08d0b663c0276beb77d73ed522a96330d4b6f89e3465dcb73e53c4efed38c018"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/63/features.json",
+          "sha256": "91646763eed57f655bc9487a9d72619d42432538639d0d994c36cff0763cc1ba"
+        }
+      },
+      "v1_maximum_feature_error": 7.738501067340586e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.738501067340586e-06,
+          "retained_reference_band_energy_fraction": 0.9999980715327184,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.738501067340586e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.738501067340586e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/64/input.f32le",
+          "sha256": "bd70ef89ff2bb05e6b10e6ed20f298ce15e5a17c03b848f1c89d5b9b15e93f74"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/64/output.f32le",
+          "sha256": "89afef8d478dce803670f999ab1d347e6a6ebbe6bd1fbbae7407dbe58bc008bd"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/64/features.json",
+          "sha256": "71f33bd380577c8a6769edae84f063ae3adb0f49c3091de40e5b9a64f95936f2"
+        }
+      },
+      "v1_maximum_feature_error": 4.356826736995334e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.356826736995334e-06,
+          "retained_reference_band_energy_fraction": 0.9999980715324467,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.356826736995334e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.356826736995334e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "975a7f62d1222c779a77728c54a5df4671b771f49dc071889f2cb206dc0dc86e"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/65/input.f32le",
+          "sha256": "fb8ce1846574f86eead16652586127e3d408073f47585700511da7df2ceae67a"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/65/output.f32le",
+          "sha256": "92778f573fcef1d36d36e524b660d42fd79e22953a9ea6008db19e7ef7921049"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/65/features.json",
+          "sha256": "4e8a9b672a64f042ae6c40bcf8cdb0016e7bff006c44abd98df2dfa8814ec842"
+        }
+      },
+      "v1_maximum_feature_error": 4.149240424272671e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.149240424272671e-06,
+          "retained_reference_band_energy_fraction": 0.9999980715325681,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.149240424272671e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.149240424272671e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "38fcd479bc8621f9bad2fae3dc46ce137d7569d43e47b438b252368a50c806c7",
+        "direct_sha256": "249ed90fedfa4a4b6537520b102d3030cae7732aebb1fb2c558abc467dc0358c",
+        "ambient_sha256": "568ae8bd7762ab3197150c8f43bbeaaea911ce99a31913f55e00e3d84f49273b"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/66/input.f32le",
+          "sha256": "575dc95546f96be008a645c99d1f55343d498f8a442493daa7ecdaeee9e4df14"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/66/output.f32le",
+          "sha256": "10f66b651d409c172c8942c52c98ec4f43f4c6c16eaed4ee599a4771d459393b"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/66/features.json",
+          "sha256": "38d9e6096e8667a1734f1c3c67f067559965b0576b9e50433044069f79581418"
+        }
+      },
+      "v1_maximum_feature_error": 7.0929916606843335e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.075886263386284e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680713657,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.117092453461481e-06,
+          "retained_reference_band_energy_fraction": 0.9999992891384656,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.0929916606843335e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "38fcd479bc8621f9bad2fae3dc46ce137d7569d43e47b438b252368a50c806c7",
+        "direct_sha256": "249ed90fedfa4a4b6537520b102d3030cae7732aebb1fb2c558abc467dc0358c",
+        "ambient_sha256": "568ae8bd7762ab3197150c8f43bbeaaea911ce99a31913f55e00e3d84f49273b"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/67/input.f32le",
+          "sha256": "93ce53e669e09dbf875e348be01a3f3caa8f2dd268526e1af2f904ddd13d853c"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/67/output.f32le",
+          "sha256": "00bd73308e71c672bdf41ba456fdf80e6bda8a5c39facfea3dca07ef97c5bb58"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/67/features.json",
+          "sha256": "1052e07446bdb11409235d7794766288e2441bac263138e427541be91c689bb0"
+        }
+      },
+      "v1_maximum_feature_error": 7.726561425641654e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.2842401491557363e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680718151,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.726561425641654e-06,
+          "retained_reference_band_energy_fraction": 0.9999992891383878,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 7.726561425641654e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "38fcd479bc8621f9bad2fae3dc46ce137d7569d43e47b438b252368a50c806c7",
+        "direct_sha256": "249ed90fedfa4a4b6537520b102d3030cae7732aebb1fb2c558abc467dc0358c",
+        "ambient_sha256": "568ae8bd7762ab3197150c8f43bbeaaea911ce99a31913f55e00e3d84f49273b"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/68/input.f32le",
+          "sha256": "f9867c04808079d8e6d12591e2dc0fd244917a8df4b759ae18b3f7f067b3c8d4"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/68/output.f32le",
+          "sha256": "583408cb69fc6b84002fd24235110104c43fc1bcb852574dfda37516b0028b2e"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/68/features.json",
+          "sha256": "c21c82aa096c49409ace7d3f410597aec238a33b745c685387ebe63e9ef8ba2d"
+        }
+      },
+      "v1_maximum_feature_error": 5.704672614681439e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2829,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.580284692244028e-06,
+          "retained_reference_band_energy_fraction": 0.9999588680676404,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2967,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.704672614681439e-06,
+          "retained_reference_band_energy_fraction": 0.999999289138356,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.704672614681439e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/69/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/69/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/69/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/70/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/70/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/70/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301122,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": -0.6172607678197813,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/71/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/71/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/71/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a0ce99e82c06809396b562b3d7ee38016c904f01bd92f1bd8b67af86e0f87654",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/72/input.f32le",
+          "sha256": "47da9a572a638ba836233c61da474ea35c57d37c4e720a3fbad122bca9fefd42"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/72/output.f32le",
+          "sha256": "c9a0e2c9a9772037ff8921615e7342f43b71ad1ec60b3d44f720b453811c60fd"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/72/features.json",
+          "sha256": "b17f9a5b9875e66cb2e70545d3dfff68538ccdf6e4fc36a68ea995fabeddeb0c"
+        }
+      },
+      "v1_maximum_feature_error": 3.4262104463902987e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.4262104463902987e-06,
+          "retained_reference_band_energy_fraction": 0.9999875402370557,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.4262104463902987e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.4262104463902987e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a0ce99e82c06809396b562b3d7ee38016c904f01bd92f1bd8b67af86e0f87654",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/73/input.f32le",
+          "sha256": "ba281189dc4ca363ee53e28f6923a138342115aefe312fb0056614e8e093ad47"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/73/output.f32le",
+          "sha256": "695ff038dab5c80ac645bd818c8ecddf8df58b95e3737e141865c5d5c016a838"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/73/features.json",
+          "sha256": "78e3bbc1691b252f2f03291a7abd7d3b7689dcad80c6c30562d2e9e7b963c8aa"
+        }
+      },
+      "v1_maximum_feature_error": 5.273699091756789e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.0352929671143003e-06,
+          "retained_reference_band_energy_fraction": 0.9999875402368117,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.273699091756789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.273699091756789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "matched",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a0ce99e82c06809396b562b3d7ee38016c904f01bd92f1bd8b67af86e0f87654",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/74/input.f32le",
+          "sha256": "6cfee3ef7d066cf2731a9f82400bfa0fda844e03caf36be5d71ade24b41cb04d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/74/output.f32le",
+          "sha256": "21ca7c13c12559e244a1c46abe443a227f25363f4cb3a7e42d7e1ae8adae8040"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/74/features.json",
+          "sha256": "82ec9cf0a44930614ec319ca9a53b85e29a65eb41804e5f4d767194ce8d8ebe2"
+        }
+      },
+      "v1_maximum_feature_error": 5.165527257072755e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.28602614499507e-06,
+          "retained_reference_band_energy_fraction": 0.9999875402353348,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.165527257072755e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.165527257072755e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "bdb68cb17fb5d227d544dc3229d9df30944be9970fd46e3abc5f0b7549028f7b",
+        "direct_sha256": "00d3f86790f1f1787858f2be4669aca42fffc820b01dcdaed235ecd808ec7b3a",
+        "ambient_sha256": "cf4cd699c340def0215ad544a06a15d72a54a8539f1bf30c2eee1a1976ee6b49"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/75/input.f32le",
+          "sha256": "fdb8d382cf97aff184871d9dff04e1acdc534a1f6e859f8ca20d025359155276"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/75/output.f32le",
+          "sha256": "554efed0448831311b8733079a9d14008541dbe83691b2f6b5683cea623fa004"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/75/features.json",
+          "sha256": "fe28ea6b1b21fb21903fb6f8ea8a62f3ad97a5fded7417623eaccf3b87bc8e63"
+        }
+      },
+      "v1_maximum_feature_error": 8.877008861485347e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2747,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.5726343579335342e-06,
+          "retained_reference_band_energy_fraction": 0.9999053881574037,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2935,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 6.412766320795793e-06,
+          "retained_reference_band_energy_fraction": 0.9999972336869004,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.877008861485347e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "bdb68cb17fb5d227d544dc3229d9df30944be9970fd46e3abc5f0b7549028f7b",
+        "direct_sha256": "00d3f86790f1f1787858f2be4669aca42fffc820b01dcdaed235ecd808ec7b3a",
+        "ambient_sha256": "cf4cd699c340def0215ad544a06a15d72a54a8539f1bf30c2eee1a1976ee6b49"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/76/input.f32le",
+          "sha256": "657c82a45becaf94652e8f50ea18f83994d01dd0de91e418b06b7675df3f9209"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/76/output.f32le",
+          "sha256": "429fc50cced6f20c3c51bc06f57a3e88675085ab8b49daf51a46fffa493a47d9"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/76/features.json",
+          "sha256": "f2ad8375d8b3d0213affe17686d5a89a67e624a56353a1761b23137d5d791416"
+        }
+      },
+      "v1_maximum_feature_error": 1.0243579539992442e-05,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2747,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.07558522583029e-06,
+          "retained_reference_band_energy_fraction": 0.999905388157994,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2935,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.6201143404654985e-06,
+          "retained_reference_band_energy_fraction": 0.9999972336865747,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.0243579539992442e-05,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "hard_pan",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 1.0,
+        "input_sha256": "bdb68cb17fb5d227d544dc3229d9df30944be9970fd46e3abc5f0b7549028f7b",
+        "direct_sha256": "00d3f86790f1f1787858f2be4669aca42fffc820b01dcdaed235ecd808ec7b3a",
+        "ambient_sha256": "cf4cd699c340def0215ad544a06a15d72a54a8539f1bf30c2eee1a1976ee6b49"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/77/input.f32le",
+          "sha256": "da6c43878c661a31d9a314b101945d1479eb505048cd15ff665b2c6a2edd8925"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/77/output.f32le",
+          "sha256": "12ecc83a59c5375f90b40a3dbf8e0eec652396a4fa415703aeb1ff995fe5bbf0"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/77/features.json",
+          "sha256": "ff04e0b79a704b753a8a5cab8dcbb4e0992c9269b319ef3f3176f586c5cdb6c5"
+        }
+      },
+      "v1_maximum_feature_error": 9.651738218097172e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2747,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.3850672478675783e-06,
+          "retained_reference_band_energy_fraction": 0.9999053881526317,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2935,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.183201317260355e-06,
+          "retained_reference_band_energy_fraction": 0.9999972336865235,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 9.651738218097172e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "d5589d3cc3d3652dd1da41a8ffaf8331c01578d0459bd8e7133fbda2047232e7",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "07c5da7d5e7ca46f19d2582cdf1adf23b6ad56be82b348a6dadb4b225ebe38da"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/78/input.f32le",
+          "sha256": "56fc7402086ac76f418d741277a6b2fb8974429a7905e9c75b43583cd747fe91"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/78/output.f32le",
+          "sha256": "b8cabd0ccd38dd127d7afc71f8357780d33a2e95c215886f09cbde7df33d1cc6"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/78/features.json",
+          "sha256": "aa916b455b693c021c08ebdeb26c05568efec49c56006b95570796d4c85a7577"
+        }
+      },
+      "v1_maximum_feature_error": 4.4417225807542375e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2914,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.4417225807542375e-06,
+          "retained_reference_band_energy_fraction": 0.9999865800044245,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.4417225807542375e-06,
+          "retained_reference_band_energy_fraction": 0.9999999226138847,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.4417225807542375e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "d5589d3cc3d3652dd1da41a8ffaf8331c01578d0459bd8e7133fbda2047232e7",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "07c5da7d5e7ca46f19d2582cdf1adf23b6ad56be82b348a6dadb4b225ebe38da"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/79/input.f32le",
+          "sha256": "146233b2517a0765f978f918e478c7e14c50116235a10fe9fb3932be4f871319"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/79/output.f32le",
+          "sha256": "9c89572e09858922cd50352408100a364c8d62bf8f88b9dca91295379f1bcfbb"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/79/features.json",
+          "sha256": "ff2f619389b0749a90ae9678abc977c1a501076f96bf793c1d9bb3b2855e7cf9"
+        }
+      },
+      "v1_maximum_feature_error": 4.800543966258923e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2914,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.0329992630018194e-06,
+          "retained_reference_band_energy_fraction": 0.9999865800044713,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.800543966258923e-06,
+          "retained_reference_band_energy_fraction": 0.999999922613873,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.800543966258923e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "correlated_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "d5589d3cc3d3652dd1da41a8ffaf8331c01578d0459bd8e7133fbda2047232e7",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "07c5da7d5e7ca46f19d2582cdf1adf23b6ad56be82b348a6dadb4b225ebe38da"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/80/input.f32le",
+          "sha256": "b731bdd36698550e15650eb590429d20b2790ee3cdf9365f352bd0f0ae7630a5"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/80/output.f32le",
+          "sha256": "1ecf0da81df776b25d1f30a169c33e85188f6e6f79acae1bd34a73944b3fa855"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/80/features.json",
+          "sha256": "b2578229d66226a1287c605e45c933324730891232065a605994248f6bd79085"
+        }
+      },
+      "v1_maximum_feature_error": 3.538870678999607e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2914,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.0966962572566906e-06,
+          "retained_reference_band_energy_fraction": 0.9999865800037657,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2975,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.538870678999607e-06,
+          "retained_reference_band_energy_fraction": 0.9999999226139328,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.538870678999607e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b79ccd4907b3d8d66e07bdab1c29a082d6bb8f4ca33fdf9b49a834a395a3ee63",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "fabd2c38bf8825c5634d9844b955cd0dd0f091d828fa579178dd6a6e6e501a5b"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/81/input.f32le",
+          "sha256": "c1460de48945bf362b76828b30fcaed3a474bd8c588bc71e8af0ac3fbd4eb8cc"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/81/output.f32le",
+          "sha256": "d57832ab235b4681486ab8e2905d67d410f3e7a9334d691d3ec4836cb4dcfa8a"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/81/features.json",
+          "sha256": "98b3f596c3d731ec05898e337020c328da124175cd3fbc07c25bd875c0995120"
+        }
+      },
+      "v1_maximum_feature_error": 4.266355803168886e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2918,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.841394870374851e-06,
+          "retained_reference_band_energy_fraction": 0.9999881467276304,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.266355803168886e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.266355803168886e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b79ccd4907b3d8d66e07bdab1c29a082d6bb8f4ca33fdf9b49a834a395a3ee63",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "fabd2c38bf8825c5634d9844b955cd0dd0f091d828fa579178dd6a6e6e501a5b"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/82/input.f32le",
+          "sha256": "359b99ad817e8ba10bb366ed2dd2e8f0120455b36f6fe5fd922448394f4d1e87"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/82/output.f32le",
+          "sha256": "53713fd3380554e88a850d656421033725914cbc5f5cbed038802a5dbf98b757"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/82/features.json",
+          "sha256": "b232f1f2f4a8ceb1985ed19a1acc83f81467b92737959e61dd515d4bc1b566cc"
+        }
+      },
+      "v1_maximum_feature_error": 8.014871688727366e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2918,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.325676779338689e-06,
+          "retained_reference_band_energy_fraction": 0.999988146727468,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.014871688727366e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.014871688727366e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "antiphase_bed",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b79ccd4907b3d8d66e07bdab1c29a082d6bb8f4ca33fdf9b49a834a395a3ee63",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "fabd2c38bf8825c5634d9844b955cd0dd0f091d828fa579178dd6a6e6e501a5b"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/83/input.f32le",
+          "sha256": "0443bee6f6703142576acf59f4ddd5675205164ddb96ad198dddc3ecf22ddcbf"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/83/output.f32le",
+          "sha256": "adce4a6a6cde7a9ec7056f86c5ee77287a70fb98ebd49ba02ea4bd5f513d2fb0"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/83/features.json",
+          "sha256": "db48c682f620d021d84b879d60b6ba07ede523d84986e74908ff996fe69c5ea6"
+        }
+      },
+      "v1_maximum_feature_error": 4.12568292979875e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2918,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.12568292979875e-06,
+          "retained_reference_band_energy_fraction": 0.999988146728125,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.12568292979875e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.12568292979875e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/84/input.f32le",
+          "sha256": "5e5ca5337d4b7056d6d6c4737bb921063763c4a71479bca89d80acd365a491f3"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/84/output.f32le",
+          "sha256": "134268b7198813c96b6c662901a03c0a85150a2cb857a8f42e065a5175167051"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/84/features.json",
+          "sha256": "b23dd5d75e3770e7798a3fa9dc295e4cc94986fb77c5b4bb846b039c0e5dd483"
+        }
+      },
+      "v1_maximum_feature_error": 0.09541464771716393,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.452946781059456e-06,
+          "retained_reference_band_energy_fraction": 0.9999980142999095,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.452946781059456e-06,
+          "retained_reference_band_energy_fraction": 0.9999980142999095,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 476,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.1015957210667933e-05,
+          "retained_reference_band_energy_fraction": 0.9999996714412288,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/85/input.f32le",
+          "sha256": "cac7c5693ce456304152c59a0b30f8ce6f3a2c38eddf20681d87576a61771dce"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/85/output.f32le",
+          "sha256": "2d27986d572c0b7ff0a382a6f9516a24458d4b299c6fcaed3ffed9c107a3b7b4"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/85/features.json",
+          "sha256": "90d9e7578322643d56585bc711470add4da1b86f1d340da047094fb0c6a315da"
+        }
+      },
+      "v1_maximum_feature_error": 0.04616499375510797,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.885599512170156e-06,
+          "retained_reference_band_energy_fraction": 0.9999980143000256,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 2.885599512170156e-06,
+          "retained_reference_band_energy_fraction": 0.9999980143000256,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 476,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 8.816306076041418e-06,
+          "retained_reference_band_energy_fraction": 0.9999996714412469,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "direct_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "direct_sha256": "b64732a7bd337d2d8e2af1d8c202a1c8a379d5fbca71a31834fb7ba52406c0e2",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/86/input.f32le",
+          "sha256": "9e95de22aa35b39fc478dc4853a47f607dadfcdeac463e2819de14440ac04a41"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/86/output.f32le",
+          "sha256": "b8f4498e7b72bc3d5d77bc821f09dd38365f6176c2fb6ac3e30ee373143d185d"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/86/features.json",
+          "sha256": "eddf7e920b9a841ff7bfc04741943f3e01b4e1afb5adc3b914f7d5114fa576bb"
+        }
+      },
+      "v1_maximum_feature_error": 0.11667798699628701,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.4257863879540977e-06,
+          "retained_reference_band_energy_fraction": 0.9999980142998698,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 400,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.4257863879540977e-06,
+          "retained_reference_band_energy_fraction": 0.9999980142998698,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 476,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 1.0466050600510535e-05,
+          "retained_reference_band_energy_fraction": 0.9999996714412679,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/87/input.f32le",
+          "sha256": "33c92a8c9ae4e3aa05298229e9746014d2ad3348b97ffa0a0d1d780aa9cde911"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/87/output.f32le",
+          "sha256": "6579a3111f97fa4be62e6325352a0705e68e4bd9045e247523160553627579a4"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/87/features.json",
+          "sha256": "d10aeaf6a868e12989c6242c2e5f92cb118eb294fc30d0f8091de46b2a49bd7d"
+        }
+      },
+      "v1_maximum_feature_error": 4.215404673990619e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.6504851960716955e-06,
+          "retained_reference_band_energy_fraction": 0.9999983633858329,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.215404673990619e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.215404673990619e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/88/input.f32le",
+          "sha256": "68ecc66981a63671ec8897ab38cb5d94159a721d8f6465d68d7fc043b9925c59"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/88/output.f32le",
+          "sha256": "5c7dc4f0373d37f513c7406dbad23bd22dd9b95685df520ac65a3156dad090d8"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/88/features.json",
+          "sha256": "cbfa0133d406c29e7cd10731a5a27c530a4e08a981f8c109d30793a16dad2b51"
+        }
+      },
+      "v1_maximum_feature_error": 5.167979523101884e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.167979523101884e-06,
+          "retained_reference_band_energy_fraction": 0.9999983633858281,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.167979523101884e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.167979523101884e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "ambient_only",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "008e000dc96bdc2f213286d19fd4cf3367466f26ffe2c4bd37313de976ac8ea2"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/89/input.f32le",
+          "sha256": "cbe4886d0f780c73dd7ecc6fa99a36fc917267888ae1f899e170d52433726987"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/89/output.f32le",
+          "sha256": "041d3479d2b845923fc6aac9755e477a23d24f6d59f9fa413123268443e6ff64"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/89/features.json",
+          "sha256": "2926dc162e0cf99f12c4733f36292e38d0a3be25551197fed1e8c485d1a52091"
+        }
+      },
+      "v1_maximum_feature_error": 3.5843654106748613e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2968,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.5843654106748613e-06,
+          "retained_reference_band_energy_fraction": 0.9999983633858885,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.5843654106748613e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.5843654106748613e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a6a5afe82232c35a294f5efd7776b96483d37b6ed7442a398966fef4fa4853bc",
+        "direct_sha256": "0d6b7f06cb7424a66e7bbb88533f61c1efc640cf46084103b17424e740e67dad",
+        "ambient_sha256": "44b828574fea51cce20f8b70ddbf9537286a9fed2599554bfef870120a5d79c8"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/90/input.f32le",
+          "sha256": "ba281189dc4ca363ee53e28f6923a138342115aefe312fb0056614e8e093ad47"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/90/output.f32le",
+          "sha256": "695ff038dab5c80ac645bd818c8ecddf8df58b95e3737e141865c5d5c016a838"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/90/features.json",
+          "sha256": "78e3bbc1691b252f2f03291a7abd7d3b7689dcad80c6c30562d2e9e7b963c8aa"
+        }
+      },
+      "v1_maximum_feature_error": 5.273699091756789e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.0352929671143003e-06,
+          "retained_reference_band_energy_fraction": 0.9999875402368117,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.273699091756789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 5.273699091756789e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a6a5afe82232c35a294f5efd7776b96483d37b6ed7442a398966fef4fa4853bc",
+        "direct_sha256": "0d6b7f06cb7424a66e7bbb88533f61c1efc640cf46084103b17424e740e67dad",
+        "ambient_sha256": "44b828574fea51cce20f8b70ddbf9537286a9fed2599554bfef870120a5d79c8"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/91/input.f32le",
+          "sha256": "5be95d3ed487dec6bd99057c66aff5a9cfe84190edbeddc6f7f082b0dee80b3e"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/91/output.f32le",
+          "sha256": "524987d3a68a86ec58195d01b089fd971260f32d532c8d540b4d10b393743118"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/91/features.json",
+          "sha256": "5b0ad73171673a43bc700d648cf733ae3367bd6de4413e7094dde6cdb59fd07f"
+        }
+      },
+      "v1_maximum_feature_error": 4.569058515646596e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.3156361017860903e-06,
+          "retained_reference_band_energy_fraction": 0.999987540237859,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.569058515646596e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.569058515646596e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "level_shift",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "a6a5afe82232c35a294f5efd7776b96483d37b6ed7442a398966fef4fa4853bc",
+        "direct_sha256": "0d6b7f06cb7424a66e7bbb88533f61c1efc640cf46084103b17424e740e67dad",
+        "ambient_sha256": "44b828574fea51cce20f8b70ddbf9537286a9fed2599554bfef870120a5d79c8"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/92/input.f32le",
+          "sha256": "a266f4b4271eb4f2359fd802b2f14fdb23344c31255640ca42c99e37e8b9f606"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/92/output.f32le",
+          "sha256": "989b87a86440550b24562a01ca8a553447d5d5576ce33442c73b60eea9443864"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/92/features.json",
+          "sha256": "c385beee57f8baf8645f5f879d303a0f36e3db236a167acd05a847f5deeff553"
+        }
+      },
+      "v1_maximum_feature_error": 4.608137351369557e-06,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 2927,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 3.086147362552083e-06,
+          "retained_reference_band_energy_fraction": 0.9999875402353735,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.608137351369557e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 2976,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 4.608137351369557e-06,
+          "retained_reference_band_energy_fraction": 1.0,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 0,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/93/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/93/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/93/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": -40,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/94/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/94/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/94/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20301123,
+        "kind": "silence",
+        "frames": 24017,
+        "sample_rate": 48000,
+        "pan": 0.20044285122601385,
+        "input_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "direct_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9",
+        "ambient_sha256": "7cbeda9a3d7527a608c2dbd1a71572fb747a27167628c4425a9e4ac9d92f4ae9"
+      },
+      "level_db": 20,
+      "files": {
+        "input": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/95/input.f32le",
+          "sha256": "13a9c790e0486ab8bb63dc6c3b1acad3e0276485a18e6be02ad0aa8f768c435d"
+        },
+        "output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/95/output.f32le",
+          "sha256": "96b32a0aabaaf37be96b1f525d1b8c705098ea63f98b95a2685d8cf9ea93d0f2"
+        },
+        "features_output": {
+          "path": "/Volumes/home_tmp/tmp/ml-upmixer-raw-power-development-20261026/95/features.json",
+          "sha256": "e66eb52292d7c9f5c95195bc839c107f158f096a81ddd68bd0820a3b11d662a0"
+        }
+      },
+      "v1_maximum_feature_error": 0.0,
+      "candidates": {
+        "40": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "50": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        },
+        "60": {
+          "selected_band_frames": 0,
+          "validity_disagreements": 0,
+          "maximum_feature_error": 0.0,
+          "retained_reference_band_energy_fraction": null,
+          "pass": true
+        }
+      }
+    }
+  ],
+  "deployment_admitted": false
+}

@@ -1,0 +1,63 @@
+{
+  "source": "completed tool-call output from this checkpoint",
+  "native_integration": {
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-upmixer",
+      "--features",
+      "qa",
+      "--test",
+      "source_masks"
+    ],
+    "exit_code": 0,
+    "tests_passed": 7
+  },
+  "native_power_unit": {
+    "command": [
+      "cargo",
+      "test",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-upmixer",
+      "--features",
+      "qa",
+      "--lib",
+      "source_mask::tests"
+    ],
+    "exit_code": 0,
+    "tests_passed": 1
+  },
+  "strict_clippy": {
+    "command": [
+      "cargo",
+      "clippy",
+      "--offline",
+      "--locked",
+      "--release",
+      "-j2",
+      "-p",
+      "sotf-plugin-upmixer",
+      "--features",
+      "qa",
+      "--lib",
+      "--test",
+      "source_masks",
+      "--bin",
+      "qa-upmixer-mask-render",
+      "--",
+      "-D",
+      "warnings"
+    ],
+    "exit_code": 0
+  },
+  "cargo_target_dir": "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+}

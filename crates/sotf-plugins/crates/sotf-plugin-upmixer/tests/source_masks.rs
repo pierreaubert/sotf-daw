@@ -73,6 +73,7 @@ fn render(p: &mut UpmixerPlugin, input: &[f32], callback: usize, rate: u32) -> V
                 before.analysis_frames
             );
             assert_eq!(p.source_mask_snapshot().masks, before.masks);
+            assert_eq!(p.source_mask_snapshot().band_power, before.band_power);
             return result;
         }
     }
@@ -141,9 +142,26 @@ fn actual_selection_is_callback_independent_and_reset_reproducible_without_heap(
         one.source_mask_snapshot().masks,
         odd.source_mask_snapshot().masks
     );
+    assert_eq!(
+        one.source_mask_snapshot().band_power,
+        odd.source_mask_snapshot().band_power
+    );
+    assert!(
+        one.source_mask_snapshot()
+            .band_power
+            .iter()
+            .flatten()
+            .all(|power| power.is_finite() && *power >= 0.0)
+    );
     assert!(one.configure_source_masks(None).is_err());
     assert_no_allocs_or_deallocs("source-mask reset", || one.reset());
     assert_eq!(one.source_mask_snapshot().analysis_frames, 0);
+    assert!(
+        one.source_mask_snapshot()
+            .band_power
+            .iter()
+            .all(Option::is_none)
+    );
     assert_eq!(a, render(&mut one, &x, 113, 48000));
     let mut native = make(512, 48000, false);
     assert_ne!(a, render(&mut native, &x, 257, 48000));
@@ -160,6 +178,13 @@ fn unsupported_geometry_and_silence_preserve_independent_native_output() {
             render(&mut selected, &x, 257, rate)
         );
         assert_eq!(selected.source_mask_snapshot().selected_bands, 0);
+        assert!(
+            selected
+                .source_mask_snapshot()
+                .band_power
+                .iter()
+                .all(Option::is_none)
+        );
     }
     let mut silent = make(512, 48000, true);
     assert!(
@@ -168,6 +193,7 @@ fn unsupported_geometry_and_silence_preserve_independent_native_output() {
             .all(|x| *x == 0.0)
     );
     assert_eq!(silent.source_mask_snapshot().selected_bands, 0);
+    assert_eq!(silent.source_mask_snapshot().band_power, [Some(0.0); 32]);
 }
 
 #[test]

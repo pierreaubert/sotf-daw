@@ -1,0 +1,8 @@
+{
+  "exit_code": 1,
+  "completed_native_renders": 96,
+  "failure": "TypeError: Object of type bool is not JSON serializable (NumPy boolean in pass field)",
+  "recovery": "converted pass to builtin bool; verified and reanalyzed existing raw exports without rerendering; thresholds unchanged",
+  "source_formatting": "Ruff formatted working script during the first development run; frozen pre-run source retained; numerical policy unchanged",
+  "raw_directory": "/Volumes/home_tmp/tmp/ml-upmixer-excitation-development-20261026"
+}

@@ -1,0 +1,10 @@
+{
+  "cases": 96,
+  "verified_raw_hashes": 576,
+  "v1_output_and_decisions_exactly_preserved": true,
+  "maximum_relative_power_error_above_proposed_floor": 6.458071696191503e-05,
+  "relative_power_diagnostic_tolerance": 0.001,
+  "before_report_sha256": "eeed2b8d8602f8a22d5c40077479d42818136bb6384c3fd87479fdc25c4fe24f",
+  "after_report_sha256": "61a8edde6e4515534fc5e488745099b7eb617b0958acb18569ad02bf53fba57a",
+  "deployment_admitted": false
+}

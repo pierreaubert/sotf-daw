@@ -1070,10 +1070,15 @@
         "scripts/ml/analyze_upmixer_mask_native.py",
         "scripts/ml/test_upmixer_mask_native.py",
         "audit/ml-upmixer-mask-render-20261026.md",
-        "audit/artifacts/ml-upmixer-mask-render-20261026"
+        "audit/artifacts/ml-upmixer-mask-render-20261026",
+        "scripts/ml/develop_upmixer_excitation.py",
+        "scripts/ml/analyze_upmixer_excitation.py",
+        "scripts/ml/test_upmixer_excitation.py",
+        "audit/ml-upmixer-excitation-20261026.md",
+        "audit/artifacts/ml-upmixer-excitation-20261026"
       ],
       "remaining": [
-        "Native source-mask export qualification exposes20 direct-only absolute-feature parity failures in very quiet FFT bands, despite exact network parity on native features. Fix the numerical-excitation policy and/or train on actual native features using development sources and a new frozen final holdout; conditional multichannel leakage/artifact measurements remain.",
+        "Native v1 qualification retains20 direct-only absolute-feature parity failures in quiet FFT bands. A new96-case development search rejects clipped excitation and proposes a60dB raw-power reliability policy, with exact v1 output preservation. Bind the proposal to a new model contract and native-feature training, freeze a candidate and evaluate a fresh final holdout including threshold boundaries; conditional multichannel leakage/artifact measurements remain.",
         "Frozen generated-stem candidate fails hard-pan retention and correlated-bed leakage; improve on development data and freeze a fresh final holdout. Full rendered multichannel artifacts and recorded/perceptual acceptance remain.",
         "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
       ]
