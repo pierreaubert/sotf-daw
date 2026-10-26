@@ -78,8 +78,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--training", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--seed-start", type=int, default=20304120)
+    parser.add_argument("--level-validation", type=Path)
     args = parser.parse_args()
     training = json.loads((args.training / "report.json").read_text())
+    validation_sha = None
+    if training.get("training_profile") == "level_robust_v2":
+        if args.level_validation is None:
+            raise ValueError(
+                "Level-robust candidate requires a passing development validation report"
+            )
+        validation = json.loads(args.level_validation.read_text())
+        if (
+            not validation["development_gate_pass"]
+            or validation["model_sha256"] != training["model_sha256"]
+            or validation["training_report_sha256"]
+            != digest(args.training / "report.json")
+        ):
+            raise ValueError("Development validation gate or candidate binding failed")
+        validation_sha = digest(args.level_validation)
     args.output.mkdir(parents=True, exist_ok=False)
     renderer = args.output / "renderer.frozen"
     model = args.output / "model.frozen.json"
@@ -102,7 +119,7 @@ def main():
         shutil.copy2(Path(__file__).parent / name, target)
         sources[name] = digest(target)
     cases = []
-    for seed in range(20304120, 20304128):
+    for seed in range(args.seed_start, args.seed_start + 8):
         for kind in KINDS:
             original, direct, ambient, identity = fixture(seed, kind)
             for level_db in [0, -40, 20]:
@@ -229,6 +246,8 @@ def main():
         "renderer_sha256": digest(renderer),
         "model_sha256": sha,
         "source_sha256": sources,
+        "final_seed_start": args.seed_start,
+        "level_validation_report_sha256": validation_sha,
         "feature_tolerance": 1e-4,
         "network_tolerance": 2e-7,
         "minimum_retained_energy": 0.999,

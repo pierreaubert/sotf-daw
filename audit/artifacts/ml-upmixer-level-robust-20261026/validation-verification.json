@@ -1,0 +1,429 @@
+{
+  "scope": "validation",
+  "cases": 48,
+  "verified_raw_hashes": 288,
+  "maximum_probability_drift": 1.1622905731201172e-05,
+  "maximum_conditional_retention_drift_db": 2.983753359941943e-07,
+  "maximum_native_network_error": 2.9798325251739755e-08,
+  "model_level_gate_pass": true,
+  "comparisons": [
+    {
+      "seed": 20306120,
+      "kind": "ambient_only",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.8998980522155762e-07,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.001990046910195953,
+        "native": 0.000999449524589392
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "ambient_only",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 8.940696716308594e-08,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 2.1310176603505553e-05,
+        "native": 4.286233704728614e-06
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "direct_only",
+      "level_db": -40,
+      "shared_band_frames": 768,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 7.748603820800781e-07,
+      "conditional_retention_drift_db": 2.382885269311408e-10,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.004867521668727625,
+        "native": 0.004866133694935171
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "direct_only",
+      "level_db": 20,
+      "shared_band_frames": 768,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.1920928955078125e-06,
+      "conditional_retention_drift_db": 2.2938007136069638e-10,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 1.5540822291981197e-07,
+        "native": 1.7263781735621014e-07
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "hard_pan",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.471489667892456e-07,
+      "conditional_retention_drift_db": 6.652827000408479e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.000344544698422919,
+        "native": 0.0003207253998770846
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "hard_pan",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.1324882507324219e-05,
+      "conditional_retention_drift_db": 8.557707698031436e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 6.6904770525773494e-06,
+        "native": 0.01887787324489547
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "matched",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 4.76837158203125e-07,
+      "conditional_retention_drift_db": 5.4086250589335805e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0006431611426183634,
+        "native": 0.0004875285417367402
+      }
+    },
+    {
+      "seed": 20306120,
+      "kind": "matched",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.385807991027832e-06,
+      "conditional_retention_drift_db": 5.316730611326648e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 6.9140346750807475e-06,
+        "native": 1.8769734610693838e-06
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "ambient_only",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 6.407499313354492e-07,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0004960403045525569,
+        "native": 0.0002758665837063694
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "ambient_only",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 2.086162567138672e-07,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 9.184991220756759e-06,
+        "native": 1.7720542836046167e-05
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "direct_only",
+      "level_db": -40,
+      "shared_band_frames": 482,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.9669532775878906e-06,
+      "conditional_retention_drift_db": 1.2116609798829003e-13,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0001739822977372091,
+        "native": 0.000191372948189144
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "direct_only",
+      "level_db": 20,
+      "shared_band_frames": 482,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.430511474609375e-06,
+      "conditional_retention_drift_db": 4.3301039837073674e-13,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 1.5808777298736553e-07,
+        "native": 1.7615731726907184e-07
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "hard_pan",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 2.980232238769531e-07,
+      "conditional_retention_drift_db": 4.517041896079377e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0005182366297619558,
+        "native": 0.0002870135994692177
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "hard_pan",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 4.023313522338867e-07,
+      "conditional_retention_drift_db": 5.522946722180677e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 9.009067013954947e-06,
+        "native": 4.65580640354796e-06
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "matched",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 6.556510925292969e-07,
+      "conditional_retention_drift_db": 2.3774223478767453e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.000345713717604395,
+        "native": 0.00018817289752631416
+      }
+    },
+    {
+      "seed": 20306121,
+      "kind": "matched",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.1920928955078125e-07,
+      "conditional_retention_drift_db": 1.3651292007921256e-07,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 7.21935288653991e-06,
+        "native": 1.537971443669758e-05
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "ambient_only",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.0579824447631836e-06,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0006565008976808508,
+        "native": 0.00013989084637145476
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "ambient_only",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 7.152557373046875e-06,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 8.211850234241336e-06,
+        "native": 2.9014175889392353e-05
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "direct_only",
+      "level_db": -40,
+      "shared_band_frames": 688,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 8.344650268554688e-07,
+      "conditional_retention_drift_db": 1.021483245211563e-12,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 5.042839876659236e-05,
+        "native": 5.0417577032994556e-05
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "direct_only",
+      "level_db": 20,
+      "shared_band_frames": 688,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.0728836059570312e-06,
+      "conditional_retention_drift_db": 1.7418748735065215e-13,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 1.5311153136248197e-07,
+        "native": 1.73063741666472e-07
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "hard_pan",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 3.688037395477295e-07,
+      "conditional_retention_drift_db": 3.5640117523882964e-09,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0008834941172897109,
+        "native": 0.0006502426266912548
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "hard_pan",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 4.176050424575806e-06,
+      "conditional_retention_drift_db": 1.2309537389398884e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 9.560058134537962e-06,
+        "native": 4.8398852245181485e-06
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "matched",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 9.402632713317871e-06,
+      "conditional_retention_drift_db": 6.505370464537918e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.00031443245688796693,
+        "native": 0.00012371799513592554
+      }
+    },
+    {
+      "seed": 20306122,
+      "kind": "matched",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.1622905731201172e-05,
+      "conditional_retention_drift_db": 7.75957644805203e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 6.595760576640738e-06,
+        "native": 0.002260084580559556
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "ambient_only",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 7.815659046173096e-06,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.00268334237035932,
+        "native": 0.0015808191241992882
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "ambient_only",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 5.930662155151367e-06,
+      "conditional_retention_drift_db": null,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 2.5410362653844728e-05,
+        "native": 6.61785116751129e-06
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "direct_only",
+      "level_db": -40,
+      "shared_band_frames": 690,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.2516975402832031e-06,
+      "conditional_retention_drift_db": 1.0460746852070102e-12,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 5.8279961667206685e-05,
+        "native": 5.8250741286238325e-05
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "direct_only",
+      "level_db": 20,
+      "shared_band_frames": 690,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.3709068298339844e-06,
+      "conditional_retention_drift_db": 1.3232887008385319e-12,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 1.5747864809197152e-07,
+        "native": 1.849061671776717e-07
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "hard_pan",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 3.762543201446533e-07,
+      "conditional_retention_drift_db": 1.386165839889486e-07,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0003717172838159658,
+        "native": 0.00024519306237092765
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "hard_pan",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 3.3527612686157227e-07,
+      "conditional_retention_drift_db": 2.983753359941943e-07,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 6.796860638249003e-06,
+        "native": 0.016813386217875582
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "matched",
+      "level_db": -40,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.4826655387878418e-06,
+      "conditional_retention_drift_db": 2.3380279823292938e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 0.0006193920318935454,
+        "native": 0.0007966069581828471
+      }
+    },
+    {
+      "seed": 20306123,
+      "kind": "matched",
+      "level_db": 20,
+      "shared_band_frames": 2976,
+      "eligibility_changes": 0,
+      "maximum_probability_drift": 1.4156103134155273e-06,
+      "conditional_retention_drift_db": 1.4666499681403877e-08,
+      "normalized_waveform_relative_rms_change": {
+        "selected": 7.182380764168042e-06,
+        "native": 1.1993833631604736e-06
+      }
+    }
+  ],
+  "report_sha256": "33959a552e1e0c4ad6631d8a8b189d1c64ef7df4febbbf90cf5f6c69a129fad9",
+  "deployment_admitted": false
+}

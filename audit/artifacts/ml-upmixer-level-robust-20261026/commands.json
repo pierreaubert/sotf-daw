@@ -1,0 +1,49 @@
+{
+  "source": "completed tool-call commands",
+  "runs": {
+    "training": {
+      "command": [
+        "/private/tmp/sotf-ml-venv/bin/python",
+        "scripts/ml/train_upmixer_native.py",
+        "--renderer",
+        "/Volumes/home_tmp/tmp/ml-upmixer-v2-training-20261026/renderer.frozen",
+        "--output",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-robust-training-20261026",
+        "--level-robust"
+      ],
+      "exit_code": 0
+    },
+    "validation": {
+      "command": [
+        "/private/tmp/sotf-ml-venv/bin/python",
+        "scripts/ml/validate_upmixer_level.py",
+        "--training",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-robust-training-20261026",
+        "--output",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-validation-20261026"
+      ],
+      "exit_code": 0
+    },
+    "final": {
+      "command": [
+        "/private/tmp/sotf-ml-venv/bin/python",
+        "scripts/ml/evaluate_upmixer_v2.py",
+        "--training",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-robust-training-20261026",
+        "--output",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-robust-final-20261026",
+        "--seed-start",
+        "20307120",
+        "--level-validation",
+        "/Volumes/home_tmp/tmp/ml-upmixer-level-validation-20261026/report.json"
+      ],
+      "exit_code": 0
+    }
+  },
+  "environment": {
+    "TMPDIR": "/Volumes/home_tmp/tmp",
+    "OPENBLAS_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1"
+  },
+  "runtime": "existing frozen renderer; no Rust edits or rebuilds in this checkpoint"
+}

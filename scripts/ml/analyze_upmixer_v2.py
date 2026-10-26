@@ -28,9 +28,10 @@ def verify(root, training_root):
         "level_shift",
         "silence",
     }
+    start = report.get("final_seed_start", 20304120)
     expected = {
         (seed, kind, level)
-        for seed in range(20304120, 20304128)
+        for seed in range(start, start + 8)
         for kind in kinds
         for level in [0, -40, 20]
     }

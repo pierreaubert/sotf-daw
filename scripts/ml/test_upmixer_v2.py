@@ -17,9 +17,24 @@ from upmixer_source_mask_v2 import load, observations, save
 ROOT = Path(__file__).resolve().parents[2]
 MODEL = ROOT / "crates/sotf-plugins/models/upmixer-source-mask-v2/model.synthetic.json"
 V1 = ROOT / "crates/sotf-plugins/models/upmixer-source-mask/model.synthetic.json"
+LEVEL_MODEL = (
+    ROOT
+    / "crates/sotf-plugins/models/upmixer-source-mask-level-robust/model.synthetic.json"
+)
 
 
 class V2ContractTests(unittest.TestCase):
+    def test_level_robust_asset_is_exactly_independent_of_excitation_coordinate(self):
+        sha = hashlib.sha256(LEVEL_MODEL.read_bytes()).hexdigest()
+        theta = load(LEVEL_MODEL, sha)
+        np.testing.assert_array_equal(theta[40:48], 0)
+        x = np.random.default_rng(20305100).uniform(size=(29, 6))
+        base = predict(theta, x)
+        for value in [0.0, 0.2, 0.7, 1.0]:
+            changed = x.copy()
+            changed[:, 5] = value
+            np.testing.assert_array_equal(predict(theta, changed), base)
+
     def test_version_binding_and_policy_rejection(self):
         sha = hashlib.sha256(MODEL.read_bytes()).hexdigest()
         self.assertEqual(load(MODEL, sha).shape, (65,))
@@ -50,6 +65,33 @@ class V2ContractTests(unittest.TestCase):
     os.environ.get("SOTF_UPMIXER_MASK_RENDERER"), "native renderer required"
 )
 class V2NativeTests(unittest.TestCase):
+    def test_level_robust_candidate_is_callback_independent(self):
+        renderer = os.environ["SOTF_UPMIXER_MASK_RENDERER"]
+        sha = hashlib.sha256(LEVEL_MODEL.read_bytes()).hexdigest()
+        signal, _, _, _ = fixture(20305101, "hard_pan")
+        with tempfile.TemporaryDirectory() as work:
+            a, am = render(
+                signal,
+                renderer,
+                Path(work) / "one",
+                model=LEVEL_MODEL,
+                sha=sha,
+                callback=1,
+            )
+            b, bm = render(
+                signal,
+                renderer,
+                Path(work) / "odd",
+                model=LEVEL_MODEL,
+                sha=sha,
+                callback=113,
+            )
+            self.assertTrue(am["model_loaded"])
+            np.testing.assert_array_equal(a, b)
+            self.assertEqual(
+                [r["state"] for r in am["rows"]], [r["state"] for r in bm["rows"]]
+            )
+
     def test_actual_v2_selection_and_callback_identity(self):
         renderer = os.environ["SOTF_UPMIXER_MASK_RENDERER"]
         sha = hashlib.sha256(MODEL.read_bytes()).hexdigest()

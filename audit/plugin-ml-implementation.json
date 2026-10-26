@@ -1083,11 +1083,16 @@
         "scripts/ml/test_upmixer_v2.py",
         "crates/sotf-plugins/models/upmixer-source-mask-v2",
         "audit/ml-upmixer-v2-20261026.md",
-        "audit/artifacts/ml-upmixer-v2-20261026"
+        "audit/artifacts/ml-upmixer-v2-20261026",
+        "scripts/ml/validate_upmixer_level.py",
+        "scripts/ml/analyze_upmixer_level.py",
+        "crates/sotf-plugins/models/upmixer-source-mask-level-robust",
+        "audit/ml-upmixer-level-robust-20261026.md",
+        "audit/artifacts/ml-upmixer-level-robust-20261026"
       ],
       "remaining": [
         "Explicit v2 raw-power contract and native-feature candidate pass all192 fresh final numerical cases at unchanged tolerances; preserved v1 reports still contain their20 quiet-band failures. Maintain numerical qualification for future candidates and measure conditional complete-chain multichannel leakage/artifacts.",
-        "V2 converges and improves some conditional mask diagnostics, but hard-pan desired-source attenuation remains worse than the scalar analytic diagnostic and degrades to-13.44dB after a-40dB level shift; correlated-bed leakage remains high. Improve level robustness/desired-source retention on development sources, then freeze another candidate and a fresh final holdout. Full rendered/perceptual and recorded acceptance remain.",
+        "An excitation-independent v2 candidate trained over gain augmentation passes fresh192-case mask-level gain and numerical gates, repairing the earlier level-collapse mechanism. Quality still fails: hard-pan desired-source retention is worse than scalar analytic (-3.64 versus-2.75dB), correlated-bed leakage is near-0.10dB, and normalized full speaker output retains up to18.25% gain dependence. Improve source representation/retention and complete full-chain leakage/artifact, listener and recorded acceptance before admission; preserve earlier candidates and use fresh final sources after any further tuning.",
         "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
       ]
     },
