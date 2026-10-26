@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "check",
+    "-p",
+    "sotf-plugin-upmixer",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--no-default-features"
+  ],
+  "exit_code": 0,
+  "seconds": 0.8152986248023808
+}

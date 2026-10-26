@@ -75,6 +75,22 @@ impl UpmixerPlugin {
             return;
         }
 
+        #[cfg(feature = "qa")]
+        if self.drain.remaining.is_none() {
+            // The source model consumes only the current completed main FFT.
+            // EOF generation freezes these source decisions and their counters.
+            let supported = self.core.fft_size == crate::source_mask::FFT_SIZE
+                && self.core.sample_rate == 48000.0
+                && !self.params.enable_hr_direct
+                && self.hr_state.hr_direct_envelope == 0.0
+                && !self.ml.enable_ml_detection;
+            self.source_masks.update(
+                &self.main_buffers.freq_domain_left,
+                &self.main_buffers.freq_domain_right,
+                supported,
+            );
+        }
+
         if self.decorrelation.decorrelation_mode == 1 {
             self.update_lfo_decorrelation();
         }
@@ -321,6 +337,10 @@ impl UpmixerPlugin {
                 for i in xfade_start..xfade_end {
                     let l = self.main_buffers.freq_domain_left[i];
                     let r = self.main_buffers.freq_domain_right[i];
+                    #[cfg(feature = "qa")]
+                    let source_mask = self.source_masks.mask(i);
+                    #[cfg(not(feature = "qa"))]
+                    let source_mask: Option<f32> = None;
 
                     // Smooth raised-cosine blend: 0.0 = pass-through, 1.0 = upmix.
                     let t = transition_crossfade_weight(i, transition_start, transition_width);
@@ -329,6 +349,8 @@ impl UpmixerPlugin {
                     let proj = l * ev_l.conj() + r * ev_r.conj();
                     let direct_l = proj * ev_l;
                     let direct_r = proj * ev_r;
+                    let (direct_l, direct_r) =
+                        source_mask.map_or((direct_l, direct_r), |m| (l * m, r * m));
                     let phase_product = direct_r * direct_l.conj();
                     let phase_correction = if phase_product.norm_sqr() > 1e-18 {
                         phase_product / phase_product.norm()
@@ -337,10 +359,17 @@ impl UpmixerPlugin {
                     };
                     let aligned_r = direct_r * phase_correction.conj();
                     let decomp_center = (direct_l + aligned_r) * (eff_coh * 0.5);
-                    let decomp_amb_l = (l - direct_l) * ambient_gain;
-                    let decomp_amb_r = (r - direct_r) * ambient_gain;
-                    let decomp_dl = l - decomp_center * stereo_w;
-                    let decomp_dr = r - decomp_center * phase_correction * stereo_w;
+                    let selected_ambient_gain = if source_mask.is_some() {
+                        self.surround.ambient_boost.current() * (1.0 - dialogue_control)
+                    } else {
+                        ambient_gain
+                    };
+                    let decomp_amb_l = (l - direct_l) * selected_ambient_gain;
+                    let decomp_amb_r = (r - direct_r) * selected_ambient_gain;
+                    let front_l = source_mask.map_or(l, |_| direct_l);
+                    let front_r = source_mask.map_or(r, |_| direct_r);
+                    let decomp_dl = front_l - decomp_center * stereo_w;
+                    let decomp_dr = front_r - decomp_center * phase_correction * stereo_w;
 
                     // Blend: pass-through has center=0, ambient=0, direct=original
                     self.main_buffers.direct[i] = decomp_center * t;
@@ -353,7 +382,7 @@ impl UpmixerPlugin {
                     // 2nd eigenvector projection for secondary source (multi-source extraction).
                     // proj2 captures the component perpendicular to the dominant source direction.
                     // Blended with t so it fades in across the transition zone.
-                    if extract_second {
+                    if extract_second && source_mask.is_none() {
                         let proj2 = l * ev2_l.conj() + r * ev2_r.conj();
                         // Scalar projection amplitude; route as mono secondary source
                         self.spectral.direct2[i] = proj2 * t;
@@ -369,9 +398,15 @@ impl UpmixerPlugin {
                 for i in upmix_start..end_bin {
                     let l = self.main_buffers.freq_domain_left[i];
                     let r = self.main_buffers.freq_domain_right[i];
+                    #[cfg(feature = "qa")]
+                    let source_mask = self.source_masks.mask(i);
+                    #[cfg(not(feature = "qa"))]
+                    let source_mask: Option<f32> = None;
                     let proj = l * ev_l.conj() + r * ev_r.conj();
                     let direct_l = proj * ev_l;
                     let direct_r = proj * ev_r;
+                    let (direct_l, direct_r) =
+                        source_mask.map_or((direct_l, direct_r), |m| (l * m, r * m));
                     let phase_product = direct_r * direct_l.conj();
                     let phase_correction = if phase_product.norm_sqr() > 1e-18 {
                         phase_product / phase_product.norm()
@@ -380,15 +415,23 @@ impl UpmixerPlugin {
                     };
                     let aligned_r = direct_r * phase_correction.conj();
                     self.main_buffers.direct[i] = (direct_l + aligned_r) * (eff_coh * 0.5);
-                    self.main_buffers.ambient_left[i] = (l - direct_l) * ambient_gain;
-                    self.main_buffers.ambient_right[i] = (r - direct_r) * ambient_gain;
-                    self.main_buffers.direct_left[i] = l - self.main_buffers.direct[i] * stereo_w;
+                    let selected_ambient_gain = if source_mask.is_some() {
+                        self.surround.ambient_boost.current() * (1.0 - dialogue_control)
+                    } else {
+                        ambient_gain
+                    };
+                    self.main_buffers.ambient_left[i] = (l - direct_l) * selected_ambient_gain;
+                    self.main_buffers.ambient_right[i] = (r - direct_r) * selected_ambient_gain;
+                    let front_l = source_mask.map_or(l, |_| direct_l);
+                    let front_r = source_mask.map_or(r, |_| direct_r);
+                    self.main_buffers.direct_left[i] =
+                        front_l - self.main_buffers.direct[i] * stereo_w;
                     self.main_buffers.direct_right[i] =
-                        r - self.main_buffers.direct[i] * phase_correction * stereo_w;
+                        front_r - self.main_buffers.direct[i] * phase_correction * stereo_w;
                     self.main_buffers.lfe[i] = Complex::new(0.0, 0.0);
 
                     // 2nd eigenvector projection for secondary source (full upmix zone).
-                    if extract_second {
+                    if extract_second && source_mask.is_none() {
                         let proj2 = l * ev2_l.conj() + r * ev2_r.conj();
                         self.spectral.direct2[i] = proj2;
                         self.spectral.direct2_doa_per_bin[i] =

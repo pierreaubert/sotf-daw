@@ -3,8 +3,9 @@
 Issue10, plugin43. This experiment implements a learned direct/ambient source
 mask and compares it to an analytic covariance mask. It does not replace the
 existing native Upmixer's scalar vocal detector. No speech labels or identity
-claims are attached to the model. Native integration and actual added latency
-measurement remain required; production Upmixer behavior is unchanged.
+claims are attached to the model. The subsequent QA-only native boundary and
+impulse latency measurements are recorded in
+`audit/ml-upmixer-mask-native-20261026.md`; production Upmixer behavior is unchanged.
 
 The candidate uses six band-covariance cues: absolute L/R power imbalance,
 signed real correlation mapped to[0,1], imaginary correlation magnitude,
@@ -70,9 +71,11 @@ hash/policy/coefficient loading and analytic fallback. A deliberate ambiguity
 test gives identical stereo observations opposite intended source labels;
 spatial covariance alone cannot resolve arbitrary semantic foreground intent.
 
-Remaining implementation: native bounded source-mask inference and optional
-selection, measured end-to-end extra latency, exact fallback/lifecycle/streaming
-and heap contracts, leakage and artifacts through actual multichannel rendering,
-calibration and stronger development data with a fresh final holdout. Recorded
+The subsequent native checkpoint implements bounded inference and optional QA
+selection with zero measured added impulse onset delay, exact fallback and
+lifecycle/streaming heap checks. Remaining implementation and validation include
+full-corpus native feature parity, leakage and artifacts through actual
+multichannel rendering, calibration and stronger development data with a fresh
+final holdout. Recorded
 music, listening, host contention/platform budgets and activation UI also remain.
 The complete31-plugin/five-program ML audit remains in progress.

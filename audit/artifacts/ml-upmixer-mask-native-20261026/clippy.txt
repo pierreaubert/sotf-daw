@@ -1,0 +1,3 @@
+    Checking sotf-plugin-upmixer v0.5.123 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-upmixer)
+    Checking sotf-plugin-gain v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-gain)
+    Finished `release` profile [optimized] target(s) in 2.46s

@@ -1059,10 +1059,14 @@
         "scripts/ml/test_upmixer_source_mask.py",
         "crates/sotf-plugins/models/upmixer-source-mask",
         "audit/ml-upmixer-mask-20261026.md",
-        "audit/artifacts/ml-upmixer-mask-20261026"
+        "audit/artifacts/ml-upmixer-mask-20261026",
+        "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/source_mask.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/source_masks.rs",
+        "audit/ml-upmixer-mask-native-20261026.md",
+        "audit/artifacts/ml-upmixer-mask-native-20261026"
       ],
       "remaining": [
-        "Native optional source-mask integration with exact streaming/reset/fallback and measured extra latency; existing vocal probability is not a source mask.",
+        "Native source-mask boundary is QA-only; full-corpus native feature/export parity and actual multichannel leakage/artifact measurements remain. Unsupported modes retain ordinary native decomposition.",
         "Frozen generated-stem candidate fails hard-pan retention and correlated-bed leakage; improve on development data and freeze a fresh final holdout. Full rendered multichannel artifacts and recorded/perceptual acceptance remain.",
         "Complete memory/worker freshness and callback/contended cross-platform DAW budgets, product activation and selection semantics."
       ]

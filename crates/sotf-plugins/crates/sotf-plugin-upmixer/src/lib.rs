@@ -19,6 +19,8 @@ mod panning;
 pub mod params;
 mod process;
 mod setup;
+#[cfg(feature = "qa")]
+pub mod source_mask;
 #[cfg(test)]
 #[path = "lib/stream_boundary_tests.rs"]
 mod stream_boundary_tests;

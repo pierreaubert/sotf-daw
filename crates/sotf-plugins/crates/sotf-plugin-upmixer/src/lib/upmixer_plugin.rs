@@ -488,6 +488,8 @@ pub(super) struct UpmixerHrState {
 
 /// Stereo to multi-channel surround upmixer using FFT-based Direct/Ambient decomposition
 pub struct UpmixerPlugin {
+    #[cfg(feature = "qa")]
+    pub(super) source_masks: crate::source_mask::SourceMasks,
     pub(super) drain: UpmixerDrain,
     pub(super) core: UpmixerCore,
     pub(super) fft: UpmixerFft,
@@ -1116,6 +1118,8 @@ impl UpmixerPlugin {
         };
 
         let mut plugin = Self {
+            #[cfg(feature = "qa")]
+            source_masks: crate::source_mask::SourceMasks::default(),
             drain: UpmixerDrain::new(hop_size, num_output_channels),
             core,
 
@@ -2339,6 +2343,10 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        {
+            self.source_masks.snapshot = crate::source_mask::SourceMaskSnapshot::default();
+        }
         self.flush_gain_clock();
         self.flush_table_clock();
         self.flush_safety_clock();

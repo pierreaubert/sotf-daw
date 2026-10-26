@@ -9495,6 +9495,7 @@ dependencies = [
  "rustfft",
  "serde",
  "serde_json",
+ "sha2",
  "sotf-host",
  "sotf-plugin-gain",
  "sotf-tract-onnx",

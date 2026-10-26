@@ -15,7 +15,7 @@ path = "src/lib.rs"
 [features]
 default = []
 onnx = ["dep:tract-onnx", "dep:plugins-inference"]
-qa = ["sotf-host/qa"]
+qa = ["sotf-host/qa", "dep:sha2"]
 
 [[bin]]
 name = "qa-upmixer"
@@ -38,6 +38,7 @@ realfft = { workspace = true }
 rustfft = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = { workspace = true, optional = true }
 hound = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
