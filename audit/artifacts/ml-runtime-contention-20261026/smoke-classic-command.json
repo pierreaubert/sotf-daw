@@ -1,0 +1,8 @@
+{
+  "argv": [
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/ml-runtime-contention",
+    "/Volumes/home_tmp/tmp/ml-runtime-contention-smoke-20261026/classic-request.json"
+  ],
+  "exit_code": 1,
+  "seconds": 0.014823625097051263
+}

@@ -155,6 +155,11 @@ path = "bin/external_plugin_sandbox_test.rs"
 name = "daw-scale-stress"
 path = "bin/daw_scale_stress.rs"
 
+[[bin]]
+name = "ml-runtime-contention"
+path = "bin/ml_runtime_contention.rs"
+required-features = ["qa", "deep-filter", "neural-pitch"]
+
 [[bench]]
 name = "all-plugins-benchmark"
 harness = false

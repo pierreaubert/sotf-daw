@@ -1,0 +1,2332 @@
+{
+  "bus_latency_samples": 240,
+  "bus_render_path": "Graph",
+  "execution_ns": {
+    "maximum": 247833,
+    "p50": 39583,
+    "p95": 195042,
+    "p99": 222417
+  },
+  "execution_overruns": 0,
+  "initialization_ms": 111.309083,
+  "measured_blocks": 150,
+  "models": {
+    "crepe_sha256": "57209bf565bce9de445b31a175294dd2f297432864599c6aa237a895353918d3",
+    "deepfilter_sha256": "412e81d8d1779b8f925ac4b53472655a9f866c4af73dbf930ab587359f631628"
+  },
+  "output_energy": 9.116687688574299,
+  "output_peak": 0.09549655765295029,
+  "paced_elapsed_ms": 597.739709,
+  "pitch_neural_selected_snapshots": [
+    14
+  ],
+  "request": {
+    "block_frames": 128,
+    "cpu_workers": 0,
+    "deep_filter": true,
+    "measure_ms": 400,
+    "models_dir": "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/models",
+    "neural_pitch": true,
+    "output": "/Volumes/home_tmp/tmp/ml-runtime-contention-smoke-r2-20261026/both.json",
+    "playout_packets": 4,
+    "tracks": 1,
+    "warmup_ms": 200
+  },
+  "response_deadline_misses": 2,
+  "runtime_choice_admitted": false,
+  "sample_rate": 48000,
+  "scope": "paced actual SOTF graph track chains and limiter bus; CPU contention only; no device callback, GPU load or matched-network alternative-runtime comparison",
+  "telemetry_after": [
+    {
+      "deep_filter": {
+        "dropped_inputs": 0,
+        "fallback_packets": 5,
+        "last_local_snr_db": -14.958776473999023,
+        "model_clock_latency_samples": 4320,
+        "timely_packets": 51,
+        "warmup_packets": 5,
+        "worker_errors": 0,
+        "worker_resets": 1
+      },
+      "pitch_confidence": 0.0,
+      "pitch_last_decision_neural": false,
+      "pitch_ratio": 1.0001574108990798
+    }
+  ],
+  "telemetry_before_measurement": [
+    {
+      "deep_filter": {
+        "dropped_inputs": 0,
+        "fallback_packets": 5,
+        "last_local_snr_db": 7.458202362060547,
+        "model_clock_latency_samples": 4320,
+        "timely_packets": 11,
+        "warmup_packets": 5,
+        "worker_errors": 0,
+        "worker_resets": 1
+      },
+      "pitch_confidence": 1.0,
+      "pitch_last_decision_neural": true,
+      "pitch_ratio": 0.9990567902844597
+    }
+  ],
+  "trace": [
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 23750,
+      "execution_overrun": false,
+      "index": 0,
+      "response_miss": false,
+      "response_ns": 23959,
+      "start_lateness_ns": 209,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9500,
+      "execution_overrun": false,
+      "index": 1,
+      "response_miss": false,
+      "response_ns": 1332834,
+      "start_lateness_ns": 1323334,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12292,
+      "execution_overrun": false,
+      "index": 2,
+      "response_miss": false,
+      "response_ns": 684126,
+      "start_lateness_ns": 671834,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 69916,
+      "execution_overrun": false,
+      "index": 3,
+      "response_miss": false,
+      "response_ns": 660625,
+      "start_lateness_ns": 590709,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13208,
+      "execution_overrun": false,
+      "index": 4,
+      "response_miss": false,
+      "response_ns": 1009126,
+      "start_lateness_ns": 995918,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9709,
+      "execution_overrun": false,
+      "index": 5,
+      "response_miss": false,
+      "response_ns": 840626,
+      "start_lateness_ns": 830917,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11250,
+      "execution_overrun": false,
+      "index": 6,
+      "response_miss": false,
+      "response_ns": 432167,
+      "start_lateness_ns": 420917,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 56792,
+      "execution_overrun": false,
+      "index": 7,
+      "response_miss": false,
+      "response_ns": 723876,
+      "start_lateness_ns": 667084,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13291,
+      "execution_overrun": false,
+      "index": 8,
+      "response_miss": false,
+      "response_ns": 164292,
+      "start_lateness_ns": 151001,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 10667,
+      "execution_overrun": false,
+      "index": 9,
+      "response_miss": false,
+      "response_ns": 1201834,
+      "start_lateness_ns": 1191167,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9125,
+      "execution_overrun": false,
+      "index": 10,
+      "response_miss": false,
+      "response_ns": 744043,
+      "start_lateness_ns": 734918,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 58750,
+      "execution_overrun": false,
+      "index": 11,
+      "response_miss": false,
+      "response_ns": 1023501,
+      "start_lateness_ns": 964751,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11167,
+      "execution_overrun": false,
+      "index": 12,
+      "response_miss": false,
+      "response_ns": 837834,
+      "start_lateness_ns": 826667,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11042,
+      "execution_overrun": false,
+      "index": 13,
+      "response_miss": false,
+      "response_ns": 928418,
+      "start_lateness_ns": 917376,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 14958,
+      "execution_overrun": false,
+      "index": 14,
+      "response_miss": false,
+      "response_ns": 95167,
+      "start_lateness_ns": 80209,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 72291,
+      "execution_overrun": false,
+      "index": 15,
+      "response_miss": false,
+      "response_ns": 1142750,
+      "start_lateness_ns": 1070459,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11625,
+      "execution_overrun": false,
+      "index": 16,
+      "response_miss": false,
+      "response_ns": 148709,
+      "start_lateness_ns": 137084,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11458,
+      "execution_overrun": false,
+      "index": 17,
+      "response_miss": false,
+      "response_ns": 93084,
+      "start_lateness_ns": 81626,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11750,
+      "execution_overrun": false,
+      "index": 18,
+      "response_miss": false,
+      "response_ns": 35875,
+      "start_lateness_ns": 24125,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 62375,
+      "execution_overrun": false,
+      "index": 19,
+      "response_miss": false,
+      "response_ns": 1381209,
+      "start_lateness_ns": 1318834,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9416,
+      "execution_overrun": false,
+      "index": 20,
+      "response_miss": false,
+      "response_ns": 656542,
+      "start_lateness_ns": 647126,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11334,
+      "execution_overrun": false,
+      "index": 21,
+      "response_miss": false,
+      "response_ns": 1019959,
+      "start_lateness_ns": 1008625,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12209,
+      "execution_overrun": false,
+      "index": 22,
+      "response_miss": false,
+      "response_ns": 838918,
+      "start_lateness_ns": 826709,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 61708,
+      "execution_overrun": false,
+      "index": 23,
+      "response_miss": false,
+      "response_ns": 980334,
+      "start_lateness_ns": 918626,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9417,
+      "execution_overrun": false,
+      "index": 24,
+      "response_miss": false,
+      "response_ns": 856209,
+      "start_lateness_ns": 846792,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 8708,
+      "execution_overrun": false,
+      "index": 25,
+      "response_miss": false,
+      "response_ns": 916209,
+      "start_lateness_ns": 907501,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11875,
+      "execution_overrun": false,
+      "index": 26,
+      "response_miss": false,
+      "response_ns": 890751,
+      "start_lateness_ns": 878876,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 56375,
+      "execution_overrun": false,
+      "index": 27,
+      "response_miss": false,
+      "response_ns": 946625,
+      "start_lateness_ns": 890250,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 8833,
+      "execution_overrun": false,
+      "index": 28,
+      "response_miss": false,
+      "response_ns": 872709,
+      "start_lateness_ns": 863876,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11500,
+      "execution_overrun": false,
+      "index": 29,
+      "response_miss": false,
+      "response_ns": 912917,
+      "start_lateness_ns": 901417,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11458,
+      "execution_overrun": false,
+      "index": 30,
+      "response_miss": false,
+      "response_ns": 891875,
+      "start_lateness_ns": 880417,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 61958,
+      "execution_overrun": false,
+      "index": 31,
+      "response_miss": false,
+      "response_ns": 952209,
+      "start_lateness_ns": 890251,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12750,
+      "execution_overrun": false,
+      "index": 32,
+      "response_miss": false,
+      "response_ns": 872959,
+      "start_lateness_ns": 860209,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9334,
+      "execution_overrun": false,
+      "index": 33,
+      "response_miss": false,
+      "response_ns": 908834,
+      "start_lateness_ns": 899500,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 17000,
+      "execution_overrun": false,
+      "index": 34,
+      "response_miss": false,
+      "response_ns": 900334,
+      "start_lateness_ns": 883334,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 78000,
+      "execution_overrun": false,
+      "index": 35,
+      "response_miss": false,
+      "response_ns": 963042,
+      "start_lateness_ns": 885042,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 10209,
+      "execution_overrun": false,
+      "index": 36,
+      "response_miss": false,
+      "response_ns": 864459,
+      "start_lateness_ns": 854250,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11542,
+      "execution_overrun": false,
+      "index": 37,
+      "response_miss": false,
+      "response_ns": 915126,
+      "start_lateness_ns": 903584,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11292,
+      "execution_overrun": false,
+      "index": 38,
+      "response_miss": false,
+      "response_ns": 891001,
+      "start_lateness_ns": 879709,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 87958,
+      "execution_overrun": false,
+      "index": 39,
+      "response_miss": false,
+      "response_ns": 94292,
+      "start_lateness_ns": 6334,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13583,
+      "execution_overrun": false,
+      "index": 40,
+      "response_miss": false,
+      "response_ns": 114959,
+      "start_lateness_ns": 101376,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12458,
+      "execution_overrun": false,
+      "index": 41,
+      "response_miss": false,
+      "response_ns": 45709,
+      "start_lateness_ns": 33251,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 13917,
+      "execution_overrun": false,
+      "index": 42,
+      "response_miss": false,
+      "response_ns": 137459,
+      "start_lateness_ns": 123542,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 80333,
+      "execution_overrun": false,
+      "index": 43,
+      "response_miss": false,
+      "response_ns": 142876,
+      "start_lateness_ns": 62543,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12000,
+      "execution_overrun": false,
+      "index": 44,
+      "response_miss": false,
+      "response_ns": 163251,
+      "start_lateness_ns": 151251,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 12250,
+      "execution_overrun": false,
+      "index": 45,
+      "response_miss": false,
+      "response_ns": 103834,
+      "start_lateness_ns": 91584,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13208,
+      "execution_overrun": false,
+      "index": 46,
+      "response_miss": false,
+      "response_ns": 40709,
+      "start_lateness_ns": 27501,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 79625,
+      "execution_overrun": false,
+      "index": 47,
+      "response_miss": false,
+      "response_ns": 201709,
+      "start_lateness_ns": 122084,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 12500,
+      "execution_overrun": false,
+      "index": 48,
+      "response_miss": false,
+      "response_ns": 72042,
+      "start_lateness_ns": 59542,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 14333,
+      "execution_overrun": false,
+      "index": 49,
+      "response_miss": false,
+      "response_ns": 167876,
+      "start_lateness_ns": 153543,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13458,
+      "execution_overrun": false,
+      "index": 50,
+      "response_miss": false,
+      "response_ns": 1266667,
+      "start_lateness_ns": 1253209,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 93792,
+      "execution_overrun": false,
+      "index": 51,
+      "response_miss": false,
+      "response_ns": 798084,
+      "start_lateness_ns": 704292,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9500,
+      "execution_overrun": false,
+      "index": 52,
+      "response_miss": false,
+      "response_ns": 947626,
+      "start_lateness_ns": 938126,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 10667,
+      "execution_overrun": false,
+      "index": 53,
+      "response_miss": false,
+      "response_ns": 872834,
+      "start_lateness_ns": 862167,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9083,
+      "execution_overrun": false,
+      "index": 54,
+      "response_miss": false,
+      "response_ns": 908667,
+      "start_lateness_ns": 899584,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 87333,
+      "execution_overrun": false,
+      "index": 55,
+      "response_miss": false,
+      "response_ns": 969584,
+      "start_lateness_ns": 882251,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9208,
+      "execution_overrun": false,
+      "index": 56,
+      "response_miss": false,
+      "response_ns": 861167,
+      "start_lateness_ns": 851959,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11000,
+      "execution_overrun": false,
+      "index": 57,
+      "response_miss": false,
+      "response_ns": 918959,
+      "start_lateness_ns": 907959,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13125,
+      "execution_overrun": false,
+      "index": 58,
+      "response_miss": false,
+      "response_ns": 52043,
+      "start_lateness_ns": 38918,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 109084,
+      "execution_overrun": false,
+      "index": 59,
+      "response_miss": false,
+      "response_ns": 133376,
+      "start_lateness_ns": 24292,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 13209,
+      "execution_overrun": false,
+      "index": 60,
+      "response_miss": false,
+      "response_ns": 1283334,
+      "start_lateness_ns": 1270125,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 15417,
+      "execution_overrun": false,
+      "index": 61,
+      "response_miss": false,
+      "response_ns": 711043,
+      "start_lateness_ns": 695626,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9208,
+      "execution_overrun": false,
+      "index": 62,
+      "response_miss": false,
+      "response_ns": 991334,
+      "start_lateness_ns": 982126,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 91333,
+      "execution_overrun": false,
+      "index": 63,
+      "response_miss": false,
+      "response_ns": 932042,
+      "start_lateness_ns": 840709,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11375,
+      "execution_overrun": false,
+      "index": 64,
+      "response_miss": false,
+      "response_ns": 882168,
+      "start_lateness_ns": 870793,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11167,
+      "execution_overrun": false,
+      "index": 65,
+      "response_miss": false,
+      "response_ns": 905376,
+      "start_lateness_ns": 894209,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9208,
+      "execution_overrun": false,
+      "index": 66,
+      "response_miss": false,
+      "response_ns": 892917,
+      "start_lateness_ns": 883709,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 107291,
+      "execution_overrun": false,
+      "index": 67,
+      "response_miss": false,
+      "response_ns": 999709,
+      "start_lateness_ns": 892418,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 15500,
+      "execution_overrun": false,
+      "index": 68,
+      "response_miss": false,
+      "response_ns": 854751,
+      "start_lateness_ns": 839251,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9833,
+      "execution_overrun": false,
+      "index": 69,
+      "response_miss": false,
+      "response_ns": 918750,
+      "start_lateness_ns": 908917,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9208,
+      "execution_overrun": false,
+      "index": 70,
+      "response_miss": false,
+      "response_ns": 886084,
+      "start_lateness_ns": 876876,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 103042,
+      "execution_overrun": false,
+      "index": 71,
+      "response_miss": false,
+      "response_ns": 997334,
+      "start_lateness_ns": 894292,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 10333,
+      "execution_overrun": false,
+      "index": 72,
+      "response_miss": false,
+      "response_ns": 847167,
+      "start_lateness_ns": 836834,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9125,
+      "execution_overrun": false,
+      "index": 73,
+      "response_miss": false,
+      "response_ns": 922126,
+      "start_lateness_ns": 913001,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11834,
+      "execution_overrun": false,
+      "index": 74,
+      "response_miss": false,
+      "response_ns": 888126,
+      "start_lateness_ns": 876292,
+      "warmup": true
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 89708,
+      "execution_overrun": false,
+      "index": 75,
+      "response_miss": false,
+      "response_ns": 982375,
+      "start_lateness_ns": 892667,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 10500,
+      "execution_overrun": false,
+      "index": 76,
+      "response_miss": false,
+      "response_ns": 857209,
+      "start_lateness_ns": 846709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12125,
+      "execution_overrun": false,
+      "index": 77,
+      "response_miss": false,
+      "response_ns": 920292,
+      "start_lateness_ns": 908167,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9708,
+      "execution_overrun": false,
+      "index": 78,
+      "response_miss": false,
+      "response_ns": 885875,
+      "start_lateness_ns": 876167,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 87167,
+      "execution_overrun": false,
+      "index": 79,
+      "response_miss": false,
+      "response_ns": 980668,
+      "start_lateness_ns": 893501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 10375,
+      "execution_overrun": false,
+      "index": 80,
+      "response_miss": false,
+      "response_ns": 857042,
+      "start_lateness_ns": 846667,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 10333,
+      "execution_overrun": false,
+      "index": 81,
+      "response_miss": false,
+      "response_ns": 918917,
+      "start_lateness_ns": 908584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13250,
+      "execution_overrun": false,
+      "index": 82,
+      "response_miss": false,
+      "response_ns": 894751,
+      "start_lateness_ns": 881501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 89666,
+      "execution_overrun": false,
+      "index": 83,
+      "response_miss": false,
+      "response_ns": 123167,
+      "start_lateness_ns": 33501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11416,
+      "execution_overrun": false,
+      "index": 84,
+      "response_miss": false,
+      "response_ns": 712125,
+      "start_lateness_ns": 700709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 10333,
+      "execution_overrun": false,
+      "index": 85,
+      "response_miss": false,
+      "response_ns": 413209,
+      "start_lateness_ns": 402876,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13708,
+      "execution_overrun": false,
+      "index": 86,
+      "response_miss": false,
+      "response_ns": 43292,
+      "start_lateness_ns": 29584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 102292,
+      "execution_overrun": false,
+      "index": 87,
+      "response_miss": false,
+      "response_ns": 1189584,
+      "start_lateness_ns": 1087292,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9583,
+      "execution_overrun": false,
+      "index": 88,
+      "response_miss": false,
+      "response_ns": 751251,
+      "start_lateness_ns": 741668,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12083,
+      "execution_overrun": false,
+      "index": 89,
+      "response_miss": false,
+      "response_ns": 277209,
+      "start_lateness_ns": 265126,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11833,
+      "execution_overrun": false,
+      "index": 90,
+      "response_miss": false,
+      "response_ns": 617042,
+      "start_lateness_ns": 605209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 92583,
+      "execution_overrun": false,
+      "index": 91,
+      "response_miss": false,
+      "response_ns": 1039834,
+      "start_lateness_ns": 947251,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 8916,
+      "execution_overrun": false,
+      "index": 92,
+      "response_miss": false,
+      "response_ns": 825667,
+      "start_lateness_ns": 816751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11167,
+      "execution_overrun": false,
+      "index": 93,
+      "response_miss": false,
+      "response_ns": 269917,
+      "start_lateness_ns": 258750,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11500,
+      "execution_overrun": false,
+      "index": 94,
+      "response_miss": false,
+      "response_ns": 742959,
+      "start_lateness_ns": 731459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 84333,
+      "execution_overrun": false,
+      "index": 95,
+      "response_miss": false,
+      "response_ns": 1050334,
+      "start_lateness_ns": 966001,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 12834,
+      "execution_overrun": false,
+      "index": 96,
+      "response_miss": false,
+      "response_ns": 89334,
+      "start_lateness_ns": 76500,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11708,
+      "execution_overrun": false,
+      "index": 97,
+      "response_miss": false,
+      "response_ns": 37209,
+      "start_lateness_ns": 25501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 14500,
+      "execution_overrun": false,
+      "index": 98,
+      "response_miss": false,
+      "response_ns": 758584,
+      "start_lateness_ns": 744084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 81375,
+      "execution_overrun": false,
+      "index": 99,
+      "response_miss": false,
+      "response_ns": 305709,
+      "start_lateness_ns": 224334,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 42709,
+      "execution_overrun": false,
+      "index": 100,
+      "response_miss": false,
+      "response_ns": 1214168,
+      "start_lateness_ns": 1171459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 47583,
+      "execution_overrun": false,
+      "index": 101,
+      "response_miss": true,
+      "response_ns": 3445917,
+      "start_lateness_ns": 3398334,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35125,
+      "execution_overrun": false,
+      "index": 102,
+      "response_miss": false,
+      "response_ns": 822834,
+      "start_lateness_ns": 787709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 84042,
+      "execution_overrun": false,
+      "index": 103,
+      "response_miss": false,
+      "response_ns": 351501,
+      "start_lateness_ns": 267459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11750,
+      "execution_overrun": false,
+      "index": 104,
+      "response_miss": false,
+      "response_ns": 787667,
+      "start_lateness_ns": 775917,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 13333,
+      "execution_overrun": false,
+      "index": 105,
+      "response_miss": false,
+      "response_ns": 518542,
+      "start_lateness_ns": 505209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13958,
+      "execution_overrun": false,
+      "index": 106,
+      "response_miss": false,
+      "response_ns": 857376,
+      "start_lateness_ns": 843418,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 71458,
+      "execution_overrun": false,
+      "index": 107,
+      "response_miss": false,
+      "response_ns": 370167,
+      "start_lateness_ns": 298709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 52417,
+      "execution_overrun": false,
+      "index": 108,
+      "response_miss": false,
+      "response_ns": 635459,
+      "start_lateness_ns": 583042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 46167,
+      "execution_overrun": false,
+      "index": 109,
+      "response_miss": false,
+      "response_ns": 1067543,
+      "start_lateness_ns": 1021376,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 45959,
+      "execution_overrun": false,
+      "index": 110,
+      "response_miss": false,
+      "response_ns": 285376,
+      "start_lateness_ns": 239417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 222417,
+      "execution_overrun": false,
+      "index": 111,
+      "response_miss": false,
+      "response_ns": 1350292,
+      "start_lateness_ns": 1127875,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 45583,
+      "execution_overrun": false,
+      "index": 112,
+      "response_miss": false,
+      "response_ns": 612084,
+      "start_lateness_ns": 566501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 60000,
+      "execution_overrun": false,
+      "index": 113,
+      "response_miss": false,
+      "response_ns": 273417,
+      "start_lateness_ns": 213417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35833,
+      "execution_overrun": false,
+      "index": 114,
+      "response_miss": false,
+      "response_ns": 1280125,
+      "start_lateness_ns": 1244292,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 180917,
+      "execution_overrun": false,
+      "index": 115,
+      "response_miss": false,
+      "response_ns": 879751,
+      "start_lateness_ns": 698834,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 33083,
+      "execution_overrun": false,
+      "index": 116,
+      "response_miss": false,
+      "response_ns": 215792,
+      "start_lateness_ns": 182709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 43291,
+      "execution_overrun": false,
+      "index": 117,
+      "response_miss": false,
+      "response_ns": 1277125,
+      "start_lateness_ns": 1233834,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 43125,
+      "execution_overrun": false,
+      "index": 118,
+      "response_miss": false,
+      "response_ns": 747293,
+      "start_lateness_ns": 704168,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 184417,
+      "execution_overrun": false,
+      "index": 119,
+      "response_miss": false,
+      "response_ns": 1155876,
+      "start_lateness_ns": 971459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35083,
+      "execution_overrun": false,
+      "index": 120,
+      "response_miss": false,
+      "response_ns": 50875,
+      "start_lateness_ns": 15792,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 44709,
+      "execution_overrun": false,
+      "index": 121,
+      "response_miss": false,
+      "response_ns": 1359918,
+      "start_lateness_ns": 1315209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36042,
+      "execution_overrun": false,
+      "index": 122,
+      "response_miss": false,
+      "response_ns": 703501,
+      "start_lateness_ns": 667459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 67958,
+      "execution_overrun": false,
+      "index": 123,
+      "response_miss": false,
+      "response_ns": 1058500,
+      "start_lateness_ns": 990542,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 16042,
+      "execution_overrun": false,
+      "index": 124,
+      "response_miss": false,
+      "response_ns": 243043,
+      "start_lateness_ns": 227001,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 46833,
+      "execution_overrun": false,
+      "index": 125,
+      "response_miss": false,
+      "response_ns": 2332084,
+      "start_lateness_ns": 2285251,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 38625,
+      "execution_overrun": false,
+      "index": 126,
+      "response_miss": true,
+      "response_ns": 2715959,
+      "start_lateness_ns": 2677334,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 176959,
+      "execution_overrun": false,
+      "index": 127,
+      "response_miss": false,
+      "response_ns": 233543,
+      "start_lateness_ns": 56584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 41542,
+      "execution_overrun": false,
+      "index": 128,
+      "response_miss": false,
+      "response_ns": 277959,
+      "start_lateness_ns": 236417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 38292,
+      "execution_overrun": false,
+      "index": 129,
+      "response_miss": false,
+      "response_ns": 1244334,
+      "start_lateness_ns": 1206042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 15458,
+      "execution_overrun": false,
+      "index": 130,
+      "response_miss": false,
+      "response_ns": 738751,
+      "start_lateness_ns": 723293,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 77875,
+      "execution_overrun": false,
+      "index": 131,
+      "response_miss": false,
+      "response_ns": 87876,
+      "start_lateness_ns": 10001,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 17291,
+      "execution_overrun": false,
+      "index": 132,
+      "response_miss": false,
+      "response_ns": 1310375,
+      "start_lateness_ns": 1293084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9791,
+      "execution_overrun": false,
+      "index": 133,
+      "response_miss": false,
+      "response_ns": 690834,
+      "start_lateness_ns": 681043,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 9459,
+      "execution_overrun": false,
+      "index": 134,
+      "response_miss": false,
+      "response_ns": 1001501,
+      "start_lateness_ns": 992042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 75708,
+      "execution_overrun": false,
+      "index": 135,
+      "response_miss": false,
+      "response_ns": 912667,
+      "start_lateness_ns": 836959,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 10500,
+      "execution_overrun": false,
+      "index": 136,
+      "response_miss": false,
+      "response_ns": 891709,
+      "start_lateness_ns": 881209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 12584,
+      "execution_overrun": false,
+      "index": 137,
+      "response_miss": false,
+      "response_ns": 903626,
+      "start_lateness_ns": 891042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 9625,
+      "execution_overrun": false,
+      "index": 138,
+      "response_miss": false,
+      "response_ns": 894417,
+      "start_lateness_ns": 884792,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 61167,
+      "execution_overrun": false,
+      "index": 139,
+      "response_miss": false,
+      "response_ns": 950626,
+      "start_lateness_ns": 889459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 13000,
+      "execution_overrun": false,
+      "index": 140,
+      "response_miss": false,
+      "response_ns": 308126,
+      "start_lateness_ns": 295126,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 47292,
+      "execution_overrun": false,
+      "index": 141,
+      "response_miss": false,
+      "response_ns": 1240459,
+      "start_lateness_ns": 1193167,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 39583,
+      "execution_overrun": false,
+      "index": 142,
+      "response_miss": false,
+      "response_ns": 388876,
+      "start_lateness_ns": 349293,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 200084,
+      "execution_overrun": false,
+      "index": 143,
+      "response_miss": false,
+      "response_ns": 1345751,
+      "start_lateness_ns": 1145667,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 40208,
+      "execution_overrun": false,
+      "index": 144,
+      "response_miss": false,
+      "response_ns": 706875,
+      "start_lateness_ns": 666667,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 40958,
+      "execution_overrun": false,
+      "index": 145,
+      "response_miss": false,
+      "response_ns": 635251,
+      "start_lateness_ns": 594293,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 42250,
+      "execution_overrun": false,
+      "index": 146,
+      "response_miss": false,
+      "response_ns": 589376,
+      "start_lateness_ns": 547126,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 244709,
+      "execution_overrun": false,
+      "index": 147,
+      "response_miss": false,
+      "response_ns": 1356959,
+      "start_lateness_ns": 1112250,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 31792,
+      "execution_overrun": false,
+      "index": 148,
+      "response_miss": false,
+      "response_ns": 691376,
+      "start_lateness_ns": 659584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36958,
+      "execution_overrun": false,
+      "index": 149,
+      "response_miss": false,
+      "response_ns": 393917,
+      "start_lateness_ns": 356959,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 33000,
+      "execution_overrun": false,
+      "index": 150,
+      "response_miss": false,
+      "response_ns": 963417,
+      "start_lateness_ns": 930417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 203625,
+      "execution_overrun": false,
+      "index": 151,
+      "response_miss": false,
+      "response_ns": 251543,
+      "start_lateness_ns": 47918,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36083,
+      "execution_overrun": false,
+      "index": 152,
+      "response_miss": false,
+      "response_ns": 1210584,
+      "start_lateness_ns": 1174501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 32292,
+      "execution_overrun": false,
+      "index": 153,
+      "response_miss": false,
+      "response_ns": 271959,
+      "start_lateness_ns": 239667,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36166,
+      "execution_overrun": false,
+      "index": 154,
+      "response_miss": false,
+      "response_ns": 1240459,
+      "start_lateness_ns": 1204293,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 184125,
+      "execution_overrun": false,
+      "index": 155,
+      "response_miss": false,
+      "response_ns": 908417,
+      "start_lateness_ns": 724292,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 30667,
+      "execution_overrun": false,
+      "index": 156,
+      "response_miss": false,
+      "response_ns": 99459,
+      "start_lateness_ns": 68792,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 37667,
+      "execution_overrun": false,
+      "index": 157,
+      "response_miss": false,
+      "response_ns": 1345251,
+      "start_lateness_ns": 1307584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 37083,
+      "execution_overrun": false,
+      "index": 158,
+      "response_miss": false,
+      "response_ns": 707042,
+      "start_lateness_ns": 669959,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 185625,
+      "execution_overrun": false,
+      "index": 159,
+      "response_miss": false,
+      "response_ns": 1127917,
+      "start_lateness_ns": 942292,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 39667,
+      "execution_overrun": false,
+      "index": 160,
+      "response_miss": false,
+      "response_ns": 304126,
+      "start_lateness_ns": 264459,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 40625,
+      "execution_overrun": false,
+      "index": 161,
+      "response_miss": false,
+      "response_ns": 1230209,
+      "start_lateness_ns": 1189584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 39000,
+      "execution_overrun": false,
+      "index": 162,
+      "response_miss": false,
+      "response_ns": 762917,
+      "start_lateness_ns": 723917,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 187000,
+      "execution_overrun": false,
+      "index": 163,
+      "response_miss": false,
+      "response_ns": 214668,
+      "start_lateness_ns": 27668,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 49583,
+      "execution_overrun": false,
+      "index": 164,
+      "response_miss": false,
+      "response_ns": 1115917,
+      "start_lateness_ns": 1066334,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 33750,
+      "execution_overrun": false,
+      "index": 165,
+      "response_miss": false,
+      "response_ns": 557750,
+      "start_lateness_ns": 524000,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 42125,
+      "execution_overrun": false,
+      "index": 166,
+      "response_miss": false,
+      "response_ns": 1102001,
+      "start_lateness_ns": 1059876,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 180833,
+      "execution_overrun": false,
+      "index": 167,
+      "response_miss": false,
+      "response_ns": 1911959,
+      "start_lateness_ns": 1731126,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 34417,
+      "execution_overrun": false,
+      "index": 168,
+      "response_miss": false,
+      "response_ns": 417584,
+      "start_lateness_ns": 383167,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36084,
+      "execution_overrun": false,
+      "index": 169,
+      "response_miss": false,
+      "response_ns": 1169043,
+      "start_lateness_ns": 1132959,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 51791,
+      "execution_overrun": false,
+      "index": 170,
+      "response_miss": false,
+      "response_ns": 805542,
+      "start_lateness_ns": 753751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 183542,
+      "execution_overrun": false,
+      "index": 171,
+      "response_miss": false,
+      "response_ns": 1120084,
+      "start_lateness_ns": 936542,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 38125,
+      "execution_overrun": false,
+      "index": 172,
+      "response_miss": false,
+      "response_ns": 822418,
+      "start_lateness_ns": 784293,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36666,
+      "execution_overrun": false,
+      "index": 173,
+      "response_miss": false,
+      "response_ns": 970542,
+      "start_lateness_ns": 933876,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 32417,
+      "execution_overrun": false,
+      "index": 174,
+      "response_miss": false,
+      "response_ns": 687917,
+      "start_lateness_ns": 655500,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 191625,
+      "execution_overrun": false,
+      "index": 175,
+      "response_miss": false,
+      "response_ns": 990543,
+      "start_lateness_ns": 798918,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 46458,
+      "execution_overrun": false,
+      "index": 176,
+      "response_miss": false,
+      "response_ns": 891542,
+      "start_lateness_ns": 845084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 48167,
+      "execution_overrun": false,
+      "index": 177,
+      "response_miss": false,
+      "response_ns": 947542,
+      "start_lateness_ns": 899375,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 40375,
+      "execution_overrun": false,
+      "index": 178,
+      "response_miss": false,
+      "response_ns": 508793,
+      "start_lateness_ns": 468418,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 195333,
+      "execution_overrun": false,
+      "index": 179,
+      "response_miss": false,
+      "response_ns": 1287209,
+      "start_lateness_ns": 1091876,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 34375,
+      "execution_overrun": false,
+      "index": 180,
+      "response_miss": false,
+      "response_ns": 732084,
+      "start_lateness_ns": 697709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 43459,
+      "execution_overrun": false,
+      "index": 181,
+      "response_miss": false,
+      "response_ns": 581168,
+      "start_lateness_ns": 537709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 32250,
+      "execution_overrun": false,
+      "index": 182,
+      "response_miss": false,
+      "response_ns": 408334,
+      "start_lateness_ns": 376084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 195042,
+      "execution_overrun": false,
+      "index": 183,
+      "response_miss": false,
+      "response_ns": 1153959,
+      "start_lateness_ns": 958917,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 32709,
+      "execution_overrun": false,
+      "index": 184,
+      "response_miss": false,
+      "response_ns": 792918,
+      "start_lateness_ns": 760209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 46666,
+      "execution_overrun": false,
+      "index": 185,
+      "response_miss": false,
+      "response_ns": 998917,
+      "start_lateness_ns": 952251,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 41958,
+      "execution_overrun": false,
+      "index": 186,
+      "response_miss": false,
+      "response_ns": 437500,
+      "start_lateness_ns": 395542,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 211458,
+      "execution_overrun": false,
+      "index": 187,
+      "response_miss": false,
+      "response_ns": 1336959,
+      "start_lateness_ns": 1125501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 44292,
+      "execution_overrun": false,
+      "index": 188,
+      "response_miss": false,
+      "response_ns": 716376,
+      "start_lateness_ns": 672084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 40500,
+      "execution_overrun": false,
+      "index": 189,
+      "response_miss": false,
+      "response_ns": 1033334,
+      "start_lateness_ns": 992834,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 40917,
+      "execution_overrun": false,
+      "index": 190,
+      "response_miss": false,
+      "response_ns": 861668,
+      "start_lateness_ns": 820751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 192959,
+      "execution_overrun": false,
+      "index": 191,
+      "response_miss": false,
+      "response_ns": 1106001,
+      "start_lateness_ns": 913042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 102333,
+      "execution_overrun": false,
+      "index": 192,
+      "response_miss": false,
+      "response_ns": 338375,
+      "start_lateness_ns": 236042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 48667,
+      "execution_overrun": false,
+      "index": 193,
+      "response_miss": false,
+      "response_ns": 774668,
+      "start_lateness_ns": 726001,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 14250,
+      "execution_overrun": false,
+      "index": 194,
+      "response_miss": false,
+      "response_ns": 967501,
+      "start_lateness_ns": 953251,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 68458,
+      "execution_overrun": false,
+      "index": 195,
+      "response_miss": false,
+      "response_ns": 920292,
+      "start_lateness_ns": 851834,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 48042,
+      "execution_overrun": false,
+      "index": 196,
+      "response_miss": false,
+      "response_ns": 932126,
+      "start_lateness_ns": 884084,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36291,
+      "execution_overrun": false,
+      "index": 197,
+      "response_miss": false,
+      "response_ns": 380792,
+      "start_lateness_ns": 344501,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 65958,
+      "execution_overrun": false,
+      "index": 198,
+      "response_miss": false,
+      "response_ns": 747667,
+      "start_lateness_ns": 681709,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 188875,
+      "execution_overrun": false,
+      "index": 199,
+      "response_miss": false,
+      "response_ns": 1163626,
+      "start_lateness_ns": 974751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 40917,
+      "execution_overrun": false,
+      "index": 200,
+      "response_miss": false,
+      "response_ns": 710959,
+      "start_lateness_ns": 670042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35750,
+      "execution_overrun": false,
+      "index": 201,
+      "response_miss": false,
+      "response_ns": 1020667,
+      "start_lateness_ns": 984917,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 43000,
+      "execution_overrun": false,
+      "index": 202,
+      "response_miss": false,
+      "response_ns": 872668,
+      "start_lateness_ns": 829668,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 182708,
+      "execution_overrun": false,
+      "index": 203,
+      "response_miss": false,
+      "response_ns": 1085459,
+      "start_lateness_ns": 902751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35875,
+      "execution_overrun": false,
+      "index": 204,
+      "response_miss": false,
+      "response_ns": 815917,
+      "start_lateness_ns": 780042,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 126166,
+      "execution_overrun": false,
+      "index": 205,
+      "response_miss": false,
+      "response_ns": 328959,
+      "start_lateness_ns": 202793,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 38333,
+      "execution_overrun": false,
+      "index": 206,
+      "response_miss": false,
+      "response_ns": 1213667,
+      "start_lateness_ns": 1175334,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 185834,
+      "execution_overrun": false,
+      "index": 207,
+      "response_miss": false,
+      "response_ns": 203459,
+      "start_lateness_ns": 17625,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 39125,
+      "execution_overrun": false,
+      "index": 208,
+      "response_miss": false,
+      "response_ns": 1280501,
+      "start_lateness_ns": 1241376,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 37459,
+      "execution_overrun": false,
+      "index": 209,
+      "response_miss": false,
+      "response_ns": 252751,
+      "start_lateness_ns": 215292,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 35334,
+      "execution_overrun": false,
+      "index": 210,
+      "response_miss": false,
+      "response_ns": 1247709,
+      "start_lateness_ns": 1212375,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 192000,
+      "execution_overrun": false,
+      "index": 211,
+      "response_miss": false,
+      "response_ns": 917376,
+      "start_lateness_ns": 725376,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 37250,
+      "execution_overrun": false,
+      "index": 212,
+      "response_miss": false,
+      "response_ns": 928376,
+      "start_lateness_ns": 891126,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 11667,
+      "execution_overrun": false,
+      "index": 213,
+      "response_miss": false,
+      "response_ns": 404667,
+      "start_lateness_ns": 393000,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 11958,
+      "execution_overrun": false,
+      "index": 214,
+      "response_miss": false,
+      "response_ns": 227501,
+      "start_lateness_ns": 215543,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 247833,
+      "execution_overrun": false,
+      "index": 215,
+      "response_miss": false,
+      "response_ns": 1479709,
+      "start_lateness_ns": 1231876,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 36167,
+      "execution_overrun": false,
+      "index": 216,
+      "response_miss": false,
+      "response_ns": 646584,
+      "start_lateness_ns": 610417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 38792,
+      "execution_overrun": false,
+      "index": 217,
+      "response_miss": false,
+      "response_ns": 1068543,
+      "start_lateness_ns": 1029751,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 38792,
+      "execution_overrun": false,
+      "index": 218,
+      "response_miss": false,
+      "response_ns": 866209,
+      "start_lateness_ns": 827417,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 199333,
+      "execution_overrun": false,
+      "index": 219,
+      "response_miss": false,
+      "response_ns": 1136917,
+      "start_lateness_ns": 937584,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 30917,
+      "execution_overrun": false,
+      "index": 220,
+      "response_miss": false,
+      "response_ns": 534543,
+      "start_lateness_ns": 503626,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 36708,
+      "execution_overrun": false,
+      "index": 221,
+      "response_miss": false,
+      "response_ns": 964542,
+      "start_lateness_ns": 927834,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666666,
+      "execution_ns": 38292,
+      "execution_overrun": false,
+      "index": 222,
+      "response_miss": false,
+      "response_ns": 468042,
+      "start_lateness_ns": 429750,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 167375,
+      "execution_overrun": false,
+      "index": 223,
+      "response_miss": false,
+      "response_ns": 761584,
+      "start_lateness_ns": 594209,
+      "warmup": false
+    },
+    {
+      "deadline_ns": 2666667,
+      "execution_ns": 38208,
+      "execution_overrun": false,
+      "index": 224,
+      "response_miss": false,
+      "response_ns": 401709,
+      "start_lateness_ns": 363501,
+      "warmup": false
+    }
+  ],
+  "track_latency_samples": [
+    6367
+  ],
+  "track_render_paths": [
+    "Graph"
+  ],
+  "warmup_blocks": 75
+}

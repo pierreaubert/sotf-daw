@@ -1,0 +1,5 @@
+{
+  "source_sha256": "690f53e78f9a9a60bc38db8403b3656f9b0799546cf885c06b6bcf9f704b7e21",
+  "binary_sha256": "9ea48ea2851c934fd49c0cd7397050a06af24d8d197e4493f978db27c23dbf08",
+  "scope": "Original speech->EQ->PND ordering; combined DeepFilter+CREPE cases have no steady-state neural selection."
+}

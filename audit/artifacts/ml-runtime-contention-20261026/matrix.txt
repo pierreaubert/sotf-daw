@@ -1,0 +1,16 @@
+{"case": 0, "tracks": 4, "cpu_workers": 0, "deep_filter": false, "neural_pitch": true, "exit_code": 0}
+{"case": 1, "tracks": 1, "cpu_workers": 2, "deep_filter": false, "neural_pitch": true, "exit_code": 0}
+{"case": 2, "tracks": 4, "cpu_workers": 2, "deep_filter": true, "neural_pitch": false, "exit_code": 0}
+{"case": 3, "tracks": 4, "cpu_workers": 0, "deep_filter": true, "neural_pitch": true, "exit_code": 0}
+{"case": 4, "tracks": 1, "cpu_workers": 2, "deep_filter": false, "neural_pitch": false, "exit_code": 0}
+{"case": 5, "tracks": 4, "cpu_workers": 2, "deep_filter": false, "neural_pitch": true, "exit_code": 0}
+{"case": 6, "tracks": 1, "cpu_workers": 0, "deep_filter": false, "neural_pitch": false, "exit_code": 0}
+{"case": 7, "tracks": 1, "cpu_workers": 0, "deep_filter": false, "neural_pitch": true, "exit_code": 0}
+{"case": 8, "tracks": 4, "cpu_workers": 0, "deep_filter": false, "neural_pitch": false, "exit_code": 0}
+{"case": 9, "tracks": 1, "cpu_workers": 2, "deep_filter": true, "neural_pitch": false, "exit_code": 0}
+{"case": 10, "tracks": 1, "cpu_workers": 2, "deep_filter": true, "neural_pitch": true, "exit_code": 0}
+{"case": 11, "tracks": 1, "cpu_workers": 0, "deep_filter": true, "neural_pitch": false, "exit_code": 0}
+{"case": 12, "tracks": 4, "cpu_workers": 0, "deep_filter": true, "neural_pitch": false, "exit_code": 0}
+{"case": 13, "tracks": 4, "cpu_workers": 2, "deep_filter": true, "neural_pitch": true, "exit_code": 0}
+{"case": 14, "tracks": 4, "cpu_workers": 2, "deep_filter": false, "neural_pitch": false, "exit_code": 0}
+{"case": 15, "tracks": 1, "cpu_workers": 0, "deep_filter": true, "neural_pitch": true, "exit_code": 0}

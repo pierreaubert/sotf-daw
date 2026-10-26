@@ -1,0 +1,25 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "clippy",
+    "-p",
+    "sotf-plugins",
+    "--bin",
+    "ml-runtime-contention",
+    "--features",
+    "qa,deep-filter,neural-pitch",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "exit_code": 0,
+  "seconds": 1.59454529103823
+}

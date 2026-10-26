@@ -1130,7 +1130,11 @@
       "candidate": "Hardware compressor emulation",
       "status": "implementation_pending",
       "acceptance_experiment": "Fit an identified target using held-out control settings and songs; evaluate envelope/gain trajectories, waveform/spectral errors and listening.",
-      "deployment_boundary": "Optional model, explicit operating level, deterministic ceiling; use the 2025 Solid State Bus-Comp work as a benchmark resource."
+      "deployment_boundary": "Optional model, explicit operating level, deterministic ceiling; use the 2025 Solid State Bus-Comp work as a benchmark resource.",
+      "evidence": [
+        "audit/ml-hardware-compressor-access-20261026.md"
+      ],
+      "remaining": "Identified hardware captures, approved dataset access/terms and deployment rights, exact level/control/alignment calibration, independent songs/settings, trained conditioned model and native/listening acceptance remain. No dataset conditions were accepted or files downloaded."
     },
     {
       "candidate": "Pitch-estimation assistance",
@@ -1181,9 +1185,18 @@
     },
     {
       "candidate": "Neural runtime choice",
-      "status": "implementation_pending",
+      "status": "implementation_in_progress",
       "acceptance_experiment": "Benchmark candidate runtimes in the real DAW workload, including competing CPU/GPU activity and many model instances.",
-      "deployment_boundary": "Choose from measured deadline tails, not standalone throughput; do not presume a published runtime winner applies to every SOTF model."
+      "deployment_boundary": "Choose from measured deadline tails, not standalone throughput; do not presume a published runtime winner applies to every SOTF model.",
+      "evidence": [
+        "crates/sotf-plugins/bin/ml_runtime_contention.rs",
+        "scripts/ml/run_runtime_contention.py",
+        "scripts/ml/analyze_runtime_contention.py",
+        "scripts/ml/test_runtime_contention.py",
+        "audit/ml-runtime-contention-20261026.md",
+        "audit/artifacts/ml-runtime-contention-20261026"
+      ],
+      "remaining": "Implemented paced native graph-track/bus CPU-contention baseline with real RNNoise/DeepFilterNet2/CREPE combinations and serving-aware raw deadline traces. Longer repeated varied-material trials, matched-network alternative-runtime parity, GPU contention, full worker/memory accounting, device/parallel-track scheduling and cross-platform DAW evidence remain; no runtime winner is selected."
     }
   ],
   "local_audit_source": "audit-20261018.md (existing user-owned untracked file; not modified or staged)"

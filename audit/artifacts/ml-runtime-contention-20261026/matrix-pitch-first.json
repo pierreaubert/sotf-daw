@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/run_runtime_contention.py",
+    "--binary",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/ml-runtime-contention",
+    "--models-dir",
+    "/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/models",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-runtime-contention-pitch-first-20261026"
+  ],
+  "exit_code": 0,
+  "seconds": 52.30127133312635
+}

@@ -1,0 +1,357 @@
+//! Paced DAW-host tracks with actual neural workers and bounded CPU contention.
+//!
+//! This measures the implemented backend/model combinations, not interchangeable
+//! runtimes for one network. It does not emulate device scheduling or GPU load.
+
+// Rust guideline compliant 2026-02-21
+use math_audio_iir_fir::{Biquad, BiquadFilterType};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use sotf_plugins::plugin_pnd::{NeuralPitchConfig, PndData};
+use sotf_plugins::plugin_speech_denoiser::{DeepFilterConfig, DeepFilterData};
+use sotf_plugins::{
+    CountingAlloc, DawHost, EqPlugin, HostRenderPath, LimiterPlugin,
+    ParametricInPlacePluginAdapter, ParametricPluginAdapter, PndPlugin, PndPluginParams,
+    SpeechDenoiserPlugin, SpeechDenoiserPluginParams,
+};
+use std::fs::{File, OpenOptions};
+use std::hint::black_box;
+use std::io::Read;
+use std::path::PathBuf;
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
+
+#[global_allocator]
+static ALLOCATOR: CountingAlloc = CountingAlloc;
+const RATE: u32 = 48000;
+const DF_SHA: &str = "412e81d8d1779b8f925ac4b53472655a9f866c4af73dbf930ab587359f631628";
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+struct Request {
+    tracks: usize,
+    block_frames: usize,
+    warmup_ms: u32,
+    measure_ms: u32,
+    cpu_workers: usize,
+    deep_filter: bool,
+    neural_pitch: bool,
+    playout_packets: usize,
+    models_dir: PathBuf,
+    output: PathBuf,
+}
+
+struct CpuLoad {
+    stop: Arc<AtomicBool>,
+    workers: Vec<JoinHandle<()>>,
+}
+impl CpuLoad {
+    fn new(count: usize) -> Result<Self, std::io::Error> {
+        let mut load = Self {
+            stop: Arc::new(AtomicBool::new(false)),
+            workers: Vec::with_capacity(count),
+        };
+        for index in 0..count {
+            let stop = Arc::clone(&load.stop);
+            load.workers.push(
+                thread::Builder::new()
+                    .name(format!("ml-contention-{index}"))
+                    .spawn(move || {
+                        let mut x = 0.1 + index as f64;
+                        while !stop.load(Ordering::Acquire) {
+                            for _ in 0..10000 {
+                                x = (x.sin() + 0.1234567).cos();
+                            }
+                            black_box(x);
+                        }
+                    })?,
+            );
+        }
+        Ok(load)
+    }
+}
+impl Drop for CpuLoad {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        for worker in self.workers.drain(..) {
+            let _ = worker.join();
+        }
+    }
+}
+
+#[derive(Serialize)]
+struct Trace {
+    index: usize,
+    warmup: bool,
+    execution_ns: u64,
+    start_lateness_ns: u64,
+    response_ns: u64,
+    deadline_ns: u64,
+    execution_overrun: bool,
+    response_miss: bool,
+}
+
+fn read_json(
+    path: impl AsRef<std::path::Path>,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    let mut bytes = Vec::new();
+    File::open(path)?.take(65537).read_to_end(&mut bytes)?;
+    if bytes.len() > 65536 {
+        return Err("runtime request/manifest exceeds64KiB".into());
+    }
+    Ok(serde_json::from_slice(&bytes)?)
+}
+
+fn telemetry(host: &DawHost) -> Result<serde_json::Value, String> {
+    let speech = host.get_plugin(0).and_then(|p| p.get_data());
+    let df=speech.as_ref().and_then(|d|d.downcast_ref::<DeepFilterData>()).map(|d|json!({
+        "timely_packets":d.timely_packets,"fallback_packets":d.fallback_packets,"warmup_packets":d.warmup_packets,
+        "dropped_inputs":d.dropped_inputs,"worker_errors":d.lifetime_worker_errors,"worker_resets":d.lifetime_worker_resets,
+        "model_clock_latency_samples":d.model_clock_latency_samples,"last_local_snr_db":d.last_local_snr_db}));
+    let data = host
+        .get_plugin(2)
+        .and_then(|p| p.get_data())
+        .ok_or("missing PND telemetry")?;
+    let pitch = data
+        .downcast_ref::<PndData>()
+        .ok_or("unexpected PND telemetry type")?;
+    Ok(
+        json!({"deep_filter":df,"pitch_last_decision_neural":pitch.neural_pitch_used,"pitch_confidence":pitch.confidence,"pitch_ratio":pitch.correction_ratio}),
+    )
+}
+
+fn quantile(values: &mut [u64], numerator: usize, denominator: usize) -> u64 {
+    values.sort_unstable();
+    values[(values.len() - 1) * numerator / denominator]
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let path = std::env::args_os()
+        .nth(1)
+        .ok_or("usage: ml-runtime-contention REQUEST.json")?;
+    let r: Request = serde_json::from_value(read_json(path)?)?;
+    if !(1..=8).contains(&r.tracks)
+        || ![64, 128, 256, 480, 512, 1024].contains(&r.block_frames)
+        || r.warmup_ms > 5000
+        || !(100..=10000).contains(&r.measure_ms)
+        || r.cpu_workers > 8
+        || !(1..=32).contains(&r.playout_packets)
+    {
+        return Err("unsupported bounded runtime workload".into());
+    }
+    let crepe = if r.neural_pitch {
+        let manifest = read_json(r.models_dir.join("crepe-tiny/manifest.json"))?;
+        Some(NeuralPitchConfig {
+            model_path: r
+                .models_dir
+                .join("crepe-tiny/crepe-tiny.onnx")
+                .to_string_lossy()
+                .into_owned(),
+            sha256: manifest["sha256"]
+                .as_str()
+                .ok_or("missing CREPE hash")?
+                .into(),
+            min_confidence: 0.8,
+            max_age_ms: 150.0,
+            max_deviation_cents: 100.0,
+            source_channel: 0,
+        })
+    } else {
+        None
+    };
+    let initialization = Instant::now();
+    let mut tracks = Vec::with_capacity(r.tracks);
+    for _ in 0..r.tracks {
+        let mut host = DawHost::new(2, RATE);
+        let deep_filter = r.deep_filter.then(|| DeepFilterConfig {
+            model_path: r
+                .models_dir
+                .join("deepfilternet2/DeepFilterNet2_onnx.tar.gz")
+                .to_string_lossy()
+                .into_owned(),
+            sha256: DF_SHA.into(),
+            playout_packets: r.playout_packets,
+        });
+        let speech = SpeechDenoiserPlugin::try_from_params(
+            2,
+            SpeechDenoiserPluginParams {
+                deep_filter,
+                strength: 1.0,
+                ..Default::default()
+            },
+        )?;
+        host.add_plugin(Box::new(ParametricInPlacePluginAdapter::new(speech)))?;
+        let filters = vec![Biquad::new(
+            BiquadFilterType::Peak,
+            1500.0,
+            48000.0,
+            0.707,
+            -1.0,
+        )];
+        host.add_plugin(Box::new(ParametricPluginAdapter::new(EqPlugin::new(
+            2, filters,
+        ))))?;
+        host.add_plugin(Box::new(PndPlugin::from_params(
+            2,
+            PndPluginParams {
+                neural_pitch: crepe.clone(),
+                reference_frequency_hz: 220.0,
+                multi_channel_analysis: false,
+                ..Default::default()
+            },
+        )?))?;
+        host.build()?;
+        if host.render_stats().path != HostRenderPath::Graph {
+            return Err("latency-bearing track did not use the expected native graph path".into());
+        }
+        tracks.push(host);
+    }
+    let mut bus = DawHost::new(2, RATE);
+    bus.add_plugin(Box::new(ParametricInPlacePluginAdapter::new(
+        LimiterPlugin::new(2, -1.0, 50.0, 5.0, false),
+    )))?;
+    bus.build()?;
+    if bus.render_stats().path != HostRenderPath::Graph {
+        return Err(
+            "latency-bearing limiter bus did not use the expected native graph path".into(),
+        );
+    }
+    let initialization_ms = initialization.elapsed().as_secs_f64() * 1000.0;
+    let blocks_for =
+        |ms: u32| (u64::from(ms) * u64::from(RATE)).div_ceil(r.block_frames as u64 * 1000) as usize;
+    let warmup = blocks_for(r.warmup_ms);
+    let measured = blocks_for(r.measure_ms);
+    let total = warmup + measured;
+    let sources: Vec<Vec<f32>> = (0..r.tracks)
+        .map(|track| {
+            (0..total * r.block_frames)
+                .flat_map(|frame| {
+                    let phase = std::f64::consts::TAU * 220.0 * frame as f64 / f64::from(RATE)
+                        + track as f64 * 0.31;
+                    let x = (0.08 * phase.sin()
+                        + 0.03 * (2.0 * phase).sin()
+                        + 0.01 * (3.0 * phase).sin()) as f32;
+                    [x, x * 0.5]
+                })
+                .collect()
+        })
+        .collect();
+    let mut rendered = vec![vec![0.0; r.block_frames * 2]; r.tracks];
+    let mut mix = vec![0.0; r.block_frames * 2];
+    let mut output = vec![0.0; r.block_frames * 2];
+    let mut traces = Vec::with_capacity(total);
+    let mut neural_snapshots = vec![0_u64; r.tracks];
+    let mut before = serde_json::Value::Null;
+    let load = CpuLoad::new(r.cpu_workers)?;
+    let start = Instant::now();
+    let mut output_energy = 0.0_f64;
+    let mut peak = 0.0_f32;
+    for block in 0..total {
+        let release_ns = (block as u64 * r.block_frames as u64 * 1_000_000_000) / u64::from(RATE);
+        let next_ns =
+            ((block + 1) as u64 * r.block_frames as u64 * 1_000_000_000) / u64::from(RATE);
+        let release = start + Duration::from_nanos(release_ns);
+        let now = Instant::now();
+        if now < release {
+            thread::sleep(release - now);
+        }
+        let begun = Instant::now();
+        let mut result = Ok(());
+        let heap = sotf_host::test_utils::measure_heap_activity(|| {
+            mix.fill(0.0);
+            for (index, host) in tracks.iter_mut().enumerate() {
+                let offset = block * r.block_frames * 2;
+                if let Err(e) = host.process(
+                    &sources[index][offset..offset + r.block_frames * 2],
+                    &mut rendered[index],
+                ) {
+                    result = Err(e);
+                    return;
+                }
+                for (dst, sample) in mix.iter_mut().zip(&rendered[index]) {
+                    *dst += *sample / r.tracks as f32;
+                }
+            }
+            if let Err(e) = bus.process(&mix, &mut output) {
+                result = Err(e);
+            }
+        });
+        let finished = Instant::now();
+        result?;
+        if heap != (0, 0) {
+            return Err(format!("callback heap activity: {heap:?}").into());
+        }
+        if output.iter().any(|v| !v.is_finite()) {
+            return Err("nonfinite session output".into());
+        }
+        let execution = finished.duration_since(begun).as_nanos() as u64;
+        let response = finished.saturating_duration_since(release).as_nanos() as u64;
+        let deadline = next_ns - release_ns;
+        traces.push(Trace {
+            index: block,
+            warmup: block < warmup,
+            execution_ns: execution,
+            start_lateness_ns: begun.saturating_duration_since(release).as_nanos() as u64,
+            response_ns: response,
+            deadline_ns: deadline,
+            execution_overrun: execution > deadline,
+            response_miss: response > deadline,
+        });
+        // Sampling is outside the timed/heap-guarded callback. Repeated cache
+        // snapshots are not a count of distinct neural inferences.
+        for (index, host) in tracks.iter().enumerate() {
+            let data = telemetry(host)?;
+            if block >= warmup && data["pitch_last_decision_neural"] == true {
+                neural_snapshots[index] += 1;
+            }
+        }
+        if block + 1 == warmup {
+            before = json!(
+                tracks
+                    .iter()
+                    .map(telemetry)
+                    .collect::<Result<Vec<_>, _>>()?
+            );
+        }
+        if block >= warmup {
+            for value in &output {
+                output_energy += f64::from(*value).powi(2);
+                peak = peak.max(value.abs());
+            }
+        }
+    }
+    let elapsed_ms = start.elapsed().as_secs_f64() * 1000.0;
+    drop(load);
+    let after = tracks
+        .iter()
+        .map(telemetry)
+        .collect::<Result<Vec<_>, _>>()?;
+    let measured_rows: Vec<_> = traces.iter().filter(|t| !t.warmup).collect();
+    let mut durations: Vec<_> = measured_rows.iter().map(|t| t.execution_ns).collect();
+    let p50 = quantile(&mut durations, 1, 2);
+    let p95 = quantile(&mut durations, 95, 100);
+    let p99 = quantile(&mut durations, 99, 100);
+    let metadata = json!({"request":r,"sample_rate":RATE,"models":{"crepe_sha256":crepe.as_ref().map(|c|&c.sha256),"deepfilter_sha256":if r.deep_filter {Some(DF_SHA)}else{None}},
+        "initialization_ms":initialization_ms,"paced_elapsed_ms":elapsed_ms,"warmup_blocks":warmup,"measured_blocks":measured,
+        "track_latency_samples":tracks.iter().map(DawHost::total_latency_samples).collect::<Vec<_>>(),"bus_latency_samples":bus.total_latency_samples(),
+        "track_render_paths":tracks.iter().map(|h|format!("{:?}",h.render_stats().path)).collect::<Vec<_>>(),"bus_render_path":format!("{:?}",bus.render_stats().path),
+        "execution_ns":{"p50":p50,"p95":p95,"p99":p99,"maximum":durations.last()},
+        "execution_overruns":measured_rows.iter().filter(|t|t.execution_overrun).count(),"response_deadline_misses":measured_rows.iter().filter(|t|t.response_miss).count(),
+        "telemetry_before_measurement":before,"telemetry_after":after,"pitch_neural_selected_snapshots":neural_snapshots,
+        "output_energy":output_energy,"output_peak":peak,"trace":traces,
+        "scope":"paced actual SOTF graph track chains and limiter bus; CPU contention only; no device callback, GPU load or matched-network alternative-runtime comparison", "runtime_choice_admitted":false});
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&r.output)?;
+    serde_json::to_writer_pretty(file, &metadata)?;
+    println!(
+        "{}",
+        json!({"measured_blocks":measured,"execution_overruns":metadata["execution_overruns"],"response_deadline_misses":metadata["response_deadline_misses"],"runtime_choice_admitted":false})
+    );
+    Ok(())
+}
