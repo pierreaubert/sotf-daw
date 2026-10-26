@@ -1,0 +1,26 @@
+{
+  "initial_build": {
+    "exit_code": 101,
+    "error": "E0502: block.len() borrowed immutably while passing mutable drain scratch",
+    "fix": "capture scratch frame count before the call"
+  },
+  "initial_smoke": {
+    "exit_code": 1,
+    "raw_directory": "/Volumes/home_tmp/tmp/ml-pnd-matched-smoke-20261026",
+    "error": "PND matched drain performed heap activity (0 allocations, 1 deallocation)",
+    "cause": "harness-owned Err(String) sentinel dropped when replaced inside heap guard",
+    "fix": "nonallocating Option sentinel; plugin drain unchanged"
+  },
+  "initial_probe_test": {
+    "exit_code": 1,
+    "observed_noise_probe_rms_cents": 1.1305234827345203,
+    "tolerance_rms_cents": 2.0,
+    "cause": "test incorrectly assumed the modest comparison noise would invalidate the probe",
+    "fix": "use explicit stronger contamination for the rejection control; comparison fixture and tolerance unchanged"
+  },
+  "initial_strict_profile_verification": {
+    "exit_code": 1,
+    "cause": "native JSON promotes f32 config to exact f64 values, rather than decimal0.1/0.8",
+    "fix": "compare to exact promoted np.float32 representations; profile and thresholds unchanged"
+  }
+}

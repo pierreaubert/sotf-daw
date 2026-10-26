@@ -78,6 +78,37 @@ pub struct PndPlugin {
     drain_zeros: Vec<f32>,
 }
 
+/// Exact current control state for QA observation without the throttled UI cache.
+#[cfg(feature = "qa")]
+#[derive(Debug, Clone, Copy, serde::Serialize, PartialEq)]
+pub struct PitchDecisionSnapshot {
+    /// Completed classical analysis hops driving control decisions.
+    pub analysis_generation: u64,
+    /// Last selected referenced pitch ratio, before drift smoothing.
+    pub drift_ratio: f64,
+    /// Smoothed inverse ratio, before correction-strength mixing.
+    pub correction_ratio: f64,
+    /// Whether the last decision used an accepted neural observation.
+    ///
+    /// Repeated snapshots do not imply distinct completed inference jobs.
+    pub neural_pitch_used: bool,
+}
+
+#[cfg(feature = "qa")]
+impl PndPlugin {
+    /// Copy the exact last decision and current control ratio without allocation.
+    ///
+    /// This does not expose the worker observation's source timestamp or confidence.
+    pub fn pitch_decision_snapshot(&self) -> PitchDecisionSnapshot {
+        PitchDecisionSnapshot {
+            analysis_generation: self.last_analysis_generation,
+            drift_ratio: self.last_drift_ratio,
+            correction_ratio: self.current_ratio,
+            neural_pitch_used: self.neural_pitch_used,
+        }
+    }
+}
+
 impl PndPlugin {
     pub fn new(channels: usize) -> Self {
         let mut p = Self {

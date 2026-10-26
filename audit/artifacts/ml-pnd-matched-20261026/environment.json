@@ -1,0 +1,8 @@
+{
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "logical_cpus": 14,
+  "timing_policy": "absolute source-frame release grid; 128 mono frames; paired same-source callbacks; no priority/affinity/device callback emulation",
+  "run_order": "neural-first on odd seed; classical-first on even seed; order is confounded with base frequency/seed",
+  "worker_telemetry": "last selected control decision only; no job identity or observation-age claim"
+}

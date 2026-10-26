@@ -21,6 +21,11 @@ name = "qa-pnd"
 path = "bin/qa_pnd.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-pnd-neural-compare"
+path = "bin/qa_pnd_neural_compare.rs"
+required-features = ["qa", "neural-pitch"]
+
 [dependencies]
 sotf-host = { workspace = true }
 serde = { workspace = true }

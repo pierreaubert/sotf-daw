@@ -928,10 +928,18 @@
         "scripts/ml/export_crepe.py",
         "audit/artifacts/ml-pitch-20261024/release-tests.json",
         "audit/artifacts/ml-pitch-20261024/engine-check.json",
-        "audit/artifacts/ml-pitch-20261024/default-integration.json"
+        "audit/artifacts/ml-pitch-20261024/default-integration.json",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/bin/qa_pnd_neural_compare.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/qa_pitch_snapshot.rs",
+        "scripts/ml/pnd_compare_cases.py",
+        "scripts/ml/run_pnd_comparison.py",
+        "scripts/ml/analyze_pnd_comparison.py",
+        "scripts/ml/test_pnd_comparison.py",
+        "audit/ml-pnd-matched-20261026.md",
+        "audit/artifacts/ml-pnd-matched-20261026"
       ],
       "remaining": [
-        "Matched classical versus learned drift/vibrato/noise/octave comparisons",
+        "Matched16-case generated classical/CREPE comparison is implemented; classical wins accepted raw pitch error in all14 supported cases and assisted output regresses in12/14. Broaden sources/rates/SNR and improve/calibrate on separate development material before fresh final/recorded acceptance; no general adoption. Lone-octave controls preserve exact classical output.",
         "Independent held-out material and real DAW contention/latency/memory acceptance",
         "Native UI and application build coverage"
       ]
@@ -1158,7 +1166,18 @@
       "candidate": "Pitch-estimation assistance",
       "status": "implementation_in_progress",
       "acceptance_experiment": "Compare classical estimator and learned monophonic estimator on wow/flutter, weak fundamentals and intentional vibrato; report octave errors and correction latency.",
-      "deployment_boundary": "Confidence-gated proposal to existing correction ratio; no unconditional polyphonic correction."
+      "deployment_boundary": "Confidence-gated proposal to existing correction ratio; no unconditional polyphonic correction.",
+      "evidence": [
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/bin/qa_pnd_neural_compare.rs",
+        "crates/sotf-plugins/crates/sotf-plugin-pnd/tests/qa_pitch_snapshot.rs",
+        "scripts/ml/pnd_compare_cases.py",
+        "scripts/ml/run_pnd_comparison.py",
+        "scripts/ml/analyze_pnd_comparison.py",
+        "scripts/ml/test_pnd_comparison.py",
+        "audit/ml-pnd-matched-20261026.md",
+        "audit/artifacts/ml-pnd-matched-20261026"
+      ],
+      "remaining": "Finite generated estimator/worker/waveform comparison fails general learned adoption. Independent natural/held-out material, policy improvement on development data, per-job age/worker memory and real DAW/platform evidence, plus application/UI acceptance remain."
     },
     {
       "candidate": "Speech enhancement alternative",

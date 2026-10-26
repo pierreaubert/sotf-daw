@@ -1,0 +1,11 @@
+{
+  "command": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "-m",
+    "unittest",
+    "scripts/ml/test_pnd_comparison.py"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.141s\n\nOK\n"
+}

@@ -1,0 +1,589 @@
+{
+  "scope": "generated native matched estimator/worker comparison; not held-out music or a device/runtime winner",
+  "smoke": false,
+  "renderer_sha256": "24d488cc4029b126cacf06fe824893123481c49415689c017855e748e03e16c4",
+  "model_sha256": "57209bf565bce9de445b31a175294dd2f297432864599c6aa237a895353918d3",
+  "source_sha256": {
+    "run_pnd_comparison.py": "1394d365305cc0009489eea4a49f7bf2453b7fc8add121dddeba98bdf7259929",
+    "pnd_compare_cases.py": "67a00f5aed720d93bc0ca0f546b842d661353bfe3023945cf153359425313bf9"
+  },
+  "cases": [
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "offset",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "29841e7e08a22ba1bb06a7e728e103ccde46d0ed5a53115e526b3ad42e39d96c",
+        "truth_cents_sha256": "5097b999de38ed98939ebc4e6add454390d02bd4cd4595c1c6e11324f0017349"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/0/input.f32le",
+          "sha256": "29841e7e08a22ba1bb06a7e728e103ccde46d0ed5a53115e526b3ad42e39d96c"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/0/classical.f32le",
+          "sha256": "a7e099805d76b88172104471a9c8863663ca60e88029261d90459320f7f1fdb7"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/0/neural.f32le",
+          "sha256": "7cfc840c01bb838a315fb873e7bd41abceea608e681b4128aa05bd9154b2c016"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/0/native.json",
+          "sha256": "c23be6c73d3d956d96ef5516d8c65300636f6c3828c8a68ca455a59328fe8e8f"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/0/request.json",
+          "sha256": "107c0b7e509666e45e7c9d6bcc95332b717a4003e8ded3a78756d7fa6ad512ed"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "wow",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "e1ca72576dfa6bf8eb0b68a3c9299645163fcaf7b2fa08b3cd5353f217e13ca0",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/1/input.f32le",
+          "sha256": "e1ca72576dfa6bf8eb0b68a3c9299645163fcaf7b2fa08b3cd5353f217e13ca0"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/1/classical.f32le",
+          "sha256": "f49d45b81485928a584fe7046e526465fa2635291c4b00981938fb08e9d68f51"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/1/neural.f32le",
+          "sha256": "548aee40f415241e4a47046d843251e025d45fc5243c10b5f2e5964fbde8434d"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/1/native.json",
+          "sha256": "099853b2194e21adf3740ce4898afea99e60dc0ca7e4c34b3f69426d652502d3"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/1/request.json",
+          "sha256": "f383037e868a1aa27ee39f2b4d13b469c28abfc12434c4228912881bf80adc3b"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "flutter",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "2e9c42b7d5501caba757cb307cc0519e2c77c71311d5fa6a15279baafc7a7c90",
+        "truth_cents_sha256": "c17680639d672ce05bd390e2767298f376086b04341e24b7632b374a074d8330"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/2/input.f32le",
+          "sha256": "2e9c42b7d5501caba757cb307cc0519e2c77c71311d5fa6a15279baafc7a7c90"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/2/classical.f32le",
+          "sha256": "b88bcd7430ba139eaf3bcae7eb4112146adcd2151d37349ae87550ff1e1f2286"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/2/neural.f32le",
+          "sha256": "bec53b66ad89886db80cb228517e0e8cf5a6783aebea602d4a207ea998cb3578"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/2/native.json",
+          "sha256": "f94881811111a7a1e567de2f2cb600d5b34fbd312f9cf688d03718880b710796"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/2/request.json",
+          "sha256": "cdbd590648054745e05e6808b7a887492da24f3397505469491d86ecc32bd6fd"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "vibrato",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "0ac4747af9bc8220b7a5ba9ec4454a7303b37b0b34fef3cdf53410eeb6abf7a1",
+        "truth_cents_sha256": "8023c96ef71307a084d768b6e675e65da5ac9275d1ae08a46e2b3af3c695996a"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/3/input.f32le",
+          "sha256": "0ac4747af9bc8220b7a5ba9ec4454a7303b37b0b34fef3cdf53410eeb6abf7a1"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/3/classical.f32le",
+          "sha256": "f3627c6c6fed889169455d023dfdb319e749d3bb528a86d1e5e75e699cd12904"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/3/neural.f32le",
+          "sha256": "f56b0ea3de6d06786534ad77b9064596e08ec399e196cd448b09f4ff17edfc43"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/3/native.json",
+          "sha256": "449b2cfb1eda62ae74a8c0ae76970c5deced1fab7d45aa6534a6998122065dab"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/3/request.json",
+          "sha256": "dd7b782aafcd389accfe497210d0304e0e2aef5609864fc0cb1736b831d17537"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "step",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "e156681030763285a68fb3070b16ccf05f7ef151a309826def8473de5ec8b897",
+        "truth_cents_sha256": "671bce064d16423e16bdb3fa215fdae0306efad92f6ab9b50d7087bfa4253c66"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/4/input.f32le",
+          "sha256": "e156681030763285a68fb3070b16ccf05f7ef151a309826def8473de5ec8b897"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/4/classical.f32le",
+          "sha256": "38c811c3c455bad2562d69ad7e5ae21b7e5367cd7800154804f62d6d2bba9374"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/4/neural.f32le",
+          "sha256": "b0a13330b996ab4a73c3ed4e174be99044ea273a061a8feded70068fd0651a2a"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/4/native.json",
+          "sha256": "170c1033171f90419ad8043af2a9fb5133b7ec077588977792c037929d671962"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/4/request.json",
+          "sha256": "05df2187f486f2ebda7e161bd0740d393e4c640f58e341ae9f80630de8af7888"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "weak_fundamental",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 2,
+        "supported_fundamental_truth": true,
+        "input_sha256": "b72e08081df42a2c1d0d0a8e483e100422dc43e179dc67f3fba0085ff9c883e5",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/5/input.f32le",
+          "sha256": "b72e08081df42a2c1d0d0a8e483e100422dc43e179dc67f3fba0085ff9c883e5"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/5/classical.f32le",
+          "sha256": "6e6cb7e352bb6e8650ee1b43f4e1e70d0e24c1ca30872423dd3c608372341dd0"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/5/neural.f32le",
+          "sha256": "9775157cc73b3d519514600470f3bcf4af845dbc0ef810d04a9c29fed2cb66d9"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/5/native.json",
+          "sha256": "a788087b8b608ae328990eec9f4b8d8e4a5a1923faf90581d9bbf885f6d1c1b3"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/5/request.json",
+          "sha256": "8eaf9937137d0b4aeeeaea6fdad4300cd43540e7b74e83fbac5f3bd69b397f06"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "noisy_wow",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "e17ef21050f5e8aeaeb3fd209490f4032e8cd117870cddfe4c025bd7449a777e",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/6/input.f32le",
+          "sha256": "e17ef21050f5e8aeaeb3fd209490f4032e8cd117870cddfe4c025bd7449a777e"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/6/classical.f32le",
+          "sha256": "8a8fe40421664aa3f4f58e837618f462dafd8101bea6c5ea754482bf04d4dcaf"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/6/neural.f32le",
+          "sha256": "a4ce03d9ecfb0eae1bd01fe5a105c26cef6f282eecd1088986b5bbc865d4a062"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/6/native.json",
+          "sha256": "8c42d25a9d966af25379a1e467afed7d96262452be7ecc6d72b2c10d536f408b"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/6/request.json",
+          "sha256": "28955f6f8c467453aa320079a7f85e5592a4f12461b04b8669fed3dca6ce7183"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308120,
+        "kind": "lone_octave",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 220.0,
+        "measurement_partial": 2,
+        "supported_fundamental_truth": false,
+        "input_sha256": "8f4d8c727d3c311336122dcc721a1883e63c0b102bd072fcca17ab2f2352de1f",
+        "truth_cents_sha256": "a976a3e6c342f123757be77db7754d12ebeb0b6afa732979ea0ca3dfb338a872"
+      },
+      "neural_first": false,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/7/input.f32le",
+          "sha256": "8f4d8c727d3c311336122dcc721a1883e63c0b102bd072fcca17ab2f2352de1f"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/7/classical.f32le",
+          "sha256": "6f30901497937d5be9085841bb675507aa55ecbb926bf98950f45d58e47a2192"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/7/neural.f32le",
+          "sha256": "6f30901497937d5be9085841bb675507aa55ecbb926bf98950f45d58e47a2192"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/7/native.json",
+          "sha256": "85da433abbeabfea6763cba8eebc412285480e9787d652e4c81e99ac78aa818f"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/7/request.json",
+          "sha256": "7cb0c16add929d682326d965f0e9e3def3b6341ad6b1700532eec66b552b13cc"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "offset",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "37be71de63a488d269ff9642e37abea651c12a0c64524f572453f8167a0b9798",
+        "truth_cents_sha256": "5097b999de38ed98939ebc4e6add454390d02bd4cd4595c1c6e11324f0017349"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/8/input.f32le",
+          "sha256": "37be71de63a488d269ff9642e37abea651c12a0c64524f572453f8167a0b9798"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/8/classical.f32le",
+          "sha256": "c9b52877aafbb856baba79c2f72ba61397741eba8ea0fd27cf7bbc79139d7845"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/8/neural.f32le",
+          "sha256": "a71ba95069aec21f07dbc1815d696ada465f6c49727598a559e9024bc24bd02b"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/8/native.json",
+          "sha256": "140c0c90c260d245e68ade11c2bbe1cc5c1209e379e5cdba17c707aa6d1c96bf"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/8/request.json",
+          "sha256": "9713e8bf9283c0214a3a7df49b2d33e3b5a64ff4d69228d87c629c774f2ee5c8"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "wow",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "df165f4a47d4a2f2295d7c5a4c066d87152ca6c317b239b5c87c85909a7c42f0",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/9/input.f32le",
+          "sha256": "df165f4a47d4a2f2295d7c5a4c066d87152ca6c317b239b5c87c85909a7c42f0"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/9/classical.f32le",
+          "sha256": "db39ae083b8ab46770145f318361c3e7c4fdac37fd45e4b3d12ea890aeadc67c"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/9/neural.f32le",
+          "sha256": "fd27f8cf35e5ec6b9e910184990fcc8c4e2b3e6b1453ba63d1a19e258412823d"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/9/native.json",
+          "sha256": "686195114b8042b6a9209e40468f4ac9f6a87c20fd64ee966c23a8250a138d04"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/9/request.json",
+          "sha256": "52bff3167b14457999944347fafe34695a44f1c25d46d9835c9049827cd628fb"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "flutter",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "cb9bdf4ab451d926b67530f1febcd1092b876973f59b9066e6ea8ee1bbb0c7ea",
+        "truth_cents_sha256": "c17680639d672ce05bd390e2767298f376086b04341e24b7632b374a074d8330"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/10/input.f32le",
+          "sha256": "cb9bdf4ab451d926b67530f1febcd1092b876973f59b9066e6ea8ee1bbb0c7ea"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/10/classical.f32le",
+          "sha256": "e541e27c1443c8cf6f8741225a6f2c49cb2229c602dc8c65642b1a46145609b8"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/10/neural.f32le",
+          "sha256": "e23b55131ed90a148ed164fee7684b998b1602c2a5fc79ea69a70df6cc530637"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/10/native.json",
+          "sha256": "a0a2800612cac6d3e13e1f559163bc4862347009ab6550982f3af773c37fb2df"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/10/request.json",
+          "sha256": "8ab0eabe043758b3266f415872f04f3332537c4008034d0ce37ef5e4faab6a7d"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "vibrato",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "1f0e5aa55e7cd4f72c6f3aaa80de2c8d661c0569b825d7ce7892ca460b962018",
+        "truth_cents_sha256": "8023c96ef71307a084d768b6e675e65da5ac9275d1ae08a46e2b3af3c695996a"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/11/input.f32le",
+          "sha256": "1f0e5aa55e7cd4f72c6f3aaa80de2c8d661c0569b825d7ce7892ca460b962018"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/11/classical.f32le",
+          "sha256": "2f407adb1cb698da2be2ceb474952126734be5e9bdd8849a8b29add15ad758c6"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/11/neural.f32le",
+          "sha256": "77df4ab3d41927ce0c63ea4d4ee494016eff4b0cd566da2f294bebb99572f46a"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/11/native.json",
+          "sha256": "e3453775eaa9954dc6266bf4921ac7742235f6f73bf575a3ba81e11ef3b2d221"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/11/request.json",
+          "sha256": "e0baff6cdf0e1786f575a6add60ef610285034f41d0bc6efbc21306f6ca97b11"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "step",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "2841340f9d494a18c440b5377b7a2015068dc0d07f6c613ed8cf812bcf1d611a",
+        "truth_cents_sha256": "671bce064d16423e16bdb3fa215fdae0306efad92f6ab9b50d7087bfa4253c66"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/12/input.f32le",
+          "sha256": "2841340f9d494a18c440b5377b7a2015068dc0d07f6c613ed8cf812bcf1d611a"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/12/classical.f32le",
+          "sha256": "e570b94836f72b2571357ca0e50d02bfed65170c70aa270e8f8731494b34a57d"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/12/neural.f32le",
+          "sha256": "08069bf2755a9c3bfa4cae16a01a50e5b12e554bd669a6090fdfd77585c9f7c9"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/12/native.json",
+          "sha256": "3cc7740ce580aa34ad38b1f6eaa81ace69c746d198a5ad870f938e53a4515f5c"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/12/request.json",
+          "sha256": "d2e0be94256c27d816071ade5b099f626ad6dc977c3e5ee4f58304324062f448"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "weak_fundamental",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 2,
+        "supported_fundamental_truth": true,
+        "input_sha256": "4df96def30431b9314c3aa223662daf251191ba211a9af7c2636aa4e03132564",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/13/input.f32le",
+          "sha256": "4df96def30431b9314c3aa223662daf251191ba211a9af7c2636aa4e03132564"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/13/classical.f32le",
+          "sha256": "ad462176607a79d5b9e5637566c8431956b2b31593f366c0c2ac572c1ee4b66a"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/13/neural.f32le",
+          "sha256": "96d88b600cbe99cf2afea78a5077ade4fa0d55060cc41820f425a9ba4fe7fcf3"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/13/native.json",
+          "sha256": "3aa1d14c5dd329fe999d4ba7afaf638fa891e1a8725bd991988ef6e4746dfb17"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/13/request.json",
+          "sha256": "920c842a347071d12ae22b1fef12abe65f6c31f7eb5efd1937a6b38e3258716e"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "noisy_wow",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 1,
+        "supported_fundamental_truth": true,
+        "input_sha256": "b2cdc7bd094df0515d2deb04360178d41d1e380b73c29071f5e255986f68a95e",
+        "truth_cents_sha256": "7396b6cc9f240a291a81548d278e07ba46d908c2306499503d292436271d0221"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/14/input.f32le",
+          "sha256": "b2cdc7bd094df0515d2deb04360178d41d1e380b73c29071f5e255986f68a95e"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/14/classical.f32le",
+          "sha256": "ba20b9b12e4e6098167470b038efa6904246ce78ea9845ce386abd46ae2dee89"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/14/neural.f32le",
+          "sha256": "a98fb94f0af0edf03a500c3c217c096b50e0ad617443f67b7d1c861a32fbfedb"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/14/native.json",
+          "sha256": "fc10bc6f12e971c8170b9c04023fa17b9be108edf62f8acbee2b49c2cca406da"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/14/request.json",
+          "sha256": "743c43aaffaac875f856f2ad6f5f52bdcb36be1f49a63322ef7103cde7a51188"
+        }
+      }
+    },
+    {
+      "identity": {
+        "seed": 20308121,
+        "kind": "lone_octave",
+        "sample_rate": 48000,
+        "frames": 144017,
+        "reference_hz": 440.0,
+        "measurement_partial": 2,
+        "supported_fundamental_truth": false,
+        "input_sha256": "2d5d27312bb742ddd65e1bc8154f2a746ef4ebb7f0cbfed865b4d7fc93a8ca06",
+        "truth_cents_sha256": "a976a3e6c342f123757be77db7754d12ebeb0b6afa732979ea0ca3dfb338a872"
+      },
+      "neural_first": true,
+      "files": {
+        "input.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/15/input.f32le",
+          "sha256": "2d5d27312bb742ddd65e1bc8154f2a746ef4ebb7f0cbfed865b4d7fc93a8ca06"
+        },
+        "classical.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/15/classical.f32le",
+          "sha256": "2f4c3cf614ca44a06e0f9e15d1a8996adbf2c8370f3ea537dcf3c09426da1bf6"
+        },
+        "neural.f32le": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/15/neural.f32le",
+          "sha256": "2f4c3cf614ca44a06e0f9e15d1a8996adbf2c8370f3ea537dcf3c09426da1bf6"
+        },
+        "native.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/15/native.json",
+          "sha256": "29a5b3a9d5787330cd80b07d54ec78d14b64197da482adf7f071a879ee1316d8"
+        },
+        "request.json": {
+          "path": "/Volumes/home_tmp/tmp/ml-pnd-matched-20261026/15/request.json",
+          "sha256": "0e22b68232b9b9f93bdaa77215e2700b90724091e8f1e487d4ccfadfa79796b9"
+        }
+      }
+    }
+  ],
+  "deployment_admitted": false
+}
