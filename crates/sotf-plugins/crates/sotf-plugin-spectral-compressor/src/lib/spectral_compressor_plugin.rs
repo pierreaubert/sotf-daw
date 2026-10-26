@@ -105,6 +105,18 @@ impl SpectralCompressorPlugin {
         self.restoration.as_ref().map(|s| s.counters())
     }
 
+    /// Inspect rendered hops, channel-major synthesis gains and the Hann window.
+    ///
+    /// Rendered hops include frozen EOF continuation; source counters exclude it.
+    #[cfg(feature = "qa")]
+    pub fn restoration_synthesis_snapshot(&self) -> (usize, &[f32], &[f32]) {
+        (
+            self.stft.rendered_hops,
+            &self.stft.synthesis_gains,
+            &self.stft.analysis_window,
+        )
+    }
+
     /// Inspect independent envelope, adaptive-average and component-mask histories.
     #[cfg(feature = "qa")]
     pub fn classical_restoration_state(&self) -> impl Iterator<Item = f32> + '_ {
@@ -432,6 +444,10 @@ impl SpectralCompressorPlugin {
             for k in 0..num_bins {
                 let envelope_db = self.stft.gains_scratch[k];
                 #[cfg(feature = "qa")]
+                {
+                    self.stft.synthesis_gains[ch * num_bins + k] = 1.0;
+                }
+                #[cfg(feature = "qa")]
                 if let Some(restoration) = &self.restoration {
                     let classical = if envelope_db > 0.001 {
                         10.0_f32.powf(-envelope_db / 20.0)
@@ -439,6 +455,7 @@ impl SpectralCompressorPlugin {
                         1.0
                     };
                     let gain = restoration.gain(k, classical);
+                    self.stft.synthesis_gains[ch * num_bins + k] = gain;
                     if gain != 1.0 {
                         self.stft.fft_processors[ch].freq_buffer[k] *= gain;
                     }
@@ -446,6 +463,10 @@ impl SpectralCompressorPlugin {
                 }
                 if envelope_db > 0.001 {
                     let gain_linear = 10.0_f32.powf(-envelope_db / 20.0);
+                    #[cfg(feature = "qa")]
+                    {
+                        self.stft.synthesis_gains[ch * num_bins + k] = gain_linear;
+                    }
                     self.stft.fft_processors[ch].freq_buffer[k] *= gain_linear;
                 }
             }
@@ -466,6 +487,10 @@ impl SpectralCompressorPlugin {
         }
 
         // Advance OLA write position by one hop
+        #[cfg(feature = "qa")]
+        {
+            self.stft.rendered_hops += 1;
+        }
         let hop_size = self.stft.hop_size;
         self.stft.next_add_position = (self.stft.next_add_position + hop_size) & mask;
         if self.stft.synthesis_discard > 0 {

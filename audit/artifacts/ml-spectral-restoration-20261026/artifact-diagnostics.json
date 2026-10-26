@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/analyze_expander_artifacts.py",
+    "--report",
+    "audit/artifacts/ml-spectral-restoration-20261026/waveform-evaluation.json",
+    "--output",
+    "audit/artifacts/ml-spectral-restoration-20261026/artifact-diagnostics-report.json"
+  ],
+  "exit_code": 0,
+  "seconds": 1.2877913329284638
+}

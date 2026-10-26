@@ -1,0 +1,18 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "rustfmt",
+    "--edition",
+    "2024",
+    "--config",
+    "skip_children=true",
+    "--check",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/stft_state.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/tests/restoration.rs",
+    "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/bin/qa_spectral_restoration_render.rs"
+  ],
+  "exit_code": 0,
+  "seconds": 0.21562233287841082
+}

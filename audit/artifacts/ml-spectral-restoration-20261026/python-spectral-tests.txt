@@ -1,0 +1,8 @@
+test_callback_and_drain_partitions_preserve_actual_output_and_trace (test_spectral_restoration.NativeSpectralRestorationTests.test_callback_and_drain_partitions_preserve_actual_output_and_trace) ... ok
+test_missing_rejected_and_unsupported_models_preserve_classical_stream (test_spectral_restoration.NativeSpectralRestorationTests.test_missing_rejected_and_unsupported_models_preserve_classical_stream) ... ok
+test_unity_profile_reconstructs_delayed_source_including_finite_tail (test_spectral_restoration.NativeSpectralRestorationTests.test_unity_profile_reconstructs_delayed_source_including_finite_tail) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.128s
+
+OK

@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/calibrate_expander_mask.py",
+    "--report",
+    "audit/artifacts/ml-spectral-restoration-20261026/waveform-evaluation.json",
+    "--output",
+    "audit/artifacts/ml-spectral-restoration-20261026/noise-calibrated-controls.json"
+  ],
+  "exit_code": 0,
+  "seconds": 0.7698052919004112
+}

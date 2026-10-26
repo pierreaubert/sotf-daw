@@ -4,6 +4,10 @@ use math_audio_dsp::tonal_transient::TonalTransientSeparator;
 /// All STFT buffers needed for spectral processing.
 /// Pre-allocated to avoid hot-path allocation.
 pub(super) struct StftState {
+    #[cfg(feature = "qa")]
+    pub(super) rendered_hops: usize,
+    #[cfg(feature = "qa")]
+    pub(super) synthesis_gains: Vec<f32>,
     pub(super) fft_size: usize,
     pub(super) hop_size: usize,
     pub(super) num_bins: usize,
@@ -90,6 +94,10 @@ impl StftState {
         let output_accumulator = vec![0.0f32; output_accumulator_frames * channels];
 
         Self {
+            #[cfg(feature = "qa")]
+            rendered_hops: 0,
+            #[cfg(feature = "qa")]
+            synthesis_gains: vec![1.0; channels * num_bins],
             fft_size,
             hop_size,
             num_bins,
@@ -127,6 +135,11 @@ impl StftState {
     }
 
     pub(super) fn reset(&mut self) {
+        #[cfg(feature = "qa")]
+        {
+            self.rendered_hops = 0;
+            self.synthesis_gains.fill(1.0);
+        }
         for buf in &mut self.input_buffers {
             buf.fill(0.0);
         }

@@ -14,17 +14,24 @@ def rms(x):
     return float(np.sqrt(np.mean(np.asarray(x, float) ** 2)))
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--renderer", type=Path, required=True)
-    parser.add_argument("--model", type=Path, required=True)
-    parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    args.output.mkdir(parents=True, exist_ok=False)
-    sha = hashlib.sha256(args.model.read_bytes()).hexdigest()
-    binary_sha = hashlib.sha256(args.renderer.read_bytes()).hexdigest()
+def evaluate(
+    renderer,
+    model,
+    output_root,
+    *,
+    native_render=render,
+    parameter_factory=parameters,
+    seed_first=20278120,
+    consumer="expander",
+):
+    renderer, model, output_root = Path(renderer), Path(model), Path(output_root)
+    output_root.mkdir(parents=True, exist_ok=False)
+    sha = hashlib.sha256(model.read_bytes()).hexdigest()
+    binary_sha = hashlib.sha256(renderer.read_bytes()).hexdigest()
     report = {
         "model_sha256": sha,
+        "consumer": consumer,
+        "first_source_seed": seed_first,
         "renderer_sha256": binary_sha,
         "cases": [],
         "deployment_admitted": False,
@@ -49,7 +56,7 @@ def main():
     ]
     for i, (kind, rate, channels) in enumerate(cases):
         sources = [
-            fixture(20278120 + i + 1000 * c, rate, kind=kind) for c in range(channels)
+            fixture(seed_first + i + 1000 * c, rate, kind=kind) for c in range(channels)
         ]
         clean, noise = [
             np.column_stack([x[k] for x in sources]).astype("<f4") for k in [1, 2]
@@ -69,22 +76,22 @@ def main():
             "methods": {},
         }
         for name, values in [("clean", clean), ("noise", noise)]:
-            path = args.output / f"{i}-{name}.f32le"
+            path = output_root / f"{i}-{name}.f32le"
             path.write_bytes(values.tobytes())
             item[name + "_file"] = {
                 "path": str(path.resolve()),
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
             }
         for mode in ["unity", "classical", "learned"]:
-            output, gains, metadata = render(
+            output, gains, metadata = native_render(
                 mixture,
-                args.renderer,
-                args.output / item["case"] / mode,
-                model=args.model,
+                renderer,
+                output_root / item["case"] / mode,
+                model=model,
                 sha=sha,
                 enabled=mode == "learned",
                 rate=rate,
-                params=parameters(ratio=1.0 if mode == "unity" else 4.0),
+                params=parameter_factory(ratio=1.0 if mode == "unity" else 4.0),
             )
             expected = reference(
                 mixture, metadata["analysis_window"], gains, len(output)
@@ -134,11 +141,11 @@ def main():
         )
         report["cases"].append(item)
     if (
-        hashlib.sha256(args.model.read_bytes()).hexdigest() != sha
-        or hashlib.sha256(args.renderer.read_bytes()).hexdigest() != binary_sha
+        hashlib.sha256(model.read_bytes()).hexdigest() != sha
+        or hashlib.sha256(renderer.read_bytes()).hexdigest() != binary_sha
     ):
         raise RuntimeError("Frozen evaluation inputs changed")
-    (args.output / "report.json").write_text(
+    (output_root / "report.json").write_text(
         json.dumps(report, indent=2, allow_nan=False) + "\n"
     )
     print(
@@ -153,6 +160,15 @@ def main():
             indent=2,
         )
     )
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--renderer", type=Path, required=True)
+    parser.add_argument("--model", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    evaluate(args.renderer, args.model, args.output)
 
 
 if __name__ == "__main__":

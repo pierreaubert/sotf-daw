@@ -1,0 +1,18 @@
+{
+  "reason": "Fresh consumer probes must avoid prior expander source-component seed overlap. Preserve all first-run results; do not change model, controls or scenario matrix.",
+  "overlapping_seeds": [
+    20279121,
+    20279123,
+    20279125,
+    20279128,
+    20279129
+  ],
+  "original_first_seed": 20279120,
+  "replacement_first_seed": 20289120,
+  "channel_seed_offset": 1000,
+  "scenario_count": 13,
+  "model_sha256": "3b93c142cbcd5fc118bd2a075c6bca7d5bccc1dc94b9cc36338f9c9fd7899af9",
+  "original_entry_point_sha256": "81ce5d8639feafcef7a3ba686aafee94ca65cc35ca45d2364b25d40f9a47163c",
+  "tuning_to_quality_results": false,
+  "deployment_admitted": false
+}

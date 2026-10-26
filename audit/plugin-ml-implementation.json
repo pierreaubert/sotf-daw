@@ -972,12 +972,17 @@
         "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs",
         "audit/ml-spectral-restoration-20261026.md",
         "audit/artifacts/ml-spectral-restoration-20261026",
-        "scripts/ml/replay_restoration_extraction.py"
+        "scripts/ml/replay_restoration_extraction.py",
+        "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/bin/qa_spectral_restoration_render.rs",
+        "scripts/ml/restoration_mask_native.py",
+        "scripts/ml/spectral_restoration_native.py",
+        "scripts/ml/evaluate_spectral_restoration.py",
+        "scripts/ml/test_spectral_restoration.py"
       ],
       "remaining": [
-        "Native spectral-compressor waveform renderer, independent conditional WOLA/stem comparison, artifacts and matched-attenuation controls against this classical compressor.",
-        "Cross-plugin use of the frozen expander mask is not new training or admission; its severe clean-material failure requires calibration/remedy and independent recorded validation.",
-        "Runtime/complete heap/contended platform budgets, perceptual/DAW validation and product activation/selector semantics."
+        "Synthetic asset remains unadmitted: clean-only relative RMS damage0.256 and severe percussion-onset damage. Calibration and independent recorded/perceptual acceptance remain.",
+        "Complete heap accounting and contended/cross-platform DAW deadlines. Native waveform/conditional WOLA, artifact proxies, post-hoc noise-lead controls and local callback probes are recorded.",
+        "Production selection, activation and full-stream product semantics require independently demonstrated quality benefit."
       ]
     },
     {

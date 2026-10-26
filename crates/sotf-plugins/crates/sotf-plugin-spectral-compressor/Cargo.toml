@@ -28,6 +28,11 @@ name = "qa-spectral-compressor"
 path = "bin/qa_spectral_compressor.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-spectral-restoration-render"
+path = "bin/qa_spectral_restoration_render.rs"
+required-features = ["qa"]
+
 [dev-dependencies]
 serde_json = { workspace = true }
 sha2 = { workspace = true }

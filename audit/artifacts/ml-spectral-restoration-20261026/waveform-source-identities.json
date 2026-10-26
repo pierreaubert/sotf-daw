@@ -1,0 +1,15 @@
+{
+  "scripts/ml/restoration_mask_native.py": "9670fcc1a482166195fcfb867bde2d4a3c0d5905ac124b6b2d4ef37352987ef3",
+  "scripts/ml/expander_mask_native.py": "5d40a57248b44d16834662cc213ec58f57e9a84ff75a4793fa2f0547f75164a1",
+  "scripts/ml/spectral_restoration_native.py": "3c51bffc2d77d148aafd16b0c3e3251b5bb7adb93f6d8c84b8210ded8be8ef7e",
+  "scripts/ml/evaluate_expander_mask.py": "8f67c2bfaa79e8e6cc860ac3607eaf786443e90acb486af7cfb8e815ecca328d",
+  "scripts/ml/evaluate_spectral_restoration.py": "f2e4ad9dae04936d411ea6298d70f1a52cafc47cad274b8bf52a25c4afc49821",
+  "scripts/ml/test_spectral_restoration.py": "b723fe9c970d25060f386e6ae6593b5320cf8f7d6e46193cb913e7f794508b76",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/stft_state.rs": "797dbec67d990dafdb0fbc2fd98a0a0702797f1d1e56c180579dc5922b698cd8",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/src/lib/spectral_compressor_plugin.rs": "ca8edc171246aed8771780bff370246935495577524729229905d4f284f9c4a2",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/tests/restoration.rs": "52e63621180ae6811341efcd1912cf5b654ad92ad2bae41b4e382ebbb8c5c8a2",
+  "crates/sotf-plugins/crates/sotf-plugin-spectral-compressor/bin/qa_spectral_restoration_render.rs": "d180868d560e29f801b93b17780ec4447112364f3092b17804c8c275edec9f21",
+  "scripts/ml/music_mask_cases.py": "6be73edd6514b4d02854bc52d392709eb9116463b8482329d6978614ba0a7d52",
+  "scripts/ml/calibrate_expander_mask.py": "9ee64d4de6abc4e012a053d5b8e4d75f1b513f064786f1e17800de82b1666c0c",
+  "scripts/ml/analyze_expander_artifacts.py": "568c3b57a0e222c41310c376a40b282a8d214998a612ae1c10c25ffa390c54f4"
+}

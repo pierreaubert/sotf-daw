@@ -1,0 +1,156 @@
+{
+  "source_report_sha256": "ab664c0ba449a7f23fce7e063e29456ab5a018d189656942e421fc3bd1e81043",
+  "scope": "Post-hoc diagnostic, not preregistered quality admission. Scalar control calibrated only on source time 50\u2013200 ms known noise lead, then frozen for the full waveform. Classical/dry interpolation or attenuation uses actual native outputs. No SNR-based alpha selection.",
+  "deployment_admitted": false,
+  "cases": [
+    {
+      "case": "0-matched-44100-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.18815422615439537,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 0.7623569549262875,
+      "learned_minus_control_snr_db": 9.617572813152874,
+      "control_clean_relative_error": 0.9065825933425754,
+      "control_full_noise_attenuation_db": 14.587483887641454,
+      "learned_full_noise_attenuation_db": 9.70612953417376
+    },
+    {
+      "case": "1-matched-44100-2ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.5869789825952972,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.5348917278744454,
+      "learned_minus_control_snr_db": 5.4835212765997206,
+      "control_clean_relative_error": 0.7670937214573762,
+      "control_full_noise_attenuation_db": 6.391285099669175,
+      "learned_full_noise_attenuation_db": 4.74279784166764
+    },
+    {
+      "case": "2-matched-48000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.29202450321980666,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.2484189426578713,
+      "learned_minus_control_snr_db": 12.789966145273837,
+      "control_clean_relative_error": 0.863985423074672,
+      "control_full_noise_attenuation_db": 11.128907459753368,
+      "learned_full_noise_attenuation_db": 7.286170741032634
+    },
+    {
+      "case": "3-matched-48000-2ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.3782784006047434,
+      "calibration_mean_square_error": 6.776263578034403e-21,
+      "control_snr_db": 1.247596899410815,
+      "learned_minus_control_snr_db": 8.513502187458066,
+      "control_clean_relative_error": 0.8478696942789435,
+      "control_full_noise_attenuation_db": 9.293755325549261,
+      "learned_full_noise_attenuation_db": 5.926007164103129
+    },
+    {
+      "case": "4-matched-96000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.7025914559378537,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.9802350997659492,
+      "learned_minus_control_snr_db": 5.638074683249197,
+      "control_clean_relative_error": 0.7481249199640229,
+      "control_full_noise_attenuation_db": 5.965099162095547,
+      "learned_full_noise_attenuation_db": 3.701129645053935
+    },
+    {
+      "case": "5-matched-96000-2ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.34571950205589985,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 0.967500965526221,
+      "learned_minus_control_snr_db": 7.94410813585013,
+      "control_clean_relative_error": 0.8524490573208099,
+      "control_full_noise_attenuation_db": 9.740706813461111,
+      "learned_full_noise_attenuation_db": 9.412756272477562
+    },
+    {
+      "case": "6-clean_only-48000-1ch",
+      "calibrated": false,
+      "reason": "no noise for calibration"
+    },
+    {
+      "case": "7-noise_only-48000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.2454106688650944,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": null,
+      "learned_minus_control_snr_db": null,
+      "control_clean_relative_error": null,
+      "control_full_noise_attenuation_db": 12.531731074030333,
+      "learned_full_noise_attenuation_db": 10.735145968625375
+    },
+    {
+      "case": "8-dense_percussion-48000-2ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.4023998979967626,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.5154442934924188,
+      "learned_minus_control_snr_db": 8.454421719207431,
+      "control_clean_relative_error": 0.8205804915629151,
+      "control_full_noise_attenuation_db": 8.579737661625826,
+      "learned_full_noise_attenuation_db": 6.8415455184373775
+    },
+    {
+      "case": "9-step_noise-48000-2ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.6296043411968719,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 0.5637416491267586,
+      "learned_minus_control_snr_db": -0.5875598516691,
+      "control_clean_relative_error": 0.7668922161699232,
+      "control_full_noise_attenuation_db": 8.702545976118138,
+      "learned_full_noise_attenuation_db": 3.599020903487549
+    },
+    {
+      "case": "10-tone_noise-48000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.9798954059752952,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.8993146709711959,
+      "learned_minus_control_snr_db": 1.1393437331928382,
+      "control_clean_relative_error": 0.5512840368746229,
+      "control_full_noise_attenuation_db": 3.535455532496099,
+      "learned_full_noise_attenuation_db": 2.4125840622855597
+    },
+    {
+      "case": "11-vibrato-48000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.38569099257621325,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 1.5766486869557403,
+      "learned_minus_control_snr_db": 13.150490805686136,
+      "control_clean_relative_error": 0.8307827274667953,
+      "control_full_noise_attenuation_db": 8.659647137808216,
+      "learned_full_noise_attenuation_db": 6.372352227626056
+    },
+    {
+      "case": "12-level_shift-48000-1ch",
+      "calibrated": true,
+      "method": "attenuate_classical",
+      "alpha": 0.4596862956430327,
+      "calibration_mean_square_error": 0.0,
+      "control_snr_db": 0.7106880326389887,
+      "learned_minus_control_snr_db": 10.297651112228504,
+      "control_clean_relative_error": 0.892075349497421,
+      "control_full_noise_attenuation_db": 8.244259046041654,
+      "learned_full_noise_attenuation_db": 7.148091348430196
+    }
+  ]
+}

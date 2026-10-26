@@ -64,3 +64,70 @@ noise leakage, onset/modulation/spectral-artifact diagnostics, equal-attenuation
 controls and runtime/heap budgets remain required for this consumer. Recorded
 material, calibrated perceptual acceptance and cross-platform DAW tests remain
 outstanding across the program. No production selector or admission is introduced.
+
+## Native waveform and artifact qualification
+
+`qa-spectral-restoration-render` records actual output, the native Hann window,
+and every per-channel/bin synthesis gain, including frozen EOF continuation.
+Input/request/model bounds, fixed source/trace counts, complete drain and native
+process/reset/drain allocation guards are checked. The shared Python render
+protocol checks complete typed parameter echoes and fixed FFT1024/H256 geometry.
+Expander and spectral-compressor parameter profiles remain explicit. Independent
+float64 WOLA and conditional clean/noise decomposition use the mixture's gain
+trace; isolated sources are never reclassified.
+
+The frozen model is still SHA256
+`3b93c142cbcd5fc118bd2a075c6bca7d5bccc1dc94b9cc36338f9c9fd7899af9`.
+There is no new training or asset admission. The initial probe set reused some
+source-component seeds from the earlier expander evaluation. Those reports and
+raw outputs are retained under `overlapping-consumer-seeds-*`; they did not
+overlap model training. `disjoint-source-plan.json` records the mechanical seed
+repair before generating the replacement. The model, controls and13-case scenario
+matrix were unchanged. The primary first seed is20289120 with1000 channel offset.
+All18 resulting source seeds are verified disjoint from this model's training,
+validation/final groups and the earlier expander waveform components. These are
+generated-family probes, not recorded or out-of-family generalization evidence.
+
+The primary13 cases produce39 outputs: unity, classical compression and learned
+restoration; mono/stereo at44.1/48/96kHz plus clean-only, noise-only, dense
+percussion, noise-step, tonal-noise, vibrato and level shifts. Maximum native/WOLA
+sample discrepancy is1.04e-7; conditional stem-sum discrepancy is1.14e-7.
+Both classical and learned routes have1024-sample latency at this FFT setting;
+the model adds no lookahead. Unity independently reconstructs delayed input.
+
+The clean-target SNR difference is +0.52 to +10.44dB across12 cases with desired
+material against the chosen ratio-four, -40dB threshold classical compressor.
+Restoration and ordinary compression have different targets; these scores assess
+the chosen restoration target and parameters. Learned residual noise attenuation
+is2.41–9.71dB on noisy cases containing desired material, and10.74dB on noise-only.
+Clean-only component relative RMS error remains0.256. This is substantial damage
+despite its better score than the chosen classical setting.
+
+Against the post-hoc noise-lead-calibrated classical/dry/scalar diagnostic, the
+learned route improves SNR in10 of11 comparable noisy cases and regresses in one, with differences
+-0.59 to +13.15dB. Only source time50–200ms calibrates the scalar; later full-wave
+attenuation differs. This is not equal-attenuation or preregistered admission.
+Clean-only lacks noise calibration and noise-only lacks a defined desired SNR.
+
+Independent source-energy onset diagnostics expose a dense-percussion case with
+mean30ms relative RMS onset error0.681 learned versus0.081 classical. Other onset
+results vary; these sparse generated labels do not establish perceptual quality.
+Active-envelope error standard deviation ranges0.35–1.50dB in the learned route.
+Positive residual local-spectral-contrast p99 increases in all12 noisy cases,
+by0.15–1.00dB. Envelope variation and spectral isolation are descriptive proxies,
+not validated pumping, musical-noise or audibility scores. The candidate remains
+unadmitted.
+
+Three native-Python integration tests and all seven expander Python compatibility
+tests pass after protocol sharing. The52-test native spectral suite, strict QA
+Clippy and default-feature check pass with the recorder. Local callback budgets
+are separately recorded for mono/stereo, all three clocks and classical/missing/
+learned modes; this does not prove complete heap accounting or contended hosts.
+All18 local cases pass the fixed80%-of-callback-duration budget with16 warmups
+and300 measured193-frame callbacks, run alone. The worst observed callback uses
+4.79% of its deadline at the declared quality-comparison parameter profile.
+
+Remaining: clean/onset damage and confidence calibration, independent recorded
+and perceptual acceptance, complete heap accounting, contended/cross-platform
+DAW deadlines, and product selection/activation semantics. Existing generated
+results do not authorize automatic production activation.

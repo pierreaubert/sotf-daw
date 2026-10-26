@@ -1,0 +1,59 @@
+{
+  "format": "sotf-spectral-restoration-qualification-v1",
+  "status": "cross_plugin_synthetic_qualification_only",
+  "deployment_admitted": false,
+  "automatic_activation": false,
+  "model": {
+    "file": "../expander-denoising-mask/model.synthetic.json",
+    "sha256": "3b93c142cbcd5fc118bd2a075c6bca7d5bccc1dc94b9cc36338f9c9fd7899af9",
+    "training": "unchanged shared generated-music/noise model; no new training"
+  },
+  "provenance": {
+    "external_audio": false,
+    "license": "GPL-3.0-or-later"
+  },
+  "geometry": {
+    "fft_size": 1024,
+    "hop_size": 256,
+    "channels": [
+      1,
+      2
+    ],
+    "sample_rates": [
+      44100,
+      48000,
+      96000
+    ],
+    "latency_samples": 1024,
+    "added_model_lookahead_samples": 0
+  },
+  "evaluation": {
+    "primary_first_seed": 20289120,
+    "channel_seed_offset": 1000,
+    "cases": 13,
+    "native_outputs": 39,
+    "disjoint_seed_verification": "audit/artifacts/ml-spectral-restoration-20261026/disjoint-source-verification.json",
+    "initial_component_overlap_retained": true
+  },
+  "failures": [
+    "Clean-material damage and severe desired percussion-onset attenuation",
+    "Residual spectral-isolation proxy increases in all noisy cases",
+    "Uncalibrated heuristic confidence and synthetic-only coverage"
+  ],
+  "evidence": "audit/artifacts/ml-spectral-restoration-20261026",
+  "remaining": [
+    "Recorded/perceptual quality and confidence calibration",
+    "Complete heap accounting and contended/platform host deadlines",
+    "Product selector and activation semantics"
+  ],
+  "validation": {
+    "native_spectral_tests": 52,
+    "python_spectral_integration_tests": 3,
+    "python_expander_compatibility_tests": 7,
+    "local_callback_cases": 18,
+    "local_callback_passes": 18,
+    "worst_observed_callback_deadline_fraction": 0.047813471502590674,
+    "complete_heap_measurement": false,
+    "perceptual_acceptance": false
+  }
+}
