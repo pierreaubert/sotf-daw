@@ -1,0 +1,8 @@
+{
+  "model_sha256": "781433352e2fe070fe640909b0ebe422e785cd2523b55b3606228ea53bd0c88c",
+  "renderer_sha256": "f4df9facef01cd3ebd1a3d68f8755be8522a85a26bce5c06ee59bc8dc8b2abec",
+  "native_feature_files_verified": 200,
+  "training_validation_final_audio_seeds_disjoint": true,
+  "audio_pairs": 72,
+  "exit_code": 0
+}

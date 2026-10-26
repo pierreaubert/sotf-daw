@@ -1029,12 +1029,20 @@
         "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/onset.rs",
         "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/tests/onset.rs",
         "audit/ml-onset-assist-20261026.md",
-        "audit/artifacts/ml-onset-assist-20261026"
+        "audit/artifacts/ml-onset-assist-20261026",
+        "scripts/ml/onset_assist_model.py",
+        "scripts/ml/onset_assist_cases.py",
+        "scripts/ml/onset_assist_native.py",
+        "scripts/ml/train_onset_assist.py",
+        "scripts/ml/test_onset_assist.py",
+        "scripts/ml/evaluate_onset_audio.py",
+        "crates/sotf-plugins/models/transient-onset-assist",
+        "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/bin/qa_onset_assist_render.rs"
       ],
       "remaining": [
-        "No trained classifier yet: source-disjoint causal onset labels, fitting and frozen model with Python/native parity remain.",
-        "Actual waveform/event-time quality, false/missed-onset, automation/confidence/domain-shift and perceptual comparisons against native fallback.",
-        "Complete memory and callback/contended host budgets, recorded material, DAW/platform and product activation/selector validation."
+        "Frozen synthetic classifier remains unadmitted: steady-only 234.33 false-positive analysis windows/minute and slow-attack event recall0.698. Improve/calibrate using development data, then freeze new independent final sources; current optimizer hit300-iteration limit.",
+        "Independent recorded/perceptual, stereo and automation-quality acceptance. Classifier held-out native/Python parity, event-time/noise/rate/level shifts and shaped-output callback/fallback checks pass their implementation contracts but do not establish audio quality.",
+        "Complete memory and callback/contended host budgets, DAW/platform and product activation/selector validation."
       ]
     },
     {

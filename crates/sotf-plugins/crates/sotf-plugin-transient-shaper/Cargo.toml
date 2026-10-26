@@ -21,6 +21,11 @@ name = "qa-transient-shaper"
 path = "bin/qa_transient_shaper.rs"
 required-features = ["qa"]
 
+[[bin]]
+name = "qa-onset-assist-render"
+path = "bin/qa_onset_assist_render.rs"
+required-features = ["qa"]
+
 [dependencies]
 sotf-host = { workspace = true }
 serde = { workspace = true }

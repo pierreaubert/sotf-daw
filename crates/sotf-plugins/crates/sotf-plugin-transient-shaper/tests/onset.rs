@@ -243,3 +243,28 @@ fn zero_attack_leaves_native_sustain_output_exactly_unchanged() {
         );
     }
 }
+
+#[test]
+fn frozen_classifier_matches_independent_python_probabilities() {
+    let bytes = include_bytes!("../../../models/transient-onset-assist/model.synthetic.json");
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../models/transient-onset-assist/parity.synthetic.json"
+    ))
+    .unwrap();
+    let model = OnsetModel::from_json(bytes, fixture["model_sha256"].as_str().unwrap()).unwrap();
+    let mut maximum = 0.0_f64;
+    for point in fixture["points"].as_array().unwrap() {
+        let row: Vec<_> = point["features"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|x| x.as_f64().unwrap())
+            .collect();
+        let x: [f64; 6] = row.try_into().unwrap();
+        maximum = maximum.max(
+            (f64::from(model.predict(&x).unwrap()) - point["prediction"].as_f64().unwrap()).abs(),
+        );
+    }
+    println!("frozen onset probability parity maximum={maximum}");
+    assert!(maximum < 2e-7);
+}

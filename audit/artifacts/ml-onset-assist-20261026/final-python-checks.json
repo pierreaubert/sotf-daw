@@ -1,0 +1,55 @@
+[
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "check",
+      "scripts/ml/onset_assist_model.py",
+      "scripts/ml/onset_assist_cases.py",
+      "scripts/ml/onset_assist_native.py",
+      "scripts/ml/train_onset_assist.py",
+      "scripts/ml/test_onset_assist.py",
+      "scripts/ml/evaluate_onset_audio.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.012151125119999051
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/ruff",
+      "format",
+      "--check",
+      "scripts/ml/onset_assist_model.py",
+      "scripts/ml/onset_assist_cases.py",
+      "scripts/ml/onset_assist_native.py",
+      "scripts/ml/train_onset_assist.py",
+      "scripts/ml/test_onset_assist.py",
+      "scripts/ml/evaluate_onset_audio.py"
+    ],
+    "exit_code": 0,
+    "seconds": 0.01187049993313849
+  },
+  {
+    "argv": [
+      "/private/tmp/sotf-ml-venv/bin/python",
+      "-m",
+      "unittest",
+      "discover",
+      "-s",
+      "scripts/ml",
+      "-p",
+      "test_onset_assist.py",
+      "-v"
+    ],
+    "exit_code": 0,
+    "seconds": 0.9318447080440819
+  },
+  {
+    "argv": [
+      "git",
+      "diff",
+      "--check"
+    ],
+    "exit_code": 0,
+    "seconds": 0.04940095799975097
+  }
+]

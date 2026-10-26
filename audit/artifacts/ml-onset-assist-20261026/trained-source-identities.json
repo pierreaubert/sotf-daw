@@ -1,0 +1,13 @@
+{
+  "scripts/ml/onset_assist_model.py": "358865933a13c8f3724545cd8cb0ab6f6d4799a9888a4c1e0fd5b03aa5d5ec91",
+  "scripts/ml/onset_assist_cases.py": "977d1fff1b22f57d2a507dd83433e29853cbc524b92919f010e321d0384ca50d",
+  "scripts/ml/onset_assist_native.py": "8e250d11f225049ce8f69f73f326e8ef6a64bdfa4de914e50207aba145731153",
+  "scripts/ml/train_onset_assist.py": "766a1d02a4f5d7cf9abae4f845b3f3165f2941054522dfe7c75c43cffe9377f6",
+  "scripts/ml/test_onset_assist.py": "f0d8391c88c6047271adb85ca2c9df6cba4ae10291630cac3bc1af83a072de21",
+  "scripts/ml/evaluate_onset_audio.py": "29acfa22f08988a497676d0ca1826aa3a283a8d81a1ed08f1c88c7b1aec2d090",
+  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/onset.rs": "bb4f6114a62e701805ca254ed7ea6609241d104f2767fbcccd97c5541e93f87d",
+  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/lib/transient_shaper_plugin.rs": "d5c137e47ad1f089504894acc9d40b52cb53074814d72f514da862dbcfc5b40d",
+  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/tests/onset.rs": "8e986c2a00c38c4d20bbc85b2e9b6a396bb6b7a4b3abde5749f7a654cbea6af6",
+  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/Cargo.toml": "81897b9024761f1ba1f31cd98bfbe67b90afbbc24dfbe22aaaa7f34a0cb0df1d",
+  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/bin/qa_onset_assist_render.rs": "ec57040696197894c3ea8619371b484d8ef76eaacabcc0fd7681c8c53ddc71be"
+}

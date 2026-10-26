@@ -1,0 +1,22 @@
+{
+  "argv": [
+    "rtk",
+    "proxy",
+    "cargo",
+    "build",
+    "-p",
+    "sotf-plugin-transient-shaper",
+    "--features",
+    "qa",
+    "--bin",
+    "qa-onset-assist-render",
+    "--release",
+    "--offline",
+    "--locked",
+    "-j2",
+    "--target-dir",
+    "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
+  ],
+  "exit_code": 0,
+  "seconds": 8.10334066580981
+}

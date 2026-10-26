@@ -1,0 +1,110 @@
+
+running 32 tests
+test params::tests::param_index_coverage ... ok
+test tests::test_attack_component_is_positive_only ... ok
+test params::tests::roundtrip_serde ... ok
+test params::tests::deserialize_empty_json_uses_defaults ... ok
+test tests::parameter_updates_reuse_cached_schema_storage ... ok
+test tests::neutral_controls_preserve_overrange_input ... ok
+test tests::from_params_rejects_out_of_range_values_instead_of_clamping ... ok
+test tests::asymmetric_stereo_transient_uses_linked_gain ... ok
+test tests::monitoring_is_sample_cadenced_and_partition_invariant ... ok
+test tests::process_rejects_oversized_buffer_without_state_change ... ok
+test tests::attenuation_only_window_is_reported_by_gain_meter ... ok
+test tests::test_from_params_wiring ... ok
+test tests::sensitivity_and_output_automation_are_partition_invariant ... ok
+test tests::sensitivity_and_output_gain_automation_are_smoothed ... ok
+test tests::test_fallible_constructor_and_buffer_validation ... ok
+test tests::test_info_and_channels ... ok
+test tests::test_output_gain_applies_makeup ... ok
+test tests::test_parameter_roundtrip ... ok
+test tests::test_get_parameter_unknown_id_returns_none ... ok
+test tests::test_process_empty_buffer ... ok
+test tests::test_sensitivity_gates_quiet_signals ... ok
+test tests::test_process_silence_is_silent ... ok
+test tests::test_process_stereo_passthrough_when_bypassed ... ok
+test tests::test_reset_clears_envelope_state ... ok
+test tests::test_set_parameter_nan_returns_error ... ok
+test tests::test_set_parameter_out_of_bounds_returns_error ... ok
+test tests::test_set_parameter_unknown_id_returns_error ... ok
+test tests::test_attack_boost_increases_transients ... ok
+test tests::test_time_to_coeff_handles_bad_inputs ... ok
+test types::tests::deserialize_empty_json_uses_param_specs_defaults ... ok
+test tests::test_sustain_reduction_lowers_tail ... ok
+test tests::extreme_shaping_has_bounded_output ... ok
+
+test result: ok. 32 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 6 tests
+test malformed_bulk_controls_are_rejected_before_any_mutation ... ok
+test reinitialize_preserves_audio_envelopes_while_reset_clears_them ... ok
+test mismatched_rate_rejection_preserves_audio_and_envelope_history ... ok
+test reset_immediately_clears_published_history_and_preserves_held_snapshots ... ok
+test quiet_start_first_hit_and_percussion_match_closed_form_step_responses ... ok
+test sustained_tone_emphasis_is_lower_than_onset_and_preserves_stereo_ratios ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 3 tests
+test native_tail_metadata_and_public_adapter_preserve_unfrozen_completion ... ok
+test cold_adapter_tail_queries_and_noop_completion_allocate_and_free_nothing ... ok
+test warmed_envelopes_and_unfinished_controls_have_exact_zero_output ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+
+running 8 tests
+test integration_default_parameters ... ok
+test integration_bypass_preserves_input_after_warmup ... ok
+test integration_parameter_roundtrip_and_validation ... ok
+test integration_from_params_applies_initial_state ... ok
+test integration_process_finite_output_with_extreme_parameters ... ok
+test integration_plugin_info_and_channels ... ok
+test integration_reset_clears_envelope_state ... ok
+test integration_output_gain_changes_level ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 7 tests
+test feature_loading_and_invalid_source_domains_are_explicit ... ok
+test overloaded_windows_cannot_supply_previous_energy_to_model_reentry ... ok
+test initialize_preserves_history_while_explicit_reset_starts_a_fresh_epoch ... ok
+test zero_attack_leaves_native_sustain_output_exactly_unchanged ... ok
+test bounded_controls_do_not_create_audio_tails_or_change_native_peak_protection ... ok
+test selected_controls_preserve_detectors_channels_and_callback_boundaries ... ok
+test missing_uncertain_and_unsupported_evidence_keep_exact_classical_output ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 4 tests
+test parameter_roundtrip ... ok
+test process_finite_output ... ok
+test output_gain_monotonic ... ok
+test bypass_preserves_input ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Compiling sotf-plugin-transient-shaper v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper)
+    Finished `release` profile [optimized] target(s) in 41.99s
+     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_transient_shaper-6259dc9fbf17494c)
+     Running unittests bin/qa_onset_assist_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_onset_assist_render-86f863bbbe2e4554)
+     Running unittests bin/qa_transient_shaper.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_transient_shaper-32921d5ca36caab2)
+     Running tests/audit_envelopes.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/audit_envelopes-51612acb551cf358)
+     Running tests/finite_stream.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/finite_stream-16ac0e0c43006829)
+     Running tests/integration.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/integration-03d831e861d659f7)
+     Running tests/onset.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/onset-997fc825fb4e87e2)
+     Running tests/property_tests.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/property_tests-210ef3dd50e66a20)

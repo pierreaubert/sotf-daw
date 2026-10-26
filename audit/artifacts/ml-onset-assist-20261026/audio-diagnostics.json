@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "/private/tmp/sotf-ml-venv/bin/python",
+    "scripts/ml/evaluate_onset_audio.py",
+    "--renderer",
+    "/Volumes/home_tmp/tmp/ml-onset-assist-training-20261026/renderer.frozen",
+    "--model",
+    "crates/sotf-plugins/models/transient-onset-assist/model.synthetic.json",
+    "--output",
+    "/Volumes/home_tmp/tmp/ml-onset-audio-20261026"
+  ],
+  "exit_code": 0,
+  "seconds": 31.13303270796314
+}
