@@ -217,8 +217,12 @@ fn factory_static_parity_and_generic_refusal_preserved() {
     // N/2 plus the 32-sample streaming head.
     assert_eq!(plugin.latency_samples(), 512 + 32);
     assert!(matches!(plugin.tail_length(), TailLength::Finite(_)));
-    // Parameter count matches DSP schema (5 global plus 6 per band).
-    assert_eq!(plugin.parameters().len(), 5 + bands.len() * 6);
+    // Parameter count matches DSP schema (6 global plus 6 per band).
+    assert_eq!(plugin.parameters().len(), 6 + bands.len() * 6);
+    assert_eq!(
+        plugin.get_parameter(&ParameterId::from("accuracy_mode")),
+        Some(ParameterValue::Bool(false))
+    );
     assert_eq!(get_gain(&*plugin, 0), 0.0);
     // Static audio through the wrapper is allocation-free and finite.
     let input = pattern(2048);

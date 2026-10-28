@@ -414,9 +414,8 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
     };
     for entry in params.sync_entries.iter().filter(|entry| !entry.realtime) {
         let id = canonical_id(name, entry.id.as_str());
-        // HissReducer triggers are momentary commands, not construction state.
-        // Its DSP config denies unknown fields, so exclude them here.
-        if name == "HissReducer" && matches!(id, "learn_noise" | "clear_profile") {
+        // Profile triggers are momentary commands, not construction state.
+        if is_profile_command(name, id) {
             continue;
         }
         let value = if name == "Convolution" {
@@ -588,6 +587,10 @@ fn dynamic_band_field(id: &str) -> Option<(usize, &str)> {
     Some((band.parse().ok()?, field))
 }
 
+fn is_profile_command(name: &str, id: &str) -> bool {
+    matches!(name, "Denoiser" | "HissReducer") && matches!(id, "learn_noise" | "clear_profile")
+}
+
 fn restore_structural_values(
     name: &str,
     params: &DynamicParams,
@@ -595,9 +598,8 @@ fn restore_structural_values(
 ) -> Result<(), String> {
     for entry in params.sync_entries.iter().filter(|entry| !entry.realtime) {
         let id = canonical_id(name, entry.id.as_str());
-        // HissReducer triggers are momentary commands, not retained structural
-        // state. Saved true values must not fail retention checks.
-        if name == "HissReducer" && matches!(id, "learn_noise" | "clear_profile") {
+        // Never replay saved momentary commands during activation.
+        if is_profile_command(name, id) {
             continue;
         }
         let mut expected = params
@@ -647,11 +649,6 @@ fn restore_structural_values(
             plugin
                 .set_parameter(parameter_id.clone(), expected.clone())
                 .map_err(|error| format!("Cannot restore {name}.{id}: {error}"))?;
-        }
-        if name == "Denoiser" && id == "clear_profile" {
-            // This is a momentary command: its getter returns false after the
-            // setter has executed it, so true is never a retained DSP state.
-            expected = ParameterValue::Bool(false);
         }
         if plugin.get_parameter(&parameter_id).as_ref() != Some(&expected) {
             return Err(format!(

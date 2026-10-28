@@ -339,6 +339,31 @@ fn all_wrapper_defaults_sync_to_initialized_plugins() {
 }
 
 #[test]
+fn denoiser_saved_profile_commands_do_not_run_during_restoration() {
+    let mut infos = schema_infos("Denoiser");
+    for info in &mut infos {
+        if matches!(info.id.as_str(), "learn_noise" | "clear_profile") {
+            info.default_value = 1.0;
+        }
+    }
+    let params = DynamicParams::from_infos(&infos);
+    let mut plugin = super::configuration::create_plugin("Denoiser", 48_000.0, &params).unwrap();
+    for id in ["learn_noise", "clear_profile"] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(id)),
+            Some(ParameterValue::Bool(false))
+        );
+    }
+    plugin.initialize(48_000.0).unwrap();
+    for id in ["learn_noise", "clear_profile"] {
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from(id)),
+            Some(ParameterValue::Bool(false))
+        );
+    }
+}
+
+#[test]
 fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
     let mut failures = Vec::new();
     for name in [
