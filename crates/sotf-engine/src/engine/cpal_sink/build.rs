@@ -80,7 +80,7 @@ pub(super) fn build_output_stream_f32(
     if logical_channels == hardware_channels {
         let stream = device
             .build_output_stream(
-                config,
+                *config,
                 move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                     state_clone.callback_count.fetch_add(1, Ordering::Relaxed);
                     read_ring_buffer(&mut consumer, data, data.len(), &state_clone, capacity);
@@ -108,7 +108,7 @@ pub(super) fn build_output_stream_f32(
 
     let stream = device
         .build_output_stream(
-            config,
+            *config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                 state_clone.callback_count.fetch_add(1, Ordering::Relaxed);
                 process_mapped_f32_callback(
@@ -160,7 +160,7 @@ where
 
     let stream = device
         .build_output_stream(
-            config,
+            *config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 state_clone.callback_count.fetch_add(1, Ordering::Relaxed);
                 let requested = data.len();

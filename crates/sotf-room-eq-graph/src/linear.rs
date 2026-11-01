@@ -1,5 +1,5 @@
 use super::misc::sorted_channel_names;
-pub use autoeq::roomeq::DspChainOutput;
+pub use roomeq_model::DspChainOutput;
 
 pub(super) fn linear_room_eq_initial_channels(
     output: &DspChainOutput,

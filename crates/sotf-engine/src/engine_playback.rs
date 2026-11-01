@@ -1,10 +1,8 @@
 //! DAW-engine sweep playback for capture takes.
 //!
 //! Implements `sotf_capture`'s [`SweepPlayback`] over [`AudioEngineManager`].
-//! The playback sequence below moved verbatim from
-//! `signal_recorder::record` (single-channel variant, including its
-//! virtual-output allowance and rate-mismatch warning); only the log tag
-//! is parameterized so multi-channel callers keep their own prefix.
+//! Routes mono stimuli to a selected hardware channel, preserving the
+//! capture caller's virtual-output policy and diagnostic log prefix.
 
 use crate::engine::PluginConfig;
 use crate::{AudioEngineManager, StreamingState};
@@ -102,28 +100,12 @@ impl SweepPlayback for EnginePlayback {
 
         log::info!("[{tag}] Hardware output channels: {hardware_channels}");
 
-        check_output_channel(channel, hardware_channels)?;
-
         log::info!(
             "[{tag}] Routing mono input (channel 0) to hardware output channel {channel} (0-indexed)"
         );
 
-        // Matrix: 1 input x hardware_channels outputs, all zeros except
-        // position [output_channel] = 1.0.
-        let mut matrix = vec![0.0_f32; hardware_channels];
-        matrix[channel as usize] = 1.0;
-
-        let matrix_params = serde_json::json!({
-            "input_channels": 1,
-            "output_channels": hardware_channels,
-            "matrix": matrix,
-        });
-
-        let plugins = vec![PluginConfig::new("matrix", matrix_params)];
-
-        log::info!(
-            "[{tag}] Matrix: 1 input -> {hardware_channels} outputs, channel {channel} active (rest silent)"
-        );
+        let route = sweep_route(channel, hardware_channels, sweep_rate)?;
+        let plugins = vec![route];
 
         let actual_output_rate = crate::manager::select_output_sample_rate_for_channels(
             sweep_rate,
@@ -158,5 +140,85 @@ impl SweepPlayback for EnginePlayback {
         } else {
             Ok(())
         }
+    }
+}
+
+// Build only the logical channels needed for this route. Playback pads them
+// to the hardware stream width, so devices wider than the matrix limit can
+// still use their supported lower channels.
+fn sweep_route(
+    channel: u16,
+    hardware_channels: usize,
+    sample_rate: u32,
+) -> Result<PluginConfig, String> {
+    check_output_channel(channel, hardware_channels)?;
+    let output_channels = usize::from(channel) + 1;
+    let mut matrix = vec![0.0_f32; output_channels];
+    matrix[usize::from(channel)] = 1.0;
+    let config = PluginConfig::new(
+        "matrix",
+        serde_json::json!({
+            "input_channels": 1,
+            "output_channels": output_channels,
+            "matrix": matrix,
+        }),
+    );
+    // The general engine can skip invalid plugins. Capture must fail before
+    // starting instead of silently playing its stimulus on the wrong channel.
+    sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 1, sample_rate)
+        .map_err(|error| format!("Cannot route sweep to output channel {channel}: {error}"))?;
+    Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sweep_route;
+    use sotf_plugins::ProcessContext;
+
+    #[test]
+    fn sweep_routes_on_wide_devices_preserve_selected_channel() {
+        for channel in [0_u16, 1, 3, 127] {
+            let config = sweep_route(channel, 130, 48_000).unwrap();
+            let mut plugin =
+                sotf_plugins::create_plugin(&config.plugin_type, &config.parameters, 1, 48_000)
+                    .unwrap();
+            plugin.initialize(48_000.0).unwrap();
+            let channels = plugin.output_channels();
+            let input = [0.25_f32, -0.5, 0.75];
+            let mut output = vec![f32::NAN; channels * input.len()];
+            plugin
+                .process(
+                    &input,
+                    &mut output,
+                    &ProcessContext::new(48_000, input.len()),
+                )
+                .unwrap();
+            for (frame, expected) in output.chunks_exact(channels).zip(input) {
+                for (index, sample) in frame.iter().enumerate() {
+                    assert_eq!(
+                        *sample,
+                        if index == usize::from(channel) {
+                            expected
+                        } else {
+                            0.0
+                        }
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_sweep_routes_fail_before_playback() {
+        assert!(sweep_route(2, 2, 48_000).is_err());
+        let error = sweep_route(128, 130, 48_000).unwrap_err();
+        assert!(
+            error.contains("Cannot route sweep to output channel 128"),
+            "{error}"
+        );
+        assert!(
+            error.contains("Matrix channel counts must be <= 128"),
+            "{error}"
+        );
     }
 }

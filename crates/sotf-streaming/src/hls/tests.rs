@@ -129,7 +129,8 @@ fn oversized_hls_body_is_rejected_before_the_response_finishes() {
     let server = std::thread::spawn(move || {
         let (mut stream, _) = listener.accept().unwrap();
         let mut request = [0u8; 1024];
-        stream.read(&mut request).unwrap();
+        let received = stream.read(&mut request).unwrap();
+        assert!(received > 0, "client closed before sending its request");
         stream
             .write_all(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n11\r\n12345678901234567\r\n")
             .unwrap();
@@ -143,7 +144,10 @@ fn oversized_hls_body_is_rejected_before_the_response_finishes() {
     let url = Url::parse(&format!("http://{addr}/oversized.ts")).unwrap();
     let result = super::fetch::fetch_bytes(&client, &url, None, 16);
     let _ = done_tx.send(());
-    assert!(server.join().unwrap(), "fetch waited for the complete oversized body");
+    assert!(
+        server.join().unwrap(),
+        "fetch waited for the complete oversized body"
+    );
     assert_eq!(result.unwrap_err().kind(), io::ErrorKind::InvalidData);
 }
 

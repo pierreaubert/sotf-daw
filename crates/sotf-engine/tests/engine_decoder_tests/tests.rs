@@ -71,9 +71,12 @@ fn test_decoder_gapless_preserves_tail_frames_from_both_sources() {
         "gapless transition must not truncate either source"
     );
     assert!(
-        event_rx
-            .try_iter()
-            .any(|event| matches!(event, ThreadEvent::DecoderGaplessTransition(_))),
+        event_rx.try_iter().any(|event| matches!(
+            event,
+            ThreadEvent::DecoderTagged { attempt: 1, event }
+                if matches!(*event, ThreadEvent::DecoderGaplessTransition(ref source)
+                    if source == &temp_file2.path().to_path_buf().into())
+        )),
         "decoder should report the queued-source transition"
     );
 }

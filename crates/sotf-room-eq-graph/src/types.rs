@@ -1,5 +1,5 @@
 use super::identity::identity_matrix_parameters;
-use autoeq::roomeq::{ChannelDspChain, PluginConfigWrapper as DspPluginConfig};
+use roomeq_model::{ChannelDspChain, PluginConfigWrapper as DspPluginConfig};
 
 pub(super) fn append_channel_dsp_graph_branch<'a, F, I>(
     add_node: &mut F,

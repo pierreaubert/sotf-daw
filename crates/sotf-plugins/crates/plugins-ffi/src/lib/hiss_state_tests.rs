@@ -650,8 +650,6 @@ fn hiss_ffi_busy_never_drops_blob() {
         }
     });
 
-    let mut saw_ok = false;
-    let mut saw_busy = false;
     for _ in 0..200 {
         let mut len = 0usize;
         let state = plugin_save_state(handle.pointer, &mut len);
@@ -662,7 +660,6 @@ fn hiss_ffi_busy_never_drops_blob() {
                 error.contains("busy"),
                 "null save must diagnose contention: {error}"
             );
-            saw_busy = true;
         } else {
             // SAFETY: FFI owns exactly len bytes until freed below.
             let saved = unsafe { std::slice::from_raw_parts(state, len) }.to_vec();
@@ -672,15 +669,16 @@ fn hiss_ffi_busy_never_drops_blob() {
             let blob: NoiseProfileData = serde_json::from_value(map["captured_profile"].clone())
                 .expect("successful save must carry the blob");
             assert_eq!(blob, v2);
-            saw_ok = true;
         }
     }
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
     churn.join().unwrap();
-    assert!(saw_ok, "churn must still permit successful saves");
-    // Busy may or may not trigger under this churn; the load-bearing claim
-    // is that no success ever omits the blob. When busy occurs, it is loud.
-    let _ = saw_busy;
+    // Every bounded read may overlap publication under continuous churn.
+    // Once publication stops, saving must recover and retain the exact blob.
+    let saved = handle.save_map();
+    let blob: NoiseProfileData = serde_json::from_value(saved["captured_profile"].clone())
+        .expect("save after churn must carry the blob");
+    assert_eq!(blob, v2);
 }
 
 #[test]

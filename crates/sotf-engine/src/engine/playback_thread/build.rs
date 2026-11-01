@@ -59,7 +59,7 @@ pub(super) fn build_output_stream_f32(
 
     let stream = device
         .build_output_stream(
-            config,
+            *config,
             move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
                 state_clone
                     .output_callback_active
@@ -119,7 +119,7 @@ where
 
     let stream = device
         .build_output_stream(
-            config,
+            *config,
             move |data: &mut [T], _: &cpal::OutputCallbackInfo| {
                 state_clone
                     .output_callback_active

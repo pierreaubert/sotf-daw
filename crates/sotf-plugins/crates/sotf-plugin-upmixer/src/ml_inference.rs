@@ -13,7 +13,7 @@ use tract_onnx::prelude::*;
 
 /// Optimised+runnable tract model. Type alias for the value returned by
 /// `TypedModel::into_runnable()`; keeps function signatures readable.
-type RunnableOnnxModel = TypedRunnableModel<TypedModel>;
+type RunnableOnnxModel = std::sync::Arc<TypedRunnableModel>;
 
 /// Ring buffer capacity in contexts (blocks arrive every ~21ms at 2048/48k with 50% overlap).
 const RING_BUFFER_CAPACITY: usize = 4;
@@ -205,7 +205,7 @@ fn run_inference(model: &RunnableOnnxModel, input_data: &[f32]) -> Result<f32, S
     }
 
     let view = outputs[0]
-        .to_array_view::<f32>()
+        .to_plain_array_view::<f32>()
         .map_err(|e| format!("Failed to extract output tensor: {}", e))?;
 
     if !output_shape_accepts_probability(view.shape()) {

@@ -2,7 +2,7 @@ use super::infer::infer_plugin_output_channels;
 use super::linear::{linear_room_eq_initial_channels, linear_room_eq_output_order};
 use super::misc::single_channel_matrix_parameters;
 use super::types::{append_channel_dsp_graph_branch, plugin_stage};
-use autoeq::roomeq::DspChainOutput;
+use roomeq_model::DspChainOutput;
 
 /// Build native playback from AutoEQ's resolved physical routing contract.
 /// Input processing precedes fan-out; each route retains its own transfer;
@@ -63,10 +63,9 @@ fn normalize_room_eq_delay_parameters(config: &mut sotf_audio::engine::PluginGra
 
 fn build_routed_room_eq_graph(
     output: &DspChainOutput,
-    graph: &autoeq::roomeq::BassManagementRoutingGraph,
+    graph: &roomeq_model::BassManagementRoutingGraph,
 ) -> anyhow::Result<sotf_audio::engine::PluginGraphConfig> {
-    let physical =
-        autoeq::roomeq_engine::physical_routing::resolve_physical_routing(&output.channels, graph)?;
+    let physical = roomeq_dsp::physical_routing::resolve_physical_routing(&output.channels, graph)?;
     super::physical::build_physical_room_eq_graph(&physical, &output.global_plugins)
 }
 

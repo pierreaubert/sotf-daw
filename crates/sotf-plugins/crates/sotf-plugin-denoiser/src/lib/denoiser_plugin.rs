@@ -101,6 +101,7 @@ pub(super) struct DenoiserMasking {
     pub bark_bin_range: Vec<(usize, usize)>, // [spectrum_size] precomputed (lo, hi) bin range within MAX_SPREAD_BARK
     pub masking_threshold: Vec<f32>,         // [spectrum_size] scratch for masking thresholds
     pub masking_signal_power: Vec<f32>,      // [spectrum_size] scratch for signal power
+    pub candidates: Vec<usize>,              // [spectrum_size] preallocated masking candidate queue
 }
 
 /// Decision-directed SNR parameters and state.
@@ -445,6 +446,7 @@ impl DenoiserPlugin {
                 bark_bin_range: vec![(0, 0); spectrum_size],
                 masking_threshold: vec![0.0_f32; spectrum_size],
                 masking_signal_power: vec![0.0_f32; spectrum_size],
+                candidates: vec![0; spectrum_size],
             },
 
             decision_directed: DenoiserDecisionDirected {

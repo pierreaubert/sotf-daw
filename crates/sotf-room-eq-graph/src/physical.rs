@@ -3,14 +3,14 @@
 //! Source processing is shared before fan-out. Distinct route transfers are
 //! never collapsed by source index; physical-output processing follows fan-in.
 
-use autoeq::roomeq_model::PhysicalRoutingGraph;
+use roomeq_model::PhysicalRoutingGraph;
 use sotf_audio::engine::{PluginGraphConfig, PluginGraphEdgeConfig, PluginGraphNodeConfig};
 
 use super::identity::identity_matrix_parameters;
 use super::misc::single_channel_matrix_parameters;
 
 /// Validate the RoomEQ runtime protection contract without accepting plugin defaults.
-fn validate_sub_limiter(plugin: &autoeq::roomeq::PluginConfigWrapper) -> anyhow::Result<()> {
+fn validate_sub_limiter(plugin: &roomeq_model::PluginConfigWrapper) -> anyhow::Result<()> {
     let ceiling = plugin.parameters["threshold_db"]
         .as_f64()
         .unwrap_or(f64::NAN);
@@ -27,9 +27,9 @@ fn validate_sub_limiter(plugin: &autoeq::roomeq::PluginConfigWrapper) -> anyhow:
 }
 
 fn native_plugins(
-    plugins: &[autoeq::roomeq::PluginConfigWrapper],
+    plugins: &[roomeq_model::PluginConfigWrapper],
     width: usize,
-) -> anyhow::Result<Vec<autoeq::roomeq::PluginConfigWrapper>> {
+) -> anyhow::Result<Vec<roomeq_model::PluginConfigWrapper>> {
     let mut result = Vec::new();
     for plugin in plugins {
         // DawHost compensates reported limiter latency at the output merge.
@@ -90,7 +90,7 @@ fn native_plugins(
 
 pub(super) fn build_physical_room_eq_graph(
     physical: &PhysicalRoutingGraph,
-    global_plugins: &[autoeq::roomeq::PluginConfigWrapper],
+    global_plugins: &[roomeq_model::PluginConfigWrapper],
 ) -> anyhow::Result<PluginGraphConfig> {
     let mut physical = physical.clone();
     physical.canonicalize().map_err(anyhow::Error::msg)?;
@@ -254,7 +254,7 @@ pub(super) fn build_physical_room_eq_graph(
             tail,
         ));
         for plugin in native_plugins(
-            &autoeq::roomeq_engine::physical_routing::physical_route_plugins(route),
+            &roomeq_dsp::physical_routing::physical_route_plugins(route),
             width,
         )? {
             let node = add(plugin.plugin_type, plugin.parameters);
@@ -293,7 +293,7 @@ pub(super) fn build_physical_room_eq_graph(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use autoeq::roomeq_model::{PhysicalRoute, PhysicalRoutingPort, PluginConfigWrapper};
+    use roomeq_model::{PhysicalRoute, PhysicalRoutingPort, PluginConfigWrapper};
     use serde_json::json;
 
     #[test]
@@ -579,10 +579,10 @@ mod tests {
     #[test]
     fn physical_native_rejects_unsupported_crossover_without_substitution() {
         let mut graph = fixture(48_000);
-        graph.routes[0].crossover = Some(autoeq::roomeq_model::PhysicalRouteCrossover {
+        graph.routes[0].crossover = Some(roomeq_model::PhysicalRouteCrossover {
             crossover_type: "LR48".into(),
             frequency_hz: 80.0,
-            pass: autoeq::roomeq_model::PhysicalRoutePass::Low,
+            pass: roomeq_model::PhysicalRoutePass::Low,
         });
         let error = build_physical_room_eq_graph(&graph, &[]).unwrap_err();
         assert!(error.to_string().contains("LR48"));
@@ -603,13 +603,13 @@ mod tests {
                     };
                     if order != 0 {
                         for route in &mut physical.routes {
-                            route.crossover = Some(autoeq::roomeq_model::PhysicalRouteCrossover {
+                            route.crossover = Some(roomeq_model::PhysicalRouteCrossover {
                                 crossover_type: format!("LR{order}"),
                                 frequency_hz: 1000.0,
                                 pass: if route.output_index == 0 {
-                                    autoeq::roomeq_model::PhysicalRoutePass::Low
+                                    roomeq_model::PhysicalRoutePass::Low
                                 } else {
-                                    autoeq::roomeq_model::PhysicalRoutePass::High
+                                    roomeq_model::PhysicalRoutePass::High
                                 },
                             });
                         }

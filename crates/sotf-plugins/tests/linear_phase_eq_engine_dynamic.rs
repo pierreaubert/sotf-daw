@@ -179,7 +179,21 @@ fn facade_factory_returns_dynamic_wrapper_with_static_parity() {
         .expect("facade must return the dynamic wrapper");
     assert_eq!(dynamic.pending_len(), 0);
     assert_eq!(plugin.latency_samples(), 512 + 32);
-    assert_eq!(plugin.parameters().len(), 5 + bands.len() * 6);
+    let parameters = plugin.parameters();
+    assert_eq!(parameters.len(), 6 + bands.len() * 6);
+    let accuracy = parameters
+        .last()
+        .expect("accuracy follows legacy band slots");
+    assert_eq!(accuracy.id, ParameterId::from("accuracy_mode"));
+    assert_eq!(accuracy.default_value, ParameterValue::Bool(false));
+    assert_eq!(
+        accuracy.update_mode,
+        sotf_plugins::param_specs::UpdateMode::Structural
+    );
+    assert_eq!(
+        plugin.get_parameter(&accuracy.id),
+        Some(ParameterValue::Bool(false))
+    );
     // Generic band setter stays structural.
     let err = plugin
         .set_parameter(ParameterId::from("band_0_gain"), ParameterValue::Float(6.0))

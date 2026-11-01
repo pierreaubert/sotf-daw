@@ -46,8 +46,11 @@ fn main() {
     let num_frames = 48000;
     let mut buffer = generate_sine(sample_rate, 1000.0, -10.0, num_frames);
     let input_rms = rms(&buffer);
-    let ctx = ProcessContext::new(sample_rate, num_frames);
-    inner.process_in_place(&mut buffer, &ctx).unwrap();
+    // Exercise a full second through callback-sized blocks, including the tail.
+    for block in buffer.chunks_mut(512 * channels) {
+        let ctx = ProcessContext::new(sample_rate, block.len() / channels);
+        inner.process_in_place(block, &ctx).unwrap();
+    }
     let output_rms = rms(&buffer[num_frames / 2..]);
 
     println!(

@@ -27,29 +27,41 @@ fn driver_capture_runs_through_dsp_and_device_free_output() {
     use std::time::{Duration, Instant};
 
     #[derive(Debug)]
-    struct MarkedCapture(Mutex<usize>);
+    struct MarkedCapture {
+        consumed_frames: Mutex<usize>,
+        started_at: Instant,
+    }
     impl CaptureInput for MarkedCapture {
         fn configuration(&self) -> DriverConfig {
             DriverConfig::new(48_000, 128, 2)
         }
         fn available_frames(&self) -> usize {
-            *self.0.lock().unwrap()
+            // Model a live capture clock. Making the entire second available
+            // immediately lets the decoder exhaust it during output startup.
+            let produced = (self.started_at.elapsed().as_secs_f64() * 48_000.0) as usize;
+            produced
+                .min(48_000)
+                .saturating_sub(*self.consumed_frames.lock().unwrap())
         }
         fn read_frames(&self, output: &mut [f32], expected: DriverConfig) -> usize {
             if expected != self.configuration() {
                 return 0;
             }
-            let mut remaining = self.0.lock().unwrap();
-            let frames = (*remaining).min(output.len() / 2);
+            let available = self.available_frames();
+            let mut consumed = self.consumed_frames.lock().unwrap();
+            let frames = available.min(output.len() / 2);
             for frame in output[..frames * 2].as_chunks_mut::<2>().0 {
                 frame.copy_from_slice(&[0.5, -0.25]);
             }
-            *remaining -= frames;
+            *consumed += frames;
             frames
         }
     }
 
-    let source = CaptureSource::new(MarkedCapture(Mutex::new(48_000)));
+    let source = CaptureSource::new(MarkedCapture {
+        consumed_frames: Mutex::new(0),
+        started_at: Instant::now(),
+    });
     let mut manager = AudioEngineManager::new();
     manager
         .start_driver_playback_with_source(

@@ -10,14 +10,20 @@ use common::find_device;
 
 #[test]
 fn test_gain_loopback_verification() {
-    let device_names = [
-        "BlackHole 2ch",
-        "BlackHole 16ch",
-        "BlackHole 64ch",
-        "SotF Virtual Audio",
-        "SotF Virtual Device",
-        "SotF Virtual Output",
-    ];
+    let requested_device = std::env::var("AEQ_E2E_DEVICE").ok();
+    let device_names = requested_device.as_deref().map_or_else(
+        || {
+            vec![
+                "BlackHole 2ch",
+                "BlackHole 16ch",
+                "BlackHole 64ch",
+                "SotF Virtual Audio",
+                "SotF Virtual Device",
+                "SotF Virtual Output",
+            ]
+        },
+        |name| vec![name],
+    );
     let mut output_setup = None;
     let mut input_setup = None;
 
@@ -33,6 +39,10 @@ fn test_gain_loopback_verification() {
     }
 
     if output_setup.is_none() || input_setup.is_none() {
+        assert!(
+            requested_device.is_none(),
+            "Requested loopback device {requested_device:?} has no usable input/output pair"
+        );
         println!("SKIPPING test: virtual audio device not found.");
         return;
     }
@@ -95,7 +105,7 @@ fn test_gain_loopback_verification() {
     let channels = in_config.channels() as usize;
     let stream = in_device
         .build_input_stream(
-            &in_config.into(),
+            in_config.into(),
             move |data: &[f32], _: &_| {
                 capture_clone.lock().unwrap().extend_from_slice(data);
             },

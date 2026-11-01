@@ -75,7 +75,10 @@ mod tests {
         state.playback_state = PlaybackState::Paused;
         assert_eq!(resume_decision(&state, false), ResumeDecision::Resume);
         state.playback_state = PlaybackState::Playing;
-        assert_eq!(resume_decision(&state, false), ResumeDecision::AlreadyPlaying);
+        assert_eq!(
+            resume_decision(&state, false),
+            ResumeDecision::AlreadyPlaying
+        );
         state.current_source = None;
         assert_eq!(resume_decision(&state, false), ResumeDecision::Reject);
         state.playback_state = PlaybackState::Paused;

@@ -7,7 +7,8 @@ repository.workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-autoeq = { workspace = true }
+roomeq-model = { workspace = true }
+roomeq-dsp = { workspace = true }
 serde_json = { workspace = true }
 sotf-engine = { workspace = true }
 

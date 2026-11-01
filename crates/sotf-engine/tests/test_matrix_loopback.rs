@@ -102,7 +102,7 @@ fn test_matrix_swap_channels_loopback_verification() {
     let channels = in_config.channels() as usize;
     let stream = in_device
         .build_input_stream(
-            &in_config.into(),
+            in_config.into(),
             move |data: &[f32], _: &_| {
                 capture_clone.lock().unwrap().extend_from_slice(data);
             },
@@ -269,7 +269,7 @@ fn test_matrix_mono_sum_loopback_verification() {
     let channels = in_config.channels() as usize;
     let stream = in_device
         .build_input_stream(
-            &in_config.into(),
+            in_config.into(),
             move |data: &[f32], _: &_| {
                 capture_clone.lock().unwrap().extend_from_slice(data);
             },

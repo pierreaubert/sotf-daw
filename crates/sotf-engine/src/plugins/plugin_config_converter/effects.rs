@@ -864,7 +864,7 @@ mod tests {
     fn pnd_neural_configuration_survives_typed_engine_conversion() {
         let neural = serde_json::json!({
             "model_path": "models/crepe-tiny.onnx", "sha256": "a".repeat(64),
-            "min_confidence": 0.8, "max_age_ms": 150.0,
+            "min_confidence": 0.8_f32, "max_age_ms": 150.0,
             "max_deviation_cents": 100.0, "source_channel": 1
         });
         let settings: PluginSettings = serde_json::from_value(serde_json::json!({

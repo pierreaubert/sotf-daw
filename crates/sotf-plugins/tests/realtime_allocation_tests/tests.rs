@@ -1706,6 +1706,40 @@ fn native_gain_descriptor(format: PluginFormat, path: PathBuf) -> PluginDescript
 }
 
 #[test]
+#[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
+fn worker_polling_without_external_plugins_does_not_allocate() {
+    let mut host = sotf_plugins::DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(ParametricPluginAdapter::new(GainPlugin::new(
+        2, 0.0,
+    ))))
+    .unwrap();
+    host.build().unwrap();
+    assert_no_alloc_or_free("worker polling without external plugins", || {
+        assert!(host.poll_isolated_external_plugin_workers().is_empty());
+        assert!(
+            host.ensure_isolated_external_plugin_workers_running()
+                .is_empty()
+        );
+    });
+}
+
+#[test]
+fn playback_volume_notifications_reuse_prepared_parameter_id() {
+    let mut host = sotf_plugins::DawHost::new(2, 48_000);
+    host.add_plugin(Box::new(ParametricPluginAdapter::new(GainPlugin::new(
+        2, 0.0,
+    ))))
+    .unwrap();
+    host.build().unwrap();
+    // Include the first notification: construction must prepare the ID.
+    for volume in [0.0, -3.0, -80.0, -1.0, 0.0] {
+        assert_no_alloc_or_free("host playback volume notification", || {
+            host.set_playback_volume_db(volume).unwrap();
+        });
+    }
+}
+
+#[test]
 fn queued_scalar_parameter_ids_are_not_freed_in_host_callback() {
     let mut host = sotf_plugins::DawHost::new(2, 48_000);
     host.add_plugin(Box::new(ParametricPluginAdapter::new(GainPlugin::new(

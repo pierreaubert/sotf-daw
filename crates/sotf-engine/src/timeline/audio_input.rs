@@ -130,7 +130,7 @@ impl AudioInput {
 
         let stream = device
             .build_input_stream(
-                &stream_config,
+                stream_config,
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
                     if !state_clone.active.load(Ordering::Relaxed) {
                         return;

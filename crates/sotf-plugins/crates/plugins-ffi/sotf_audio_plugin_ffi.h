@@ -30,24 +30,6 @@
 #define HISS_CLEAR_PROFILE 2
 
 /**
- * Error codes returned by FFI functions
- */
-typedef enum PluginError {
-  Success = 0,
-  InvalidHandle = -1,
-  InvalidParameter = -2,
-  NullPointer = -3,
-  InvalidUtf8 = -4,
-  PluginCreationFailed = -5,
-  ProcessingFailed = -6,
-  InitializationFailed = -7,
-  InvalidConfig = -8,
-  UnsupportedFeature = -9,
-  BufferTooSmall = -10,
-  UnknownError = -99,
-} PluginError;
-
-/**
  * Host/packaging family that can consume this C ABI.
  */
 typedef enum PluginFfiHostKind {
@@ -68,6 +50,24 @@ typedef enum PluginNoteExpressionKind {
   Volume = 5,
   Pan = 6,
 } PluginNoteExpressionKind;
+
+/**
+ * Error codes returned by FFI functions
+ */
+typedef enum PluginError {
+  Success = 0,
+  InvalidHandle = -1,
+  InvalidParameter = -2,
+  NullPointer = -3,
+  InvalidUtf8 = -4,
+  PluginCreationFailed = -5,
+  ProcessingFailed = -6,
+  InitializationFailed = -7,
+  InvalidConfig = -8,
+  UnsupportedFeature = -9,
+  BufferTooSmall = -10,
+  UnknownError = -99,
+} PluginError;
 
 /**
  * Thread-safe parameter value cache using atomics.

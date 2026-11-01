@@ -487,10 +487,10 @@ fn manager_request_commits_during_playback_and_reaches_eof() {
     // Fixed latency survives the dynamic commit.
     assert_eq!(engine.get_state().plugin_latency_samples, EXPECTED_LATENCY);
 
-    // Pause mid-stream for a deterministic nonzero-peak observation window,
-    // then resume to natural EOF.
-    engine.pause().expect("pause must succeed");
+    // Observe real output before pausing: a real-time device may not have
+    // consumed any audio when the processing thread accepts the edit.
     await_peak_nonzero(&engine, &mut peaks);
+    engine.pause().expect("pause must succeed");
     engine.resume().expect("resume must succeed");
 
     // Natural EOF with genuine nonzero output observed along the way.
@@ -544,10 +544,10 @@ fn manager_stale_refusal_cancel_and_recovery() {
     await_generation(&engine, &mut peaks, EQ_INDEX, 1);
 
     // Stage a stale edit while paused: a worker prepares from the
-    // generation-0 base and submits through the detached handle. The pause
-    // also opens the deterministic nonzero-peak observation window.
-    engine.pause().expect("pause must succeed");
+    // generation-0 base and submits through the detached handle. First observe
+    // genuine output so a real-time device is not paused before its first audio.
     await_peak_nonzero(&engine, &mut peaks);
+    engine.pause().expect("pause must succeed");
     let barrier = Barrier::new(2);
     let (tx, rx) = mpsc::channel();
     std::thread::scope(|s| {
@@ -641,9 +641,9 @@ fn manager_rebuild_orphans_old_handle() {
         .snapshot;
 
     // Hot chain rebuild replaces the wrapper; the old handle orphans.
-    // The pause also opens the deterministic nonzero-peak observation window.
-    engine.pause().expect("pause must succeed");
+    // Observe genuine output before pausing the real-time device.
     await_peak_nonzero(&engine, &mut peaks);
+    engine.pause().expect("pause must succeed");
     engine
         .update_plugin_chain(&manager_config(&device, &bands).plugins)
         .expect("rebuild must succeed");
@@ -806,18 +806,16 @@ fn terminal_stats_publish_before_drained_for_short_stream() {
         return;
     };
     require_device_visible(&device);
-    // Thirty seconds of audio draining in well under a second of wall
-    // time: the short-stream premise is wall-clock under the five-second
-    // diagnostics cadence, not audio length, and the established
-    // thirty-second fixture sustains flowing playback across several
-    // meter windows. The premise assert below verifies the wall bound
-    // every run. No pause: pausing after the single sub-100 ms burst can
-    // freeze the pipeline with the residual peak lost to one dropped
-    // meter event (bounded-256 event channel, nonblocking sends, manager
-    // ACK-blocked), hanging peak observation with nothing left to
-    // re-prime it. Sustained flow plus the terminal meter backstop
-    // observes deterministically instead.
-    let (wav_path, _wav_temp) = make_source();
+    // The null backend drains 30 seconds in under five seconds. A macOS
+    // virtual output runs in real time, so use one second of audio to retain
+    // the same terminal-before-periodic-snapshot premise. Both fixtures span
+    // several 100 ms meter windows and must reach natural EOF below.
+    let source_seconds = if cfg!(target_os = "macos") {
+        1.0
+    } else {
+        FILE_SECONDS
+    };
+    let (wav_path, _wav_temp) = make_source_with_seconds(source_seconds);
 
     let engine =
         AudioEngine::new(manager_config(&device, &initial_bands())).expect("engine must start");
@@ -864,7 +862,7 @@ fn terminal_stats_publish_before_drained_for_short_stream() {
         "terminal counters missing at first Stopped: {first_stopped:?}"
     );
     assert!(
-        first_stopped.position > 20.0,
+        first_stopped.position > f64::from(source_seconds) * (2.0 / 3.0),
         "incomplete EOF drain: {first_stopped:?}"
     );
     assert!(

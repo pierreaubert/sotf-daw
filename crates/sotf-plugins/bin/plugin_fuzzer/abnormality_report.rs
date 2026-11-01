@@ -194,8 +194,8 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
     println!("Plugin: {}", args.plugin);
     println!("Iterations: {}", args.iterations);
 
-    if let Some(seed) = args.seed {
-        println!("Seed: {}", seed);
+    if args.iterations == 0 {
+        return Err("fuzzing requires at least one iteration".into());
     }
     println!();
 
@@ -288,9 +288,11 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
             .unwrap()
             .as_secs()
     });
+    println!("Seed: {}", base_seed);
 
     // Progress counter for parallel execution
     let progress = AtomicUsize::new(0);
+    let setup_failures = AtomicUsize::new(0);
 
     // Run fuzzing in parallel
     println!("Running fuzzing tests with varying sample rates (parallel)...");
@@ -326,6 +328,7 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
                 Ok(f) => f,
                 Err(e) => {
                     eprintln!("\nError creating fuzzer: {}", e);
+                    setup_failures.fetch_add(1, Ordering::Relaxed);
                     return None;
                 }
             };
@@ -337,6 +340,7 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
             let mut host = DawHost::new(channels, *test_sample_rate);
             if let Err(e) = host.add_plugin(plugin) {
                 eprintln!("\nError adding plugin: {}", e);
+                setup_failures.fetch_add(1, Ordering::Relaxed);
                 return None;
             }
 
@@ -475,6 +479,8 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
     println!("===============");
     println!("Total iterations: {}", args.iterations);
     println!("Issues found: {}", issues_found.len());
+    let setup_failures = setup_failures.load(Ordering::Relaxed);
+    println!("Setup failures: {}", setup_failures);
 
     if !issues_found.is_empty() {
         println!("\nBreakdown of issues:");
@@ -511,9 +517,15 @@ pub(super) fn run_fuzzer(args: Args) -> Result<(), String> {
         if silent_count > 0 {
             println!("  - Silent output: {}", silent_count);
         }
-    } else {
+    } else if setup_failures == 0 {
         println!("\nNo issues detected. Plugin appears stable.");
     }
 
+    if !issues_found.is_empty() || setup_failures != 0 {
+        return Err(format!(
+            "fuzzing failed: {} issues, {setup_failures} setup failures (seed {base_seed})",
+            issues_found.len()
+        ));
+    }
     Ok(())
 }

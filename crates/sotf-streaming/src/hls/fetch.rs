@@ -2,9 +2,9 @@ use super::consts::USER_AGENT;
 use super::hls_byte_range::HlsByteRange;
 use super::hls_segment::HlsSegment;
 use crate::http_range::parse_content_range;
+use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::RANGE;
-use reqwest::StatusCode;
 use std::io::{self, Read};
 use url::Url;
 
@@ -61,7 +61,10 @@ pub(super) fn fetch_bytes(
         }
     }
 
-    if response.content_length().is_some_and(|length| length > max_bytes as u64) {
+    if response
+        .content_length()
+        .is_some_and(|length| length > max_bytes as u64)
+    {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "HTTP body exceeds the configured size limit",
@@ -69,10 +72,10 @@ pub(super) fn fetch_bytes(
     }
 
     let mut bytes = Vec::new();
-    let read_limit = u64::try_from(max_bytes).unwrap_or(u64::MAX).saturating_add(1);
-    response
-        .take(read_limit)
-        .read_to_end(&mut bytes)?;
+    let read_limit = u64::try_from(max_bytes)
+        .unwrap_or(u64::MAX)
+        .saturating_add(1);
+    response.take(read_limit).read_to_end(&mut bytes)?;
     if bytes.len() > max_bytes {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,

@@ -2,7 +2,7 @@
 #![cfg(feature = "deep-filter")]
 
 use deep_filter_runtime::tract::{DfParams, DfTract, RuntimeParams};
-use ndarray015::{ArrayView2, ArrayViewMut2};
+use ndarray017::{ArrayView2, ArrayViewMut2};
 use plugins_denoiser::deep_filter::{DEEP_FILTER_HOP, DeepFilterModel};
 use plugins_denoiser::deep_filter_config::DeepFilterConfig;
 use plugins_inference::framed_audio::AudioFrameModel;

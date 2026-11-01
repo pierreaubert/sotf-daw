@@ -12,9 +12,16 @@ pub(super) fn should_run_e2e_tests() -> bool {
 }
 
 pub(super) fn test_output_dir() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("target")
-        .join("e2e-tests")
+        .join("e2e-tests");
+    std::fs::create_dir_all(&root).expect("create E2E artifact root");
+    // Retain diagnostics, but never let a failed capture reuse an earlier WAV.
+    tempfile::Builder::new()
+        .prefix("capture-")
+        .tempdir_in(root)
+        .expect("create fresh E2E artifact directory")
+        .keep()
 }
 
 pub(super) fn write_wav_file(
@@ -159,6 +166,22 @@ pub(super) fn upmixer_plugin(speaker_config: &str) -> PluginConfig {
 #[cfg(test)]
 mod tests {
     use super::sweep_end_frequency;
+    use super::test_output_dir;
+
+    #[test]
+    fn recordings_cannot_reuse_previous_run_artifacts() {
+        let previous = test_output_dir();
+        let current = test_output_dir();
+        assert_ne!(previous, current, "each acquisition needs fresh artifacts");
+
+        let recording = "e2e_tone_recorded.wav";
+        std::fs::write(previous.join(recording), b"previous capture").unwrap();
+        assert!(previous.join(recording).exists());
+        assert!(!current.join(recording).exists());
+
+        std::fs::remove_dir_all(previous).unwrap();
+        std::fs::remove_dir_all(current).unwrap();
+    }
 
     #[test]
     fn sweep_end_frequency_stays_below_nyquist() {

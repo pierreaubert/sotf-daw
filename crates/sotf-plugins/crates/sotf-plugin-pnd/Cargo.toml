@@ -43,7 +43,7 @@ rustfft = { workspace = true }
 tract-onnx = { workspace = true, optional = true }
 plugins-inference = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
-ort = { version = "=2.0.0-rc.12", default-features = false, features = ["std", "load-dynamic", "api-23", "coreml"], optional = true }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-23", "coreml"], optional = true }
 
 [dev-dependencies]
 hound = { workspace = true }

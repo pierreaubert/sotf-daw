@@ -14,14 +14,20 @@ fn test_upmixer_real_audio_loopback() {
     // 1. Setup Devices
     // We need a 6ch-capable virtual audio device to support 5.1
     // Prioritize known multi-channel virtual devices first
-    let device_names = [
-        "BlackHole 16ch",
-        "BlackHole 64ch",
-        "BlackHole 6ch",
-        "SotF Virtual Audio",
-        "SotF Virtual Device",
-        "SotF Virtual Output",
-    ];
+    let requested_device = std::env::var("AEQ_E2E_DEVICE").ok();
+    let device_names = requested_device.as_deref().map_or_else(
+        || {
+            vec![
+                "BlackHole 16ch",
+                "BlackHole 64ch",
+                "BlackHole 6ch",
+                "SotF Virtual Audio",
+                "SotF Virtual Device",
+                "SotF Virtual Output",
+            ]
+        },
+        |name| vec![name],
+    );
 
     let mut output_setup = None;
     let mut input_setup = None;
@@ -29,6 +35,8 @@ fn test_upmixer_real_audio_loopback() {
     for name in device_names {
         if let Some(out) = find_device(name, false)
             && let Some(in_) = find_device(name, true)
+            && out.1.channels() >= 6
+            && in_.1.channels() >= 6
         {
             output_setup = Some(out);
             input_setup = Some(in_);
@@ -38,8 +46,12 @@ fn test_upmixer_real_audio_loopback() {
     }
 
     if output_setup.is_none() || input_setup.is_none() {
+        assert!(
+            requested_device.is_none(),
+            "Requested loopback device {requested_device:?} requires input and output configurations with at least six channels"
+        );
         println!(
-            "SKIPPING test: virtual audio device with 6+ channels not found. Install SotF Virtual Audio or BlackHole 16ch/64ch."
+            "SKIPPING test: virtual audio device with 6+ channels not found. Configure AEQ_E2E_DEVICE or install BlackHole 16ch/64ch."
         );
         return;
     }
@@ -79,13 +91,7 @@ fn test_upmixer_real_audio_loopback() {
         }),
     )];
 
-    let engine = match AudioEngine::new(config) {
-        Ok(e) => e,
-        Err(e) => {
-            println!("Failed to create AudioEngine: {}. Skipping test.", e);
-            return;
-        }
-    };
+    let engine = AudioEngine::new(config).expect("Failed to create loopback audio engine");
 
     // 3. Create Test File (Stereo Sine Wave)
     let spec = hound::WavSpec {
@@ -115,7 +121,7 @@ fn test_upmixer_real_audio_loopback() {
 
     let stream = in_device
         .build_input_stream(
-            &in_config.into(),
+            in_config.into(),
             move |data: &[f32], _: &_| {
                 let mut buffer = capture_clone.lock().unwrap();
                 buffer.extend_from_slice(data);
@@ -131,10 +137,9 @@ fn test_upmixer_real_audio_loopback() {
 
     // 5. Start Playback
     println!("Starting playback...");
-    if let Err(e) = engine.play(temp_file.path().to_path_buf()) {
-        println!("Failed to start playback: {}. Skipping test.", e);
-        return;
-    }
+    engine
+        .play(temp_file.path())
+        .expect("Failed to start loopback playback");
 
     // 6. Wait and Record
     // Wait a bit for engine to start
@@ -154,14 +159,11 @@ fn test_upmixer_real_audio_loopback() {
         channels
     );
 
-    if buffer.is_empty() {
-        let callback_count = engine.get_state().playback_callback_count;
-        if callback_count == 0 {
-            eprintln!("Skipping upmixer loopback assertion: virtual output produced no callbacks");
-            return;
-        }
-        panic!("No audio captured despite {callback_count} output callbacks");
-    }
+    assert!(
+        !buffer.is_empty(),
+        "No audio captured; state: {:?}",
+        engine.get_state()
+    );
 
     // Verify channel content
     // We check RMS of each channel

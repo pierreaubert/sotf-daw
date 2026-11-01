@@ -1,5 +1,5 @@
 pub(super) fn infer_plugin_output_channels(
-    plugin: &autoeq::roomeq::PluginConfigWrapper,
+    plugin: &roomeq_model::PluginConfigWrapper,
     input_channels: usize,
 ) -> usize {
     match plugin.plugin_type.as_str() {

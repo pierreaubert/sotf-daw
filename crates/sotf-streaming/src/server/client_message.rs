@@ -18,8 +18,7 @@ use std::time::Duration;
 pub(super) fn run_server(
     listener: TcpListener,
     chunk_rx: Receiver<PcmStreamChunk>,
-    client_tx: Sender<ClientRegistration>,
-    client_rx: Receiver<ClientRegistration>,
+    (client_tx, client_rx): (Sender<ClientRegistration>, Receiver<ClientRegistration>),
     shutdown_rx: Receiver<()>,
     stats: Arc<SharedStats>,
     client_queue_capacity: usize,

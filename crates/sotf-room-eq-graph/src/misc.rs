@@ -1,4 +1,4 @@
-use autoeq::roomeq::DspChainOutput;
+use roomeq_model::DspChainOutput;
 
 pub(super) fn sorted_channel_names(output: &DspChainOutput) -> Vec<String> {
     let mut names: Vec<_> = output.channels.keys().cloned().collect();

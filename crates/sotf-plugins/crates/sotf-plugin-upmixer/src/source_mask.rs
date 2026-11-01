@@ -331,7 +331,10 @@ mod tests {
                 let expected = !guarded
                     || snapshot.band_power[1].unwrap() >= snapshot.band_power[0].unwrap() * 1e-6;
                 assert_eq!(snapshot.masks[1].is_some(), expected);
-                assert_eq!(snapshot.masks[1].is_some(), !guarded || amplitude == boundary);
+                assert_eq!(
+                    snapshot.masks[1].is_some(),
+                    !guarded || amplitude == boundary
+                );
                 assert!(snapshot.features[1].is_some());
                 assert!(snapshot.masks[2..].iter().all(Option::is_none));
                 assert_eq!(snapshot.selected_bands + snapshot.fallback_bands, 32);

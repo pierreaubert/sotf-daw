@@ -518,13 +518,13 @@ fn capture_eq_placement_vectors_through_engine_factory_and_daw_host() {
 }
 
 #[test]
-fn compiled_legacy_eq_host_falls_back_after_ordered_placement_event() {
+fn compiled_legacy_eq_host_requires_rebuild_for_placement_event() {
     let root = eq_placement_regression_fixture_root();
     let channels = 2;
     let sample_rate = 44_100;
     let mut filter = EQFilter::new(BiquadFilterType::Peak, 1379.0, 0.83, 7.0);
     filter.order = 2;
-    let settings = PluginSettings::EQ {
+    let mut settings = PluginSettings::EQ {
         channels,
         filters: vec![filter],
         channel_filters: None,
@@ -562,11 +562,26 @@ fn compiled_legacy_eq_host_falls_back_after_ordered_placement_event() {
             .is_err()
     );
 
-    // Exercise the defensive path if a low-level event reaches an already
-    // compiled legacy host: EqPlugin declines the stale compiled operation,
-    // and DawHost falls back to the generic ordered route.
-    host.set_plugin_parameter(0, "filter_0_placement", mid)
-        .unwrap();
+    // The immediate setter also rejects structural changes. Rebuild through
+    // the settings/factory route, which owns placement changes.
+    assert!(
+        host.set_plugin_parameter(0, "filter_0_placement", mid)
+            .is_err()
+    );
+    assert!(
+        host.get_plugin(0)
+            .unwrap()
+            .compile_metadata()
+            .compiled_op
+            .is_some()
+    );
+    let PluginSettings::EQ { filters, .. } = &mut settings else {
+        unreachable!();
+    };
+    filters[0].placement = Some(EqBandPlacement::Mid);
+    let config = settings.to_plugin_config(sample_rate as f64);
+    let (mut host, warnings) = build_plugin_host(&[config], sample_rate, channels).unwrap();
+    assert!(warnings.is_empty());
     let input = read_f32le_samples(&root.join("44100-2ch-input.f32le"), 4096 * channels);
     let mut output = vec![0.0f32; input.len()];
     assert_eq!(host.process(&input, &mut output).unwrap(), 4096);

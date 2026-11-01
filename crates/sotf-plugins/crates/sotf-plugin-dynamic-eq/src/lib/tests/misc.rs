@@ -1,8 +1,8 @@
 use super::super::dyn_eq_band_params::DynEqBandParams;
 use super::super::dynamic_eq_plugin::DynamicEqPlugin;
 use super::super::dynamic_eq_plugin_params::DynamicEqPluginParams;
-use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::parameters::{ParameterId, ParameterValue};
+use sotf_host::parametric_in_place_plugin::ParametricInPlacePlugin;
 use sotf_host::plugin::ProcessContext;
 
 fn make_sine(freq_hz: f32, sample_rate: u32, num_frames: usize, amplitude: f32) -> Vec<f32> {

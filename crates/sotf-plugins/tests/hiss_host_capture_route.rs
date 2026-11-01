@@ -17,6 +17,7 @@ use sotf_plugins::{
     create_plugin,
 };
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 const RATE: u32 = 48_000;
 
@@ -382,8 +383,10 @@ impl Plugin for PanicHookPlugin {
     }
 }
 
-/// Pass-through plugin whose parameter metadata panics on every probe.
-struct PanicMetadataPlugin;
+/// Pass-through plugin whose metadata probe can fail after host preparation.
+struct PanicMetadataPlugin {
+    panic_metadata: Arc<AtomicBool>,
+}
 
 impl Plugin for PanicMetadataPlugin {
     fn info(&self) -> PluginInfo {
@@ -399,7 +402,14 @@ impl Plugin for PanicMetadataPlugin {
     }
 
     fn parameters(&self) -> Vec<Parameter> {
-        panic!("injected metadata panic")
+        assert!(
+            !self.panic_metadata.load(Ordering::Relaxed),
+            "injected metadata panic"
+        );
+        vec![
+            Parameter::new_bool("trigger", "Trigger", false)
+                .with_update_mode(UpdateMode::Structural),
+        ]
     }
 
     fn set_parameter(&mut self, _id: ParameterId, _value: ParameterValue) -> Result<(), String> {
@@ -427,7 +437,11 @@ fn panicking_probe_fails_closed_and_preserves_host() {
     host.add_plugin(create_plugin("hiss_reducer", &serde_json::json!({}), 1, RATE).unwrap())
         .unwrap();
     host.add_plugin(Box::new(PanicHookPlugin)).unwrap();
-    host.add_plugin(Box::new(PanicMetadataPlugin)).unwrap();
+    let panic_metadata = Arc::new(AtomicBool::new(false));
+    host.add_plugin(Box::new(PanicMetadataPlugin {
+        panic_metadata: Arc::clone(&panic_metadata),
+    }))
+    .unwrap();
     host.build().unwrap();
 
     // Accepted Hiss history exists before any panicking probe runs.
@@ -439,6 +453,7 @@ fn panicking_probe_fails_closed_and_preserves_host() {
     let gen_accepted = snapshot.try_status().unwrap().generation;
 
     // Both probes fail closed as errors instead of unwinding.
+    panic_metadata.store(true, Ordering::Relaxed);
     let error = host
         .set_plugin_parameter_immediate(1, "trigger", ParameterValue::Bool(true))
         .unwrap_err();
@@ -492,7 +507,7 @@ fn forced_oversampling_preserves_momentary_admission_and_refusals() {
         // inner delivery count: every chunk yields exactly
         // OS_CHUNK_SIZE * factor inner frames. Capture therefore needs
         // the next chunk multiple of host input, and completes at that
-        // chunk boundary with analyzed frames equal to produced frames.
+        // chunk boundary, but analyzes only the exact one-second prefix.
         let stranded = RATE as usize % OS_CHUNK_SIZE;
         let required_host_frames = RATE as usize + (OS_CHUNK_SIZE - stranded) % OS_CHUNK_SIZE;
         assert_eq!((stranded, required_host_frames), (128, 48128));
@@ -546,8 +561,8 @@ fn forced_oversampling_preserves_momentary_admission_and_refusals() {
         assert_eq!(done.profile.sample_rate, f64::from(RATE * factor));
         assert_eq!(
             done.profile.frames_analyzed,
-            (required_host_frames * factor as usize) as u64,
-            "factor {factor} must analyze exactly the produced inner frames"
+            u64::from(RATE * factor),
+            "factor {factor} must analyze exactly one second of inner frames"
         );
         assert!(done.generation > gen_before);
 

@@ -722,6 +722,8 @@ pub struct DawHost {
     /// Prepared ID owners and admission modes keep scalar events allocation-free
     /// and prevent construction-sized changes from invalidating cached geometry/PDC.
     parameter_id_owners: Vec<Vec<(ParameterId, UpdateMode)>>,
+    /// Prepared before processing so sink-volume notifications do not allocate IDs.
+    playback_volume_id: ParameterId,
     /// Cached total latency in samples, computed during build() and invalidated on graph changes
     pub(super) cached_latency: Option<usize>,
     pub(super) compiled_plan: CompiledRenderPlan,
@@ -941,6 +943,7 @@ impl DawHost {
             cached_output_frame_ratios: Vec::new(),
             analyzer_indices: Vec::new(),
             parameter_id_owners: Vec::new(),
+            playback_volume_id: ParameterId::from("playback_volume_db"),
             cached_latency: None,
             compiled_plan: CompiledRenderPlan::default(),
             cached_parallel_node_costs: Vec::new(),
@@ -2860,9 +2863,9 @@ impl DawHost {
         if !volume_db.is_finite() || !(-80.0..=0.0).contains(&volume_db) {
             return Err("playback attenuation must be finite and between -80 and 0 dB".into());
         }
-        let id = crate::parameters::ParameterId::from("playback_volume_db");
+        let id = &self.playback_volume_id;
         for plugin in self.plugins.iter_mut().flatten() {
-            if let Some(current) = plugin.get_parameter(&id)
+            if let Some(current) = plugin.get_parameter(id)
                 && current != crate::parameters::ParameterValue::Float(volume_db)
             {
                 plugin.set_parameter(
@@ -2880,8 +2883,12 @@ impl DawHost {
         &mut self,
     ) -> Vec<IsolatedExternalPluginWorkerReport> {
         let mut reports = Vec::new();
-        for (plugin_index, node_id) in self.worker_report_nodes() {
-            let Some(Some(plugin)) = self.plugins.get_mut(node_id) else {
+        // Storage is indexed by NodeId, preserving report order without a temporary list.
+        for (node_id, plugin) in self.plugins.iter_mut().enumerate() {
+            if !self.nodes.contains_key(&node_id) {
+                continue;
+            }
+            let Some(plugin) = plugin else {
                 continue;
             };
             let Some(isolated) = plugin
@@ -2891,6 +2898,11 @@ impl DawHost {
                 continue;
             };
 
+            let plugin_index = self
+                .chain_nodes
+                .iter()
+                .position(|&chain_node_id| chain_node_id == node_id)
+                .unwrap_or(node_id);
             let (event, error) = match isolated.poll_worker() {
                 Ok(event) => (event, None),
                 Err(err) => (None, Some(err)),
@@ -2911,8 +2923,12 @@ impl DawHost {
         &mut self,
     ) -> Vec<IsolatedExternalPluginWorkerReport> {
         let mut reports = Vec::new();
-        for (plugin_index, node_id) in self.worker_report_nodes() {
-            let Some(Some(plugin)) = self.plugins.get_mut(node_id) else {
+        // Storage is indexed by NodeId, preserving report order without a temporary list.
+        for (node_id, plugin) in self.plugins.iter_mut().enumerate() {
+            if !self.nodes.contains_key(&node_id) {
+                continue;
+            }
+            let Some(plugin) = plugin else {
                 continue;
             };
             let Some(isolated) = plugin
@@ -2922,6 +2938,11 @@ impl DawHost {
                 continue;
             };
 
+            let plugin_index = self
+                .chain_nodes
+                .iter()
+                .position(|&chain_node_id| chain_node_id == node_id)
+                .unwrap_or(node_id);
             let (event, error) = match isolated.ensure_worker_running_event() {
                 Ok(event) => (Some(event), None),
                 Err(err) => (None, Some(err)),
@@ -2973,23 +2994,6 @@ impl DawHost {
             sandbox_backend: sandbox.backend,
             sandbox_reason,
         }
-    }
-
-    #[cfg(any(target_os = "linux", target_os = "macos", target_os = "windows"))]
-    fn worker_report_nodes(&self) -> Vec<(usize, NodeId)> {
-        let mut node_ids = self.nodes.keys().copied().collect::<Vec<_>>();
-        node_ids.sort_unstable();
-        node_ids
-            .into_iter()
-            .map(|node_id| {
-                let plugin_index = self
-                    .chain_nodes
-                    .iter()
-                    .position(|&chain_node_id| chain_node_id == node_id)
-                    .unwrap_or(node_id);
-                (plugin_index, node_id)
-            })
-            .collect()
     }
 
     pub fn input_channels(&self) -> usize {

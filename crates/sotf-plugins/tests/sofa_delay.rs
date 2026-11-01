@@ -738,7 +738,8 @@ fn spatial_consumers_report_source_time_rebase_and_keep_active_value_on_failed_r
 fn fractional_support_is_counted_at_binaural_and_xtc_fft_boundaries() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("fractional-support.sofa");
-    for (delay, should_fit) in [(49.5, true), (50.5, false)] {
+    // The N-point HRTF design is padded into the 2N audio transform.
+    for (delay, should_fit) in [(80.5, true), (81.5, false)] {
         write_fixture(
             &path,
             &Fixture {
@@ -746,6 +747,8 @@ fn fractional_support_is_counted_at_binaural_and_xtc_fft_boundaries() {
                 ..Default::default()
             },
         );
+        let loaded = load_sofa(&path).unwrap();
+        assert_eq!(loaded.data.ir_length, FFT + usize::from(!should_fit));
         let mut plugin = binaural_plugin(&path, 2);
         let result = plugin.initialize(f64::from(RATE));
         assert_eq!(
@@ -754,11 +757,7 @@ fn fractional_support_is_counted_at_binaural_and_xtc_fft_boundaries() {
             "Binaural delay={delay}: {result:?}"
         );
         if !should_fit {
-            assert!(
-                result
-                    .unwrap_err()
-                    .contains("linear convolution capacity 97")
-            );
+            assert!(result.unwrap_err().contains("HRTF design capacity 128"));
         }
     }
 
@@ -1031,7 +1030,20 @@ fn drain_pair(a: &mut dyn Plugin, b: &mut dyn Plugin) {
         let ar = a.drain(&mut actual, &context).unwrap();
         let br = b.drain(&mut expected, &context).unwrap();
         assert_eq!(ar, br);
-        assert_eq!(actual[..ar.frames * 2], expected[..br.frames * 2]);
+        // Independently prepared FFT instances can differ in the last f32 bits.
+        // Keep the tail comparison below -160 dBFS while requiring identical
+        // frame counts and completion, so lost or reset history still fails.
+        for (index, (&actual, &expected)) in actual[..ar.frames * 2]
+            .iter()
+            .zip(&expected[..br.frames * 2])
+            .enumerate()
+        {
+            assert!(actual.is_finite() && expected.is_finite());
+            assert!(
+                (actual - expected).abs() <= 1e-8,
+                "tail sample {index}: actual={actual}, expected={expected}"
+            );
+        }
         assert!(actual[ar.frames * 2..].iter().all(|sample| sample.is_nan()));
         if ar.complete {
             return;

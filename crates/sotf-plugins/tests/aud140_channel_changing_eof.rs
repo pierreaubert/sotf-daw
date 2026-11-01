@@ -512,9 +512,10 @@ fn drain_preflight_rejects_expansion_and_contraction_scratch_extents() {
         expansion_capacity,
     );
 
-    // The source producer's 64-channel output exceeds scratch before the
-    // 64→16 contraction reduces the extent.
-    let contraction_capacity = PREPARED_GRAPH_SCRATCH_SAMPLES / ORDER7_INPUT_CHANNELS + 1;
+    // The graph prepares 64-channel scratch for this route, exceeding the
+    // 32-channel minimum used by the expansion case. Exceed that full
+    // source extent before the 64→16 contraction reduces it.
+    let contraction_capacity = 8192 + 1;
     assert_oversized_channel_changing_drain_is_rejected_before_begin(
         7,
         "9.1.6",

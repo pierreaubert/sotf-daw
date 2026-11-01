@@ -96,6 +96,12 @@ flowchart TD
     Final --> Stop["Stopped"]
 ```
 
+Playback statistics publish as soon as the feeder observes the first callback of
+each output generation. A full event queue leaves that initial observation pending
+for retry; later statistics retain the five-second diagnostic cadence. This lets
+systemwide acknowledge HAL configuration after a real callback without waiting
+for periodic diagnostics. All event publication stays on the feeder thread.
+
 ## Frame Hot Path
 
 `write_frame_to_ring` in `src/engine/playback_thread/frame_writer.rs` is the

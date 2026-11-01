@@ -181,9 +181,11 @@ fn input_buffer_restarts_interrupted_sysex_and_counts_discard() {
 #[test]
 fn timed_input_keeps_sysex_start_and_completion_metadata() {
     let mut buffer = InputBuffer::new();
-    assert!(buffer
-        .parse_timed_message(100, 2, 7, &[0xF0, 0x7D])
-        .is_none());
+    assert!(
+        buffer
+            .parse_timed_message(100, 2, 7, &[0xF0, 0x7D])
+            .is_none()
+    );
     let clock = buffer
         .parse_timed_message(110, 2, 7, &[0xF8])
         .unwrap()

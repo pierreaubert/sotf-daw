@@ -6,13 +6,12 @@
     "lib.rs": "5dfa85aa3077e21faac48bee574f0983c831ae30f4b05759207961a05cb995e5",
     "tract.rs": "3966fdf513c714848bfdd55b54ca807be13d8964a3d0bce900f537f530927d94"
   },
-  "tract_revision": "ed00ff7eadc84b345318b042f134602ed743879d",
   "status": "Mono/stereo integration under validation; linked stereo is a local extension of the pretrained mono model",
   "local_sha256": {
-    "Cargo.toml": "d5ac4601085c80e05befad5f00593e21f8efbf3ba5ad25a34b9d967c2818d0a1",
-    "src/lib.rs": "c23cba903926be0396d6f30e4061c05d0c478308492f9ff3c3f6fbd7e93b03ab",
-    "src/tract.rs": "e0dc57c996d52c3dd00d6fca415c69d28fd70ff415ae60cfacf25dae55f1ae22",
-    "upstream.patch": "86d76c8a9f1bf44696ce09f3ad31b6c932eaa9976907f61170b81f74a1c18fb9",
+    "Cargo.toml": "172fddcbb0b6533b4100757298a78c67ce8a41d5e6860a322ea74acebcca8d51",
+    "src/lib.rs": "071b05d9c05c74d20fd7bbf88845497d262a38bd5a8fe3c2bce854d771597e13",
+    "src/tract.rs": "3cf489473511fe926a98308fd1aa95eda9482cebd9b5baf4a37b6e14c6665903",
+    "upstream.patch": "1f694980a7cc38ba4c931c9fb737290597806882bb04a6c1e7af219b634125cf",
     "LICENSE": "f7ef673bf046d823dcd775bdd0768432bd8855f81d0e5e1290a0a48c42e2dca3",
     "LICENSE-MIT": "24e6bb09c928af8d8e56268082f87413247ce36b39dd5d33add2f9893968065e",
     "LICENSE-APACHE": "1eaee808c5fb6b4e895ba30425285a5cdc5dd25bba2cd230f264c2200c331aec"
@@ -22,5 +21,8 @@
     "erb_mask": "mean mask across channels, post-filtered once",
     "deep_filter": "mean real/imaginary FIR coefficients shared across channels",
     "audio": "independent per-channel STFT and rolling audio; no audio crossmix"
-  }
+  },
+  "original_tract_revision": "ed00ff7eadc84b345318b042f134602ed743879d",
+  "tract_version": "0.23.9",
+  "dependency_migration": "DFN2 model parity verified across eight default/forced-stage cases; consumer release gates pending"
 }

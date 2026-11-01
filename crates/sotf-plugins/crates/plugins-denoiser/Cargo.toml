@@ -13,7 +13,7 @@ name = "plugins_denoiser"
 path = "src/lib.rs"
 
 [features]
-deep-filter = ["dep:deep-filter-runtime", "dep:ndarray015", "dep:plugins-inference", "dep:sha2"]
+deep-filter = ["dep:deep-filter-runtime", "dep:ndarray017", "dep:plugins-inference", "dep:sha2"]
 
 [dependencies]
 nnnoiseless = { workspace = true }
@@ -21,5 +21,5 @@ math-dsp = { workspace = true }
 serde = { workspace = true }
 plugins-inference = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
-ndarray015 = { package = "ndarray", version = "0.15", optional = true }
+ndarray017 = { package = "ndarray", version = "0.17", optional = true }
 deep-filter-runtime = { package = "sotf-deep-filter-runtime", path = "../../../../vendor/deep-filter-runtime", optional = true }

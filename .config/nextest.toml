@@ -1,9 +1,15 @@
-# Engine device tests drive one shared virtual audio device (BlackHole) with
+# Engine device tests drive shared virtual audio devices (BlackHole or SotF) with
 # real-time state transitions. Running them concurrently starves device
 # callbacks and flakes timing/state assertions, so they share one lane.
 [test-groups.device-io]
 max-threads = 1
 
+# Wall-clock latency measurements need the whole runner's capacity, not just
+# exclusion from other device tests. Keep their existing timing limits intact.
 [[profile.default.overrides]]
-filter = 'package(sotf-engine) and (binary(e2e_audio) or binary(engine_allocation_tests) or binary(engine_latency_tests) or binary(engine_manager_tests) or binary(engine_mute_solo_tests) or binary(engine_playback_tests) or binary(engine_stress_tests) or binary(fft_plugin_chain_tests) or binary(test_upmixer_loopback))'
+filter = '(package(sotf-engine) and binary(engine_latency_tests)) or (package(sotf-plugins) and binary(realtime_tests))'
+threads-required = "num-test-threads"
+
+[[profile.default.overrides]]
+filter = 'package(sotf-engine) and (binary(e2e_audio) or binary(engine_allocation_tests) or binary(engine_latency_tests) or binary(engine_manager_tests) or binary(engine_mute_solo_tests) or binary(engine_playback_tests) or binary(engine_stress_tests) or binary(fft_plugin_chain_tests) or binary(/loopback/) or binary(linear_phase_eq_manager_dynamic))'
 test-group = 'device-io'

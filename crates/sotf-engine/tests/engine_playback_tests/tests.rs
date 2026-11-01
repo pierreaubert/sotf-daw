@@ -304,10 +304,25 @@ fn receives_frames_transport_proof() {
         .collect();
     assert_eq!(
         stats_before.len(),
-        1,
-        "exactly the terminal snapshot must precede drained: {events:?}"
+        2,
+        "first-callback and terminal snapshots must precede drained: {events:?}"
     );
-    let (received, written, dropped, callbacks) = stats_before[0];
+    let (first_received, first_written, first_dropped, first_callbacks) = stats_before[0];
+    assert!(
+        first_callbacks > 0,
+        "first snapshot must confirm a callback"
+    );
+    let (received, written, dropped, callbacks) = stats_before[1];
+    assert!(
+        first_received <= received,
+        "received count must not regress"
+    );
+    assert!(first_written <= written, "written count must not regress");
+    assert_eq!(first_dropped, 0, "first snapshot dropped count");
+    assert!(
+        callbacks >= first_callbacks,
+        "callback count must not regress"
+    );
     assert_eq!(received, BLOCKS as u64, "terminal received count");
     assert_eq!(written, BLOCKS as u64, "terminal written count");
     assert_eq!(dropped, 0, "terminal dropped count");
@@ -721,6 +736,7 @@ fn test_playback_drop_cleanup() {
 #[test]
 #[serial]
 fn test_playback_terminal_stats_precede_drained_for_short_stream() {
+    let _ = env_logger::try_init();
     const BLOCKS: usize = 10;
     super::common::skip_without_device!();
     // In the audit environment `AEQ_E2E_DEVICE` resolves the named null
@@ -774,9 +790,8 @@ fn test_playback_terminal_stats_precede_drained_for_short_stream() {
             Err(_) => panic!("drained receipt never arrived; events so far: {events:?}"),
         }
     };
-    // Premise guard: with construction-to-drained under five seconds, every
-    // stats event in the stream must be the terminal snapshot, never a
-    // periodic one.
+    // Before the five-second interval, only the prompt first-callback and
+    // terminal snapshots should appear; no periodic snapshot is due.
     assert!(
         drained_at.duration_since(constructed_at) < Duration::from_secs(5),
         "short-stream premise violated: drain took {:?}",
@@ -806,10 +821,25 @@ fn test_playback_terminal_stats_precede_drained_for_short_stream() {
         .collect();
     assert_eq!(
         stats_before.len(),
-        1,
-        "exactly the terminal snapshot must precede drained: {events:?}"
+        2,
+        "first-callback and terminal snapshots must precede drained: {events:?}"
     );
-    let (received, written, dropped, callbacks) = stats_before[0];
+    let (first_received, first_written, first_dropped, first_callbacks) = stats_before[0];
+    assert!(
+        first_callbacks > 0,
+        "first snapshot must confirm a callback"
+    );
+    let (received, written, dropped, callbacks) = stats_before[1];
+    assert!(
+        first_received <= received,
+        "received count must not regress"
+    );
+    assert!(first_written <= written, "written count must not regress");
+    assert_eq!(first_dropped, 0, "first snapshot dropped count");
+    assert!(
+        callbacks >= first_callbacks,
+        "callback count must not regress"
+    );
     assert_eq!(received, BLOCKS as u64, "terminal received count");
     assert_eq!(written, BLOCKS as u64, "terminal written count");
     assert_eq!(dropped, 0, "terminal dropped count");

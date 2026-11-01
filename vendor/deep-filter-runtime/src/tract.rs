@@ -117,7 +117,7 @@ impl RuntimeParams {
     }
 }
 
-pub type TractModel = TypedSimpleState<TypedModel, TypedSimplePlan<TypedModel>>;
+pub type TractModel = TypedSimpleState;
 
 #[derive(Clone)]
 pub struct DfTract {
@@ -166,9 +166,9 @@ impl DfTract {
             init_erb_decoder_from_read(&mut Cursor::new(dfp.erb_dec), model_cfg, df_cfg, ch)?;
         let (df_dec, _df_dec_delay) =
             init_df_decoder_from_read(&mut Cursor::new(dfp.df_dec), model_cfg, df_cfg, ch)?;
-        let enc = SimpleState::new(enc.into_runnable()?)?;
-        let erb_dec = SimpleState::new(erb_dec.into_runnable()?)?;
-        let df_dec = SimpleState::new(df_dec.into_runnable()?)?;
+        let enc = TypedSimpleState::new(&enc.into_runnable()?)?;
+        let erb_dec = TypedSimpleState::new(&erb_dec.into_runnable()?)?;
+        let df_dec = TypedSimpleState::new(&df_dec.into_runnable()?)?;
         #[cfg(feature = "timings")]
         let t1 = Instant::now();
 
@@ -228,7 +228,7 @@ impl DfTract {
         let rolling_spec_buf = VecDeque::with_capacity(df_order + lookahead);
         let rolling_spec_buf_x = VecDeque::with_capacity(lookahead);
 
-        let mut state = DFState::new(sr as usize, fft_size, hop_size, nb_erb, min_nb_erb_freqs);
+        let mut state = DFState::new(sr, fft_size, hop_size, nb_erb, min_nb_erb_freqs);
         state.init_norm_states(nb_df);
         let df_states = vec![state];
 
@@ -338,9 +338,9 @@ impl DfTract {
         self.rolling_spec_buf_x.pop_front();
         for (ns_ch, mut rbuf, mut erb_ch, mut cplx_ch, state) in izip!(
             noisy.axis_iter(Axis(0)),
-            self.spec_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
-            self.erb_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
-            self.cplx_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
+            self.spec_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
+            self.erb_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
+            self.cplx_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
             self.df_states.iter_mut(),
         ) {
             let spec = as_slice_mut_complex(rbuf.as_slice_mut().unwrap());
@@ -361,15 +361,16 @@ impl DfTract {
         let t1 = Instant::now();
         // Run encoder
         let mut enc_emb = self.enc.run(tvec!(
-            self.erb_buf.clone(),
-            self.cplx_buf.clone().permute_axes(&[0, 3, 1, 2])?
+            self.erb_buf.clone().into(),
+            self.cplx_buf.clone().permute_axes(&[0, 3, 1, 2])?.into()
         ))?;
         #[cfg(feature = "timings")]
         let t2 = Instant::now();
         // Every channel must contribute to the common stage decision. The
         // legacy to_scalar call silently selected the first batch element.
         let scores = enc_emb.pop().unwrap().into_tensor();
-        let scores = scores.as_slice::<f32>()?;
+        let scores = scores.to_plain_array_view::<f32>()?;
+        let scores = scores.as_slice().context("DeepFilter scores must be contiguous")?;
         if scores.len() != ch || scores.iter().any(|x| !x.is_finite()) {
             bail!("Unexpected local-SNR channel geometry or non-finite score");
         }
@@ -397,14 +398,14 @@ impl DfTract {
         );
 
         let mut spec =
-            self.rolling_spec_buf.get_mut(self.df_order - 1).unwrap().to_array_view_mut()?;
+            self.rolling_spec_buf.get_mut(self.df_order - 1).unwrap().to_plain_array_view_mut()?;
         let mut m = if apply_erb {
             let dec_input = tvec!(
-                emb.clone(),
-                enc_emb.pop().unwrap().into_tensor(), // e3
-                enc_emb.pop().unwrap().into_tensor(), // e2
-                enc_emb.pop().unwrap().into_tensor(), // e1
-                enc_emb.pop().unwrap().into_tensor(), // e0
+                emb.clone().into(),
+                enc_emb.pop().unwrap(), // e3
+                enc_emb.pop().unwrap(), // e2
+                enc_emb.pop().unwrap(), // e1
+                enc_emb.pop().unwrap(), // e0
             );
             let mut m = self.erb_dec.run(dec_input)?;
             let mut m = m
@@ -412,7 +413,7 @@ impl DfTract {
                 .unwrap()
                 .into_tensor()
                 .into_shape(&[self.ch, self.nb_erb])?
-                .into_array()?;
+                .into_plain_array()?;
             if self.ch > 1 {
                 m = match self.reduce_mask {
                     ReduceMask::MAX => m.fold_axis(Axis(0), 0., |&acc, &x| f32::max(x, acc)),
@@ -448,12 +449,12 @@ impl DfTract {
             .unwrap();
         self.spec_buf.clone_from(spec);
         if apply_df {
-            let mut coefs = self.df_dec.run(tvec!(emb, c0))?.pop().unwrap().into_tensor();
+            let mut coefs = self.df_dec.run(tvec!(emb.into(), c0.into()))?.pop().unwrap().into_tensor();
             coefs.set_shape(&[ch, self.nb_df, self.df_order, 2])?;
             if ch > 1 {
                 // Real and imaginary FIR components are averaged together,
                 // then shared by all channels. No cross-channel audio is mixed.
-                let mut channel_coefs = coefs.to_array_view_mut::<f32>()?;
+                let mut channel_coefs = coefs.to_plain_array_view_mut::<f32>()?;
                 let shared = channel_coefs.mean_axis(Axis(0))
                     .ok_or_else(|| anyhow!("Empty deep-filter channel axis"))?;
                 for mut channel in channel_coefs.axis_iter_mut(Axis(0)) {
@@ -471,9 +472,9 @@ impl DfTract {
         };
 
         // Limit noise attenuation by mixing back some of the noisy signal
-        let mut spec_enh = self.spec_buf.to_array_view_mut()?;
+        let mut spec_enh = self.spec_buf.to_plain_array_view_mut()?;
         if let Some(lim) = self.atten_lim {
-            let spec_noisy = self.rolling_spec_buf_x.front().unwrap().to_array_view().unwrap();
+            let spec_noisy = self.rolling_spec_buf_x.front().unwrap().to_plain_array_view().unwrap();
             spec_enh.map_inplace(|x| *x *= 1. - lim);
             spec_enh.scaled_add(lim, &spec_noisy);
         }
@@ -529,16 +530,16 @@ fn df(
     debug_assert_eq!(df_order, coefs.shape()[2]);
     debug_assert_eq!(ch, spec_out.shape()[0]);
     let mut o_f: ArrayViewMut2<Complex32> =
-        as_array_mut_complex(spec_out.to_array_view_mut::<f32>()?, &[ch, n_freqs])
+        as_array_mut_complex(spec_out.to_plain_array_view_mut::<f32>()?, &[ch, n_freqs])
             .into_dimensionality()?;
     // Zero relevant frequency bins of output
     o_f.slice_mut(s![.., ..nb_df]).fill(Complex32::default());
     let coefs_arr: ArrayView3<Complex32> =
-        as_arrayview_complex(coefs.to_array_view::<f32>()?, &[ch, nb_df, df_order])
+        as_arrayview_complex(coefs.to_plain_array_view::<f32>()?, &[ch, nb_df, df_order])
             .into_dimensionality()?;
     // Transform spec to an complex array and iterate over time frames of spec and coefs
     let spec_iter = spec.iter().map(|s| {
-        as_arrayview_complex(s.to_array_view::<f32>().unwrap(), &[ch, n_freqs])
+        as_arrayview_complex(s.to_plain_array_view::<f32>().unwrap(), &[ch, n_freqs])
             .into_dimensionality::<Ix2>()
             .unwrap()
     });
@@ -563,7 +564,8 @@ fn init_encoder_impl(
     n_ch: usize,
 ) -> Result<(TypedModel, usize)> {
     log::debug!("Start init encoder.");
-    let s = tract_pulse::fact::stream_dim();
+    let stream_symbol = m.symbols.sym("S");
+    let s = stream_symbol.to_dim();
 
     let nb_erb = df_cfg.get("nb_erb").unwrap().parse::<usize>()?;
     let nb_df = df_cfg.get("nb_df").unwrap().parse::<usize>()?;
@@ -573,15 +575,20 @@ fn init_encoder_impl(
     m = m
         .with_input_fact(0, feat_erb)?
         .with_input_fact(1, feat_spec)?
-        .with_input_names(&["feat_erb", "feat_spec"])?
-        .with_output_names(&["e0", "e1", "e2", "e3", "emb", "c0", "lsnr"])?;
+        .with_input_names(["feat_erb", "feat_spec"])?
+        .with_outputs_by_name(["e0", "e1", "e2", "e3", "emb", "c0", "lsnr"])?;
 
     m.analyse(true)?;
     let mut m = m.into_typed()?;
 
     m.declutter()?;
-    let pulsed = PulsedModel::new(&m, 1)?;
-    let delay = pulsed.output_fact(0)?.delay;
+    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
+    let delay = pulsed
+        .output_fact(0)?
+        .stream
+        .as_ref()
+        .context("DeepFilter output must retain its streaming axis")?
+        .delay;
     log::info!("Init encoder with delay: {}", delay);
     let m = pulsed.into_typed()?.into_optimized()?;
     Ok((m, delay))
@@ -607,7 +614,8 @@ fn init_erb_decoder_impl(
     n_ch: usize,
 ) -> Result<(TypedModel, usize)> {
     log::debug!("Start init ERB decoder.");
-    let s = tract_pulse::fact::stream_dim();
+    let stream_symbol = m.symbols.sym("S");
+    let s = stream_symbol.to_dim();
 
     let nb_erb = df_cfg.get("nb_erb").unwrap().parse::<usize>()?;
     let n_hidden = net_cfg.get("emb_hidden_dim").unwrap().parse::<usize>()?;
@@ -630,15 +638,20 @@ fn init_erb_decoder_impl(
         .with_input_fact(2, e2)?
         .with_input_fact(3, e1)?
         .with_input_fact(4, e0)?
-        .with_input_names(&["emb", "e3", "e2", "e1", "e0"])?
-        .with_output_names(&["m"])?;
+        .with_input_names(["emb", "e3", "e2", "e1", "e0"])?
+        .with_outputs_by_name(["m"])?;
 
     m.analyse(true)?;
     let mut m = m.into_typed()?;
 
     m.declutter()?;
-    let pulsed = PulsedModel::new(&m, 1)?;
-    let delay = pulsed.output_fact(0)?.delay;
+    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
+    let delay = pulsed
+        .output_fact(0)?
+        .stream
+        .as_ref()
+        .context("DeepFilter output must retain its streaming axis")?
+        .delay;
     log::info!("Init ERB decoder with delay: {}", delay);
     let m = pulsed.into_typed()?.into_optimized()?;
     Ok((m, delay))
@@ -669,7 +682,8 @@ fn init_df_decoder_impl(
     n_ch: usize,
 ) -> Result<(TypedModel, usize)> {
     log::debug!("Start init DF decoder.");
-    let s = tract_pulse::fact::stream_dim();
+    let stream_symbol = m.symbols.sym("S");
+    let s = stream_symbol.to_dim();
 
     let nb_df = df_cfg.get("nb_df").unwrap().parse::<usize>()?;
     let n_hidden = net_cfg.get("emb_hidden_dim").unwrap().parse::<usize>()?;
@@ -684,15 +698,20 @@ fn init_df_decoder_impl(
     m = m
         .with_input_fact(0, emb)?
         .with_input_fact(1, c0)?
-        .with_input_names(&["emb", "c0"])?
-        .with_output_names(&["coefs"])?;
+        .with_input_names(["emb", "c0"])?
+        .with_outputs_by_name(["coefs"])?;
 
     m.analyse(true)?;
     let mut m = m.into_typed()?;
 
     m.declutter()?;
-    let pulsed = PulsedModel::new(&m, 1)?;
-    let delay = pulsed.output_fact(0)?.delay;
+    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
+    let delay = pulsed
+        .output_fact(0)?
+        .stream
+        .as_ref()
+        .context("DeepFilter output must retain its streaming axis")?
+        .delay;
     log::info!("Init DF decoder with delay: {}", delay);
     let m = pulsed.into_typed()?.into_optimized()?;
     Ok((m, delay))

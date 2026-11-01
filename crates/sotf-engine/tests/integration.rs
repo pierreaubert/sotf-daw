@@ -385,7 +385,7 @@ fn dsd_output_mode_helpers_and_roundtrip() {
 fn network_endpoint_config_defaults_and_roundtrip() {
     let default = NetworkEndpointConfig::default();
     assert_eq!(default.mode, NetworkEndpointMode::Disabled);
-    assert_eq!(default.bind_addr, "0.0.0.0");
+    assert_eq!(default.bind_addr, "127.0.0.1");
     assert_eq!(default.port, 17890);
 
     let custom = NetworkEndpointConfig {

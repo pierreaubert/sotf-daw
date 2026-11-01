@@ -1,6 +1,5 @@
 ---
 source: crates/sotf-plugins/tests/render_plan_snapshots.rs
-assertion_line: 61
 expression: plan
 ---
 {
@@ -62,7 +61,25 @@ expression: plan
   ],
   "main_groups": [],
   "output_controls": [],
-  "tabs": [],
+  "tabs": [
+    {
+      "name": "Reproducibility",
+      "controls": [
+        {
+          "param_index": 3,
+          "param_name": "Seed",
+          "control_type": "knob",
+          "unit": "",
+          "range": [
+            0.0,
+            2147483647.0
+          ],
+          "read_only": false,
+          "enabled": true
+        }
+      ]
+    }
+  ],
   "viz_slots": [],
   "dynamic_sections": []
 }

@@ -10,7 +10,7 @@ use tract_onnx::prelude::*;
 ///
 /// Loading and inference allocate and must never execute on an audio callback.
 pub struct SileroModel {
-    model: TypedRunnableModel<TypedModel>,
+    model: std::sync::Arc<TypedRunnableModel>,
 }
 
 impl std::fmt::Debug for SileroModel {
@@ -93,10 +93,10 @@ impl SileroModel {
             return Err("Unexpected Silero output count".into());
         }
         let score = output[0]
-            .to_array_view::<f32>()
+            .to_plain_array_view::<f32>()
             .map_err(|e| e.to_string())?;
         let state = output[1]
-            .to_array_view::<f32>()
+            .to_plain_array_view::<f32>()
             .map_err(|e| e.to_string())?;
         if score.shape() != [1, 1] || state.shape() != [2, 1, 128] {
             return Err("Unexpected Silero output shape".into());

@@ -7,6 +7,7 @@
 
 // Rust guideline compliant 2026-02-21
 use crate::NeuralPitchConfig;
+use ort::environment::Environment;
 use ort::ep::coreml::{ComputeUnits, ModelFormat};
 use ort::session::Session;
 use ort::session::builder::GraphOptimizationLevel;
@@ -44,9 +45,9 @@ struct LibraryIdentity {
     sha256: String,
 }
 
-// ort itself owns a process-global library/API/environment. A control-thread
-// lock makes our identity check/initialization atomic across simultaneous loads.
-static LIBRARY: Mutex<Option<LibraryIdentity>> = Mutex::new(None);
+// Keep the explicit environment alive for the process-bound runtime. A control-
+// thread lock makes identity checking and initialization atomic across loads.
+static LIBRARY: Mutex<Option<(LibraryIdentity, Environment)>> = Mutex::new(None);
 
 fn sha256_file(path: &Path) -> Result<String, String> {
     // Bound executable resources to 256 MiB without holding their bytes in RAM.
@@ -72,7 +73,7 @@ fn sha256_file(path: &Path) -> Result<String, String> {
     Ok(hash.finalize().iter().map(|v| format!("{v:02x}")).collect())
 }
 
-fn initialize(config: &OrtPitchConfig) -> Result<(), String> {
+fn initialize(config: &OrtPitchConfig) -> Result<Environment, String> {
     if !config.library_path.is_absolute() || config.library_sha256.len() != 64 {
         return Err("ORT requires an absolute library path and SHA-256".into());
     }
@@ -94,21 +95,19 @@ fn initialize(config: &OrtPitchConfig) -> Result<(), String> {
     let mut binding = LIBRARY
         .lock()
         .map_err(|_| "ORT library binding lock poisoned")?;
-    if let Some(current) = binding.as_ref() {
+    if let Some((current, environment)) = binding.as_ref() {
         return if *current == identity {
-            Ok(())
+            Ok(environment.clone())
         } else {
             Err("ORT process library is already bound to another path/hash".into())
         };
     }
-    if !ort::init_from(&identity.path)
+    let environment = ort::init_from(&identity.path)
         .map_err(|e| e.to_string())?
-        .commit()
-    {
-        return Err("ORT environment was initialized outside the explicit pitch binding".into());
-    }
-    *binding = Some(identity);
-    Ok(())
+        .build()
+        .map_err(|e| format!("ORT explicit pitch environment initialization failed: {e}"))?;
+    *binding = Some((identity, environment.clone()));
+    Ok(environment)
 }
 
 #[derive(Debug)]
@@ -143,8 +142,8 @@ impl OrtPitchModel {
         if bytes.len() > 64 * 1024 * 1024 || config.sha256 != actual {
             return Err("CREPE model size/SHA-256 mismatch".into());
         }
-        initialize(runtime)?;
-        let mut builder = Session::builder()
+        let environment = initialize(runtime)?;
+        let mut builder = Session::builder(&environment)
             .map_err(|e| e.to_string())?
             .with_intra_threads(1)
             .map_err(|e| e.to_string())?

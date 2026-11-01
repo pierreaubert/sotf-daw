@@ -311,7 +311,8 @@ fn test_decoder_invalid_file() {
 
     while start.elapsed() < timeout {
         if let Ok(event) = event_rx.recv_timeout(Duration::from_millis(100))
-            && let ThreadEvent::DecoderError(_) = event
+            && let ThreadEvent::DecoderTagged { attempt: 1, event } = event
+            && matches!(*event, ThreadEvent::DecoderError(_))
         {
             got_error = true;
             break;

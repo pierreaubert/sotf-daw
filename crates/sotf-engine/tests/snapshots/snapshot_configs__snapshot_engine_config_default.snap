@@ -20,7 +20,7 @@ expression: config
   "oversampling_policy": "plugin_preferred",
   "network_endpoint": {
     "mode": "disabled",
-    "bind_addr": "0.0.0.0",
+    "bind_addr": "127.0.0.1",
     "port": 17890
   }
 }

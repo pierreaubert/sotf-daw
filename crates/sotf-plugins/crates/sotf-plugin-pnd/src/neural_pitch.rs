@@ -16,7 +16,7 @@ const MODEL_SAMPLES: usize = 1024;
 const MODEL_RATE: f64 = 16_000.0;
 const MAX_SOURCE_SAMPLES: usize = 12_288;
 const PITCH_BINS: usize = 360;
-type Runnable = TypedRunnableModel<TypedModel>;
+type Runnable = std::sync::Arc<TypedRunnableModel>;
 
 enum ActivationModel {
     Tract(Box<Runnable>),
@@ -238,15 +238,17 @@ impl CrepeModel {
         if frame.iter().any(|v| !v.is_finite()) {
             return Err("Non-finite CREPE input".into());
         }
+        #[cfg(not(feature = "neural-pitch-ort"))]
+        let ActivationModel::Tract(model) = &mut self.model;
+        #[cfg(feature = "neural-pitch-ort")]
         let model = match &mut self.model {
             ActivationModel::Tract(model) => model,
-            #[cfg(feature = "neural-pitch-ort")]
             ActivationModel::Ort(model) => return model.activations(frame),
         };
         let input = Tensor::from_shape(&[1, MODEL_SAMPLES], frame).map_err(|e| e.to_string())?;
         let output = model.run(tvec!(input.into())).map_err(|e| e.to_string())?;
         let view = output[0]
-            .to_array_view::<f32>()
+            .to_plain_array_view::<f32>()
             .map_err(|e| e.to_string())?;
         if view.shape() != [1, PITCH_BINS] {
             return Err("Invalid CREPE output shape".into());

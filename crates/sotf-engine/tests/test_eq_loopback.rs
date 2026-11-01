@@ -96,7 +96,7 @@ fn probe_loopback_available(
     let in_channels = in_config.channels() as usize;
 
     let in_stream = match in_device.build_input_stream(
-        &in_config.clone().into(),
+        (*in_config).into(),
         move |data: &[f32], _: &_| {
             captured.lock().unwrap().extend_from_slice(data);
         },
@@ -117,10 +117,10 @@ fn probe_loopback_available(
     let write_pos_clone = write_pos.clone();
 
     let out_stream = match out_device.build_output_stream(
-        &out_config.clone().into(),
+        (*out_config).into(),
         move |data: &mut [f32], _: &_| {
-            let pos = write_pos_clone.load(std::sync::atomic::Ordering::Relaxed);
             for frame in data.chunks_mut(channels) {
+                let pos = write_pos_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 let sample = if pos < tone_clone.len() {
                     tone_clone[pos]
                 } else {
@@ -129,7 +129,6 @@ fn probe_loopback_available(
                 for ch in frame.iter_mut() {
                     *ch = sample;
                 }
-                write_pos_clone.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             }
         },
         |err| eprintln!("Probe playback error: {}", err),
@@ -180,14 +179,20 @@ fn test_eq_sweep_loopback_verification() {
 
 fn run_eq_sweep_loopback_verification_once() {
     // 1. Setup Devices
-    let device_names = [
-        "BlackHole 2ch",
-        "BlackHole 16ch",
-        "BlackHole 64ch",
-        "SotF Virtual Audio",
-        "SotF Virtual Device",
-        "SotF Virtual Output",
-    ];
+    let requested_device = std::env::var("AEQ_E2E_DEVICE").ok();
+    let device_names = requested_device.as_deref().map_or_else(
+        || {
+            vec![
+                "BlackHole 2ch",
+                "BlackHole 16ch",
+                "BlackHole 64ch",
+                "SotF Virtual Audio",
+                "SotF Virtual Device",
+                "SotF Virtual Output",
+            ]
+        },
+        |name| vec![name],
+    );
     let mut output_setup = None;
     let mut input_setup = None;
 
@@ -203,6 +208,10 @@ fn run_eq_sweep_loopback_verification_once() {
     }
 
     if output_setup.is_none() || input_setup.is_none() {
+        assert!(
+            requested_device.is_none(),
+            "Requested loopback device {requested_device:?} has no usable input/output pair"
+        );
         println!("SKIPPING test: virtual audio device not found.");
         return;
     }
@@ -331,7 +340,7 @@ fn run_eq_sweep_loopback_verification_once() {
 
     let stream = in_device
         .build_input_stream(
-            &in_config.into(),
+            in_config.into(),
             move |data: &[f32], _: &_| {
                 let mut buffer = capture_clone.lock().unwrap();
                 buffer.extend_from_slice(data);

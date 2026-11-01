@@ -40,8 +40,7 @@ impl PcmStreamServer {
                 run_server(
                     listener,
                     chunk_rx,
-                    client_tx,
-                    client_rx,
+                    (client_tx, client_rx),
                     shutdown_rx,
                     thread_stats,
                     client_queue_capacity,

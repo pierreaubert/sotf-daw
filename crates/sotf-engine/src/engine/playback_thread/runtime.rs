@@ -390,6 +390,7 @@ struct RecoveryState {
 }
 
 struct DiagnosticState {
+    reported_callback_generation: Option<u64>,
     stream_start_time: Instant,
     last_diagnostic_log: Instant,
     diagnostic_interval: Duration,
@@ -439,6 +440,54 @@ mod lab_tests {
             lab_pcm_probe: Some(Arc::new(crate::lab_pcm::LabPcmProbe::default())),
         })
         .expect("lab runtime")
+    }
+
+    #[test]
+    fn first_callback_stats_are_prompt_retryable_and_generation_scoped() {
+        let mut runtime = runtime();
+        let (tx, rx) = crossbeam::channel::bounded(1);
+        runtime.event_tx = tx;
+        // Keep periodic diagnostics out of this deterministic readiness test.
+        runtime.diagnostics.diagnostic_interval = Duration::from_secs(3600);
+        runtime.emit_periodic_diagnostics();
+        assert!(rx.try_recv().is_err());
+
+        runtime.state.callback_count.store(1, Ordering::Relaxed);
+        runtime
+            .event_tx
+            .try_send(ThreadEvent::DecoderEndOfStream)
+            .unwrap();
+        runtime.emit_periodic_diagnostics();
+        assert_eq!(runtime.diagnostics.reported_callback_generation, None);
+        assert!(matches!(
+            rx.try_recv().unwrap(),
+            ThreadEvent::DecoderEndOfStream
+        ));
+        runtime.emit_periodic_diagnostics();
+        assert!(
+            matches!(rx.try_recv().unwrap(), ThreadEvent::PlaybackStats {
+            callback_count: 1, output_generation, ..
+        } if output_generation == runtime.state.output_generation)
+        );
+        runtime.emit_periodic_diagnostics();
+        assert!(
+            rx.try_recv().is_err(),
+            "initial observation must not flood stats"
+        );
+
+        let old_generation = runtime.state.output_generation;
+        runtime.rebuild_lab_output(96_000, 2, None).unwrap();
+        assert_ne!(runtime.state.output_generation, old_generation);
+        while rx.try_recv().is_ok() {}
+        runtime.emit_periodic_diagnostics();
+        assert!(rx.try_recv().is_err(), "replacement needs its own callback");
+        runtime.state.callback_count.store(1, Ordering::Relaxed);
+        runtime.emit_periodic_diagnostics();
+        assert!(
+            matches!(rx.try_recv().unwrap(), ThreadEvent::PlaybackStats {
+            callback_count: 1, output_generation, ..
+        } if output_generation == runtime.state.output_generation)
+        );
     }
 
     #[test]
@@ -851,6 +900,7 @@ impl PlaybackRuntime {
                 last_reported_underruns: 0,
             },
             diagnostics: DiagnosticState {
+                reported_callback_generation: None,
                 stream_start_time: Instant::now(),
                 last_diagnostic_log: Instant::now(),
                 diagnostic_interval: Duration::from_secs(5),
@@ -986,6 +1036,7 @@ impl PlaybackRuntime {
                 last_reported_underruns: 0,
             },
             diagnostics: DiagnosticState {
+                reported_callback_generation: None,
                 stream_start_time: now,
                 last_diagnostic_log: now,
                 diagnostic_interval: Duration::from_secs(5),
@@ -2022,11 +2073,21 @@ impl PlaybackRuntime {
     }
 
     fn emit_periodic_diagnostics(&mut self) {
-        if self.diagnostics.last_diagnostic_log.elapsed() <= self.diagnostics.diagnostic_interval {
+        // HAL readiness waits for observed callbacks. Do not make the first
+        // observation wait for the five-second diagnostic interval.
+        let first_callback = self.diagnostics.reported_callback_generation
+            != Some(self.state.output_generation)
+            && self.state.callback_count.load(Ordering::Relaxed) > 0;
+        if !first_callback
+            && self.diagnostics.last_diagnostic_log.elapsed()
+                <= self.diagnostics.diagnostic_interval
+        {
             return;
         }
 
-        self.send_playback_stats_snapshot("PERIODIC");
+        if self.send_playback_stats_snapshot("PERIODIC") && first_callback {
+            self.diagnostics.reported_callback_generation = Some(self.state.output_generation);
+        }
         self.diagnostics.last_diagnostic_log = Instant::now();
     }
 
@@ -2036,8 +2097,9 @@ impl PlaybackRuntime {
     /// both report identical fields from identical loads. Runs on the
     /// playback worker thread (never the CPAL callback); the channel send is
     /// best-effort on the bounded event queue like every other emission.
-    /// Tagged with the adopted playback epoch.
-    fn send_playback_stats_snapshot(&self, report_kind: &str) {
+    /// Tagged with the adopted playback epoch. Returns whether it was queued,
+    /// allowing the initial callback observation to retry after saturation.
+    fn send_playback_stats_snapshot(&self, report_kind: &str) -> bool {
         let elapsed = self.diagnostics.stream_start_time.elapsed().as_secs_f64();
         let total_cb = self.state.callback_count.load(Ordering::Relaxed);
         let total_cb_samples = self.state.total_callback_samples.load(Ordering::Relaxed);
@@ -2065,9 +2127,8 @@ impl PlaybackRuntime {
             self.accounting.frames_received,
             self.output_format,
         );
-        send_playback_event(
-            &self.event_tx,
-            ThreadEvent::PlaybackStats {
+        self.event_tx
+            .try_send(ThreadEvent::PlaybackStats {
                 output_generation: self.state.output_generation,
                 callback_count: total_cb,
                 buffer_fill_percent: fill as u64,
@@ -2077,9 +2138,8 @@ impl PlaybackRuntime {
                 frames_dropped: self.accounting.frames_dropped,
                 effective_sample_rate: effective_hz,
                 epoch: self.drain.meter_epoch,
-            },
-            "playback stats",
-        );
+            })
+            .is_ok()
     }
 
     fn emit_output_meter(&mut self) {

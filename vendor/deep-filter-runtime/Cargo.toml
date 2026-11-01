@@ -15,12 +15,12 @@ realfft = "3"
 num-complex = { version = "0.4", features = ["serde", "bytemuck"] }
 bytemuck = "1"
 log = "0.4"
-ndarray = "0.15"
+ndarray = "0.17"
 anyhow = "1"
-rust-ini = "0.18"
+rust-ini = "0.21.3"
 flate2 = "1"
 tar = "0.4"
-tract-core = { git = "https://github.com/sonos/tract", rev = "ed00ff7eadc84b345318b042f134602ed743879d" }
-tract-onnx = { git = "https://github.com/sonos/tract", rev = "ed00ff7eadc84b345318b042f134602ed743879d" }
-tract-pulse = { git = "https://github.com/sonos/tract", rev = "ed00ff7eadc84b345318b042f134602ed743879d" }
-tract-hir = { git = "https://github.com/sonos/tract", rev = "ed00ff7eadc84b345318b042f134602ed743879d" }
+tract-core = "=0.23.9"
+tract-onnx = "=0.23.9"
+tract-pulse = "=0.23.9"
+tract-hir = "=0.23.9"

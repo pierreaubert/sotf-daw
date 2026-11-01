@@ -1477,10 +1477,9 @@ mod tests {
             || state.applied_gains.lock().unwrap().contains(&2.0),
             "accepted pre-reset parameter was not applied",
         );
-        wait_until(
-            || adapter.queues.ready_output.slots() != 0,
-            "post-reset output was not published",
-        );
+        // The queue still contains the deliberately stale pre-reset block.
+        // Current-epoch completion proves the new output was also published.
+        wait_for(&adapter, Q as u64);
         let second = process(&mut adapter, &[1.0; Q], &[]);
         let third = process(&mut adapter, &[0.0; Q], &[]);
         assert!(first.iter().chain(&second).all(|sample| *sample == 0.0));

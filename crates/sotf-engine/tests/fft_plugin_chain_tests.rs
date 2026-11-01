@@ -70,12 +70,10 @@ fn test_fft_chain_arbitrary_frame_sizes() {
         "Engine reported error: {:?}",
         state.last_error
     );
-    if state.playback_callback_count == 0 {
-        eprintln!(
-            "Skipping FFT chain spectrum assertion: virtual output device produced no callbacks"
-        );
-        return;
-    }
+    assert!(
+        state.playback_callback_count > 0,
+        "FFT chain spectrum validation requires playback callbacks; state: {state:?}"
+    );
 
     // 4. Verify Spectrum Analyzer data
     // The engine index for spectrum analyzer should be 2 (Upmixer=0, Denoiser=1, Spectrum=2)

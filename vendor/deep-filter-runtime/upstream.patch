@@ -1,9 +1,6 @@
 --- upstream/lib.rs
 +++ src/lib.rs
-@@ -11,26 +11,7 @@
- pub const MEAN_NORM_INIT: [f32; 2] = [-60., -90.];
- pub const UNIT_NORM_INIT: [f32; 2] = [0.001, 0.0001];
- 
+@@ -14,17 +13,0 @@
 -#[cfg(any(feature = "transforms", feature = "dataset"))]
 -pub mod transforms;
 -#[cfg(feature = "dataset")]
@@ -21,16 +18,21 @@
 -#[cfg(feature = "cache")]
 -mod cache;
 -#[cfg(feature = "tract")]
- pub mod tract;
+@@ -32,2 +14,0 @@
 -#[cfg(all(feature = "wav-utils", not(feature = "dataset")))]
 -pub mod wav_utils;
- 
- pub(crate) fn freq2erb(freq_hz: f32) -> f32 {
-     9.265 * (freq_hz / (24.7 * 9.265)).ln_1p()
-@@ -523,37 +504,3 @@
-     sum / n as f32
- }
- 
+@@ -399 +380 @@
+-        Err(e) => Err(e).unwrap(),
++        Err(e) => panic!("FFT inverse failed: {e:?}"),
+@@ -443 +424 @@
+-    debug_assert!(gains.len() % 4 == 0);
++    debug_assert!(gains.len().is_multiple_of(4));
+@@ -449 +430 @@
+-    for g in gains.chunks_exact_mut(4) {
++    for g in gains.as_chunks_mut::<4>().0 {
+@@ -484,0 +466 @@
++#[expect(clippy::type_complexity, reason = "Preserve the upstream five-way zip API")]
+@@ -526,34 +507,0 @@
 -#[cfg(test)]
 -mod tests {
 -    use rand::distributions::{Distribution, Uniform};
@@ -67,47 +69,31 @@
 -}
 --- upstream/tract.rs
 +++ src/tract.rs
-@@ -15,7 +15,6 @@
- use tract_onnx::{prelude::*, tract_hir::shapefactoid};
- use tract_pulse::{internal::ToDim, model::*};
- 
+@@ -18 +17,0 @@
 -use crate::transforms::find_max_abs;
- use crate::*;
- 
- #[derive(Clone)]
-@@ -31,7 +30,7 @@
-         let file = File::open(tar_file).context("Could not open model tar file.")?;
-         Self::from_targz(file)
-     }
+@@ -34 +33 @@
 -    pub fn from_bytes(tar_buf: &'static [u8]) -> Result<Self> {
 +    pub fn from_bytes(tar_buf: &[u8]) -> Result<Self> {
-         Self::from_targz(tar_buf)
-     }
-     fn from_targz<R: Read>(f: R) -> Result<Self> {
-@@ -92,6 +91,11 @@
-     reduce_mask: ReduceMask,
- }
- impl RuntimeParams {
+@@ -94,0 +94,5 @@
 +    /// Default enhancement policy from the upstream command-line runner.
 +    pub fn default_with_ch(channels: usize) -> Self {
 +        Self::new(channels, false, 100., -10., 30., 20., ReduceMask::MEAN)
 +    }
 +
-     pub fn new(
-         n_ch: usize,
-         post_filter: bool,
-@@ -115,6 +119,7 @@
- 
- pub type TractModel = TypedSimpleState<TypedModel, TypedSimplePlan<TypedModel>>;
- 
+@@ -116,2 +120,3 @@
+-pub type TractModel = TypedSimpleState<TypedModel, TypedSimplePlan<TypedModel>>;
+-
++pub type TractModel = TypedSimpleState;
++
 +#[derive(Clone)]
- pub struct DfTract {
-     enc: TractModel,
-     erb_dec: TractModel,
-@@ -202,10 +207,9 @@
-             Some(10f32.powf(-atten_lim / 20.))
-         };
-         let spec_shape = [1, 1, 1, n_freqs, 2];
+@@ -164,3 +169,3 @@
+-        let enc = SimpleState::new(enc.into_runnable()?)?;
+-        let erb_dec = SimpleState::new(erb_dec.into_runnable()?)?;
+-        let df_dec = SimpleState::new(df_dec.into_runnable()?)?;
++        let enc = TypedSimpleState::new(&enc.into_runnable()?)?;
++        let erb_dec = TypedSimpleState::new(&erb_dec.into_runnable()?)?;
++        let df_dec = TypedSimpleState::new(&df_dec.into_runnable()?)?;
+@@ -205,4 +210,3 @@
 -        let spec_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &spec_shape)? };
 -        let erb_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &[1, 1, 1, nb_erb])? };
 -        let cplx_buf = unsafe { Tensor::uninitialized_dt(f32::datum_type(), &[1, 1, nb_df, 2])? };
@@ -115,75 +101,153 @@
 +        let spec_buf = Tensor::zero::<f32>(&spec_shape)?;
 +        let erb_buf = Tensor::zero::<f32>(&[1, 1, 1, nb_erb])?;
 +        let cplx_buf = Tensor::zero::<f32>(&[1, 1, nb_df, 2])?;
-         let m_zeros = vec![0.; nb_erb];
- 
-         let model_type = config.section(Some("train")).unwrap().get("model").unwrap();
-@@ -322,7 +326,10 @@
-         debug_assert_eq!(noisy.len_of(Axis(0)), enh.len_of(Axis(0)));
-         debug_assert_eq!(noisy.len_of(Axis(1)), enh.len_of(Axis(1)));
-         debug_assert_eq!(noisy.len_of(Axis(1)), self.hop_size);
+@@ -227 +231 @@
+-        let mut state = DFState::new(sr as usize, fft_size, hop_size, nb_erb, min_nb_erb_freqs);
++        let mut state = DFState::new(sr, fft_size, hop_size, nb_erb, min_nb_erb_freqs);
+@@ -325 +329,4 @@
 -        let max_a = find_max_abs(noisy.iter()).expect("NaN");
 +        let max_a = noisy.iter().try_fold(0f32, |acc, &v| {
 +            if !v.is_finite() { bail!("Non-finite input") }
 +            Ok(acc.max(v.abs()))
 +        })?;
-         if max_a > 0.99 {
-             log::warn!("Possible clipping detected ({:.3}).", max_a)
-         }
-@@ -359,7 +366,14 @@
-         ))?;
-         #[cfg(feature = "timings")]
-         let t2 = Instant::now();
+@@ -334,3 +341,3 @@
+-            self.spec_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
+-            self.erb_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
+-            self.cplx_buf.to_array_view_mut()?.axis_iter_mut(Axis(0)),
++            self.spec_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
++            self.erb_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
++            self.cplx_buf.to_plain_array_view_mut()?.axis_iter_mut(Axis(0)),
+@@ -357,2 +364,2 @@
+-            self.erb_buf.clone(),
+-            self.cplx_buf.clone().permute_axes(&[0, 3, 1, 2])?
++            self.erb_buf.clone().into(),
++            self.cplx_buf.clone().permute_axes(&[0, 3, 1, 2])?.into()
+@@ -362 +369,9 @@
 -        let &lsnr = enc_emb.pop().unwrap().to_scalar::<f32>()?;
 +        // Every channel must contribute to the common stage decision. The
 +        // legacy to_scalar call silently selected the first batch element.
 +        let scores = enc_emb.pop().unwrap().into_tensor();
-+        let scores = scores.as_slice::<f32>()?;
++        let scores = scores.to_plain_array_view::<f32>()?;
++        let scores = scores.as_slice().context("DeepFilter scores must be contiguous")?;
 +        if scores.len() != ch || scores.iter().any(|x| !x.is_finite()) {
 +            bail!("Unexpected local-SNR channel geometry or non-finite score");
 +        }
 +        let lsnr = scores.iter().copied().sum::<f32>() / ch as f32;
-         let c0 = enc_emb.pop().unwrap().into_tensor();
-         let emb = enc_emb.pop().unwrap().into_tensor();
-         let (apply_erb, apply_erb_zeros, apply_df) = if lsnr < self.min_db_thresh {
-@@ -415,8 +429,13 @@
-                 .as_mut()
-                 .map(|x| x.as_slice_mut().unwrap())
-                 .unwrap_or(self.m_zeros.as_mut_slice());
+@@ -386 +401 @@
+-            self.rolling_spec_buf.get_mut(self.df_order - 1).unwrap().to_array_view_mut()?;
++            self.rolling_spec_buf.get_mut(self.df_order - 1).unwrap().to_plain_array_view_mut()?;
+@@ -389,5 +404,5 @@
+-                emb.clone(),
+-                enc_emb.pop().unwrap().into_tensor(), // e3
+-                enc_emb.pop().unwrap().into_tensor(), // e2
+-                enc_emb.pop().unwrap().into_tensor(), // e1
+-                enc_emb.pop().unwrap().into_tensor(), // e0
++                emb.clone().into(),
++                enc_emb.pop().unwrap(), // e3
++                enc_emb.pop().unwrap(), // e2
++                enc_emb.pop().unwrap(), // e1
++                enc_emb.pop().unwrap(), // e0
+@@ -401 +416 @@
+-                .into_array()?;
++                .into_plain_array()?;
+@@ -417,0 +433,5 @@
 +            // Post-filter the linked mask once; processing it once per channel
 +            // would apply a different transfer function to each channel.
 +            if pf {
 +                post_filter(m);
 +            }
-             for (state, mut spec_ch) in self.df_states.iter().zip(spec.axis_iter_mut(Axis(0))) {
+@@ -419 +439 @@
 -                state.apply_mask(as_slice_mut_complex(spec_ch.as_slice_mut().unwrap()), m, pf);
 +                state.apply_mask(as_slice_mut_complex(spec_ch.as_slice_mut().unwrap()), m, false);
-             }
-         }
-         #[cfg(feature = "timings")]
-@@ -431,6 +450,16 @@
-         if apply_df {
-             let mut coefs = self.df_dec.run(tvec!(emb, c0))?.pop().unwrap().into_tensor();
-             coefs.set_shape(&[ch, self.nb_df, self.df_order, 2])?;
+@@ -432 +452 @@
+-            let mut coefs = self.df_dec.run(tvec!(emb, c0))?.pop().unwrap().into_tensor();
++            let mut coefs = self.df_dec.run(tvec!(emb.into(), c0.into()))?.pop().unwrap().into_tensor();
+@@ -433,0 +454,10 @@
 +            if ch > 1 {
 +                // Real and imaginary FIR components are averaged together,
 +                // then shared by all channels. No cross-channel audio is mixed.
-+                let mut channel_coefs = coefs.to_array_view_mut::<f32>()?;
++                let mut channel_coefs = coefs.to_plain_array_view_mut::<f32>()?;
 +                let shared = channel_coefs.mean_axis(Axis(0))
 +                    .ok_or_else(|| anyhow!("Empty deep-filter channel axis"))?;
 +                for mut channel in channel_coefs.axis_iter_mut(Axis(0)) {
 +                    channel.assign(&shared);
 +                }
 +            }
-             df(
-                 &self.rolling_spec_buf,
-                 coefs,
-@@ -699,61 +728,24 @@
-     a
- }
- 
+@@ -445 +475 @@
+-        let mut spec_enh = self.spec_buf.to_array_view_mut()?;
++        let mut spec_enh = self.spec_buf.to_plain_array_view_mut()?;
+@@ -447 +477 @@
+-            let spec_noisy = self.rolling_spec_buf_x.front().unwrap().to_array_view().unwrap();
++            let spec_noisy = self.rolling_spec_buf_x.front().unwrap().to_plain_array_view().unwrap();
+@@ -503 +533 @@
+-        as_array_mut_complex(spec_out.to_array_view_mut::<f32>()?, &[ch, n_freqs])
++        as_array_mut_complex(spec_out.to_plain_array_view_mut::<f32>()?, &[ch, n_freqs])
+@@ -508 +538 @@
+-        as_arrayview_complex(coefs.to_array_view::<f32>()?, &[ch, nb_df, df_order])
++        as_arrayview_complex(coefs.to_plain_array_view::<f32>()?, &[ch, nb_df, df_order])
+@@ -512 +542 @@
+-        as_arrayview_complex(s.to_array_view::<f32>().unwrap(), &[ch, n_freqs])
++        as_arrayview_complex(s.to_plain_array_view::<f32>().unwrap(), &[ch, n_freqs])
+@@ -537 +567,2 @@
+-    let s = tract_pulse::fact::stream_dim();
++    let stream_symbol = m.symbols.sym("S");
++    let s = stream_symbol.to_dim();
+@@ -547,2 +578,2 @@
+-        .with_input_names(&["feat_erb", "feat_spec"])?
+-        .with_output_names(&["e0", "e1", "e2", "e3", "emb", "c0", "lsnr"])?;
++        .with_input_names(["feat_erb", "feat_spec"])?
++        .with_outputs_by_name(["e0", "e1", "e2", "e3", "emb", "c0", "lsnr"])?;
+@@ -554,2 +585,7 @@
+-    let pulsed = PulsedModel::new(&m, 1)?;
+-    let delay = pulsed.output_fact(0)?.delay;
++    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
++    let delay = pulsed
++        .output_fact(0)?
++        .stream
++        .as_ref()
++        .context("DeepFilter output must retain its streaming axis")?
++        .delay;
+@@ -581 +617,2 @@
+-    let s = tract_pulse::fact::stream_dim();
++    let stream_symbol = m.symbols.sym("S");
++    let s = stream_symbol.to_dim();
+@@ -604,2 +641,2 @@
+-        .with_input_names(&["emb", "e3", "e2", "e1", "e0"])?
+-        .with_output_names(&["m"])?;
++        .with_input_names(["emb", "e3", "e2", "e1", "e0"])?
++        .with_outputs_by_name(["m"])?;
+@@ -611,2 +648,7 @@
+-    let pulsed = PulsedModel::new(&m, 1)?;
+-    let delay = pulsed.output_fact(0)?.delay;
++    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
++    let delay = pulsed
++        .output_fact(0)?
++        .stream
++        .as_ref()
++        .context("DeepFilter output must retain its streaming axis")?
++        .delay;
+@@ -643 +685,2 @@
+-    let s = tract_pulse::fact::stream_dim();
++    let stream_symbol = m.symbols.sym("S");
++    let s = stream_symbol.to_dim();
+@@ -658,2 +701,2 @@
+-        .with_input_names(&["emb", "c0"])?
+-        .with_output_names(&["coefs"])?;
++        .with_input_names(["emb", "c0"])?
++        .with_outputs_by_name(["coefs"])?;
+@@ -665,2 +708,7 @@
+-    let pulsed = PulsedModel::new(&m, 1)?;
+-    let delay = pulsed.output_fact(0)?.delay;
++    let pulsed = PulsedModel::new(&m, stream_symbol, &1.to_dim())?;
++    let delay = pulsed
++        .output_fact(0)?
++        .stream
++        .as_ref()
++        .context("DeepFilter output must retain its streaming axis")?
++        .delay;
+@@ -701,0 +750 @@
 +// Safe representation casts require num-complex's checked Pod implementation.
- pub fn as_slice_mut_complex(buffer: &mut [f32]) -> &mut [Complex32] {
+@@ -703,7 +752,2 @@
 -    unsafe {
 -        let ptr = buffer.as_ptr() as *mut Complex32;
 -        let len = buffer.len();
@@ -193,7 +257,7 @@
 -
 +    bytemuck::cast_slice_mut(buffer)
 +}
- pub fn as_slice_mut_real(buffer: &mut [Complex32]) -> &mut [f32] {
+@@ -711,49 +755,16 @@
 -    unsafe {
 -        let ptr = buffer.as_ptr() as *mut f32;
 -        let len = buffer.len();

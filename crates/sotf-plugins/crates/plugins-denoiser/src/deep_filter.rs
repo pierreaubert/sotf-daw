@@ -7,7 +7,7 @@
 
 use crate::deep_filter_config::DeepFilterConfig;
 use deep_filter_runtime::tract::{DfParams, DfTract, RuntimeParams};
-use ndarray015::{ArrayView2, ArrayViewMut2};
+use ndarray017::{ArrayView2, ArrayViewMut2};
 use plugins_inference::framed_audio::{AudioFrameModel, AudioInferenceStatus, FramedAudio};
 use sha2::{Digest, Sha256};
 

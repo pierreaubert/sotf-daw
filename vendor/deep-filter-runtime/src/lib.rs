@@ -377,7 +377,7 @@ fn frame_synthesis(input: &mut [Complex32], output: &mut [f32], state: &mut DFSt
         .process_with_scratch(input, &mut x, &mut state.synthesis_scratch)
     {
         Err(realfft::FftError::InputValues(_, _)) => (),
-        Err(e) => Err(e).unwrap(),
+        Err(e) => panic!("FFT inverse failed: {e:?}"),
         Ok(_) => (),
     }
     apply_window_in_place(&mut x, &state.window);
@@ -421,13 +421,13 @@ where
 }
 
 pub fn post_filter(gains: &mut [f32]) {
-    debug_assert!(gains.len() % 4 == 0);
+    debug_assert!(gains.len().is_multiple_of(4));
     let beta = 0.02f32;
     let eps = 1e-12;
     let pi = std::f32::consts::PI;
     // Run in efficient size-4 chunks
     let mut g_sin = [0.0; 4];
-    for g in gains.chunks_exact_mut(4) {
+    for g in gains.as_chunks_mut::<4>().0 {
         g_sin[0] = (g[0] * (g[0] * pi / 2.0).sin()).max(eps);
         g_sin[1] = (g[1] * (g[1] * pi / 2.0).sin()).max(eps);
         g_sin[2] = (g[2] * (g[2] * pi / 2.0).sin()).max(eps);
@@ -463,6 +463,7 @@ where
         .zip(b.into_iter().zip(c.into_iter().zip(d)))
         .map(|(w, (x, (y, z)))| (w, x, y, z))
 }
+#[expect(clippy::type_complexity, reason = "Preserve the upstream five-way zip API")]
 pub fn zip5<A, B, C, D, E>(
     a: A,
     b: B,

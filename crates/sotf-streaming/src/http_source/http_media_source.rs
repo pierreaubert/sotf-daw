@@ -7,12 +7,12 @@ use super::misc::url_extension_hint;
 use super::types::StreamMetadata;
 use crate::http_range::parse_content_range;
 use crate::icy::IcyMetadata;
+use reqwest::StatusCode;
 use reqwest::blocking::Client;
 use reqwest::header::{
     ACCEPT_RANGES, CONTENT_LENGTH, CONTENT_TYPE, ETAG, HeaderMap, HeaderValue, IF_RANGE,
     LAST_MODIFIED, RANGE,
 };
-use reqwest::StatusCode;
 use std::io::{self, Read, Seek, SeekFrom};
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
@@ -212,12 +212,15 @@ impl HttpMediaSource {
 
         // Get content length
         if offset == 0 {
-            self.content_length = content_range.as_ref().and_then(|range| range.total).or_else(|| {
-                headers
-                    .get(CONTENT_LENGTH)
-                    .and_then(|v| v.to_str().ok())
-                    .and_then(|v| v.parse().ok())
-            });
+            self.content_length = content_range
+                .as_ref()
+                .and_then(|range| range.total)
+                .or_else(|| {
+                    headers
+                        .get(CONTENT_LENGTH)
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(|v| v.parse().ok())
+                });
         }
 
         // Get content type

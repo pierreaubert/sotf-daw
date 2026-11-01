@@ -719,6 +719,53 @@ fn true_cross_process_encrypted_ring_stress_reconfigures_without_stale_records()
 }
 
 #[test]
+fn reader_frame_count_uses_geometry_at_read_after_reconfiguration() {
+    for encrypted_mode in [false, true] {
+        let temp_file = create_mock_shared_memory_with_max_geometry(48_000, 64, 4, 64, 8);
+        let mut writer = SharedAudioBuffer::open(temp_file.path()).expect("open writer");
+        let reader = SharedAudioBuffer::open(temp_file.path()).expect("open reader");
+        let cipher = AudioCipher::new(&[0x21_u8; 32]);
+        if encrypted_mode {
+            writer.set_key_fingerprint(*cipher.fingerprint());
+            writer.set_encrypted(true);
+        }
+        let sampled_channels = reader.channel_count() as usize;
+        let sampled_generation = reader.header().ring_generation.load(Ordering::Acquire);
+        let mut output = vec![0.0; sampled_channels * 8];
+        writer.reconfigure_quiesced(None, Some(64), Some(2));
+        let expected = sequential_audio(12, 2, 0);
+        let (mut ciphertext, mut encrypted) = encrypted_staging_buffers();
+        if encrypted_mode {
+            assert_eq!(
+                writer.write_audio_encrypted_into(
+                    &expected,
+                    &cipher,
+                    &mut ciphertext,
+                    &mut encrypted,
+                ),
+                12
+            );
+        } else {
+            assert_eq!(writer.write_audio(&expected), 12);
+        }
+        let read = if encrypted_mode {
+            reader.read_audio_encrypted_into(&mut output, &cipher, &mut encrypted, &mut ciphertext)
+        } else {
+            reader.read_audio(&mut output)
+        };
+        assert_eq!(read, 12);
+        assert!(read > output.len() / sampled_channels);
+        assert!(read <= output.len() / 2);
+        assert_ne!(
+            reader.header().ring_generation.load(Ordering::Acquire),
+            sampled_generation
+        );
+        assert_eq!(&output[..expected.len()], expected.as_slice());
+        assert!(output[expected.len()..].iter().all(|sample| *sample == 0.0));
+    }
+}
+
+#[test]
 fn cross_process_ring_worker() {
     let (Some(path), Some(ready), Some(mode), Some(role)) = (
         env::var_os(PROCESS_STRESS_PATH),
@@ -738,6 +785,7 @@ fn cross_process_ring_worker() {
     fs::write(ready, b"ready").expect("publish worker readiness");
 
     for step in 0..10_000 {
+        let generation = buffer.header().ring_generation.load(Ordering::Acquire);
         let channels = buffer.channel_count() as usize;
         assert!((1..=8).contains(&channels), "invalid worker channel count");
         let frames = (step % 4) + 1;
@@ -769,10 +817,16 @@ fn cross_process_ring_worker() {
             } else {
                 buffer.read_audio(&mut output)
             };
-            assert!(
-                read <= output.len() / channels,
-                "reader returned too many frames"
-            );
+            // The controller alternates stereo and four-channel geometry. A
+            // read uses the geometry protected by its own commit, which may
+            // differ from the earlier sample used to size this output slice.
+            assert!(read <= output.len() / 2, "reader exceeded stereo capacity");
+            if buffer.header().ring_generation.load(Ordering::Acquire) == generation {
+                assert!(
+                    read <= output.len() / channels,
+                    "reader returned too many frames at unchanged geometry"
+                );
+            }
             assert!(output.iter().all(|sample| sample.is_finite()));
         } else {
             panic!("unknown worker role {role}");
