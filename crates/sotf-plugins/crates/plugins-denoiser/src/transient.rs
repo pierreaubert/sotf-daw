@@ -285,18 +285,34 @@ fn canonical_sensitivity(sensitivity: f32) -> f32 {
     }
 }
 
-fn median<const N: usize>(mut values: [f32; N]) -> f32 {
-    values.sort_unstable_by(f32::total_cmp);
+// Convert once per value instead of repeating the float total-order transform
+// for every comparison. Flipping the lower 31 bits of negative values retains
+// total_cmp ordering, including signed zero and NaN payloads.
+#[inline]
+fn total_key(value: f32) -> i32 {
+    let bits = value.to_bits() as i32;
+    bits ^ (((bits >> 31) as u32) >> 1) as i32
+}
+
+// The sign-dependent bit transform is its own inverse.
+#[inline]
+fn from_total_key(key: i32) -> f32 {
+    let bits = key ^ (((key >> 31) as u32) >> 1) as i32;
+    f32::from_bits(bits as u32)
+}
+
+fn median<const N: usize>(values: [f32; N]) -> f32 {
+    let mut keys = values.map(total_key);
+    keys.sort_unstable();
     if N.is_multiple_of(2) {
-        0.5 * (values[N / 2 - 1] + values[N / 2])
+        0.5 * (from_total_key(keys[N / 2 - 1]) + from_total_key(keys[N / 2]))
     } else {
-        values[N / 2]
+        from_total_key(keys[N / 2])
     }
 }
 
-fn median_16(mut values: [f32; 16]) -> f32 {
-    values.sort_unstable_by(f32::total_cmp);
-    0.5 * (values[7] + values[8])
+fn median_16(values: [f32; 16]) -> f32 {
+    median(values)
 }
 
 #[cfg(test)]
@@ -498,5 +514,41 @@ mod tests {
         let original = buffer.clone();
         assert!(suppressor.process(&mut buffer).is_err());
         assert_eq!(buffer, original);
+    }
+}
+
+#[cfg(test)]
+mod median_equivalence {
+    use super::median;
+
+    fn check<const N: usize>(values: [f32; N]) {
+        let mut sorted = values;
+        sorted.sort_unstable_by(f32::total_cmp);
+        let expected = 0.5 * (sorted[N / 2 - 1] + sorted[N / 2]);
+        assert_eq!(median(values).to_bits(), expected.to_bits());
+    }
+
+    fn exercise<const N: usize>() {
+        // Exhaustive binary inputs verify the median for every zero/one arrangement.
+        for mask in 0..(1usize << N) {
+            check::<N>(std::array::from_fn(|i| ((mask >> i) & 1) as f32));
+        }
+        let mut state = 0x4d59_5df4_u32;
+        for _ in 0..10_000 {
+            check::<N>(std::array::from_fn(|_| {
+                state ^= state << 13;
+                state ^= state >> 17;
+                state ^= state << 5;
+                f32::from_bits(state)
+            }));
+        }
+        check::<N>(std::array::from_fn(|i| if i % 2 == 0 { -0.0 } else { 0.0 }));
+    }
+
+    #[test]
+    fn integer_medians_match_total_sort() {
+        exercise::<8>();
+        exercise::<14>();
+        exercise::<16>();
     }
 }
