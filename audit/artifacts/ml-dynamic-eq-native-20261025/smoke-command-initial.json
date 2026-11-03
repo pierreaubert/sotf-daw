@@ -1,9 +1,0 @@
-{
-  "command": [
-    "/private/tmp/sotf-ml-venv/bin/python",
-    "-c",
-    "import sys,json,numpy as np\nsys.path.insert(0,\"scripts/ml\")\nfrom dynamic_eq_native import preset,render\nrate=48000;t=np.arange(72001)/rate\nlevel=np.repeat([.001,.03,.3,.01,.2,.001],12001)[:len(t)]\nx=(level*np.sin(2*np.pi*1000*t)).astype(np.float32);x=np.column_stack([x,x*.25])\ny,m=render(x,\"/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-dynamic-eq-render\",\"/Volumes/home_tmp/tmp/ml-dynamic-eq-native-20261025/smoke\",preset([{\"q\":1.0,\"gain\":-6.0}],attack_ms=.1,release_ms=100),zeros=4096,response_hz=[0,100,1000,10000,24000])\nprint(json.dumps(m,indent=2))\n"
-  ],
-  "exit_code": 0,
-  "seconds": 0.07290683290921152
-}

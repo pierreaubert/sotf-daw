@@ -1,9 +1,0 @@
-{
-  "Cargo.lock": "dba5237aa42fa375ab198c7c91ce16fa582dfb89b646e9595a67b209f76870d7",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/Cargo.toml": "ba7084e66261e4feadf56eb6e9cea8aa9d16c9e05ba8f3239997682a54b9382c",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/lib.rs": "5ac9f7d90941d1d0788474a7aad996353c2cfe78906fe61f5443f0e36878daa0",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/source_mask.rs": "7c58b4838f29d3dc5d16131bb69b0ae444a4196f62907ba503be69522814498b",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/lib/upmixer_plugin.rs": "572f7d7e21828b4d908b9dc0eee52de2ae8a1d92d47c77a0b30619cf4515cd5e",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/src/frequency_domain/consts.rs": "52b9b3682eabe5cd1263a7930cd77fb0defa36b5aee08bb457274a74308fdc06",
-  "crates/sotf-plugins/crates/sotf-plugin-upmixer/tests/source_masks.rs": "2fa8c376a0e74c5e434833f15f94a1fb179c238a237392e758b4286963c52188"
-}

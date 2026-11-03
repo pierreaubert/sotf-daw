@@ -1,9 +1,0 @@
-{
-  "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/Cargo.toml": "8548e19f89a8680180ecf81fcc027be02a83b0cb6b219c7c93a8423a7e7cf78e",
-  "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/src/analog_limiter.rs": "cb4f170293a58a424d3a561e258bb0e98a2ca795b00164499ae159cb3e832dcb",
-  "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/src/candidate.rs": "a20327c89fbb8747376676a5a40ec0547ff258a34873c4fd25ac9edfd6bce8a9",
-  "crates/sotf-plugins/crates/sotf-plugin-analog-limiter/tests/neural_candidate.rs": "8be4bf31efa100ebc417087323c81aa3029850f430fbf0ac090a9ea2bae8b8b9",
-  "crates/sotf-plugins/crates/sotf-plugin-analog-common/src/hardware_candidate.rs": "5e0dc1ffe699018cd8ff0098521bd2889148e62f698701d00e2fa3b634b6e942",
-  "crates/sotf-plugins/models/analog-limiter-candidate/candidate.overdrive.synthetic.json": "4a45728b5b426c6707536510d7f756a51ea0dc2c5389baaa9fd46c42759ab902",
-  "crates/sotf-plugins/models/analog-hardware/candidate.synthetic.json": "f4eea207a98774d8f9027cac2d96bb031b736a7dd8358cabf5419f5f551bdf44"
-}

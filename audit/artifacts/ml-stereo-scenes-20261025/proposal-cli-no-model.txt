@@ -1,1 +1,0 @@
-{"accepted": false, "reasons": ["model_unavailable"], "automatic_apply": false}

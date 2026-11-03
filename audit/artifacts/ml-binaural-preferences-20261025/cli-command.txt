@@ -1,1 +1,0 @@
-{"accepted": true, "selected_id": "candidate-1", "reasons": []}

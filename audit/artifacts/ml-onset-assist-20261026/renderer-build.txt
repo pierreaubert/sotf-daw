@@ -1,2 +1,0 @@
-   Compiling sotf-plugin-transient-shaper v0.5.9 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-transient-shaper)
-    Finished `release` profile [optimized] target(s) in 8.05s

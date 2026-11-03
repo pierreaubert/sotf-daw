@@ -1,7 +1,0 @@
-{
-  "model_sha256": "a4368ca93edb1a8029730474955ec65ad28724146acc595af036ed80c6001e39",
-  "git_blob_sha1_no_filters": "184084b8567d7eeca7dbf5e79d4a9126307489cc",
-  "git_blob_sha1_autocrlf_true": "184084b8567d7eeca7dbf5e79d4a9126307489cc",
-  "equal": true,
-  "scope": "Git clean filtering with raw model -text attribute; model bytes are pinned independently by SHA-256."
-}

@@ -1,2 +1,0 @@
-    Checking sotf-plugin-saturation v0.5.12 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-saturation)
-    Finished `release` profile [optimized] target(s) in 0.54s

@@ -1,2 +1,0 @@
-   Compiling sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)
-    Finished `release` profile [optimized] target(s) in 1m 58s

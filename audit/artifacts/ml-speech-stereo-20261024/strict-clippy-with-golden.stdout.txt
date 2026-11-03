@@ -1,2 +1,0 @@
-    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)
-    Finished `release` profile [optimized] target(s) in 0.69s

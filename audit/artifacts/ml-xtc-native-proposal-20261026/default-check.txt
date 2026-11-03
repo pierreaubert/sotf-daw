@@ -1,2 +1,0 @@
-    Checking sotf-plugin-xtc v0.5.42 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-xtc)
-    Finished `release` profile [optimized] target(s) in 0.68s

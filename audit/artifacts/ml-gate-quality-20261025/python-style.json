@@ -1,9 +1,0 @@
-{
-  "command": [
-    "/private/tmp/sotf-ml-venv/bin/ruff",
-    "check",
-    "scripts/ml/analyze_gate_quality.py"
-  ],
-  "exit_code": 0,
-  "elapsed_seconds": 0.009991958970203996
-}

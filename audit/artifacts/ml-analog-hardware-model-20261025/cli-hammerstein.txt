@@ -1,1 +1,0 @@
-{"offline_quality_passed": false, "hardware_model_admitted": false, "automatic_apply": false}

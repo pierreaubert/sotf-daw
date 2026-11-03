@@ -1,9 +1,0 @@
-   Compiling sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
-    Finished `release` profile [optimized] target(s) in 21.56s
-     Running tests/interval_config.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/interval_config-d80f3e391cb71b6d)
-
-running 2 tests
-test structural_identity_validation_is_transactional ... ok
-test legacy_defaults_and_unavailable_configuration_preserve_classical_audio ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

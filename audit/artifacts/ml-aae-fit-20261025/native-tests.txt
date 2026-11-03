@@ -1,8 +1,0 @@
-    Finished `release` profile [optimized] target(s) in 0.86s
-     Running unittests bin/qa_aae_fit_render.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/qa_aae_fit_render-d7bf8f53a80d6cd3)
-
-running 2 tests
-test tests::identification_rejects_adaptation_modulation_and_path_escape_before_output ... ok
-test tests::identification_render_is_exact_across_partitions_and_retains_infinite_support ... ok
-
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

@@ -1,9 +1,0 @@
-test_differentiable_response_matches_independent_scipy_evaluation (test_eq_assistant.EqAssistantTests.test_differentiable_response_matches_independent_scipy_evaluation) ... ok
-test_invalid_target_is_rejected_before_weights_are_loaded (test_eq_assistant.EqAssistantTests.test_invalid_target_is_rejected_before_weights_are_loaded) ... ok
-test_split_identities_are_disjoint_and_response_gradients_finite (test_eq_assistant.EqAssistantTests.test_split_identities_are_disjoint_and_response_gradients_finite) ... ok
-test_zero_gain_is_unity_for_all_frequency_and_q_settings (test_eq_assistant.EqAssistantTests.test_zero_gain_is_unity_for_all_frequency_and_q_settings) ... ok
-
-----------------------------------------------------------------------
-Ran 4 tests in 0.055s
-
-OK

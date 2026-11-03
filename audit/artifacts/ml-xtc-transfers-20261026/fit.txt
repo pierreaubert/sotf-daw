@@ -1,1 +1,0 @@
-{"model_sha256": "157b1f395717fcebb669d57e61450214823695f520dcef83545d35ce7c161248", "held_directions": 36, "held_pose_pairs": 36, "deployment_admitted": false}

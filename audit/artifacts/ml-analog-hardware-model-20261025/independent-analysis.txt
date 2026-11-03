@@ -1,8 +1,0 @@
-{
-  "cases": 2,
-  "held_records_verified": 8,
-  "independent_hammerstein_fits": 2,
-  "max_metric_error": 8.526512829121202e-13,
-  "max_baseline_coefficient_error": 1.3877787807814457e-14,
-  "scope": "Numerical reconstruction on generated targets only; no hardware fidelity or production admission."
-}

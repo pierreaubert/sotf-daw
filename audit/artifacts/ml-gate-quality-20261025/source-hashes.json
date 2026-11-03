@@ -1,7 +1,0 @@
-{
-  "crates/sotf-plugins/crates/sotf-plugin-gate/Cargo.toml": "3a3d5a7f5186f01d7c4abd54a5c1d61e42ee55df0c2468e447b0d8c800673fa8",
-  "crates/sotf-plugins/crates/sotf-plugin-gate/bin/qa_gate_speech.rs": "63043812b06a96f8d71ace9fb5bca93f7f0c6056b07230b4d56f2869c35b4fc2",
-  "scripts/ml/analyze_gate_quality.py": "b0c9b0a5713748b03d1cffdacfd73189f3249450be16a977f7e86a4b8b9dd366",
-  "Cargo.lock": "d682e0cf3e0adf54c421c3e1c8d2262fa1443e4b6169d0cb49146f3907700e67",
-  "crates/sotf-plugins/crates/sotf-plugin-gate/USAGE.md": "6802f8bce6849fac42e91e39625eaf9bc3b928f611daa7ef54c050061e256df9"
-}

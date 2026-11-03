@@ -1,8 +1,0 @@
-# Static compressor parameter assistant
-
-Issue 10; baseline cadb9246. Full audit scope persists; this checkpoint implements static per-band fitting, not temporal/hardware matching.
-Method:128→64 SiLU→64 SiLU→4 tanh MLP proposes threshold/log-ratio/knee/makeup, followed by exact bounded least squares. Compare segmented analytic seeds with knee0/6/16 and a fixed seed under identical per-seed budgets; retain classical candidates.
-Data: generated memoryless native quadratic soft-knee/hard-knee curves. Separate background parameter identities for train/development/final. No recordings, hardware or timing labels. Ratio1/constant-gain targets use a canonical response-equivalent representative.
-Timing/layout: user supplies attack/release and crossovers explicitly; gain-range120dB,hold0,unitymix,AutoGainoff,no sidechainfilter/tilt/lookahead. Native plateau renders validate each isolated band; constructing the full preset is not evidence of mixed-band temporal/hardware accuracy.
-Primary research reviewed before training: Giannoulis/Massberg/Reiss JAES2012 https://aes.org/publications/elibrary/elibrary-page/?id=16354 ; DeepAFx-ST https://csteinmetz1.github.io/DeepAFx-ST/ ; Kates2005 https://pmc.ncbi.nlm.nih.gov/articles/PMC4111488/ . They motivate output-domain fitting and separation of static gain law from temporal/multiband interactions. They do not validate this learned model or its speed.
-Guardrails: sampled fit error, bounded native controls, actual steady native response, rejection without presets. Report makeup/headroom explicitly. Do not claim original parameter recovery in unidentifiable cases, inferred timing, measured-hardware emulation or a runtime speed benefit.

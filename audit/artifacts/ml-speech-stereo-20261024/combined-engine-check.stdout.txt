@@ -1,9 +1,0 @@
-    Checking sotf-deep-filter-runtime v0.3.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/vendor/deep-filter-runtime)
-    Checking plugins-denoiser v0.5.14 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/plugins-denoiser)
-    Checking sotf-plugin-declick v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-declick)
-    Checking sotf-plugin-speech-denoiser v0.6.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-speech-denoiser)
-    Checking sotf-plugin-hiss-reducer v0.5.8 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-hiss-reducer)
-    Checking sotf-plugins v0.8.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins)
-    Checking sotf-engine v1.1.2 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-engine)
-    Checking sotf-testkit v0.1.1 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-testkit)
-    Finished `release` profile [optimized] target(s) in 9.09s

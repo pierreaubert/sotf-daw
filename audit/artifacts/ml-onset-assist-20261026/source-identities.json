@@ -1,6 +1,0 @@
-{
-  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/onset.rs": "bb4f6114a62e701805ca254ed7ea6609241d104f2767fbcccd97c5541e93f87d",
-  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/src/lib/transient_shaper_plugin.rs": "d5c137e47ad1f089504894acc9d40b52cb53074814d72f514da862dbcfc5b40d",
-  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/tests/onset.rs": "aee880cf62ba04ac28ab12ae197be7679dda5a3676ea9c20823d83a334c69417",
-  "crates/sotf-plugins/crates/sotf-plugin-transient-shaper/Cargo.toml": "b9c41e2a2ca135cc95cf7e0fe83ac3a8b65587a1b9cf01d8dea7f0fe176ba71b"
-}

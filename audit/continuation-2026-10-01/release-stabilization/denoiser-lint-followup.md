@@ -1,1 +1,0 @@
-Strict lint additionally found unnecessary_unwrap at src/tests.rs:1641 after settled_at.is_none() at1613. Root will fix this mechanically after worker hands off if still present. No bounds may change.

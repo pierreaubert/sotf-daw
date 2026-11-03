@@ -1,9 +1,0 @@
-{
-  "command": [
-    "/private/tmp/sotf-ml-venv/bin/python",
-    "-c",
-    "import sys,json,numpy as np\nfrom pathlib import Path\nsys.path.insert(0,\"scripts/ml\")\nfrom binaural_native import render\nx=(np.random.default_rng(20521026).normal(size=(4201,2))*.03).astype(np.float32)\ny,m=render(x,\"/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/qa-binaural-render\",\"crates/sotf-plugins/crates/sotf-plugin-binaural/tests/fixtures/kemar/mit_kemar_normal_pinna.sofa\",\"/Volumes/home_tmp/tmp/ml-binaural-native-20261025/smoke\")\nprint(json.dumps(m,indent=2))\n"
-  ],
-  "exit_code": 0,
-  "seconds": 0.1257901252247393
-}

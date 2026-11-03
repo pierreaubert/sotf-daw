@@ -1,8 +1,0 @@
-   Compiling sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)
-    Finished `release` profile [optimized] target(s) in 10.51s
-     Running unittests src/lib.rs (/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target/release/deps/sotf_plugin_aec-dca0180fc02e5ca5)
-
-running 1 test
-test residual_features::tests::qa_view_exposes_only_completed_live_native_blocks_and_retires_at_eof ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 55 filtered out; finished in 0.00s

@@ -1,9 +1,0 @@
-{
-  "argv": [
-    "/private/tmp/sotf-ml-venv/bin/python",
-    "-c",
-    "import sys,pathlib; sys.path.insert(0,\"scripts/ml\"); import hiss_rust_parity as p; expected=p.OUTPUT.read_bytes(); p.OUTPUT=pathlib.Path(\"audit/artifacts/ml-hiss-rust-20261025/reference-recomputed.json\"); p.main(); assert p.OUTPUT.read_bytes()==expected; print(\"10 Python reference cases reproduce byte-for-byte\")"
-  ],
-  "exit_code": 0,
-  "seconds": 0.9949259590357542
-}

@@ -1,8 +1,0 @@
-test_invalid_contract_arrays_and_features_are_rejected (test_aec_residual.ModelTests.test_invalid_contract_arrays_and_features_are_rejected) ... ok
-test_no_reference_keeps_exact_time_domain_adaptive_signal (test_aec_residual.ModelTests.test_no_reference_keeps_exact_time_domain_adaptive_signal) ... ok
-test_predictions_match_scalar_tanh_and_sigmoid (test_aec_residual.ModelTests.test_predictions_match_scalar_tanh_and_sigmoid) ... ok
-
-----------------------------------------------------------------------
-Ran 3 tests in 0.006s
-
-OK

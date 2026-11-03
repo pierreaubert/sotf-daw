@@ -1,3 +1,0 @@
-    Checking sotf-plugin-analog-common v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-common)
-    Checking sotf-plugin-analog-eq v0.5.0 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-analog-eq)
-    Finished `release` profile [optimized] target(s) in 1.46s

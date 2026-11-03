@@ -1,6 +1,0 @@
-{
-  "enum_layout_clippy": "largest Tract variant272bytes versus boxed ORT8bytes; box both prepared handles",
-  "shape_comparison_clippy": "remove needless borrowed slice in fixed output shape comparison",
-  "profile_hash_compile": "workspace sha2 digest array has no LowerHex; format digest bytes explicitly",
-  "validation_runs": "preliminary successful reports retained; qualified-tests.json and qualified-parity.json cover final source including active drain, delegation and CPU arena setting"
-}

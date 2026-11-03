@@ -1,8 +1,0 @@
-{
-  "crates/sotf-plugins/crates/sotf-plugin-stereo-imager/Cargo.toml": "d2fa6c8c581aadf00715fab0039d8752cc83d51aa2506dfd5c54fc8bfbc59474",
-  "crates/sotf-plugins/crates/sotf-plugin-stereo-imager/bin/qa_stereo_imager_render.rs": "1d508b9f99638d6fcf7329695977b72da22e99b3662db9f7abe6a4c1990edbcd",
-  "scripts/ml/stereo_imager_native.py": "d9e7d49e9ee825964ee8fe68b60717e4e963c9924bd788bb78c14fc5be8064ef",
-  "scripts/ml/test_stereo_imager_native.py": "dac1f0e0f91b6e8e9ffd85713d61e0dd1e2119b51a7c28eb395df3d32c2fe30c",
-  "scripts/ml/evaluate_stereo_imager_native.py": "53c801f1254506cb38305b543660cb6dff0d05a914dd52af890260c1f0be8ef4",
-  "scripts/ml/analyze_stereo_imager_native.py": "a36c5f72b031c220f3def3ad016e54f6f477de30557be48c7c2c1010fd841c1f"
-}

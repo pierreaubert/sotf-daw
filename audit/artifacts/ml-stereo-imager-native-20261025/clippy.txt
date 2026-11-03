@@ -1,2 +1,0 @@
-    Checking sotf-plugin-stereo-imager v0.5.6 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-stereo-imager)
-    Finished `release` profile [optimized] target(s) in 1.00s

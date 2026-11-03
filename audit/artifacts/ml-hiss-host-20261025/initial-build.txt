@@ -1,1 +1,0 @@
-Shared-inference unit compile failed (E0063): an existing manually constructed Shared fixture needed the new alive field. Fixed before successful verification.

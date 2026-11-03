@@ -1,7 +1,0 @@
-{
-  "model_sha256": "7ed98ddbad84ccac4cd0aeb3099049280713df825c610a8ed34543318f1b2c49",
-  "command": "cargo run -p sotf-plugin-gate --bin qa-gate-silero --features qa,silero-vad-eval --release --offline --locked --jobs 2 --target-dir /Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target -- crates/sotf-plugins/models/silero-vad/silero_vad_16k_op15.onnx audit/artifacts/ml-gate-silero-20261025/ort-golden.json",
-  "exit_code": 1,
-  "observed_error": "Translating /model/decoder/If to typed graph: branch output facts differ (1,128,F32 vs 1,128,1,F32).",
-  "resolution": "Evaluate the unchanged upstream op18_ifless export; preserve original measurements and compare independent reference outputs before native use."
-}

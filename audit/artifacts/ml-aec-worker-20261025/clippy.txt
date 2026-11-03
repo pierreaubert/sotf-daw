@@ -1,2 +1,0 @@
-    Checking sotf-plugin-aec v0.5.7 (/Volumes/home_tmp/src/all_of_sotf/sotf-daw/crates/sotf-plugins/crates/sotf-plugin-aec)
-    Finished `release` profile [optimized] target(s) in 0.97s

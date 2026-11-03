@@ -1,1 +1,0 @@
-{"checks": 6, "all_expected_results": true}

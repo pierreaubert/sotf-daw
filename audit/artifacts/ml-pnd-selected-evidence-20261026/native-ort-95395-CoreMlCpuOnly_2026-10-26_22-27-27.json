@@ -1,7 +1,0 @@
-[
-{"cat" : "Session","pid" :95395,"tid" :398948435,"dur" :296,"ts" :2,"ph" : "X","name" :"model_loading_array","args" : {}},
-{"cat" : "Session","pid" :95395,"tid" :398948435,"dur" :110696,"ts" :322,"ph" : "X","name" :"session_initialization","args" : {}},
-{"cat" : "Node","pid" :95395,"tid" :398948435,"dur" :694,"ts" :111052,"ph" : "X","name" :"CoreMLExecutionProvider_6537853014309379728_CoreML_6537853014309379728_0_0_kernel_time","args" : {"op_name" : "6537853014309379728_CoreML_6537853014309379728_0","provider" : "CoreMLExecutionProvider","node_index" : "30","activation_size" : "4096","output_size" : "1440","thread_scheduling_stats" : "","parameter_size" : "0","output_type_shape" : [{"float":[1,360]}],"input_type_shape" : [{"float":[1,1024]}]}},
-{"cat" : "Session","pid" :95395,"tid" :398948435,"dur" :701,"ts" :111051,"ph" : "X","name" :"SequentialExecutor::Execute","args" : {}},
-{"cat" : "Session","pid" :95395,"tid" :398948435,"dur" :711,"ts" :111043,"ph" : "X","name" :"model_run","args" : {}}
-]

@@ -1,6 +1,0 @@
-{
-  "prior_parameter_identities": 4627,
-  "fresh_final_identities": 64,
-  "overlap": [],
-  "qualification": "Fresh model holdout excludes full train/development, smoke train/development and smoke verification; declared native/edge probes are functional controls, not blind population data"
-}

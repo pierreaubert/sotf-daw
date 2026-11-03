@@ -1,8 +1,0 @@
-{
-  "reports_replayed": 24,
-  "all_core_reports_identical": true,
-  "initial_protocol_sha256": "c877736d6181ce53344466d6d63c02176cf06ec9a94b2b033582e3bd7ee5ef97",
-  "new_source_sha256": "d32842febed9804ec7a195af4c288be020573d0c31e9bde73cf13639a3e23dae",
-  "change": "Validation-only requirement: each programme supplies at least3 non-reference levels; original fixtures meet it. Kernel, learning, policy constants, scores and all stored original report fields remain identical.",
-  "functional_core_reports_replayed": 5
-}

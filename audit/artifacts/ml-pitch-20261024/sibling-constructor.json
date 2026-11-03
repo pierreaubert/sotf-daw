@@ -1,7 +1,0 @@
-{
-  "file": "/Volumes/home_tmp/src/all_of_sotf/sotf/crates/app-cli/bin/sotf_player_cli/build.rs",
-  "before": "fba5a7209f6b3ab65a665fff9cc212fd134c4424d7ab877e7cfcbf09872f492e",
-  "after": "6feecd917f4a29e18ec78bf9eae026fc6c60012046f14985cd430562d1554a20",
-  "staged_index_unchanged": true,
-  "change": "Default classical opt-out for added engine structural field"
-}

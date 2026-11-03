@@ -1,7 +1,0 @@
-{
-  "python": "3.12.10 (main, Apr  9 2025, 03:49:38) [Clang 20.1.0 ]",
-  "numpy": "2.5.4",
-  "scipy": "1.18.1",
-  "base_commit": "a2e08a2f",
-  "scope": "Local native qualification only; no ML model or DAW timing claim"
-}
