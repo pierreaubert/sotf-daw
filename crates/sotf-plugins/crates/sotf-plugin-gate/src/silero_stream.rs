@@ -425,9 +425,8 @@ mod tests {
 
     #[test]
     fn chronological_worker_matches_independent_streaming_states_and_clock() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
-            "../../../../audit/artifacts/ml-gate-silero-20261025/fixed-batch/ort-golden.json",
-        );
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/silero-ort-golden.json");
         let golden: Golden = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
         let mut model = StreamModel::new(net(), 16000.0).unwrap();
         let mut score_error = 0.0_f32;

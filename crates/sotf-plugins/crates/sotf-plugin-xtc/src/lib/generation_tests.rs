@@ -19,8 +19,7 @@ const TIMEOUT: Duration = Duration::from_secs(10);
 fn delayed_native_worker_cannot_replace_a_prepared_learned_proposal() {
     use crate::learned_proposal::PreparedProposal;
     use sha2::{Digest, Sha256};
-    let bytes =
-        include_bytes!("../../../../../../audit/artifacts/ml-xtc-transfers-20261026/proposal.json");
+    let bytes = include_bytes!("../../tests/fixtures/learned_proposal.json");
     let sha: String = Sha256::digest(bytes)
         .iter()
         .map(|v| format!("{v:02x}"))

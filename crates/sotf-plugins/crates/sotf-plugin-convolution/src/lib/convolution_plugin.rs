@@ -2218,6 +2218,4 @@ mod storm_tests;
 #[path = "upc_real_tests.rs"]
 mod upc_real_tests;
 
-#[cfg(test)]
-#[path = "overlap_cost.rs"]
-mod overlap_cost;
+

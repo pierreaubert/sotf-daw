@@ -1003,6 +1003,20 @@ fn xtc_rejects_only_new_selected_nonzero_support_beyond_fft() {
     }
 }
 
+// Independently prepared FFT instances can differ in the last f32 bits
+// (see drain_pair), so dense outputs are compared below -160 dBFS rather
+// than bit-exactly; lost or reset history still fails by a wide margin.
+fn assert_dense_close(actual: &[f32], expected: &[f32]) {
+    assert_eq!(actual.len(), expected.len());
+    for (index, (&a, &b)) in actual.iter().zip(expected).enumerate() {
+        assert!(a.is_finite() && b.is_finite(), "sample {index} not finite");
+        assert!(
+            (a - b).abs() <= 1e-8,
+            "dense sample {index}: actual={a}, expected={b}"
+        );
+    }
+}
+
 fn process_dense(plugin: &mut dyn Plugin, frames: usize) -> Vec<f32> {
     let input: Vec<_> = (0..frames)
         .flat_map(|n| {
@@ -1072,9 +1086,9 @@ fn failed_binaural_delay_replacement_or_reinitialize_preserves_live_and_partial_
         reference.initialize(f64::from(RATE)).unwrap();
         let active_offset = Some(32.0 / f64::from(RATE));
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
-        assert_eq!(
-            process_dense(&mut actual, 193),
-            process_dense(&mut reference, 193)
+        assert_dense_close(
+            &process_dense(&mut actual, 193),
+            &process_dense(&mut reference, 193),
         );
         let settings = actual.parameters();
         let old_path = actual.get_parameter(&"hrtf_file".into());
@@ -1097,7 +1111,7 @@ fn failed_binaural_delay_replacement_or_reinitialize_preserves_live_and_partial_
                 actual.drain(&mut a, &context).unwrap(),
                 reference.drain(&mut b, &context).unwrap()
             );
-            assert_eq!(a, b);
+            assert_dense_close(&a, &b);
         }
         // The configured pathname now resolves to invalid metadata. Validation
         // must fail before changing the old 48 kHz state, even for a rate change.
@@ -1115,9 +1129,9 @@ fn failed_binaural_delay_replacement_or_reinitialize_preserves_live_and_partial_
         assert_eq!(actual.get_parameter(&"hrtf_file".into()), old_path);
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
         if !partial {
-            assert_eq!(
-                process_dense(&mut actual, 257),
-                process_dense(&mut reference, 257)
+            assert_dense_close(
+                &process_dense(&mut actual, 257),
+                &process_dense(&mut reference, 257),
             );
         }
         drain_pair(&mut actual, &mut reference);
@@ -1139,9 +1153,9 @@ fn failed_xtc_delay_reinitialize_preserves_live_and_partial_tail_history() {
         reference.initialize(f64::from(RATE)).unwrap();
         let active_offset = Some(32.0 / f64::from(RATE));
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
-        assert_eq!(
-            process_dense(&mut actual, 193),
-            process_dense(&mut reference, 193)
+        assert_dense_close(
+            &process_dense(&mut actual, 193),
+            &process_dense(&mut reference, 193),
         );
         if partial {
             let context = ProcessContext::new(RATE, 7);
@@ -1151,7 +1165,7 @@ fn failed_xtc_delay_reinitialize_preserves_live_and_partial_tail_history() {
                 actual.drain(&mut a, &context).unwrap(),
                 reference.drain(&mut b, &context).unwrap()
             );
-            assert_eq!(a, b);
+            assert_dense_close(&a, &b);
         }
         write_fixture(
             &actual_path,
@@ -1168,9 +1182,9 @@ fn failed_xtc_delay_reinitialize_preserves_live_and_partial_tail_history() {
         );
         assert_eq!(actual.sofa_delay_rebase_seconds(), active_offset);
         if !partial {
-            assert_eq!(
-                process_dense(&mut actual, 257),
-                process_dense(&mut reference, 257)
+            assert_dense_close(
+                &process_dense(&mut actual, 257),
+                &process_dense(&mut reference, 257),
             );
         }
         drain_pair(&mut actual, &mut reference);

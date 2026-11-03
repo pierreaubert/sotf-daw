@@ -319,3 +319,9 @@ strip = "symbols"
 
 [patch.crates-io]
 block = { git = "https://github.com/pierreaubert/sotf-3rdparties", rev = "5a4634af0916b5f53effa5ef6340efd90af32285" }
+
+# Local Linux fix: VST3 view uses `Weak` under cfg(target_os = "linux")
+# without importing it. Drop this patch once the fix lands in
+# sotf-3rdparties and the git dependency is bumped.
+[patch."https://github.com/pierreaubert/sotf-3rdparties"]
+sotf-nih_plug = { path = "../sotf-3rdparties/nih-plug" }

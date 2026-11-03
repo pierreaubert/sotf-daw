@@ -11,8 +11,7 @@ use sotf_plugin_xtc::{XtcPlugin, XtcPluginParams};
 static ALLOCATOR: CountingAlloc = CountingAlloc;
 
 const MODEL: &str = "157b1f395717fcebb669d57e61450214823695f520dcef83545d35ce7c161248";
-const BYTES: &[u8] =
-    include_bytes!("../../../../../audit/artifacts/ml-xtc-transfers-20261026/proposal.json");
+const BYTES: &[u8] = include_bytes!("fixtures/learned_proposal.json");
 
 fn sha(raw: &[u8]) -> String {
     Sha256::digest(raw)

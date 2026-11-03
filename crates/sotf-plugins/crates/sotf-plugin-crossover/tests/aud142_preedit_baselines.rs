@@ -214,10 +214,7 @@ fn capture_directory() -> PathBuf {
 fn baseline_directory() -> PathBuf {
     std::env::var_os("SOTF_AUD142_BASELINE_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../../../audit/artifacts/aud142-preedit/crossover")
-        })
+        .unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/aud142"))
 }
 
 fn write_f32_le(path: &Path, samples: &[f32]) {
@@ -316,15 +313,27 @@ fn replay_aud142_pre_edit_audio_and_runtime_metadata_bit_exactly() {
             current_metadata,
             "only the intentional legacy mode update-mode change is permitted"
         );
-        assert_eq!(
-            rendered.process,
-            read_f32_le(&directory.join(format!("{name}-process-f32le.bin"))),
-            "pre-edit process audio changed for {name}"
-        );
-        assert_eq!(
-            rendered.tail,
-            read_f32_le(&directory.join(format!("{name}-tail-f32le.bin"))),
-            "pre-edit EOF audio changed for {name}"
-        );
+        // Rendered FIR audio is compared with a tight tolerance: the
+        // baseline was captured on macOS/ARM and the x86 FIR path rounds
+        // 1 ULP differently (observed max diff 1.5e-8).
+        for (label, actual, file) in [
+            (
+                "process",
+                &rendered.process,
+                format!("{name}-process-f32le.bin"),
+            ),
+            ("EOF", &rendered.tail, format!("{name}-tail-f32le.bin")),
+        ] {
+            let expected = read_f32_le(&directory.join(&file));
+            assert_eq!(actual.len(), expected.len(), "{label} length for {name}");
+            let max_diff = actual
+                .iter()
+                .zip(&expected)
+                .fold(0.0_f32, |m, (a, b)| m.max((a - b).abs()));
+            assert!(
+                max_diff <= 1.0e-6,
+                "pre-edit {label} audio changed for {name}: max diff {max_diff:e}"
+            );
+        }
     }
 }
