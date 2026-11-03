@@ -1,0 +1,1 @@
+case=per-channel-lr24-stereo;settings=type=LR24;channels=[900:lowpass,2100:highpass];sample_rate=48000;frames=12288;input_channels=2;output_channels=2

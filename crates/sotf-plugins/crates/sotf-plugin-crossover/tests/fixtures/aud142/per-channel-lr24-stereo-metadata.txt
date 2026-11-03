@@ -1,0 +1,7 @@
+case=per-channel-lr24-stereo;settings=type=LR24;channels=[900:lowpass,2100:highpass];sample_rate=48000;frames=12288;input_channels=2;output_channels=2;tail_frames=0
+runtime_parameter_count=5
+index=0;id=type;name=Type;unit=;default=String("LR24");min=None;max=None;logarithmic=false;update_mode=Structural;current=Some(String("LR24"))
+index=1;id=channel_frequency_0;name=Frequency Ch0;unit=Hz;default=Float(900.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(900.0))
+index=2;id=channel_mode_0;name=Mode Ch0;unit=;default=String("lowpass");min=None;max=None;logarithmic=false;update_mode=Realtime;current=Some(String("lowpass"))
+index=3;id=channel_frequency_1;name=Frequency Ch1;unit=Hz;default=Float(2100.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(2100.0))
+index=4;id=channel_mode_1;name=Mode Ch1;unit=;default=String("highpass");min=None;max=None;logarithmic=false;update_mode=Realtime;current=Some(String("highpass"))

@@ -125,6 +125,10 @@ qa-plugins-fuzzer-simple:
 	mkdir -p "$qa_clang_cache_dir"; \
 	export CLANG_MODULE_CACHE_PATH="$qa_clang_cache_dir"; \
 	for file in ./data_generated/test-audio/wav/pink_noise/pink_noise_*.wav; do \
+		if [ ! -f "$file" ]; then \
+			printf 'Error: missing test audio file (or no files match): %s/%s\n' "$PWD" "$file" >&2; \
+			exit 1; \
+		fi; \
 		for plugin in gain eq compressor limiter gate delay loudness_monitor abcompare expander mbcomp mbexp matrix mutesolo denoiser spectrum pnd analog_eq analog_limiter analog_compressor; do \
 			echo "=== Fuzzing plugin: $plugin with $file ==="; \
 			{{cargo}} run --release --bin plugin-fuzzer -- --file "$file" --plugin $plugin || exit 1; \

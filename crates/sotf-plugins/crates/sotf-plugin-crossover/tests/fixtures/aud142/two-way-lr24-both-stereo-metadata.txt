@@ -1,0 +1,5 @@
+case=two-way-lr24-both-stereo;settings=type=LR24;frequency=1250;output=both;sample_rate=48000;frames=12288;input_channels=2;output_channels=4;tail_frames=0
+runtime_parameter_count=3
+index=0;id=type;name=Type;unit=;default=String("LR24");min=None;max=None;logarithmic=false;update_mode=Structural;current=Some(String("LR24"))
+index=1;id=frequency;name=Frequency;unit=;default=Float(1250.0);min=Some(Float(20.0));max=Some(Float(20000.0));logarithmic=false;update_mode=Realtime;current=Some(Float(1250.0))
+index=2;id=mode;name=Mode;unit=;default=String("both");min=None;max=None;logarithmic=false;update_mode=Realtime;current=Some(String("both"))
