@@ -183,10 +183,10 @@ insta = { version = "1.42", features = ["json"] }
 libc = "0.2"
 libloading = { version = "0.9.0" }
 log = "0.4.28"
-math-analog = { version = "0.5", path = "../math-audio/crates/math-analog" }
-math-dsp = { version = "0.5", path = "../math-audio/crates/math-dsp" }
-math-iir-fir = { version = "0.5", path = "../math-audio/crates/math-iir-fir" }
-math-rir = { version = "0.5", path = "../math-audio/crates/math-rir" }
+math-analog = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
+math-dsp = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
+math-iir-fir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
+math-rir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
 memmap2 = "0.9.11"
 midir = "0.11"
 nalgebra = { package = "sotf-nalgebra", git = "https://github.com/pierreaubert/sotf-3rdparties",  version = "0.35", default-features = false, features = ["std"] }
@@ -316,3 +316,6 @@ strip = "symbols"
 
 
 # Pinned NIH with narrowly scoped CLAP event-offset and transport fixes.
+
+[patch.crates-io]
+block = { git = "https://github.com/pierreaubert/sotf-3rdparties", rev = "5a4634af0916b5f53effa5ef6340efd90af32285" }

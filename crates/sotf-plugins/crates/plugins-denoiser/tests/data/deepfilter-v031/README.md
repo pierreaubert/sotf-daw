@@ -17,9 +17,9 @@ upstream Rust sources. No reference-source changes are compiled into production.
 Replay with `scripts/ml/deepfilter_reference.py`, using an empty work directory
 outside the repository and an external Cargo target cache. `--source-dir` can
 supply the original release source directory after mandatory hash verification;
-omitting it fetches those exact files. After initial dependency setup, use
-`--offline`; an existing generated dependency lock is also locked on replay.
-The first build and subsequent cached replay logs are both retained.
+omitting it fetches those exact files. Builds and cached replays use normal
+Cargo resolution. The original build and cached replay logs are retained
+as historical evidence.
 
 The native `mono_port_matches_unchanged_upstream_v031_golden_audio` test checks
 fixture hashes and compares the local adapter. Local maximum waveform and score

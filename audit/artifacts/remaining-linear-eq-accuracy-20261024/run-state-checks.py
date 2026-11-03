@@ -8,9 +8,9 @@ env=dict(os.environ,CARGO_BUILD_JOBS='2',TMPDIR='/Volumes/home_tmp/tmp/sotf-daw-
 target=['--target-dir','/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target']
 mode=sys.argv[1]
 if mode=='nih':
- jobs=[('nih-native-lifecycle-final',root,['test','-p','plugins-nih','--lib','--no-default-features','--features','linear-phase-eq','linear_phase_eq_native_mode_only','--release','--offline','--locked',*target,'--','--nocapture']),('nih-legacy-clippy-final',root,['clippy','-p','plugins-nih','--no-default-features','--features','linear-phase-eq','--all-targets','--release','--offline','--locked',*target,'--','-D','warnings'])]
+ jobs=[('nih-native-lifecycle-final',root,['test','-p','plugins-nih','--lib','--no-default-features','--features','linear-phase-eq','linear_phase_eq_native_mode_only','--release',*target,'--','--nocapture']),('nih-legacy-clippy-final',root,['clippy','-p','plugins-nih','--no-default-features','--features','linear-phase-eq','--all-targets','--release',*target,'--','-D','warnings'])]
 else:
- jobs=[('ffi-legacy-coherent-confirmed',fixture,['test','-p','plugins-ffi','--lib','linear_phase','--release','--offline','--locked','--features','sotf-plugins/qa',*target,'--','--nocapture']),('ffi-legacy-clippy-debug-coherent',fixture,['clippy','-p','plugins-ffi','--all-targets','--offline','--locked','--features','sotf-plugins/qa',*target,'--','-D','warnings'])]
+ jobs=[('ffi-legacy-coherent-confirmed',fixture,['test','-p','plugins-ffi','--lib','linear_phase','--release','--features','sotf-plugins/qa',*target,'--','--nocapture']),('ffi-legacy-clippy-debug-coherent',fixture,['clippy','-p','plugins-ffi','--all-targets','--features','sotf-plugins/qa',*target,'--','-D','warnings'])]
 if mode=='ffi-clippy': jobs=jobs[1:]
 for name,cwd,args in jobs:
  before=hashes();start=time.monotonic();cmd=['rtk','proxy','cargo',*args]

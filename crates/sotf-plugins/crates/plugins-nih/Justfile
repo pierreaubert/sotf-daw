@@ -43,7 +43,7 @@ build-nih-all:
 			failed=$((failed + 1))
 			continue
 		fi
-		if {{cargo}} build --release --locked -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$dylib" ] && cp "$dylib" "$staged"; then
+		if {{cargo}} build --release -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$dylib" ] && cp "$dylib" "$staged"; then
 			echo "  built $staged"
 		else
 			echo "  FAILED: $feat (full log: $log)"
@@ -151,7 +151,7 @@ build-nih-linux:
 			failed=$((failed + 1))
 			continue
 		fi
-		if {{cargo}} build --release --locked -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$built" ] && cp "$built" "$staged"; then
+		if {{cargo}} build --release -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$built" ] && cp "$built" "$staged"; then
 			echo "  built $staged"
 		else
 			echo "  FAILED: $feat (full log: $log)"
@@ -286,7 +286,7 @@ build-nih-windows:
 			failed=$((failed + 1))
 			continue
 		fi
-		if CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc {{cargo}} build --release --locked --target "{{WIN_TARGET}}" -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$built" ] && cp "$built" "$staged"; then
+		if CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER=x86_64-w64-mingw32-gcc {{cargo}} build --release --target "{{WIN_TARGET}}" -p plugins-nih --features "$feat" --no-default-features >"$log" 2>&1 && [ -f "$built" ] && cp "$built" "$staged"; then
 			echo "  built $staged"
 		else
 			echo "  FAILED: $feat (full log: $log)"

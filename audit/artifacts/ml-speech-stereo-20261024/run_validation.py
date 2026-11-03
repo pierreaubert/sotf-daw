@@ -9,8 +9,6 @@ ROOT = Path(__file__).resolve().parents[3]
 OUTPUT = Path(__file__).resolve().parent
 COMMON = [
     "--release",
-    "--offline",
-    "--locked",
     "--jobs",
     "2",
     "--target-dir",

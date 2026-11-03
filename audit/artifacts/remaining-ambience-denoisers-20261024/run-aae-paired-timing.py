@@ -28,7 +28,7 @@ def execute(command):
 try:
     for label, source in [("baseline",base),("candidate",candidate)]:
         FDN.write_bytes(source)
-        command = ["rtk","proxy","cargo","build","-p","sotf-plugin-aae","--release","--offline","--locked","--target-dir",str(TARGET),"--features","qa","--bin","qa-aae","--bin","qa-aae-timing"]
+        command = ["rtk","proxy","cargo","build","-p","sotf-plugin-aae","--release","--target-dir",str(TARGET),"--features","qa","--bin","qa-aae","--bin","qa-aae-timing"]
         row = execute(command)
         row["variant"] = label
         records.append(row)

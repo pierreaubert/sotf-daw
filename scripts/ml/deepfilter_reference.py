@@ -82,7 +82,6 @@ def main() -> None:
     parser.add_argument("--target-dir", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--source-dir", type=Path)
-    parser.add_argument("--offline", action="store_true")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     args.work_dir = args.work_dir.resolve()
@@ -205,10 +204,6 @@ codegen-units = 14
         "--target-dir",
         str(args.target_dir),
     ]
-    if existing_lock:
-        command.append("--locked")
-    if args.offline:
-        command.append("--offline")
     command += ["--", str(model), str(input_path), str(wave_path), str(score_path)]
     start = time.time()
     with (args.output / "reference-build.stdout.txt").open("w") as log:

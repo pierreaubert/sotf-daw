@@ -10,7 +10,7 @@ import time
 ROOT = Path(__file__).resolve().parents[3]
 ART = Path(__file__).resolve().parent
 TARGET = "/Volumes/home_tmp/tmp/sotf-daw-audit-20261018-target"
-COMMON = ["--release", "--offline", "--locked", "--target-dir", TARGET]
+COMMON = ["--release", "--target-dir", TARGET]
 ENV = {**os.environ, "CARGO_BUILD_JOBS":"2"}
 paths = [*Path(ROOT / "crates/sotf-plugins/crates/sotf-plugin-hal-input").rglob("*.rs"), *Path(ROOT / "crates/driver-hal").rglob("*.rs"), ROOT / "Cargo.lock"]
 def hashes():
