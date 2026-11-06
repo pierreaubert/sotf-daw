@@ -156,9 +156,9 @@ mod tests {
 
         println!("Checking common sample rates:");
         for rate in common_rates {
-            let rate_supported = supported.iter().any(|config| {
-                config.min_sample_rate() <= rate && rate <= config.max_sample_rate()
-            });
+            let rate_supported = supported
+                .iter()
+                .any(|config| config.min_sample_rate() <= rate && rate <= config.max_sample_rate());
             println!(
                 "  {}Hz: {}",
                 rate,

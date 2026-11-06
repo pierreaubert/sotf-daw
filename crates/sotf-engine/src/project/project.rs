@@ -91,10 +91,8 @@ impl Project {
                 // Stored project paths are portable: always use `/` separators.
                 let stored = region.source_path.replace('\\', "/");
                 if !Path::new(&stored).is_absolute() && !stored.starts_with('/') {
-                    region.source_path = base_dir
-                        .join(&stored)
-                        .to_string_lossy()
-                        .replace('\\', "/");
+                    region.source_path =
+                        base_dir.join(&stored).to_string_lossy().replace('\\', "/");
                 }
             }
         }

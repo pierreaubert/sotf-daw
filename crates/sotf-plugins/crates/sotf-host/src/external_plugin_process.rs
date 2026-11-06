@@ -692,12 +692,11 @@ mod tests {
 
     #[test]
     fn test_supervisor_reports_launch_failure() {
-        let command =
-            ExternalPluginWorkerCommand::new(if cfg!(windows) {
-                "C:\\definitely\\not\\a\\real\\sotf\\external\\plugin\\worker.exe"
-            } else {
-                "/definitely/not/a/real/sotf/external/plugin/worker"
-            });
+        let command = ExternalPluginWorkerCommand::new(if cfg!(windows) {
+            "C:\\definitely\\not\\a\\real\\sotf\\external\\plugin\\worker.exe"
+        } else {
+            "/definitely/not/a/real/sotf/external/plugin/worker"
+        });
         let mut supervisor =
             ExternalPluginProcessSupervisor::new(command, "/tmp/sotf-plugin-test.shm").unwrap();
 

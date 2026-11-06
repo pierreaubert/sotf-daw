@@ -4,8 +4,7 @@
 use sotf_host::ExternalPluginSandboxPolicy;
 use sotf_host::{
     DawHost, ExternalPluginProcessEvent, ExternalPluginWorkerCommand, IsolatedExternalPlugin,
-    PluginSandboxLaunchBackend,
-    IsolatedExternalPluginConfig, PluginDescriptor, PluginFormat,
+    IsolatedExternalPluginConfig, PluginDescriptor, PluginFormat, PluginSandboxLaunchBackend,
 };
 #[cfg(all(
     target_os = "linux",
