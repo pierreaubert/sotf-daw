@@ -914,7 +914,9 @@ mod tests {
     #[test]
     fn model_processes_on_a_bounded_audio_thread_stack() {
         std::thread::Builder::new()
-            .stack_size(64 * 1024)
+            // Windows/MSVC debug frames need the product bounded-thread size
+            // (sotf-host CLIENT/SERVER_THREAD_STACK_SIZE_BYTES = 256 KiB).
+            .stack_size(if cfg!(windows) { 256 * 1024 } else { 64 * 1024 })
             .spawn(|| {
                 let mut state = nnnoiseless::DenoiseState::new();
                 let input = [0.1; RNNOISE_FRAME_SIZE];

@@ -12,6 +12,11 @@ categories.workspace = true
 name = "plugins_spatial"
 path = "src/lib.rs"
 
+[features]
+# Frozen local audit artifacts (audit/artifacts/..., not committed); only
+# enable on the machine that generated them.
+frozen-cost-audit = []
+
 [dependencies]
 sotf-host = { workspace = true }
 rustfft = { workspace = true }

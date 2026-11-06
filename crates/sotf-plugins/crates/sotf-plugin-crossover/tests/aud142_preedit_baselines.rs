@@ -297,6 +297,7 @@ fn capture_aud142_pre_edit_audio_and_runtime_metadata() {
 }
 
 #[test]
+#[ignore = "requires preserved AUD142 pre-edit audit artifacts (SOTF_AUD142_BASELINE_DIR)"]
 fn replay_aud142_pre_edit_audio_and_runtime_metadata_bit_exactly() {
     let directory = baseline_directory();
     let expected_input = read_f32_le(&directory.join("input-f32le.bin"));

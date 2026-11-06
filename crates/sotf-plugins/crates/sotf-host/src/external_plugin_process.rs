@@ -44,6 +44,14 @@ impl ExternalPluginWorkerCommand {
         let program = std::env::current_exe()
             .ok()
             .and_then(|exe| exe.parent().map(|parent| parent.join(name)))
+            .map(|mut path| {
+                // Windows executables carry the `.exe` extension; without it
+                // CreateProcess cannot find the sibling binary.
+                if !std::env::consts::EXE_EXTENSION.is_empty() {
+                    path.set_extension(std::env::consts::EXE_EXTENSION);
+                }
+                path
+            })
             .unwrap_or_else(|| PathBuf::from(name));
         Self::new(program)
     }
@@ -685,7 +693,11 @@ mod tests {
     #[test]
     fn test_supervisor_reports_launch_failure() {
         let command =
-            ExternalPluginWorkerCommand::new("/definitely/not/a/real/sotf/external/plugin/worker");
+            ExternalPluginWorkerCommand::new(if cfg!(windows) {
+                "C:\\definitely\\not\\a\\real\\sotf\\external\\plugin\\worker.exe"
+            } else {
+                "/definitely/not/a/real/sotf/external/plugin/worker"
+            });
         let mut supervisor =
             ExternalPluginProcessSupervisor::new(command, "/tmp/sotf-plugin-test.shm").unwrap();
 
@@ -734,7 +746,11 @@ mod tests {
     #[test]
     fn test_supervisor_quarantines_repeated_launch_failures() {
         let mut core = ExternalPluginProcessSupervisorCore::new(
-            ExternalPluginWorkerCommand::new("/definitely/not/a/real/sotf/external/plugin/worker"),
+            ExternalPluginWorkerCommand::new(if cfg!(windows) {
+                "C:\\definitely\\not\\a\\real\\sotf\\external\\plugin\\worker.exe"
+            } else {
+                "/definitely/not/a/real/sotf/external/plugin/worker"
+            }),
             "/tmp/sotf-plugin-test-quarantine.shm",
         );
 
@@ -792,9 +808,18 @@ mod tests {
     fn test_default_macos_sandbox_helper_uses_sibling_binary_name() {
         let command = ExternalPluginWorkerCommand::default_macos_sandbox_helper_binary();
 
+        let expected = if std::env::consts::EXE_EXTENSION.is_empty() {
+            ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY.to_string()
+        } else {
+            format!(
+                "{}.{}",
+                ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY,
+                std::env::consts::EXE_EXTENSION
+            )
+        };
         assert_eq!(
             command.program().file_name().and_then(|name| name.to_str()),
-            Some(ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY)
+            Some(expected.as_str())
         );
     }
 

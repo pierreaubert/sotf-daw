@@ -94,7 +94,7 @@ realfft = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 directories = { workspace = true }
-rusqlite = { workspace = true }
+rusqlite = { workspace = true, features = ["bundled"] }
 walkdir = { workspace = true }
 math-dsp = { workspace = true }
 math-iir-fir = { workspace = true }

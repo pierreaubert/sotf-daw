@@ -14,6 +14,9 @@ path = "src/lib.rs"
 
 [features]
 qa = ["sotf-host/qa"]
+# Frozen local audit artifacts (audit/artifacts/..., not committed); only
+# enable on the machine that generated them.
+frozen-cost-audit = []
 
 [[bin]]
 name = "qa-convolution"

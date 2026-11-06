@@ -52,7 +52,7 @@ fn cpal_sink_rejects_zero_buffer_duration() {
 
 #[test]
 fn stream_error_callbacks_gate_event_formatting() {
-    let source = include_str!("build.rs");
+    let source = include_str!("build.rs").replace("\r\n", "\n");
 
     assert!(
         source.contains("if crate::rate_limit::allow(&EVENT_GATE, 5_000_000_000)"),
@@ -62,7 +62,7 @@ fn stream_error_callbacks_gate_event_formatting() {
 
 #[test]
 fn equal_channel_f32_output_clamps_after_volume() {
-    let source = include_str!("build.rs");
+    let source = include_str!("build.rs").replace("\r\n", "\n");
 
     assert!(
         source.contains("apply_volume_clamp(data, &state_clone, logical_channels, sample_rate);"),
@@ -72,7 +72,7 @@ fn equal_channel_f32_output_clamps_after_volume() {
 
 #[test]
 fn mapped_channel_f32_output_clamps_after_volume() {
-    let source = include_str!("build.rs");
+    let source = include_str!("build.rs").replace("\r\n", "\n");
 
     assert!(
         source.contains("&mut scratch[..logical_len],\n            state,\n            logical_channels,\n            sample_rate,"),

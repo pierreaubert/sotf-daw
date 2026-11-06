@@ -13,6 +13,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::Mutex;
+#[cfg(unix)]
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread;
@@ -121,6 +122,8 @@ impl Drop for ConfigWatcher {
 }
 
 /// Main config watcher thread function
+// `shutdown_tx` is only signalled from the Unix signal branch.
+#[cfg_attr(not(unix), allow(unused_variables))]
 fn run_config_watcher(
     config_path: Option<PathBuf>,
     watch_signals: bool,

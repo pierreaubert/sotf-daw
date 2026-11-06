@@ -88,9 +88,13 @@ impl Project {
     pub fn resolve_paths(&mut self, base_dir: &Path) {
         for track in &mut self.tracks {
             for region in &mut track.regions {
-                if !Path::new(&region.source_path).is_absolute() {
-                    region.source_path =
-                        base_dir.join(&region.source_path).to_string_lossy().into();
+                // Stored project paths are portable: always use `/` separators.
+                let stored = region.source_path.replace('\\', "/");
+                if !Path::new(&stored).is_absolute() && !stored.starts_with('/') {
+                    region.source_path = base_dir
+                        .join(&stored)
+                        .to_string_lossy()
+                        .replace('\\', "/");
                 }
             }
         }
@@ -100,11 +104,13 @@ impl Project {
     pub fn relativize_paths(&mut self, base_dir: &Path) {
         for track in &mut self.tracks {
             for region in &mut track.regions {
-                let abs = Path::new(&region.source_path);
-                if abs.is_absolute()
-                    && let Ok(rel) = abs.strip_prefix(base_dir)
+                let stored = region.source_path.replace('\\', "/");
+                let abs = Path::new(&stored);
+                let base = base_dir.to_string_lossy().replace('\\', "/");
+                if (abs.is_absolute() || stored.starts_with('/'))
+                    && let Ok(rel) = abs.strip_prefix(Path::new(&base))
                 {
-                    region.source_path = rel.to_string_lossy().into();
+                    region.source_path = rel.to_string_lossy().replace('\\', "/");
                 }
             }
         }

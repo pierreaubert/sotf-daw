@@ -919,7 +919,7 @@ fn test_isolated_external_plugin_event_and_status_mappings() {
     }
     #[cfg(windows)]
     {
-        let status = ExitStatusExt::from_raw((11 << 8) as u32);
+        let status = ExitStatusExt::from_raw(11);
         let event = isolated_external_plugin_event(ExternalPluginProcessEvent::Exited { status });
         assert!(matches!(
             event,

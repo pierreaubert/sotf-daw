@@ -1,4 +1,6 @@
 # These runtime assets are verified by raw-byte SHA-256 before inference.
+# RNNoise model files are parsed byte-exactly (header line) and SHA-verified.
+*.rnnn -text
 crates/sotf-plugins/models/aec-residual/model.json -text
 crates/sotf-plugins/models/aae-room-fit/model.json -text
 crates/sotf-plugins/models/ir-tail-mask/model.json -text

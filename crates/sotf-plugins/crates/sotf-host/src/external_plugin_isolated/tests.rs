@@ -1978,6 +1978,7 @@ fn isolated_external_plugin_rejects_helper_backend_without_launcher() {
             "/tmp/sotf-presets",
         )),
         sandbox_launch_backend: PluginSandboxLaunchBackend::MacosAppSandboxHelper,
+        sandbox_launcher_command: None,
         start_worker: false,
         ..Default::default()
     };
@@ -1997,6 +1998,7 @@ fn isolated_external_plugin_rejects_windows_backend_without_launcher() {
             "/tmp/sotf-presets",
         )),
         sandbox_launch_backend: PluginSandboxLaunchBackend::WindowsAppContainerWorker,
+        sandbox_launcher_command: None,
         start_worker: false,
         ..Default::default()
     };

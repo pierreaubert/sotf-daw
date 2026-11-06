@@ -175,11 +175,16 @@ fn default_launcher_command_for_macos_helper_uses_helper_binary() {
     )
     .unwrap();
 
-    assert!(
-        launcher
-            .program()
-            .ends_with(ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY)
-    );
+    let expected = if std::env::consts::EXE_EXTENSION.is_empty() {
+        ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY.to_string()
+    } else {
+        format!(
+            "{}.{}",
+            ExternalPluginWorkerCommand::DEFAULT_MACOS_SANDBOX_HELPER_BINARY,
+            std::env::consts::EXE_EXTENSION
+        )
+    };
+    assert!(launcher.program().ends_with(expected));
     assert!(
         default_plugin_sandbox_launcher_command_for_backend(
             PluginSandboxLaunchBackend::LinuxLandlockWorker
@@ -195,11 +200,16 @@ fn default_launcher_command_for_windows_worker_uses_launcher_binary() {
     )
     .unwrap();
 
-    assert!(
-        launcher
-            .program()
-            .ends_with(ExternalPluginWorkerCommand::DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY)
-    );
+    let expected = if std::env::consts::EXE_EXTENSION.is_empty() {
+        ExternalPluginWorkerCommand::DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY.to_string()
+    } else {
+        format!(
+            "{}.{}",
+            ExternalPluginWorkerCommand::DEFAULT_WINDOWS_SANDBOX_LAUNCHER_BINARY,
+            std::env::consts::EXE_EXTENSION
+        )
+    };
+    assert!(launcher.program().ends_with(expected));
 }
 
 #[test]

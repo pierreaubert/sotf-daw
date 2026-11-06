@@ -129,6 +129,7 @@ fn capture_aud141_pre_edit_control_audio() {
 }
 
 #[test]
+#[ignore = "requires preserved AUD141 pre-edit audit artifacts (SOTF_AUDIT_BASELINE_DIR)"]
 fn replay_aud141_pre_edit_control_audio_bit_exactly() {
     let directory = baseline_directory();
     for name in CASES {

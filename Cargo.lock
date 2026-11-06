@@ -7112,6 +7112,7 @@ dependencies = [
  "roomeq-export",
  "roomeq-model",
  "roomeq-quality",
+ "rusqlite",
  "rustfft",
  "same-file",
  "schemars",
@@ -7924,6 +7925,7 @@ dependencies = [
  "sotf-rubato",
  "tempfile",
  "thiserror 2.0.21",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -8513,6 +8515,7 @@ dependencies = [
  "rayon",
  "realfft",
  "rtrb",
+ "rusqlite",
  "rustfft",
  "serde",
  "serde_json",

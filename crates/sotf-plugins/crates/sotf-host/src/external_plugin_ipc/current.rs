@@ -27,7 +27,8 @@ pub(super) fn set_windows_owner_only_dacl(path: &Path) -> io::Result<()> {
         TRUSTEE_W,
     };
     use windows_sys::Win32::Security::{
-        DACL_SECURITY_INFORMATION, NO_INHERITANCE, PROTECTED_DACL_SECURITY_INFORMATION, PSID,
+        DACL_SECURITY_INFORMATION, NO_INHERITANCE, OWNER_SECURITY_INFORMATION,
+        PROTECTED_DACL_SECURITY_INFORMATION, PSID,
     };
     use windows_sys::Win32::Storage::FileSystem::FILE_ALL_ACCESS;
 
@@ -64,8 +65,13 @@ pub(super) fn set_windows_owner_only_dacl(path: &Path) -> io::Result<()> {
         SetNamedSecurityInfoW(
             path_w.as_ptr(),
             SE_FILE_OBJECT,
-            DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
-            null_mut(),
+            // Also take ownership as the current user: an elevated admin
+            // token creates objects owned by BUILTIN\Administrators, which
+            // the owner-only validation would otherwise reject.
+            DACL_SECURITY_INFORMATION
+                | PROTECTED_DACL_SECURITY_INFORMATION
+                | OWNER_SECURITY_INFORMATION,
+            user_sid.as_mut_ptr() as PSID,
             null_mut(),
             dacl,
             null(),

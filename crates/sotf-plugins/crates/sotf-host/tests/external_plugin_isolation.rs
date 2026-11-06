@@ -4,6 +4,7 @@
 use sotf_host::ExternalPluginSandboxPolicy;
 use sotf_host::{
     DawHost, ExternalPluginProcessEvent, ExternalPluginWorkerCommand, IsolatedExternalPlugin,
+    PluginSandboxLaunchBackend,
     IsolatedExternalPluginConfig, PluginDescriptor, PluginFormat,
 };
 #[cfg(all(
@@ -26,6 +27,13 @@ fn isolated_external_plugin_rejects_worker_without_native_backend() {
                 .arg("--idle-sleep-micros")
                 .arg("50"),
             sandbox_policy: ExternalPluginSandboxPolicy::disabled(),
+            // Launch the worker directly (as the Linux default backend does)
+            // so the worker's own native-backend rejection surfaces instead
+            // of a platform sandbox-launcher error.
+            sandbox_launch_backend: PluginSandboxLaunchBackend::ProcessIsolationOnly {
+                platform: "test",
+            },
+            sandbox_launcher_command: None,
             ..Default::default()
         },
     ) {
