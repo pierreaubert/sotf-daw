@@ -6,10 +6,10 @@ use serde::{Deserialize, Serialize};
 /// `allows(item_level)` returns true when `self >= item_level`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub enum ReleaseChannel {
-    /// Stable, production-ready features (default)
-    #[default]
+    /// Stable, production-ready features
     Prod,
-    /// Features in testing, mostly stable
+    /// Features in testing, mostly stable (default)
+    #[default]
     Beta,
     /// Experimental features, may change or break
     Alpha,

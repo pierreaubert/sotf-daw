@@ -493,6 +493,18 @@ impl AudioEngineManager {
             }
         };
 
+        if matches!(source, AudioSource::File(_)) {
+            let current = lock_recover(&self.current_audio_info, "current_audio_info");
+            if let Some(current) = current.as_ref()
+                && current.spec.sample_rate != audio_info.spec.sample_rate
+            {
+                return Err(AudioDecoderError::ConfigError(format!(
+                    "Smooth source switch requires the same sample rate ({} Hz to {} Hz)",
+                    current.spec.sample_rate, audio_info.spec.sample_rate
+                )));
+            }
+        }
+
         match position {
             Some(pos) => engine
                 .play_at(source.clone(), pos)

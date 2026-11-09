@@ -157,6 +157,40 @@ fn invalid_initial_driver_graph_never_admits_capture_or_output() {
 
 #[cfg(feature = "test-util")]
 #[test]
+fn smooth_file_switch_rejects_a_different_source_rate() {
+    let directory = tempfile::tempdir().unwrap();
+    let make_file = |rate| {
+        let path = directory.path().join(format!("{rate}.wav"));
+        let spec = hound::WavSpec {
+            channels: 2,
+            sample_rate: rate,
+            bits_per_sample: 16,
+            sample_format: hound::SampleFormat::Int,
+        };
+        let mut writer = hound::WavWriter::create(&path, spec).unwrap();
+        for _ in 0..rate * 2 {
+            writer.write_sample(0_i16).unwrap();
+            writer.write_sample(0_i16).unwrap();
+        }
+        writer.finalize().unwrap();
+        path
+    };
+    let first = make_file(48_000);
+    let second = make_file(96_000);
+    let mut manager = AudioEngineManager::new();
+    manager.set_test_output_enabled(true).unwrap();
+    manager.load_file(&first).unwrap();
+    manager.start_playback(None, vec![], 2).unwrap();
+    let error = manager
+        .switch_source_at(crate::decoder::AudioSource::File(second), None)
+        .unwrap_err();
+    assert!(error.to_string().contains("same sample rate"));
+    assert_eq!(manager.get_audio_info().unwrap().spec.sample_rate, 48_000);
+    manager.stop().unwrap();
+}
+
+#[cfg(feature = "test-util")]
+#[test]
 fn test_file_output_runs_decode_dsp_and_transport_without_hardware() {
     use crate::PlaybackState;
     use std::time::{Duration, Instant};
