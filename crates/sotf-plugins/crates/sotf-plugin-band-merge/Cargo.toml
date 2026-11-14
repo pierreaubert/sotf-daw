@@ -33,3 +33,6 @@ sotf-plugin-band-split = { workspace = true }
 [[bench]]
 name = "band-merge-benchmark"
 harness = false
+
+[lints]
+workspace = true

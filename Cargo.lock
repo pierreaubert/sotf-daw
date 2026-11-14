@@ -6068,7 +6068,6 @@ version = "0.5.4"
 dependencies = [
  "gpui-audio-kit",
  "gpui-design",
- "gpui-px",
  "gpui-ui-kit",
  "math-iir-fir",
  "sotf-gpui-toolkit-gpui",
@@ -8575,7 +8574,6 @@ dependencies = [
  "sotf-plugin-multiband-compressor",
  "tempfile",
  "thiserror 2.0.21",
- "tokio",
 ]
 
 [[package]]

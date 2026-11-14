@@ -63,11 +63,16 @@ fn test_loopback_tone() {
         1, // num_sweeps
         None,
     );
+    assert!(
+        recorded_wav.exists(),
+        "Recording file not created at {}; capture error: {:?}",
+        recorded_wav.display(),
+        result.as_ref().err(),
+    );
     if let Err(e) = &result {
         println!("  Note: Analysis failed (expected for tones): {}", e);
     }
 
-    assert!(recorded_wav.exists(), "Recording file not created");
     let mut reader = hound::WavReader::open(&recorded_wav).unwrap();
     let samples: Vec<f32> = reader.samples().collect::<Result<Vec<_>, _>>().unwrap();
 
@@ -172,11 +177,16 @@ fn test_loopback_pink_noise() {
         1, // num_sweeps
         None,
     );
+    assert!(
+        recorded_wav.exists(),
+        "Recording file not created at {}; capture error: {:?}",
+        recorded_wav.display(),
+        result.as_ref().err(),
+    );
     if let Err(e) = &result {
         println!("  Note: Analysis failed (expected for noise): {}", e);
     }
 
-    assert!(recorded_wav.exists(), "Recording file not created");
     let mut reader = hound::WavReader::open(&recorded_wav).unwrap();
     let samples: Vec<f32> = reader.samples().collect::<Result<Vec<_>, _>>().unwrap();
 

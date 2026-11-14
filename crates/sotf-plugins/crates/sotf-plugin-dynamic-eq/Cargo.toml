@@ -32,3 +32,6 @@ serde_json = { workspace = true }
 name = "qa-dynamic-eq-render"
 path = "bin/qa_dynamic_eq_render.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true

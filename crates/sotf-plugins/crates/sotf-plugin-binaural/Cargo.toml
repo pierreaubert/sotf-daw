@@ -46,3 +46,6 @@ harness = false
 name = "qa-binaural-render"
 path = "bin/qa_binaural_render.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true

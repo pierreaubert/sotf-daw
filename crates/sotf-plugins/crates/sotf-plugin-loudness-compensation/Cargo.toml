@@ -37,3 +37,6 @@ criterion = { workspace = true }
 [[bench]]
 name = "loudness-benchmark"
 harness = false
+
+[lints]
+workspace = true

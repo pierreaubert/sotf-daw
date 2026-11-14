@@ -28,3 +28,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 sotf-plugin-analog-common = { path = "../sotf-plugin-analog-common", optional = true }
 sha2 = { workspace = true, optional = true }
+
+[lints]
+workspace = true

@@ -31,3 +31,6 @@ proptest = { workspace = true }
 [[bench]]
 name = "crossover-block-benchmark"
 harness = false
+
+[lints]
+workspace = true

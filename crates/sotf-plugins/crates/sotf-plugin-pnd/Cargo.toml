@@ -47,3 +47,6 @@ ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "
 
 [dev-dependencies]
 hound = { workspace = true }
+
+[lints]
+workspace = true

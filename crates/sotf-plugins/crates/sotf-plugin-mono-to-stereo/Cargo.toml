@@ -27,3 +27,6 @@ serde = { workspace = true }
 [dev-dependencies]
 rustfft = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

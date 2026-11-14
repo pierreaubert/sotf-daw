@@ -14,3 +14,6 @@ sotf-engine = { workspace = true }
 
 [dev-dependencies]
 sotf-plugins = { workspace = true }
+
+[lints]
+workspace = true

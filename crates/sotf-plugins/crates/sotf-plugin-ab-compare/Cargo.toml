@@ -33,3 +33,6 @@ math-iir-fir = { workspace = true }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

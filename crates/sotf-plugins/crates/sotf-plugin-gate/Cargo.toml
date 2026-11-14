@@ -51,3 +51,6 @@ proptest = { workspace = true }
 name = "qa-speech-observe"
 path = "bin/qa_speech_observe.rs"
 required-features = ["qa", "silero-speech"]
+
+[lints]
+workspace = true

@@ -73,7 +73,6 @@ resolver = "3"
 [workspace.package]
 version = "0.8.2"
 authors = ["Pierre F. Aubert pierre@spinorama.org"]
-description = "SOTF DAW core: engine, plugins, MIDI, IAMF, and driver transport"
 edition = "2024"
 license = "GPL-3.0-or-later"
 repository = "https://github.com/pierreaubert/all_of_sotf"
@@ -91,7 +90,6 @@ plugins-gpui = { path = "crates/sotf-plugins/crates/plugins-gpui" }
 plugins-inference = { path = "crates/sotf-plugins/crates/plugins-inference" }
 plugins-spatial = { path = "crates/sotf-plugins/crates/plugins-spatial" }
 sotf-engine = { path = "crates/sotf-engine", default-features = false }
-sotf-room-eq-graph = { path = "crates/sotf-room-eq-graph" }
 sotf-host = { path = "crates/sotf-plugins/crates/sotf-host", default-features = false }
 sotf-iamf = { path = "crates/sotf-iamf" }
 symphonia-iamf-core = { version = "0.1.0", git = "https://github.com/pierreaubert/symphonia-add-ons" }
@@ -164,7 +162,6 @@ coreaudio-rs = { version = "0.14.2", package = "sotf-coreaudio-rs", git = "https
 cpal = "0.18.2"
 criterion = "0.8.2"
 crossbeam = "0.8"
-crossterm = "0.29"
 ctrlc = { version = "3.5", features = ["termination"] }
 directories = "6"
 env_logger = "0.11"
@@ -202,7 +199,6 @@ proc-macro2 = "1"
 proptest = "1.9"
 quote = "1"
 rand = "0.10.2"
-ratatui = "0.30"
 rayon = "1.11"
 realfft = "3.5"
 reqwest = { version = "0.13", features = ["json"] }

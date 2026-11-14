@@ -35,3 +35,6 @@ gpui-ui-kit = { workspace = true }
 
 [build-dependencies]
 cbindgen = { workspace = true }
+
+[lints]
+workspace = true

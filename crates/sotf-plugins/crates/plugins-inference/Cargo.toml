@@ -14,3 +14,6 @@ publish = false
 [dependencies]
 log = { workspace = true }
 rtrb = { workspace = true }
+
+[lints]
+workspace = true

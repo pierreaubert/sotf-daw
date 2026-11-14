@@ -30,3 +30,6 @@ required-features = ["qa"]
 sotf-host = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

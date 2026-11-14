@@ -37,3 +37,6 @@ required-features = ["qa"]
 
 [dev-dependencies]
 hound = { workspace = true }
+
+[lints]
+workspace = true

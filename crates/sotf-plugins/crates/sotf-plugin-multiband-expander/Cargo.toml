@@ -34,3 +34,6 @@ serde_json = { workspace = true }
 rustfft = { workspace = true }
 sha2 = { workspace = true, optional = true }
 sotf-restoration-mask = { path = "../sotf-restoration-mask", optional = true }
+
+[lints]
+workspace = true

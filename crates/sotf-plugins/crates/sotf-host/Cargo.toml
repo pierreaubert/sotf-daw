@@ -129,3 +129,6 @@ objc2-core-foundation = { version = "0.3", optional = true, default-features = f
     "CFPropertyList",
     "CFString",
 ] }
+
+[lints]
+workspace = true

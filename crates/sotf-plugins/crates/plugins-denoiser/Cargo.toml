@@ -23,3 +23,6 @@ plugins-inference = { workspace = true, optional = true }
 sha2 = { workspace = true, optional = true }
 ndarray017 = { package = "ndarray", version = "0.17", optional = true }
 deep-filter-runtime = { package = "sotf-deep-filter-runtime", path = "../../../../vendor/deep-filter-runtime", optional = true }
+
+[lints]
+workspace = true

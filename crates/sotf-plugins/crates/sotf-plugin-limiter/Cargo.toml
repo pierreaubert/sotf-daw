@@ -33,3 +33,6 @@ proptest = { workspace = true }
 name = "qa-limiter-render"
 path = "bin/qa_limiter_render.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true

@@ -29,3 +29,6 @@ serde_json = { workspace = true }
 flate2 = "1.1.10"
 proptest = { workspace = true }
 sotf-plugin-band-merge = { workspace = true }
+
+[lints]
+workspace = true

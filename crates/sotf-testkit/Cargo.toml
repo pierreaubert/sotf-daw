@@ -20,3 +20,6 @@ rand = { workspace = true }
 sotf-engine = { workspace = true, optional = true }
 cpal = { workspace = true, optional = true }
 sotf-host = { workspace = true, optional = true }
+
+[lints]
+workspace = true

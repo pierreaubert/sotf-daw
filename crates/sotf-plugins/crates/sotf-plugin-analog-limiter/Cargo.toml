@@ -22,3 +22,6 @@ sotf-plugin-analog-common = { workspace = true }
 sotf-plugin-limiter = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

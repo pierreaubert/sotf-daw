@@ -21,3 +21,6 @@ frozen-cost-audit = []
 sotf-host = { workspace = true }
 rustfft = { workspace = true }
 realfft = { workspace = true }
+
+[lints]
+workspace = true

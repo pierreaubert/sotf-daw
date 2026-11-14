@@ -55,3 +55,6 @@ sotf-plugin-gain = { workspace = true }
 [[bench]]
 name = "upmixer-benchmark"
 harness = false
+
+[lints]
+workspace = true

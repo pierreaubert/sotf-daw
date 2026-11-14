@@ -31,3 +31,6 @@ criterion = { workspace = true }
 [[bench]]
 name = "channel-mute-solo-benchmark"
 harness = false
+
+[lints]
+workspace = true

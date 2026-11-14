@@ -36,3 +36,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 math-dsp = { workspace = true }
 sha2 = { workspace = true, optional = true }
+
+[lints]
+workspace = true

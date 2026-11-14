@@ -124,3 +124,6 @@ required-features = ["playback-runtime-harness"]
 name = "playback-runtime-fuzzer"
 path = "src/bin/playback-runtime-fuzzer.rs"
 required-features = ["playback-runtime-harness"]
+
+[lints]
+workspace = true

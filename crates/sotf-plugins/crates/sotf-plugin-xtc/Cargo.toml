@@ -46,3 +46,6 @@ tempfile = { workspace = true }
 [[bench]]
 name = "xtc-validation-benchmark"
 harness = false
+
+[lints]
+workspace = true

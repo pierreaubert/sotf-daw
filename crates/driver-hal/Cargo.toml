@@ -58,3 +58,6 @@ serde_json = { workspace = true }
 libc = { workspace = true }
 proptest = { workspace = true }
 serial_test = { workspace = true }
+
+[lints]
+workspace = true

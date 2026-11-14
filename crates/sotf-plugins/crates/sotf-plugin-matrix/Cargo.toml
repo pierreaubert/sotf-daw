@@ -34,3 +34,6 @@ proptest = { workspace = true }
 name = "qa-matrix-routing"
 path = "bin/qa_matrix_routing.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true

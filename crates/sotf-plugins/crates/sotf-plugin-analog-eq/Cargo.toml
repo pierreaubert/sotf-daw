@@ -27,3 +27,6 @@ sotf-plugin-analog-common = { workspace = true }
 math-iir-fir = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

@@ -38,3 +38,6 @@ tempfile = { workspace = true }
 name = "qa-hiss-render"
 path = "bin/qa_hiss_render.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true

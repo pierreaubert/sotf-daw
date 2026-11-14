@@ -47,3 +47,6 @@ serde_json = { workspace = true }
 name = "qa_eq_transitions"
 path = "examples/qa_eq_transitions.rs"
 required-features = ["qa"]
+
+[lints]
+workspace = true
