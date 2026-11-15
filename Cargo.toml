@@ -166,12 +166,12 @@ ctrlc = { version = "3.5", features = ["termination"] }
 directories = "6"
 env_logger = "0.11"
 gpui = { package = "sotf-gpui-toolkit-gpui", version = "0.2.3", git = "https://github.com/pierreaubert/sotf-3rdparties" }
-gpui-au = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
-gpui-audio-kit = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
-gpui-builder = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
-gpui-design = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
-gpui-px = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
-gpui-ui-kit = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit" }
+gpui-au = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
+gpui-audio-kit = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
+gpui-builder = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
+gpui-design = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
+gpui-px = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
+gpui-ui-kit = { version = "0.11", git = "https://github.com/pierreaubert/gpui-toolkit", rev = "36bb357e8d17667c6dc0bce7c2443223c9b9070e" }
 hex = "0.4"
 hound = "3.5"
 m3u8-rs = { version = "6" }
@@ -180,10 +180,10 @@ insta = { version = "1.42", features = ["json"] }
 libc = "0.2"
 libloading = { version = "0.9.0" }
 log = "0.4.28"
-math-analog = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
-math-dsp = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
-math-iir-fir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
-math-rir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
+math-analog = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "df9d84095835ace6af4b8a2b79bd65c6a5250cf6" }
+math-dsp = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "df9d84095835ace6af4b8a2b79bd65c6a5250cf6" }
+math-iir-fir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "df9d84095835ace6af4b8a2b79bd65c6a5250cf6" }
+math-rir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "df9d84095835ace6af4b8a2b79bd65c6a5250cf6" }
 memmap2 = "0.9.11"
 midir = "0.11"
 nalgebra = { package = "sotf-nalgebra", git = "https://github.com/pierreaubert/sotf-3rdparties",  version = "0.35", default-features = false, features = ["std"] }
