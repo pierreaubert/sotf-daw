@@ -20,6 +20,9 @@ silero-speech = ["sotf-plugins/silero-speech"]
 deep-filter = ["sotf-plugins/deep-filter"]
 hal = ["driver-hal", "sotf-plugins/hal"]
 asio = ["cpal/asio"]
+# Native PipeWire measurement playback (sotf-capture backend; Linux
+# only in effect, needs libpipewire-0.3-dev on the build host).
+pipewire-io = ["sotf-capture/pipewire-io"]
 iamf = ["dep:sotf-iamf", "dep:sotf-plugin-ambisonics"]
 streaming = ["dep:sotf-streaming"]
 hls = ["streaming", "sotf-streaming/hls"]

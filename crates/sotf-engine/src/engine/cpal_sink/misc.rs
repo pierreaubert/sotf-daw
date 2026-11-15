@@ -6,16 +6,14 @@ use rtrb::{CopyToUninit, chunks::WriteChunkUninit};
 #[allow(dead_code)]
 const MAX_DOWNMIX_CH: usize = 32;
 
+/// Whether `name` denotes a virtual or null endpoint that must never
+/// be treated as the physical output by accident. Delegates to the
+/// shared endpoint classifier in sotf-capture (which also covers the
+/// Linux names: monitor sources, PipeWire loopbacks, the ALSA sample
+/// discarder); `is_null_device` stays as a belt-and-braces check for
+/// name forms the classifier maps to `Null` via device id only.
 pub(super) fn is_virtual_output_device_name(name: &str) -> bool {
-    let lower = name.to_lowercase();
-    lower.contains("sotf")
-        || lower.contains("blackhole")
-        || lower.contains("zoomaudio")
-        || lower.contains("loopback")
-        || lower.contains("virtual")
-        || lower.contains("soundflower")
-        || lower.contains("background music")
-        || lower.contains("audio bridge")
+    !crate::devices::classify_device(name, None).is_physical_output_candidate()
         || crate::devices::is_null_device(name)
 }
 

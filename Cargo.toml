@@ -180,10 +180,10 @@ insta = { version = "1.42", features = ["json"] }
 libc = "0.2"
 libloading = { version = "0.9.0" }
 log = "0.4.28"
-math-analog = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
-math-dsp = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
-math-iir-fir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
-math-rir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio" }
+math-analog = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
+math-dsp = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
+math-iir-fir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
+math-rir = { version = "0.5", git = "https://github.com/pierreaubert/math-audio", rev = "0b64accb3be346e35f6e9eaf534dfb28b20636f2" }
 memmap2 = "0.9.11"
 midir = "0.11"
 nalgebra = { package = "sotf-nalgebra", git = "https://github.com/pierreaubert/sotf-3rdparties",  version = "0.35", default-features = false, features = ["std"] }
