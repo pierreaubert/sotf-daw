@@ -3,7 +3,9 @@ use super::super::PluginGraphEdgeKind;
 use super::misc::configure_host_oversampling;
 use super::misc::create_plugin;
 use crate::{EngineOversamplingPolicy, PluginBuildDiagnostic};
-use sotf_plugins::speaker_config::{ChannelLayout, get_speaker_config};
+use sotf_plugins::speaker_config::{
+    ChannelLayout, get_speaker_config, speaker_config_id_from_legacy_index,
+};
 use sotf_plugins::{
     EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost, ProcessingMode,
     create_plugin_with_external_key,
@@ -26,6 +28,24 @@ fn upmixer_input_layout(
     serde_json::from_value(parameters.get("input_layout")?.clone()).ok()
 }
 
+/// Resolve the declared `speaker_config`, accepting the string form and
+/// the legacy numeric index form exactly as the plugin decoder does. A
+/// present but undecodable value yields `None` (layout unknown) instead of
+/// guessing a default the plugin did not select.
+fn speaker_config_id(parameters: &serde_json::Value) -> Option<&str> {
+    let value = parameters.get("speaker_config")?;
+    if let Some(id) = value.as_str() {
+        return Some(id);
+    }
+    if let Some(index) = value.as_u64() {
+        return speaker_config_id_from_legacy_index(index);
+    }
+    let number = value.as_f64()?;
+    (number.is_finite() && number.fract() == 0.0 && number >= 0.0)
+        .then(|| speaker_config_id_from_legacy_index(number as u64))
+        .flatten()
+}
+
 fn upmixer_output_layout(
     plugin_type: &str,
     parameters: &serde_json::Value,
@@ -37,11 +57,11 @@ fn upmixer_output_layout(
     let speaker_config =
         if parameters.get("binaural_preview").and_then(|v| v.as_bool()) == Some(true) {
             "2.0"
+        } else if parameters.get("speaker_config").is_none() {
+            // Mirrors the plugin field default.
+            "5.1"
         } else {
-            parameters
-                .get("speaker_config")
-                .and_then(|v| v.as_str())
-                .unwrap_or("5.1")
+            speaker_config_id(parameters)?
         };
     let layout = ChannelLayout::from_speaker_config(get_speaker_config(speaker_config)?).ok()?;
     (layout.channels.len() == output_channels).then_some(layout)

@@ -2639,13 +2639,15 @@ impl DynamicParams {
         }
         let index = i32::try_from(index).map_err(|_| "upmixer output choice is out of range")?;
         self.int_params[entry.index].set_plain_value_for_initialization(index);
-        let input = match input_id {
-            "2.0" => 0,
-            "5.0" => 1,
-            "5.1" => 2,
-            "7.1" => 3,
-            _ => return Err(format!("unsupported upmixer input layout {input_id}")),
+        let input = if input_id == "2.0" {
+            0
+        } else {
+            sotf_plugins::param_specs::upmixer::INPUT_FORMATS
+                .iter()
+                .position(|id| *id == input_id)
+                .ok_or_else(|| format!("unsupported upmixer input layout {input_id}"))?
         };
+        let input = i32::try_from(input).map_err(|_| "upmixer input choice is out of range")?;
         let entry = self
             .param_map
             .get("input_format")

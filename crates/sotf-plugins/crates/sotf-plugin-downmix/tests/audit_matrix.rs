@@ -66,7 +66,7 @@ fn every_named_layout_matches_independent_basis_vectors_and_coherent_headroom() 
     for id in get_available_configs() {
         assert!(layouts.iter().any(|(name, _)| name == id));
     }
-    assert_eq!(layouts.len(), 15);
+    assert_eq!(layouts.len(), 17);
     for rate in [44_100, 48_000, 96_000] {
         for (id, positions) in &layouts {
             for itu in [false, true] {
@@ -149,7 +149,9 @@ fn every_named_layout_matches_independent_basis_vectors_and_coherent_headroom() 
 
 #[test]
 fn unnamed_layouts_have_explicit_index_pan_without_invented_lfe() {
-    for channels in [4, 7, 9, 11, 13, 15, 17, 32] {
+    // Channel counts with no named speaker configuration. Seven channels
+    // are not listed: that width unambiguously selects the 7.0 layout.
+    for channels in [4, 9, 11, 13, 15, 17, 32] {
         for itu in [false, true] {
             let mut plugin = make(None, channels, itu, false, 48_000);
             for source in 0..channels {

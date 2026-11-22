@@ -2,7 +2,7 @@
 
 SOTF Upmixer plugin for stereo upmixing and surround-input height generation.
 
-Converts stereo audio to surround formats using FFT-based direct/ambient decomposition and VBAP panning. For explicitly identified 5.0, 5.1, and 7.1 input, it preserves the existing speaker bed and generates optional height channels and a configurable subwoofer feed. See [USAGE.md](USAGE.md) for role ordering, bass routing, latency, and level conventions.
+Converts stereo audio to surround formats using FFT-based direct/ambient decomposition and VBAP panning. For explicitly identified 5.0, 5.1, 7.0, and 7.1 input, it preserves the existing speaker bed and generates optional height channels and a configurable subwoofer feed. See [USAGE.md](USAGE.md) for role ordering, bass routing, latency, and level conventions.
 
 The main and high-resolution FFTs use shared scratch storage sized during setup and replanning. This keeps their processing calls allocation-free when an FFT backend requires scratch space.
 

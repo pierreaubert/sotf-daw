@@ -51,10 +51,10 @@ impl SurroundRouting {
         };
         let supported = matches!(
             (input.channels.len(), lfe.is_some(), back.is_some()),
-            (5, false, false) | (6, true, false) | (8, true, true)
+            (5, false, false) | (6, true, false) | (7, false, true) | (8, true, true)
         );
         if !supported {
-            return Err("surround input must be 5.0, 5.1, or 7.1".into());
+            return Err("surround input must be 5.0, 5.1, 7.0, or 7.1".into());
         }
 
         let mut bed = Vec::with_capacity(input.channels.len());
@@ -109,7 +109,7 @@ mod tests {
     #[test]
     fn input_format_selection_preserves_custom_channel_order() {
         let mut settings = crate::UpmixerMultichannelParams::default();
-        for index in 0..=3 {
+        for index in [0, 1, 2, 3, 5] {
             settings.set_input_format_index(index).unwrap();
             assert_eq!(settings.input_format_index(), index);
         }
@@ -120,7 +120,7 @@ mod tests {
         let before = settings.input_layout.clone();
         settings.set_input_format_index(4).unwrap();
         assert_eq!(settings.input_layout, before);
-        assert!(settings.set_input_format_index(5).is_err());
+        assert!(settings.set_input_format_index(6).is_err());
     }
 
     fn layout(id: &str) -> ChannelLayout {
@@ -129,10 +129,11 @@ mod tests {
 
     #[test]
     fn maps_every_supported_bed_to_matching_output_roles() {
-        for input_id in ["5.0", "5.1", "7.1"] {
+        for input_id in ["5.0", "5.1", "7.0", "7.1"] {
             let input = layout(input_id);
             for output_id in [
-                "5.0", "5.1", "5.1.2", "5.1.4", "5.1.6", "7.1", "7.1.2", "7.1.4", "9.1.4", "9.1.6",
+                "5.0", "5.1", "5.1.2", "5.1.4", "5.1.6", "7.0", "7.1", "7.1.2", "7.1.4", "9.1.4",
+                "9.1.6",
             ] {
                 let output = layout(output_id);
                 let compatible = input.channels.iter().all(|source| {

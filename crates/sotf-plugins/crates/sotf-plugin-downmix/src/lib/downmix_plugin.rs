@@ -255,7 +255,7 @@ impl DownmixPlugin {
             }
             Some(config)
         } else {
-            if matches!(params.input_channels, 8 | 10) {
+            if matches!(params.input_channels, 8 | 10 | 12) {
                 return Err(format!(
                     "Downmix input_layout is required for ambiguous {}-channel input",
                     params.input_channels

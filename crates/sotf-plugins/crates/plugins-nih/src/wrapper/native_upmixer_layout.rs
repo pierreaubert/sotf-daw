@@ -14,6 +14,7 @@ pub enum SpeakerLayout {
     FiveOneTwo,
     FiveOneFour,
     FiveOneSix,
+    SevenZero,
     SevenOne,
     SevenOneTwo,
     SevenOneFour,
@@ -30,6 +31,7 @@ impl SpeakerLayout {
             Self::FiveOneTwo => "5.1.2",
             Self::FiveOneFour => "5.1.4",
             Self::FiveOneSix => "5.1.6",
+            Self::SevenZero => "7.0",
             Self::SevenOne => "7.1",
             Self::SevenOneTwo => "7.1.2",
             Self::SevenOneFour => "7.1.4",
@@ -41,7 +43,7 @@ impl SpeakerLayout {
     const fn existing(self) -> Option<ExistingLayout> {
         Some(match self {
             Self::Stereo => ExistingLayout::Stereo,
-            Self::FiveZero | Self::FiveOneSix => return None,
+            Self::FiveZero | Self::FiveOneSix | Self::SevenZero => return None,
             Self::FiveOne => ExistingLayout::FiveOne,
             Self::FiveOneTwo => ExistingLayout::FiveOneTwo,
             Self::FiveOneFour => ExistingLayout::FiveOneFour,
@@ -57,6 +59,9 @@ impl SpeakerLayout {
         if matches!(self, Self::FiveOneSix) {
             return 12;
         }
+        if matches!(self, Self::SevenZero) {
+            return 7;
+        }
         match self.existing() {
             Some(layout) => layout.channel_count(),
             None => 5,
@@ -64,6 +69,10 @@ impl SpeakerLayout {
     }
 
     pub const fn vst3_arrangement(self) -> u64 {
+        if matches!(self, Self::SevenZero) {
+            // The 7.1 arrangement (0x063f) without the LFE speaker (bit 3).
+            return 0x0637;
+        }
         if matches!(self, Self::FiveOneSix) {
             // 5.1 plus top-front, top-back, and top-side pairs.
             return 0x0302_d03f;
@@ -81,6 +90,11 @@ impl SpeakerLayout {
         if api != PluginApi::Vst3 {
             return (channel < self.channels()).then_some(channel);
         }
+        if matches!(self, Self::SevenZero) {
+            // VST3 orders the back pair before the side pair, as in 7.1
+            // without its LFE channel.
+            return [0, 1, 2, 5, 6, 3, 4].get(channel).copied();
+        }
         match self.existing() {
             Some(layout) => layout.vst3_bus_to_sotf_permutation().get(channel).copied(),
             None => (channel < self.channels()).then_some(channel),
@@ -96,6 +110,7 @@ impl SpeakerLayout {
             Self::FiveOneFour => &super::CLAP_MAP_514,
             // CLAP's surround map has no top-middle left/right roles.
             Self::FiveOneSix => return None,
+            Self::SevenZero => &[0, 1, 2, 9, 10, 4, 5],
             Self::SevenOne => &super::CLAP_MAP_71,
             Self::SevenOneTwo => &super::CLAP_MAP_712,
             Self::SevenOneFour => &super::CLAP_MAP_714,
@@ -116,9 +131,9 @@ use SpeakerLayout::{
     FiveOne as F1, FiveOneFour as F14, FiveOneSix as F16, FiveOneTwo as F12, FiveZero as F0,
 };
 use SpeakerLayout::{NineOneFour as N14, NineOneSix as N16, SevenOne as S1, SevenOneFour as S14};
-use SpeakerLayout::{SevenOneTwo as S12, Stereo as St};
+use SpeakerLayout::{SevenOneTwo as S12, SevenZero as S0, Stereo as St};
 
-const VST3_PAIRS: [LayoutPair; 25] = [
+const VST3_PAIRS: [LayoutPair; 32] = [
     LayoutPair {
         input: St,
         output: F1,
@@ -244,9 +259,44 @@ const VST3_PAIRS: [LayoutPair; 25] = [
         output: F16,
         name: "5.1 to 5.1.6",
     },
+    LayoutPair {
+        input: F0,
+        output: S0,
+        name: "5.0 to 7.0",
+    },
+    LayoutPair {
+        input: S0,
+        output: S0,
+        name: "7.0 to 7.0",
+    },
+    LayoutPair {
+        input: S0,
+        output: S1,
+        name: "7.0 to 7.1",
+    },
+    LayoutPair {
+        input: S0,
+        output: S12,
+        name: "7.0 to 7.1.2",
+    },
+    LayoutPair {
+        input: S0,
+        output: S14,
+        name: "7.0 to 7.1.4",
+    },
+    LayoutPair {
+        input: S0,
+        output: N14,
+        name: "7.0 to 9.1.4",
+    },
+    LayoutPair {
+        input: S0,
+        output: N16,
+        name: "7.0 to 9.1.6",
+    },
 ];
 
-const CLAP_PAIRS: [LayoutPair; 17] = [
+const CLAP_PAIRS: [LayoutPair; 22] = [
     VST3_PAIRS[0],
     VST3_PAIRS[1],
     VST3_PAIRS[2],
@@ -264,6 +314,11 @@ const CLAP_PAIRS: [LayoutPair; 17] = [
     VST3_PAIRS[18],
     VST3_PAIRS[19],
     VST3_PAIRS[20],
+    VST3_PAIRS[25],
+    VST3_PAIRS[26],
+    VST3_PAIRS[27],
+    VST3_PAIRS[28],
+    VST3_PAIRS[29],
 ];
 
 const fn make_layouts<const N: usize>(pairs: &[LayoutPair; N]) -> [AudioIOLayout; N] {
@@ -288,8 +343,8 @@ const fn make_layouts<const N: usize>(pairs: &[LayoutPair; N]) -> [AudioIOLayout
     layouts
 }
 
-pub static VST3_LAYOUTS: [AudioIOLayout; 25] = make_layouts(&VST3_PAIRS);
-pub static CLAP_LAYOUTS: [AudioIOLayout; 17] = make_layouts(&CLAP_PAIRS);
+pub static VST3_LAYOUTS: [AudioIOLayout; 32] = make_layouts(&VST3_PAIRS);
+pub static CLAP_LAYOUTS: [AudioIOLayout; 22] = make_layouts(&CLAP_PAIRS);
 
 pub fn pair(index: usize, api: PluginApi) -> Option<LayoutPair> {
     match api {
@@ -359,6 +414,29 @@ mod tests {
     }
 
     #[test]
+    fn seven_zero_uses_the_seven_one_host_order_without_lfe() {
+        let layout = SpeakerLayout::SevenZero;
+        assert_eq!(layout.id(), "7.0");
+        assert_eq!(layout.channels(), 7);
+        assert_eq!(
+            layout.vst3_arrangement(),
+            SpeakerLayout::SevenOne.vst3_arrangement() & !(1 << 3)
+        );
+        let permutation: Vec<_> = (0..7)
+            .map(|channel| layout.host_to_sotf(PluginApi::Vst3, channel).unwrap())
+            .collect();
+        assert_eq!(permutation, [0, 1, 2, 5, 6, 3, 4]);
+        let index = CLAP_PAIRS
+            .iter()
+            .position(|pair| pair.input == layout && pair.output == layout)
+            .expect("CLAP must advertise the 7.0 input");
+        assert_eq!(
+            clap_channel_map(index, true, 0),
+            Some([0_u8, 1, 2, 9, 10, 4, 5].as_slice())
+        );
+    }
+
+    #[test]
     fn declared_surround_pairs_preserve_roles_and_have_distinct_host_layouts() {
         for api in [PluginApi::Clap, PluginApi::Vst3] {
             let layouts: &[AudioIOLayout] = if api == PluginApi::Clap {
@@ -414,7 +492,7 @@ mod tests {
             SpeakerLayout::FiveOneFour.vst3_arrangement(),
             SpeakerLayout::SevenOneTwo.vst3_arrangement()
         );
-        assert_eq!(CLAP_LAYOUTS.len(), 17);
+        assert_eq!(CLAP_LAYOUTS.len(), 22);
         assert!(CLAP_PAIRS.iter().all(|pair| !matches!(
             pair.output,
             SpeakerLayout::NineOneFour | SpeakerLayout::NineOneSix

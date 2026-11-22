@@ -733,7 +733,7 @@ mod tests {
 
     #[test]
     fn preserves_each_bed_sample_after_the_height_delay() {
-        for input_id in ["5.0", "5.1", "7.1"] {
+        for input_id in ["5.0", "5.1", "7.0", "7.1"] {
             let input_layout = layout(input_id);
             let output_layout = layout("9.1.6");
             let mut plugin = processor(input_id, "9.1.6");

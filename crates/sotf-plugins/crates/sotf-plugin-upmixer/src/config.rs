@@ -3,48 +3,17 @@
 // ============================================================================
 
 use crate::params::consts::{DECORRELATION_MODES, FREQUENCY_RESOLUTIONS};
-use serde::{Deserialize, Deserializer, Serialize};
-use sotf_host::speaker_config::{ChannelLayout, ChannelRole};
+use serde::{Deserialize, Serialize};
+use sotf_host::speaker_config::{ChannelLayout, ChannelRole, LEGACY_SPEAKER_CONFIG_IDS};
 use sotf_host::{define_choice_index_deserializer, define_choice_string_deserializer};
 
 define_choice_string_deserializer!(deserialize_frequency_resolution, FREQUENCY_RESOLUTIONS);
 define_choice_index_deserializer!(deserialize_decorrelation_mode, DECORRELATION_MODES);
 
-/// Accept both a string (`"5.1"`) and a legacy integer index (`2` → `"5.1"`).
-fn deserialize_speaker_config<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    use serde::de;
-
-    struct Visitor;
-    impl<'de> de::Visitor<'de> for Visitor {
-        type Value = String;
-        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-            f.write_str("a speaker config string or legacy integer index")
-        }
-        fn visit_str<E: de::Error>(self, v: &str) -> Result<String, E> {
-            Ok(v.to_string())
-        }
-        fn visit_string<E: de::Error>(self, v: String) -> Result<String, E> {
-            Ok(v)
-        }
-        fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
-            const C: &[&str] = &[
-                "2.0", "5.0", "5.1", "7.0", "7.1", "7.1.2", "7.1.4", "9.1", "9.1.4", "9.1.6",
-                "5.1.6",
-            ];
-            Ok(C.get(v as usize).unwrap_or(&"5.1").to_string())
-        }
-        fn visit_i64<E: de::Error>(self, v: i64) -> Result<String, E> {
-            self.visit_u64(v as u64)
-        }
-        fn visit_f64<E: de::Error>(self, v: f64) -> Result<String, E> {
-            self.visit_u64(v as u64)
-        }
-    }
-    deserializer.deserialize_any(Visitor)
-}
+// Accept both a string (`"5.1"`) and a legacy integer index (`2` → `"5.1"`)
+// resolved through the shared frozen v1 table. Out-of-range indices are
+// hard errors instead of silently selecting another layout.
+define_choice_string_deserializer!(deserialize_speaker_config, LEGACY_SPEAKER_CONFIG_IDS);
 
 pub fn default_fft_size() -> usize {
     2048
@@ -716,6 +685,7 @@ impl UpmixerMultichannelParams {
             (1, &[Fl, Fr, C, Sl, Sr]),
             (2, &[Fl, Fr, C, Lfe, Sl, Sr]),
             (3, &[Fl, Fr, C, Lfe, Sl, Sr, Bl, Br]),
+            (5, &[Fl, Fr, C, Sl, Sr, Bl, Br]),
         ];
         canonical
             .iter()
@@ -742,6 +712,7 @@ impl UpmixerMultichannelParams {
             2 => "5.1",
             3 => "7.1",
             4 if self.input_format_index() == 4 => return Ok(()),
+            5 => "7.0",
             _ => return Err("unsupported upmixer input format selection".into()),
         };
         let speakers = sotf_host::speaker_config::get_speaker_config(id)
@@ -831,5 +802,25 @@ mod speaker_config_tests {
         let older: UpmixerPluginCoreParams =
             serde_json::from_value(serde_json::json!({ "speaker_config": 9 })).unwrap();
         assert_eq!(older.speaker_config, "9.1.6");
+    }
+
+    #[test]
+    fn legacy_numeric_speaker_config_uses_the_frozen_v1_table() {
+        let numeric: UpmixerPluginCoreParams =
+            serde_json::from_value(serde_json::json!({ "speaker_config": 4 })).unwrap();
+        assert_eq!(numeric.speaker_config, "7.1");
+        for invalid in [
+            serde_json::json!(11),
+            serde_json::json!(-1),
+            serde_json::json!(1.5),
+        ] {
+            assert!(
+                serde_json::from_value::<UpmixerPluginCoreParams>(
+                    serde_json::json!({ "speaker_config": invalid })
+                )
+                .is_err(),
+                "{invalid} must not silently select a layout"
+            );
+        }
     }
 }

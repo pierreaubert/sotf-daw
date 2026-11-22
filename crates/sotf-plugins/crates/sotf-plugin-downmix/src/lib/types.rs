@@ -14,7 +14,7 @@ pub struct DownmixPluginParams {
     #[serde(default)]
     pub input_channels: usize,
     /// Explicit structural channel layout (for example `"5.1.2"`). Required
-    /// when the channel count is ambiguous (currently 8 and 10 channels).
+    /// when the channel count is ambiguous (currently 8, 10, and 12 channels).
     #[serde(default)]
     pub input_layout: Option<String>,
     #[serde(default = "default_center_gain_db")]

@@ -803,6 +803,33 @@ fn explicit_layout_distinguishes_7_1_from_5_1_2() {
 }
 
 #[test]
+fn twelve_channels_require_an_explicit_layout() {
+    let params = |layout: Option<&str>| DownmixPluginParams {
+        input_channels: 12,
+        input_layout: layout.map(str::to_string),
+        center_gain_db: -3.0,
+        surround_gain_db: -3.0,
+        height_gain_db: -6.0,
+        lfe_gain_db: -10.0,
+        phase_coherence: false,
+        phase_blend_low_hz: 500.0,
+        phase_blend_high_hz: 2000.0,
+        itu_mode: false,
+        matrix_ltrt: false,
+    };
+    // 12 channels can be 7.1.4 or 5.1.6. A count alone must not select
+    // 7.1.4 and read 5.1.6 top-front channels as back channels.
+    let error = DownmixPlugin::try_from_params(params(None))
+        .err()
+        .expect("12 channels without a layout must be rejected");
+    assert!(error.contains("ambiguous 12-channel input"), "{error}");
+    for layout in ["7.1.4", "5.1.6"] {
+        let plugin = DownmixPlugin::try_from_params(params(Some(layout))).unwrap();
+        assert_eq!(plugin.speaker_config.unwrap().id, layout);
+    }
+}
+
+#[test]
 fn reinitialize_discards_old_rate_stream_and_filter_state() {
     let mut reused = DownmixPlugin::new(6);
     reused.initialize(44_100.0).unwrap();

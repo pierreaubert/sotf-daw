@@ -208,6 +208,62 @@ const METER_GROUPS_7_1: &[MeterGroupSpec] = &[
     },
 ];
 
+const METER_GROUPS_7_0: &[MeterGroupSpec] = &[
+    MeterGroupSpec {
+        name: "L/R",
+        channels: &[
+            MeterChannelSpec {
+                index: 0,
+                label: "L",
+                display_chars: &["L"],
+            },
+            MeterChannelSpec {
+                index: 1,
+                label: "R",
+                display_chars: &["R"],
+            },
+        ],
+    },
+    MeterGroupSpec {
+        name: "Center",
+        channels: &[MeterChannelSpec {
+            index: 2,
+            label: "C",
+            display_chars: &["C"],
+        }],
+    },
+    MeterGroupSpec {
+        name: "Side",
+        channels: &[
+            MeterChannelSpec {
+                index: 3,
+                label: "SL",
+                display_chars: &["S", "L"],
+            },
+            MeterChannelSpec {
+                index: 4,
+                label: "SR",
+                display_chars: &["S", "R"],
+            },
+        ],
+    },
+    MeterGroupSpec {
+        name: "Rear",
+        channels: &[
+            MeterChannelSpec {
+                index: 5,
+                label: "BL",
+                display_chars: &["B", "L"],
+            },
+            MeterChannelSpec {
+                index: 6,
+                label: "BR",
+                display_chars: &["B", "R"],
+            },
+        ],
+    },
+];
+
 const METER_GROUPS_5_1_2: &[MeterGroupSpec] = &[
     MeterGroupSpec {
         name: "L/R",
@@ -1048,6 +1104,36 @@ pub const CONFIG_7_1: SpeakerConfig = SpeakerConfig {
         },
     ],
     meter_groups: METER_GROUPS_7_1,
+};
+
+/// 7.0 Surround
+pub const CONFIG_7_0: SpeakerConfig = SpeakerConfig {
+    id: "7.0",
+    name: "7.0 Surround",
+    description: "7.0 surround with side and back speakers, without LFE channel",
+    total_channels: 7,
+    speakers: &[
+        CONFIG_7_1.speakers[0],
+        CONFIG_7_1.speakers[1],
+        CONFIG_7_1.speakers[2],
+        SpeakerPosition {
+            channel: 3,
+            ..CONFIG_7_1.speakers[4]
+        },
+        SpeakerPosition {
+            channel: 4,
+            ..CONFIG_7_1.speakers[5]
+        },
+        SpeakerPosition {
+            channel: 5,
+            ..CONFIG_7_1.speakers[6]
+        },
+        SpeakerPosition {
+            channel: 6,
+            ..CONFIG_7_1.speakers[7]
+        },
+    ],
+    meter_groups: METER_GROUPS_7_0,
 };
 
 /// 5.1.2 Atmos

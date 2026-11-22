@@ -397,6 +397,45 @@ fn test_normalize_gains_l2_zero_input_is_noop() {
 }
 
 #[test]
+fn legacy_speaker_config_indices_use_the_frozen_v1_table() {
+    use super::get::speaker_config_id_from_legacy_index;
+    assert_eq!(speaker_config_id_from_legacy_index(0), Some("2.0"));
+    assert_eq!(speaker_config_id_from_legacy_index(3), Some("7.0"));
+    assert_eq!(speaker_config_id_from_legacy_index(4), Some("7.1"));
+    assert_eq!(speaker_config_id_from_legacy_index(10), Some("5.1.6"));
+    assert_eq!(speaker_config_id_from_legacy_index(11), None);
+}
+
+#[test]
+fn seven_zero_is_the_seven_one_bed_without_lfe() {
+    let config = get_speaker_config("7.0").expect("7.0 must be available by name");
+    assert!(get_available_configs().contains(&"7.0"));
+    let layout = ChannelLayout::from_speaker_config(config).unwrap();
+    let roles = [
+        ChannelRole::FrontLeft,
+        ChannelRole::FrontRight,
+        ChannelRole::FrontCenter,
+        ChannelRole::SideLeft,
+        ChannelRole::SideRight,
+        ChannelRole::BackLeft,
+        ChannelRole::BackRight,
+    ];
+    assert_eq!(config.total_channels, roles.len());
+    for (index, role) in roles.into_iter().enumerate() {
+        assert_eq!(layout.role_at(index), Some(role), "channel {index}");
+    }
+    let mut meters = config
+        .meter_groups
+        .iter()
+        .flat_map(|group| group.channels)
+        .map(|channel| channel.index)
+        .collect::<Vec<_>>();
+    meters.sort_unstable();
+    assert_eq!(meters, (0..7).collect::<Vec<_>>());
+    assert_eq!(get_speaker_config_by_channels(7).unwrap().id, "7.0");
+}
+
+#[test]
 fn five_one_six_has_distinct_height_roles_and_meter_channels() {
     let config = get_speaker_config("5.1.6").expect("5.1.6 must be available by name");
     assert!(get_available_configs().contains(&"5.1.6"));

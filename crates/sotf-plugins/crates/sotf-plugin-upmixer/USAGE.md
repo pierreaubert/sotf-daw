@@ -2,7 +2,7 @@
 
 ## Overview
 
-The upmixer converts stereo to multichannel audio or extends a 5.0, 5.1, or 7.1 bed with height channels. The surround-input path keeps the original bed by default and can create a subwoofer feed for full-range or bass-managed speakers.
+The upmixer converts stereo to multichannel audio or extends a 5.0, 5.1, 7.0, or 7.1 bed with height channels. The surround-input path keeps the original bed by default and can create a subwoofer feed for full-range or bass-managed speakers.
 
 Initialization accepts finite sample rates from 8 kHz through 384 kHz. A host or output device can impose a narrower range.
 
@@ -24,9 +24,10 @@ Select the input layout to match the actual channel order. The canonical SOTF or
 | --- | --- |
 | 5.0 | Front left, front right, center, side left, side right |
 | 5.1 | Front left, front right, center, LFE, side left, side right |
+| 7.0 | Front left, front right, center, side left, side right, back left, back right |
 | 7.1 | Front left, front right, center, LFE, side left, side right, back left, back right |
 
-Custom JSON layouts can assign the same roles to different indices. Unknown, duplicated, or missing roles and outputs that discard an input role are rejected. A 5.0 input can use any listed output except stereo. A 5.1 input requires an output with the same bed; 7.1 input requires an output with both side and back channels. Extra horizontal channels are silent. With bass mode off, a new LFE is silent and an incoming LFE is copied unchanged.
+Custom JSON layouts can assign the same roles to different indices. Unknown, duplicated, or missing roles and outputs that discard an input role are rejected. A 5.0 input can use any listed output except stereo. A 5.1 input requires an output with the same bed; 7.0 and 7.1 inputs require an output with both side and back channels. Extra horizontal channels are silent. With bass mode off, a new LFE is silent and an incoming LFE is copied unchanged.
 
 The engine checks a known preceding upmixer layout against the declared input, including through gain nodes. It currently receives only a channel count for a decoded source and cannot verify its speaker roles; the selected input layout must match the source's actual order. An intermediate plugin without declared role behavior makes that upstream layout unknown.
 

@@ -232,6 +232,49 @@ fn upmixer_rejects_known_same_width_but_different_speaker_roles() {
 }
 
 #[test]
+fn numeric_speaker_config_keeps_the_upstream_layout_for_role_checks() {
+    use sotf_plugins::speaker_config::{ChannelLayout, get_speaker_config};
+
+    let layout =
+        |name| ChannelLayout::from_speaker_config(get_speaker_config(name).unwrap()).unwrap();
+    // Legacy numeric form: index 4 selects "7.1" in the frozen v1 table,
+    // exactly as the plugin decoder resolves it. The engine must retain
+    // that 8-channel layout instead of falling back to a 6-channel guess
+    // and dropping it on the width mismatch.
+    let source = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": layout("5.0"), "speaker_config": 4
+        }),
+    );
+    let compatible = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": layout("7.1"), "speaker_config": "7.1.4"
+        }),
+    );
+    assert!(build_plugin_host(&[source.clone(), compatible], 48_000, 5).is_ok());
+
+    let mut swapped = layout("7.1");
+    swapped.channels[0].index = 1;
+    swapped.channels[1].index = 0;
+    let wrong_order = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": swapped, "speaker_config": "7.1.4"
+        }),
+    );
+    let error = build_plugin_host(&[source, wrong_order], 48_000, 5)
+        .err()
+        .expect("swapped downstream roles must be rejected for numeric presets too");
+    assert!(
+        error.message.contains("upmixer expects"),
+        "{}",
+        error.message
+    );
+}
+
+#[test]
 fn test_downmix_adapts_to_current_chain_channel_count() {
     let sample_rate = 48000;
     let settings = PluginSettings::default_for(&PluginType::Downmix).unwrap();

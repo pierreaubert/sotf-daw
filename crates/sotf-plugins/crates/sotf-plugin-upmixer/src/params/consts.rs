@@ -1,15 +1,17 @@
 use sotf_host::param_specs::ParamSpec;
 use sotf_host::plugin_layout::*;
 
+// New layouts append at the end so existing choice indices never move.
 pub const SPEAKER_CONFIGS: &[&str] = &[
     "2.0", "5.0", "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6", "5.1.6",
+    "7.0",
 ];
 
 pub const DECORRELATION_MODES: &[&str] = &["Velvet Noise", "LFO Phase"];
 
 pub const FREQUENCY_RESOLUTIONS: &[&str] = &["ERB", "Fine ERB", "Per Bin"];
 pub const SURROUND_BASS_MODES: &[&str] = &["Off", "Derived", "Managed"];
-pub const INPUT_FORMATS: &[&str] = &["Stereo", "5.0", "5.1", "7.1", "Custom"];
+pub const INPUT_FORMATS: &[&str] = &["Stereo", "5.0", "5.1", "7.1", "Custom", "7.0"];
 
 pub const PARAMS: &[ParamSpec] = &[
     // 0: speaker_config

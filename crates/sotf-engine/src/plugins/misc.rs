@@ -1,12 +1,29 @@
 use serde::Deserializer;
+use sotf_plugins::speaker_config::{
+    LEGACY_SPEAKER_CONFIG_IDS, speaker_config_id_from_legacy_index,
+};
 
 /// Deserialize `speaker_config` accepting both a string (e.g. `"5.1"`) and
-/// a legacy integer index (e.g. `0` → `"2.0"`, `2` → `"5.1"`).
+/// a legacy integer index (e.g. `0` → `"2.0"`, `2` → `"5.1"`), resolved
+/// through the shared frozen v1 table so engine settings decode numeric
+/// presets to the same layout as the plugin. Out-of-range indices are
+/// hard errors instead of silently selecting another layout.
 pub(super) fn deserialize_speaker_config<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
     use serde::de;
+
+    fn from_index<E: de::Error>(index: u64) -> Result<String, E> {
+        speaker_config_id_from_legacy_index(index)
+            .map(str::to_string)
+            .ok_or_else(|| {
+                E::custom(format!(
+                    "invalid legacy speaker_config index {index}; expected 0..{}",
+                    LEGACY_SPEAKER_CONFIG_IDS.len()
+                ))
+            })
+    }
 
     struct SpeakerConfigVisitor;
 
@@ -26,19 +43,23 @@ where
         }
 
         fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
-            const CONFIGS: &[&str] = &[
-                "2.0", "5.0", "5.1", "7.0", "7.1", "7.1.2", "7.1.4", "9.1", "9.1.4", "9.1.6",
-                "5.1.6",
-            ];
-            Ok(CONFIGS.get(v as usize).unwrap_or(&"5.1").to_string())
+            from_index(v)
         }
 
         fn visit_i64<E: de::Error>(self, v: i64) -> Result<String, E> {
-            self.visit_u64(v as u64)
+            u64::try_from(v)
+                .map_err(|_| E::custom(format!("invalid legacy speaker_config index {v}")))
+                .and_then(from_index)
         }
 
         fn visit_f64<E: de::Error>(self, v: f64) -> Result<String, E> {
-            self.visit_u64(v as u64)
+            if v.is_finite() && v.fract() == 0.0 && v >= 0.0 {
+                from_index(v as u64)
+            } else {
+                Err(E::custom(format!(
+                    "invalid legacy speaker_config index {v}; expected an integral index"
+                )))
+            }
         }
     }
 

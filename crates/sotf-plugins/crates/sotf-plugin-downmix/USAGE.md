@@ -154,7 +154,7 @@ it cannot restore energy already cancelled by the routing sum.
 - Matrix gains are exact and are not silently normalized. Reserve downstream
   headroom or add an explicit limiter when correlated channels can sum above
   0 dBFS.
-- Supply `input_layout` for ambiguous 8- and 10-channel inputs. Unknown
+- Supply `input_layout` for ambiguous 8-, 10-, and 12-channel inputs (12 channels can be 7.1.4 or 5.1.6). Unknown
   ambiguous layouts are rejected instead of guessed.
 - Custom surround panning is constant-power. Heights additionally receive cosine elevation attenuation; this intentionally reduces their contribution to the horizontal image.
 - For unknown channel counts without a speaker config, channels are linearly panned across the stereo field.
