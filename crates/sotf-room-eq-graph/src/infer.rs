@@ -61,9 +61,18 @@ pub(super) fn infer_upmixer_output_channels(parameters: &serde_json::Value) -> O
         "7.1" => Some(8),
         "7.1.2" => Some(10),
         "5.1.4" => Some(10),
-        "7.1.4" => Some(12),
+        "7.1.4" | "5.1.6" => Some(12),
         "9.1.4" => Some(14),
         "9.1.6" => Some(16),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn infers_five_one_six_as_twelve_output_channels() {
+        let params = serde_json::json!({ "speaker_config": "5.1.6" });
+        assert_eq!(super::infer_upmixer_output_channels(&params), Some(12));
     }
 }

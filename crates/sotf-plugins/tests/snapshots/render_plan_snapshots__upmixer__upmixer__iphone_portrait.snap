@@ -41,6 +41,18 @@ expression: plan
       ],
       "read_only": false,
       "enabled": true
+    },
+    {
+      "param_index": 60,
+      "param_name": "Input Layout",
+      "control_type": "selector",
+      "unit": "",
+      "range": [
+        0.0,
+        4.0
+      ],
+      "read_only": false,
+      "enabled": true
     }
   ],
   "main_groups": [
@@ -180,6 +192,167 @@ expression: plan
     }
   ],
   "tabs": [
+    {
+      "name": "Surround Bass",
+      "controls": [
+        {
+          "param_index": 61,
+          "param_name": "Bypass Surround",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 48,
+          "param_name": "Bass Mode",
+          "control_type": "selector",
+          "unit": "",
+          "range": [
+            0.0,
+            2.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 49,
+          "param_name": "Bass Crossover",
+          "control_type": "knob",
+          "unit": "Hz",
+          "range": [
+            20.0,
+            180.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 50,
+          "param_name": "Bass Gain",
+          "control_type": "knob",
+          "unit": "dB",
+          "range": [
+            -60.0,
+            12.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 51,
+          "param_name": "LFE Playback Gain",
+          "control_type": "knob",
+          "unit": "dB",
+          "range": [
+            0.0,
+            10.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 52,
+          "param_name": "Combine LFE",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 53,
+          "param_name": "Bass Front Left",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 54,
+          "param_name": "Bass Front Right",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 55,
+          "param_name": "Bass Center",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 56,
+          "param_name": "Bass Side Left",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 57,
+          "param_name": "Bass Side Right",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 58,
+          "param_name": "Bass Back Left",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        },
+        {
+          "param_index": 59,
+          "param_name": "Bass Back Right",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "read_only": false,
+          "enabled": false
+        }
+      ]
+    },
     {
       "name": "Bass & Output",
       "controls": [
@@ -388,6 +561,18 @@ expression: plan
           "range": [
             0.0,
             2.0
+          ],
+          "read_only": false,
+          "enabled": true
+        },
+        {
+          "param_index": 47,
+          "param_name": "Bypass Heights",
+          "control_type": "toggle",
+          "unit": "",
+          "range": [
+            0.0,
+            1.0
           ],
           "read_only": false,
           "enabled": true

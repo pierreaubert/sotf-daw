@@ -133,3 +133,46 @@ snapshot_plugin!(mono_to_stereo, sotf_plugin_mono_to_stereo::params::Params);
 snapshot_plugin!(pnd, sotf_plugin_pnd::params::Params);
 snapshot_plugin!(upmixer, sotf_plugin_upmixer::params::Params);
 snapshot_plugin!(xtc, sotf_plugin_xtc::params::Params);
+
+#[test]
+fn upmixer_controls_follow_the_selected_input_layout() {
+    use sotf_host::design_system::DesignSystem;
+    use sotf_host::render_plan::build_render_plan_from_layout_with_values;
+    use sotf_plugin_upmixer::params::{LAYOUT, PARAMS};
+
+    let mut values: Vec<_> = PARAMS.iter().map(|param| param.default_f64()).collect();
+    let input = PARAMS
+        .iter()
+        .position(|param| param.engine_key == "input_format")
+        .unwrap();
+    for input_format in 0..=4 {
+        values[input] = f64::from(input_format);
+        let plan = build_render_plan_from_layout_with_values(
+            "upmixer",
+            PARAMS,
+            &LAYOUT,
+            &values,
+            1_200.0,
+            &DesignSystem::neutral(),
+        );
+        let bass = plan
+            .tabs
+            .iter()
+            .find(|tab| tab.name == "Surround Bass")
+            .unwrap();
+        assert!(
+            bass.controls
+                .iter()
+                .all(|control| control.enabled == (input_format != 0))
+        );
+        for name in ["Auto Gain", "Subharmonic Synth", "Binaural Preview"] {
+            let control = plan
+                .output_controls
+                .iter()
+                .chain(plan.tabs.iter().flat_map(|tab| &tab.controls))
+                .find(|control| control.param_name == name)
+                .unwrap_or_else(|| panic!("missing {name}"));
+            assert_eq!(control.enabled, input_format == 0, "{name}");
+        }
+    }
+}

@@ -455,9 +455,15 @@ private func testEveryPublishedWrapperConstructs() throws {
                     "\(wrapperCase.name): missing update mode for \(parameter.identifier)"
                 )
             }
+            guard let floatingPoint = unit.parameterIsFloatingPointForTesting(address: parameter.address) else {
+                throw SmokeFailure.failure(
+                    "\(wrapperCase.name): missing type for \(parameter.identifier)"
+                )
+            }
+            let preciseRamp = wrapperCase.name == "Upmixer" && parameter.identifier == "height_gain"
             try require(
-                parameter.flags.contains(.flag_CanRamp) == (steps == 0 && realtime),
-                "\(wrapperCase.name).\(parameter.identifier): CanRamp disagrees with steps=\(steps), realtime=\(realtime)"
+                parameter.flags.contains(.flag_CanRamp) == (floatingPoint && realtime && (steps == 0 || preciseRamp)),
+                "\(wrapperCase.name).\(parameter.identifier): CanRamp disagrees with steps=\(steps), floatingPoint=\(floatingPoint), realtime=\(realtime)"
             )
         }
         try require(
@@ -800,6 +806,202 @@ private func testVariableToStereoCapabilityRejectionAndRecovery() throws {
                 recovered,
                 caseName: "Binaural wrong-output recovery"
             )
+        }
+    }
+}
+
+private func testUpmixerOutputLayoutRecreation() throws {
+    let cases: [(String, AVAudioChannelCount, AudioChannelLayoutTag, AUValue)] = [
+        ("5.1.4", 10, kAudioChannelLayoutTag_Atmos_5_1_4, 5),
+        ("7.1", 8, kAudioChannelLayoutTag_MPEG_7_1_C, 3),
+        ("5.1.2", 8, discreteTag(8), 4),
+        ("7.1.4", 12, kAudioChannelLayoutTag_Atmos_7_1_4, 7),
+        ("5.0", 5, kAudioChannelLayoutTag_MPEG_5_0_A, 1),
+        ("5.1", 6, kAudioChannelLayoutTag_MPEG_5_1_A, 2),
+        ("9.1.4", 14, discreteTag(14), 8),
+        ("9.1.6", 16, discreteTag(16), 9),
+        ("2.0", 2, kAudioChannelLayoutTag_Stereo, 0),
+    ]
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    let input = try stereoFormat(sampleRate: 48_000)
+    for (name, channels, tag, expectedChoice) in cases {
+        let output = try format(sampleRate: 48_000, channels: channels, tag: tag)
+        let configuration = unit.pluginConfiguration(inputFormat: input, outputFormat: output)
+        let json = try JSONSerialization.jsonObject(with: Data(configuration.utf8)) as? [String: Any]
+        try require(json?["speaker_config"] as? String == name,
+                    "\(name): incorrect construction identity: \(configuration)")
+        let (_, rendered) = try render(unit, inputFormat: input, outputFormat: output, frames: 4096)
+        try assertFiniteOverwrittenAndAudible(
+            rendered,
+            caseName: "Upmixer \(name)",
+            allowedSilentChannels: Set(2..<Int(channels))
+        )
+        let actualChoice = unit.parameterValueForTesting(identifier: "speaker_config") ?? .nan
+        try require(abs(actualChoice - expectedChoice) < 1.0e-4,
+                    "\(name): format recreation selected \(actualChoice), expected \(expectedChoice)")
+    }
+}
+
+private func testUpmixerReinitializingStateRestore() throws {
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    guard let initialCutoff = unit.parameterTree?.allParameters.first(where: {
+        $0.identifier == "bass_cutoff_hz"
+    }) else {
+        throw SmokeFailure.failure("Upmixer is missing its crossover parameter")
+    }
+    _ = initialCutoff.value // Prime Core Audio's cached parameter value.
+    let observedTreeChanges = Atomic<Int>(0)
+    let observedCutoffBits = Atomic<UInt32>(0)
+    let observation = unit.observe(\.parameterTree, options: [.new]) { changed, _ in
+        let value = changed.parameterTree?.allParameters.first(where: {
+            $0.identifier == "bass_cutoff_hz"
+        })?.value ?? .nan
+        observedCutoffBits.store(value.bitPattern, ordering: .releasing)
+        observedTreeChanges.wrappingAdd(1, ordering: .relaxed)
+    }
+    defer { observation.invalidate() }
+    for wanted: Float in [20, 21.5929, 80, 149.333, 180] {
+        guard var state = unit.fullState else {
+            throw SmokeFailure.failure("Upmixer could not save state")
+        }
+        // The host dictionary overrides the plugin blob. Restoring this value
+        // needs a fresh DSP instance, not the realtime parameter setter.
+        state["bass_cutoff_hz"] = NSNumber(value: wanted)
+        unit.fullState = state
+        let restored = (unit.fullState?["bass_cutoff_hz"] as? NSNumber)?.floatValue ?? .nan
+        try require(abs(restored - wanted) < 0.001,
+                    "Upmixer crossover restore wanted \(wanted), got \(restored)")
+        let displayed = unit.parameterTree?.allParameters.first(where: {
+            $0.identifier == "bass_cutoff_hz"
+        })?.value ?? .nan
+        try require(abs(displayed - wanted) < 0.001,
+                    "Upmixer host parameter wanted \(wanted), got \(displayed)")
+        let observed = Float(bitPattern: observedCutoffBits.load(ordering: .acquiring))
+        try require(observedTreeChanges.load(ordering: .relaxed) > 0
+                        && abs(observed - wanted) < 0.001,
+                    "Upmixer did not notify the host of the refreshed parameter tree")
+    }
+    guard var state = unit.fullState else {
+        throw SmokeFailure.failure("Upmixer could not save state after crossover sweep")
+    }
+    state["bass_gain_db"] = NSNumber(value: -8.25)
+    state["bass_source_center"] = NSNumber(value: false)
+    unit.fullState = state
+    let restored = unit.fullState
+    let restoredGain = (restored?["bass_gain_db"] as? NSNumber)?.floatValue ?? .nan
+    try require(abs(restoredGain + 8.25) < 0.001,
+                "Upmixer bass gain override was not restored: \(restoredGain)")
+    try require((restored?["bass_source_center"] as? NSNumber)?.boolValue == false,
+                "Upmixer bass source override was not restored")
+    state["bass_cutoff_hz"] = NSNumber(value: 181)
+    unit.fullState = state
+    let afterInvalid = (unit.fullState?["bass_cutoff_hz"] as? NSNumber)?.floatValue ?? .nan
+    try require(abs(afterInvalid - 180) < 0.001,
+                "invalid Upmixer crossover changed the live state")
+}
+
+private func testUpmixerStructuralParameterMetadata() throws {
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    let structural = [
+        "bass_mode", "bass_cutoff_hz", "bass_gain_db", "lfe_playback_gain_db",
+        "combine_input_lfe", "bass_source_front_left", "bass_source_front_right",
+        "bass_source_center", "bass_source_side_left", "bass_source_side_right",
+        "bass_source_back_left", "bass_source_back_right", "input_format",
+        "speaker_config", "low_latency", "enable_ml_detection", "frequency_resolution",
+        "bypass_all_processing", "lfe_cutoff_hz", "bandpass_hz", "height_hf_cap_hz",
+    ]
+    func checkMetadata(_ stage: String) throws {
+        let parameters = unit.parameterTree?.allParameters ?? []
+        for identifier in structural {
+            guard let parameter = parameters.first(where: { $0.identifier == identifier }) else {
+                throw SmokeFailure.failure("\(stage): missing structural parameter \(identifier)")
+            }
+            try require(parameter.flags.contains(.flag_NonRealTime),
+                        "\(stage): \(identifier) must be marked non-realtime")
+            try require(!parameter.flags.contains(.flag_CanRamp),
+                        "\(stage): \(identifier) must not advertise ramps")
+            try require(parameter.flags.contains(.flag_IsReadable) && parameter.flags.contains(.flag_IsWritable),
+                        "\(stage): \(identifier) must remain readable and writable")
+        }
+        guard let height = parameters.first(where: { $0.identifier == "height_gain" }) else {
+            throw SmokeFailure.failure("\(stage): missing height gain")
+        }
+        try require(height.flags.contains(.flag_CanRamp) && !height.flags.contains(.flag_NonRealTime),
+                    "\(stage): precise height gain must be realtime-rampable")
+        guard let bypass = parameters.first(where: { $0.identifier == "bypass_heights" }) else {
+            throw SmokeFailure.failure("\(stage): missing height bypass")
+        }
+        try require(!bypass.flags.contains(.flag_CanRamp) && !bypass.flags.contains(.flag_NonRealTime),
+                    "\(stage): height bypass must be realtime and discrete")
+    }
+    try checkMetadata("initial")
+    guard var state = unit.fullState else { throw SmokeFailure.failure("Upmixer has no state") }
+    state["bass_cutoff_hz"] = NSNumber(value: 90)
+    unit.fullState = state
+    let restored = (unit.fullState?["bass_cutoff_hz"] as? NSNumber)?.floatValue ?? .nan
+    try require(abs(restored - 90) < 0.001, "Upmixer crossover restore failed")
+    try checkMetadata("restored")
+    let output = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+    try unit.outputBusses[0].setFormat(output)
+    try unit.allocateRenderResources()
+    defer { unit.deallocateRenderResources() }
+    try checkMetadata("recreated")
+}
+
+private func testUpmixerNativeRenderAllocation() throws {
+    let inputFormat = try stereoFormat(sampleRate: 48_000)
+    let layouts: [(AVAudioChannelCount, AudioChannelLayoutTag)] = [
+        (10, kAudioChannelLayoutTag_Atmos_5_1_4),
+        (12, kAudioChannelLayoutTag_Atmos_7_1_4),
+    ]
+    for (channels, tag) in layouts {
+        let outputFormat = try format(sampleRate: 48_000, channels: channels, tag: tag)
+        let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+        try unit.inputBusses[0].setFormat(inputFormat)
+        try unit.outputBusses[0].setFormat(outputFormat)
+        unit.maximumFramesToRender = 512
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+        guard let input = AVAudioPCMBuffer(pcmFormat: inputFormat, frameCapacity: 512),
+              let output = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: 512),
+              let gain = unit.parameterTree?.allParameters.first(where: {
+                  $0.identifier == "height_gain"
+              }) else {
+            throw SmokeFailure.failure("cannot prepare Upmixer native render test")
+        }
+        input.frameLength = 512
+        output.frameLength = 512
+        for channel in 0..<2 {
+            for frame in 0..<512 {
+                input.floatChannelData![channel][frame] =
+                    Float(0.1 + 0.05 * sin(Double(frame + channel * 7) * 0.11))
+            }
+        }
+        for frames: AVAudioFrameCount in [1, 64, 128, 512] {
+            input.frameLength = frames
+            output.frameLength = frames
+            for (automation, name) in [
+                (SOTF_NATIVE_AUTOMATION_NONE, "static"),
+                (SOTF_NATIVE_AUTOMATION_POINT, "point automation"),
+                (SOTF_NATIVE_AUTOMATION_RAMP, "ramp automation"),
+            ] {
+                var allocations: UInt64 = 0
+                var frees: UInt64 = 0
+                let status = sotf_test_native_render(
+                    unit, input.mutableAudioBufferList, output.mutableAudioBufferList,
+                    frames, gain.address, automation, &allocations, &frees
+                )
+                if allocations != 0 || frees != 0 { sotfMallocCounterDumpCallers() }
+                try require(status == noErr,
+                            "Upmixer \(channels)ch/\(frames) \(name) render returned \(status)")
+                try require(allocations == 0 && frees == 0,
+                            "Upmixer \(channels)ch/\(frames) \(name) render allocated \(allocations) and freed \(frees)")
+                try assertFiniteOverwrittenAndAudible(
+                    output,
+                    caseName: "Upmixer \(channels)ch/\(frames) native render",
+                    allowedSilentChannels: Set(2..<Int(channels))
+                )
+            }
         }
     }
 }
@@ -2003,6 +2205,531 @@ private func testParameterRampPersistsAcrossBlocks() throws {
     try require(abs(secondValue - 20) < 0.01, "cross-block ramp missed target: \(secondValue)")
 }
 
+private func testUpmixerStatePreservesUnsteppedValues() throws {
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    let stereo = try stereoFormat(sampleRate: 48_000)
+    let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+    try unit.inputBusses[0].setFormat(stereo)
+    try unit.outputBusses[0].setFormat(immersive)
+    try unit.allocateRenderResources()
+    unit.deallocateRenderResources()
+    guard var incoming = unit.fullState, let data = incoming["sotf_state"] as? Data,
+          var object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+        throw SmokeFailure.failure("cannot capture Upmixer state for unstepped values")
+    }
+    let values: [String: Float] = [
+        "gain_front_direct": 0.73,
+        "voice_freq_min_hz": 537.3,
+        "bass_gain_db": 0.13,
+        "bass_cutoff_hz": 83.7,
+        "height_gain": 0.731,
+    ]
+    for (identifier, value) in values {
+        object[identifier] = value
+        incoming.removeValue(forKey: identifier)
+    }
+    incoming["sotf_state"] = try JSONSerialization.data(withJSONObject: object)
+    unit.fullState = incoming
+    guard let saved = unit.fullState, let beforeData = saved["sotf_state"] as? Data,
+          let before = try JSONSerialization.jsonObject(with: beforeData) as? [String: Any] else {
+        throw SmokeFailure.failure("cannot read restored unstepped Upmixer state")
+    }
+    for (identifier, value) in values {
+        guard let actual = (before[identifier] as? NSNumber)?.floatValue else {
+            throw SmokeFailure.failure("missing restored Upmixer value \(identifier)")
+        }
+        try require(actual.bitPattern == value.bitPattern,
+                    "initial state did not preserve \(identifier): \(actual) != \(value)")
+    }
+    unit.fullState = saved
+    guard let afterState = unit.fullState, let afterData = afterState["sotf_state"] as? Data,
+          let after = try JSONSerialization.jsonObject(with: afterData) as? [String: Any] else {
+        throw SmokeFailure.failure("cannot read round-tripped Upmixer state")
+    }
+    var changes: [String] = []
+    for (identifier, value) in values {
+        guard let actual = (after[identifier] as? NSNumber)?.floatValue else {
+            throw SmokeFailure.failure("missing round-tripped Upmixer value \(identifier)")
+        }
+        if actual.bitPattern != value.bitPattern { changes.append("\(identifier): \(value) -> \(actual)") }
+    }
+    try require(changes.isEmpty, "state round-trip changed unstepped values: \(changes.sorted())")
+
+    guard let parameters = unit.parameterTree?.allParameters else {
+        throw SmokeFailure.failure("missing Upmixer parameter tree")
+    }
+    let floatingParameters = parameters.compactMap { parameter -> (String, Float)? in
+        guard unit.parameterIsFloatingPointForTesting(address: parameter.address) == true else { return nil }
+        let value = parameter.minValue + (parameter.maxValue - parameter.minValue) * 0.438371
+        return (parameter.identifier, value)
+    }
+    try require(floatingParameters.count == 37, "unexpected Upmixer float parameter count")
+    for (identifier, value) in floatingParameters {
+        var trial = saved
+        var blob = before
+        blob[identifier] = value
+        trial.removeValue(forKey: identifier)
+        trial["sotf_state"] = try JSONSerialization.data(withJSONObject: blob)
+        unit.fullState = trial
+        guard let captured = unit.fullState, let capturedData = captured["sotf_state"] as? Data,
+              let capturedBlob = try JSONSerialization.jsonObject(with: capturedData) as? [String: Any],
+              let accepted = (capturedBlob[identifier] as? NSNumber)?.floatValue,
+              let original = (before[identifier] as? NSNumber)?.floatValue else {
+            throw SmokeFailure.failure("cannot inspect Upmixer state for \(identifier)")
+        }
+        try require(accepted.bitPattern != original.bitPattern,
+                    "test did not change Upmixer value \(identifier)")
+        unit.fullState = captured
+        guard let repeated = unit.fullState, let repeatedData = repeated["sotf_state"] as? Data,
+              let repeatedBlob = try JSONSerialization.jsonObject(with: repeatedData) as? [String: Any] else {
+            throw SmokeFailure.failure("cannot inspect repeated Upmixer state for \(identifier)")
+        }
+        for (key, beforeValue) in capturedBlob {
+            guard let first = beforeValue as? NSNumber, let second = repeatedBlob[key] as? NSNumber else {
+                throw SmokeFailure.failure("unexpected nonnumeric Upmixer state field \(key)")
+            }
+            try require(first.doubleValue == second.doubleValue,
+                        "repeating \(identifier) state changed \(key): \(first) -> \(second)")
+        }
+    }
+
+    var edited = saved
+    edited["gain_front_direct"] = NSNumber(value: Float(1.23))
+    edited["bass_gain_db"] = NSNumber(value: Float(0.77))
+    unit.fullState = edited
+    let changed = unit.parameterValueForTesting(identifier: "gain_front_direct") ?? .nan
+    try require(abs(changed - 1.25) < 0.001, "host override did not retain stepped behavior: \(changed)")
+    let changedBass = unit.parameterValueForTesting(identifier: "bass_gain_db") ?? .nan
+    try require(abs(changedBass - 0.77) < 0.001, "host structural override was ignored: \(changedBass)")
+
+    var repaired = saved
+    var malformedBlob = before
+    malformedBlob["bass_gain_db"] = false
+    repaired["sotf_state"] = try JSONSerialization.data(withJSONObject: malformedBlob)
+    repaired["bass_gain_db"] = NSNumber(value: Float(0))
+    unit.fullState = repaired
+    let repairedBass = unit.parameterValueForTesting(identifier: "bass_gain_db") ?? .nan
+    try require(abs(repairedBass) < 0.001, "valid host override did not repair malformed bass state")
+}
+
+private func testUpmixerHeightRampPrecision() throws {
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    let stereo = try stereoFormat(sampleRate: 48_000)
+    let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+    try unit.inputBusses[0].setFormat(stereo)
+    try unit.outputBusses[0].setFormat(immersive)
+    unit.maximumFramesToRender = 32
+    try unit.allocateRenderResources()
+    defer { unit.deallocateRenderResources() }
+    guard let input = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: 32),
+          let output = AVAudioPCMBuffer(pcmFormat: immersive, frameCapacity: 32),
+          let gain = unit.parameterTree?.allParameters.first(where: { $0.identifier == "height_gain" }) else {
+        throw SmokeFailure.failure("cannot prepare precise Upmixer height ramp test")
+    }
+    input.frameLength = 32
+    output.frameLength = 32
+    let pull: AURenderPullInputBlock = { _, _, _, _, destination in
+        let source = UnsafeMutableAudioBufferListPointer(input.mutableAudioBufferList)
+        let target = UnsafeMutableAudioBufferListPointer(destination)
+        for index in 0..<source.count {
+            memcpy(target[index].mData, source[index].mData, Int(source[index].mDataByteSize))
+            target[index].mDataByteSize = source[index].mDataByteSize
+        }
+        return noErr
+    }
+    var parameter = AUParameterEvent()
+    parameter.eventSampleTime = 8_192 + 16
+    parameter.eventType = .parameterRamp
+    parameter.rampDurationSampleFrames = 48
+    parameter.parameterAddress = gain.address
+    parameter.value = 1.49
+    var event = AURenderEvent(parameter: parameter)
+    var flags = AudioUnitRenderActionFlags(rawValue: 0)
+    var timestamp = AudioTimeStamp()
+    timestamp.mSampleTime = 8_192
+    timestamp.mFlags = .sampleTimeValid
+    let firstStatus = withUnsafePointer(to: &event) { pointer in
+        unit.internalRenderBlock(&flags, &timestamp, 32, 0, output.mutableAudioBufferList, pointer, pull)
+    }
+    try require(firstStatus == noErr, "first precise height ramp block failed: \(firstStatus)")
+    let first = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    let expected: Float = 1 + (1.49 - 1) / 3
+    try require(abs(first - expected) < 0.001, "height ramp was quantized: \(first), expected \(expected)")
+    timestamp.mSampleTime += 32
+    let secondStatus = unit.internalRenderBlock(
+        &flags, &timestamp, 32, 0, output.mutableAudioBufferList, nil, pull
+    )
+    try require(secondStatus == noErr, "second precise height ramp block failed: \(secondStatus)")
+    let final = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(final - 1.49) < 0.001, "height ramp missed precise target: \(final)")
+    guard let saved = unit.fullState else { throw SmokeFailure.failure("cannot save precise height gain") }
+
+    timestamp.mSampleTime += 32
+    parameter.eventSampleTime = AUEventSampleTime(timestamp.mSampleTime)
+    parameter.rampDurationSampleFrames = 96
+    parameter.value = 0.37
+    event = AURenderEvent(parameter: parameter)
+    let newRampStatus = withUnsafePointer(to: &event) { pointer in
+        unit.internalRenderBlock(&flags, &timestamp, 32, 0, output.mutableAudioBufferList, pointer, pull)
+    }
+    try require(newRampStatus == noErr, "second height ramp failed: \(newRampStatus)")
+    let secondRamp = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    let secondExpected: Float = 1.49 + (0.37 - 1.49) / 3
+    try require(abs(secondRamp - secondExpected) < 0.001, "second height ramp lost precision: \(secondRamp)")
+
+    timestamp.mSampleTime += 32
+    parameter.eventSampleTime = AUEventSampleTime(timestamp.mSampleTime)
+    parameter.eventType = .parameter
+    parameter.rampDurationSampleFrames = 0
+    parameter.value = 0.73
+    event = AURenderEvent(parameter: parameter)
+    let pointStatus = withUnsafePointer(to: &event) { pointer in
+        unit.internalRenderBlock(&flags, &timestamp, 32, 0, output.mutableAudioBufferList, pointer, pull)
+    }
+    try require(pointStatus == noErr, "height point event failed: \(pointStatus)")
+    let point = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(point - 0.75) < 0.001, "point event did not retain stepped behavior: \(point)")
+    timestamp.mSampleTime += 32
+    let afterPointStatus = unit.internalRenderBlock(
+        &flags, &timestamp, 32, 0, output.mutableAudioBufferList, nil, pull
+    )
+    let afterPoint = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(afterPointStatus == noErr && abs(afterPoint - 0.75) < 0.001,
+                "height ramp continued after point event: \(afterPoint)")
+    unit.deallocateRenderResources()
+    unit.fullState = saved
+    let restored = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(restored - 1.49) < 0.001, "state restore quantized height gain: \(restored)")
+    let larger = try format(sampleRate: 48_000, channels: 12, tag: kAudioChannelLayoutTag_Atmos_7_1_4)
+    try unit.outputBusses[0].setFormat(larger)
+    try unit.allocateRenderResources()
+    let reallocated = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(reallocated - 1.49) < 0.001, "format migration changed height gain: \(reallocated)")
+}
+
+private func testUpmixerPreciseRampInterruption() throws {
+    let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+    let stereo = try stereoFormat(sampleRate: 48_000)
+    let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+    try unit.inputBusses[0].setFormat(stereo)
+    try unit.outputBusses[0].setFormat(immersive)
+    unit.maximumFramesToRender = 1
+    try unit.allocateRenderResources()
+    defer { unit.deallocateRenderResources() }
+    guard let input = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: 1),
+          let output = AVAudioPCMBuffer(pcmFormat: immersive, frameCapacity: 1),
+          let gain = unit.parameterTree?.allParameters.first(where: { $0.identifier == "height_gain" }) else {
+        throw SmokeFailure.failure("cannot prepare interrupted height ramp test")
+    }
+    input.frameLength = 1
+    output.frameLength = 1
+    let pull: AURenderPullInputBlock = { _, _, _, _, destination in
+        let source = UnsafeMutableAudioBufferListPointer(input.mutableAudioBufferList)
+        let target = UnsafeMutableAudioBufferListPointer(destination)
+        for index in 0..<source.count {
+            memcpy(target[index].mData, source[index].mData, Int(source[index].mDataByteSize))
+            target[index].mDataByteSize = source[index].mDataByteSize
+        }
+        return noErr
+    }
+    var parameter = AUParameterEvent()
+    parameter.eventSampleTime = 10_000
+    parameter.eventType = .parameterRamp
+    parameter.rampDurationSampleFrames = 64
+    parameter.parameterAddress = gain.address
+    parameter.value = 1.49
+    var event = AURenderEvent(parameter: parameter)
+    var flags = AudioUnitRenderActionFlags(rawValue: 0)
+    var timestamp = AudioTimeStamp()
+    timestamp.mSampleTime = 10_000
+    timestamp.mFlags = .sampleTimeValid
+    let firstStatus = withUnsafePointer(to: &event) { pointer in
+        unit.internalRenderBlock(&flags, &timestamp, 1, 0, output.mutableAudioBufferList, pointer, pull)
+    }
+    let expected: Float = 1 + (1.49 - 1) / 64
+    let first = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(firstStatus == noErr && abs(first - expected) < 0.00001,
+                "one-frame ramp readback was \(first), expected \(expected)")
+    let applied = unit.parameterTargetForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(applied - 1.0) < 0.00001,
+                "height ramp applied a future target before its time: \(applied)")
+    guard let saved = unit.fullState,
+          let savedValue = (saved["height_gain"] as? NSNumber)?.floatValue else {
+        throw SmokeFailure.failure("cannot save interrupted height ramp")
+    }
+    try require(abs(savedValue - expected) < 0.00001, "saved mid-ramp value was \(savedValue)")
+    guard let document = unit.exportPreset(named: "Mid-ramp") else {
+        throw SmokeFailure.failure("cannot export mid-ramp preset")
+    }
+
+    timestamp.mSampleTime += 1
+    parameter.eventSampleTime = AUEventSampleTime(timestamp.mSampleTime)
+    parameter.rampDurationSampleFrames = 16
+    parameter.value = 0.23
+    event = AURenderEvent(parameter: parameter)
+    let nextStatus = withUnsafePointer(to: &event) { pointer in
+        unit.internalRenderBlock(&flags, &timestamp, 1, 0, output.mutableAudioBufferList, pointer, pull)
+    }
+    let secondExpected = expected + (0.23 - expected) / 16
+    let second = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(nextStatus == noErr && abs(second - secondExpected) < 0.00001,
+                "interrupted ramp started at \(second), expected \(secondExpected)")
+
+    gain.value = 0.73
+    timestamp.mSampleTime += 1
+    let pointStatus = unit.internalRenderBlock(&flags, &timestamp, 1, 0, output.mutableAudioBufferList, nil, pull)
+    let point = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(pointStatus == noErr && abs(point - 0.75) < 0.001,
+                "mailbox point did not cancel the ramp: \(point)")
+    timestamp.mSampleTime += 1
+    _ = unit.internalRenderBlock(&flags, &timestamp, 1, 0, output.mutableAudioBufferList, nil, pull)
+    let afterPoint = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(afterPoint - 0.75) < 0.001, "ramp resumed after mailbox point: \(afterPoint)")
+    unit.deallocateRenderResources()
+    unit.fullState = saved
+    let restored = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(restored - expected) < 0.00001, "saved mid-ramp value restored as \(restored)")
+    try require(unit.importPresetDocument(document), "cannot import mid-ramp preset")
+    let imported = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+    try require(abs(imported - expected) < 0.00001, "mid-ramp preset restored as \(imported)")
+    try unit.allocateRenderResources()
+}
+
+private func testUpmixerRampResourceRestart() throws {
+    for changeLayout in [false, true] {
+        let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+        let stereo = try stereoFormat(sampleRate: 48_000)
+        let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+        try unit.inputBusses[0].setFormat(stereo)
+        try unit.outputBusses[0].setFormat(immersive)
+        unit.maximumFramesToRender = 1
+        try unit.allocateRenderResources()
+        guard let input = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: 1),
+              let output = AVAudioPCMBuffer(pcmFormat: immersive, frameCapacity: 1),
+              let gain = unit.parameterTree?.allParameters.first(where: { $0.identifier == "height_gain" }) else {
+            throw SmokeFailure.failure("cannot prepare ramp resource restart test")
+        }
+        input.frameLength = 1
+        output.frameLength = 1
+        let pull: AURenderPullInputBlock = { _, _, _, _, destination in
+            let source = UnsafeMutableAudioBufferListPointer(input.mutableAudioBufferList)
+            let target = UnsafeMutableAudioBufferListPointer(destination)
+            for index in 0..<source.count {
+                memcpy(target[index].mData, source[index].mData, Int(source[index].mDataByteSize))
+                target[index].mDataByteSize = source[index].mDataByteSize
+            }
+            return noErr
+        }
+        var parameter = AUParameterEvent()
+        parameter.eventSampleTime = 11_000
+        parameter.eventType = .parameterRamp
+        parameter.rampDurationSampleFrames = 64
+        parameter.parameterAddress = gain.address
+        parameter.value = 1.49
+        var event = AURenderEvent(parameter: parameter)
+        var flags = AudioUnitRenderActionFlags(rawValue: 0)
+        var timestamp = AudioTimeStamp()
+        timestamp.mSampleTime = 11_000
+        timestamp.mFlags = .sampleTimeValid
+        let status = withUnsafePointer(to: &event) { pointer in
+            unit.internalRenderBlock(&flags, &timestamp, 1, 0, output.mutableAudioBufferList, pointer, pull)
+        }
+        try require(status == noErr, "ramp before resource restart failed: \(status)")
+        let current: Float = 1 + (1.49 - 1) / 64
+        unit.deallocateRenderResources()
+        let newFormat: AVAudioFormat
+        if changeLayout {
+            newFormat = try format(sampleRate: 48_000, channels: 12, tag: kAudioChannelLayoutTag_Atmos_7_1_4)
+            try unit.outputBusses[0].setFormat(newFormat)
+        } else {
+            newFormat = immersive
+        }
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+        let restored = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+        try require(abs(restored - current) < 0.00001,
+                    "resource restart changed ramp position: \(restored), layout changed=\(changeLayout)")
+        guard let resumedOutput = AVAudioPCMBuffer(pcmFormat: newFormat, frameCapacity: 1) else {
+            throw SmokeFailure.failure("cannot allocate restarted output")
+        }
+        resumedOutput.frameLength = 1
+        timestamp.mSampleTime += 1
+        let resumed = unit.internalRenderBlock(&flags, &timestamp, 1, 0, resumedOutput.mutableAudioBufferList, nil, pull)
+        let after = unit.parameterValueForTesting(identifier: "height_gain") ?? .nan
+        let wanted = changeLayout ? current : current + (1.49 - 1) / 64
+        try require(resumed == noErr && abs(after - wanted) < 0.00001,
+                    "unexpected ramp after resource restart: \(after), wanted \(wanted)")
+    }
+}
+
+private func testUpmixerRampPartitionIndependence() throws {
+    func render(blockSize: Int, mode: Int) throws -> [Float] {
+        let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+        let stereo = try stereoFormat(sampleRate: 48_000)
+        let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+        try unit.inputBusses[0].setFormat(stereo)
+        try unit.outputBusses[0].setFormat(immersive)
+        unit.maximumFramesToRender = AUAudioFrameCount(blockSize)
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+        guard let input = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: AUAudioFrameCount(blockSize)),
+              let output = AVAudioPCMBuffer(pcmFormat: immersive, frameCapacity: AUAudioFrameCount(blockSize)),
+              let gain = unit.parameterTree?.allParameters.first(where: { $0.identifier == "height_gain" }) else {
+            throw SmokeFailure.failure("cannot prepare height ramp partition test")
+        }
+        input.frameLength = AUAudioFrameCount(blockSize)
+        output.frameLength = AUAudioFrameCount(blockSize)
+        let pull: AURenderPullInputBlock = { _, _, _, _, destination in
+            let source = UnsafeMutableAudioBufferListPointer(input.mutableAudioBufferList)
+            let target = UnsafeMutableAudioBufferListPointer(destination)
+            for index in 0..<source.count {
+                memcpy(target[index].mData, source[index].mData, Int(source[index].mDataByteSize))
+                target[index].mDataByteSize = source[index].mDataByteSize
+            }
+            return noErr
+        }
+        var parameter = AUParameterEvent()
+        parameter.eventSampleTime = 4096
+        parameter.eventType = .parameterRamp
+        parameter.rampDurationSampleFrames = 2048
+        parameter.parameterAddress = gain.address
+        parameter.value = 1.49
+        var event = AURenderEvent(parameter: parameter)
+        var interruptedParameter = AUParameterEvent()
+        interruptedParameter.eventSampleTime = 4103
+        interruptedParameter.eventType = .parameterRamp
+        interruptedParameter.rampDurationSampleFrames = 1537
+        interruptedParameter.parameterAddress = gain.address
+        interruptedParameter.value = 0.37
+        var interrupted = AURenderEvent(parameter: interruptedParameter)
+        var flags = AudioUnitRenderActionFlags(rawValue: 0)
+        var timestamp = AudioTimeStamp()
+        timestamp.mFlags = .sampleTimeValid
+        var samples: [Float] = []
+        samples.reserveCapacity(8192 * 10)
+        for position in stride(from: 0, to: 8192, by: blockSize) {
+            timestamp.mSampleTime = Float64(position)
+            for frame in 0..<blockSize {
+                for channel in 0..<2 {
+                    var bits = UInt32(position + frame) &* 1_664_525 &+ UInt32(channel) &* 1_013_904_223 &+ 12_345
+                    bits ^= bits >> 13
+                    bits = bits &* 2_246_822_519
+                    input.floatChannelData![channel][frame] = (Float(bits >> 8) / 16_777_216 - 0.5) * 0.2
+                }
+            }
+            let first = mode > 0 && position <= 4096 && 4096 < position + blockSize
+            let second = mode == 2 && position <= 4103 && 4103 < position + blockSize
+            let status = withUnsafeMutablePointer(to: &interrupted) { secondPointer in
+                event.parameter.next = first && second ? secondPointer : nil
+                return withUnsafePointer(to: &event) { firstPointer in
+                    let events = first ? firstPointer : (second ? UnsafePointer(secondPointer) : nil)
+                    return unit.internalRenderBlock(&flags, &timestamp, AUAudioFrameCount(blockSize), 0,
+                        output.mutableAudioBufferList, events, pull)
+                }
+            }
+            try require(status == noErr, "height ramp partition render failed: \(status)")
+            for frame in 0..<blockSize {
+                for channel in 0..<10 { samples.append(output.floatChannelData![channel][frame]) }
+            }
+        }
+        return samples
+    }
+    for mode in [0, 1, 2] {
+        let single = try render(blockSize: 1, mode: mode)
+        let wide = try render(blockSize: 64, mode: mode)
+        try require(single == wide, "height ramp output changed with callback partition, mode=\(mode)")
+    }
+}
+
+private func testUpmixerSimultaneousRampTiming() throws {
+    func trace(withHeight: Bool) throws -> (values: [Float], bed: [Float]) {
+        let unit = try UpmixerAudioUnit(componentDescription: componentDescription("SOUp"))
+        let stereo = try stereoFormat(sampleRate: 48_000)
+        let immersive = try format(sampleRate: 48_000, channels: 10, tag: kAudioChannelLayoutTag_Atmos_5_1_4)
+        try unit.inputBusses[0].setFormat(stereo)
+        try unit.outputBusses[0].setFormat(immersive)
+        unit.maximumFramesToRender = 32
+        try unit.allocateRenderResources()
+        defer { unit.deallocateRenderResources() }
+        guard let input = AVAudioPCMBuffer(pcmFormat: stereo, frameCapacity: 32),
+              let output = AVAudioPCMBuffer(pcmFormat: immersive, frameCapacity: 32),
+              let height = unit.parameterTree?.allParameters.first(where: { $0.identifier == "height_gain" }),
+              let width = unit.parameterTree?.allParameters.first(where: { $0.identifier == "stereo_width" }) else {
+            throw SmokeFailure.failure("cannot prepare simultaneous ramps")
+        }
+        input.frameLength = 32
+        output.frameLength = 32
+        func fillInput(_ position: Int) {
+            for frame in 0..<32 {
+                for channel in 0..<2 {
+                    var bits = UInt32(position + frame) &* 1_664_525 &+ UInt32(channel) &* 1_013_904_223 &+ 12_345
+                    bits ^= bits >> 13
+                    bits = bits &* 2_246_822_519
+                    input.floatChannelData![channel][frame] = (Float(bits >> 8) / 16_777_216 - 0.5) * 0.2
+                }
+            }
+        }
+        var bed: [Float] = []
+        bed.reserveCapacity(160 * 32 * 6)
+        func captureBed() {
+            for frame in 0..<32 {
+                for channel in 0..<6 { bed.append(output.floatChannelData![channel][frame]) }
+            }
+        }
+        let pull: AURenderPullInputBlock = { _, _, _, _, destination in
+            let source = UnsafeMutableAudioBufferListPointer(input.mutableAudioBufferList)
+            let target = UnsafeMutableAudioBufferListPointer(destination)
+            for index in 0..<source.count {
+                memcpy(target[index].mData, source[index].mData, Int(source[index].mDataByteSize))
+                target[index].mDataByteSize = source[index].mDataByteSize
+            }
+            return noErr
+        }
+        var widthParameter = AUParameterEvent()
+        widthParameter.eventSampleTime = 12_000
+        widthParameter.eventType = .parameterRamp
+        widthParameter.rampDurationSampleFrames = 96
+        widthParameter.parameterAddress = width.address
+        widthParameter.value = 0.77
+        var widthEvent = AURenderEvent(parameter: widthParameter)
+        var heightParameter = AUParameterEvent()
+        heightParameter.eventSampleTime = 12_000
+        heightParameter.eventType = .parameterRamp
+        heightParameter.rampDurationSampleFrames = 19
+        heightParameter.parameterAddress = height.address
+        heightParameter.value = 1.49
+        var heightEvent = AURenderEvent(parameter: heightParameter)
+        var flags = AudioUnitRenderActionFlags(rawValue: 0)
+        var timestamp = AudioTimeStamp()
+        timestamp.mSampleTime = 12_000
+        timestamp.mFlags = .sampleTimeValid
+        fillInput(0)
+        let status = withUnsafeMutablePointer(to: &heightEvent) { heightPointer in
+            if withHeight { widthEvent.parameter.next = heightPointer }
+            return withUnsafePointer(to: &widthEvent) { pointer in
+                unit.internalRenderBlock(&flags, &timestamp, 32, 0, output.mutableAudioBufferList, pointer, pull)
+            }
+        }
+        try require(status == noErr, "simultaneous ramp start failed: \(status)")
+        captureBed()
+        var values = [unit.parameterValueForTesting(identifier: "stereo_width") ?? .nan]
+        for block in 1..<160 {
+            timestamp.mSampleTime += 32
+            fillInput(block * 32)
+            let next = unit.internalRenderBlock(&flags, &timestamp, 32, 0, output.mutableAudioBufferList, nil, pull)
+            try require(next == noErr, "simultaneous ramp continuation failed: \(next)")
+            captureBed()
+            values.append(unit.parameterValueForTesting(identifier: "stereo_width") ?? .nan)
+        }
+        return (values, bed)
+    }
+    let reference = try trace(withHeight: false)
+    let mixed = try trace(withHeight: true)
+    try require(reference.values == mixed.values, "precise ramp changed another ramp's timing")
+    try require(reference.bed == mixed.bed && reference.bed.contains(where: { $0 != 0 }),
+                "precise ramp changed the non-silent bed during another ramp")
+}
+
 private func testConcurrentRenderAndControlAccess() throws {
     let unit = try GainAudioUnit(componentDescription: componentDescription("SOGN"))
     let stereo = try stereoFormat(sampleRate: 48_000)
@@ -2236,7 +2963,13 @@ private func testLinearPhaseNegotiatedAdapterLatency() throws {
     )
 }
 
-do {
+private func runSmokeTests() throws {
+    if ProcessInfo.processInfo.environment["SOTF_AU_ALLOCATION_ONLY"] == "1" {
+        try testAllocatorInterpositionSelfTest()
+        try testUpmixerNativeRenderAllocation()
+        print("Native AU allocation tests passed")
+        return
+    }
     print("Running constructor-failure tests")
     try testRepeatedConstructorFailureIsDeterministic()
     print("Running wrapper inventory tests")
@@ -2251,6 +2984,11 @@ do {
     try testMonoToStereoConstructionAndRender()
     print("Running downmix layout tests")
     try testDownmixLayoutMatrix()
+    print("Running upmixer output layout recreation tests")
+    try testUpmixerOutputLayoutRecreation()
+    print("Running upmixer reinitializing state restore tests")
+    try testUpmixerReinitializingStateRestore()
+    try testUpmixerStructuralParameterMetadata()
     print("Running downmix format-change tests")
     try testDownmixFormatChangeAndUnsupportedLayout()
     print("Running named-layout refusal preservation tests")
@@ -2282,13 +3020,24 @@ do {
     try testAbsoluteEventTimelineConversion()
     try testParameterRenderEventPointAndRampOffsets()
     try testParameterRampPersistsAcrossBlocks()
+    try testUpmixerStatePreservesUnsteppedValues()
+    try testUpmixerHeightRampPrecision()
+    try testUpmixerPreciseRampInterruption()
+    try testUpmixerRampResourceRestart()
+    try testUpmixerRampPartitionIndependence()
+    try testUpmixerSimultaneousRampTiming()
     print("Running concurrent render/control stress")
     try testQueuedControlHasBoundedRenderFairness()
     try testConcurrentRenderAndControlAccess()
     print("Running realtime allocation evidence")
     try testAllocatorInterpositionSelfTest()
     try testRealtimeRenderAllocationEvidence()
+    try testUpmixerNativeRenderAllocation()
     print("Native AU smoke tests passed")
+}
+
+do {
+    try runSmokeTests()
 } catch {
     fputs("Native AU smoke tests failed: \(error)\n", stderr)
     exit(EXIT_FAILURE)

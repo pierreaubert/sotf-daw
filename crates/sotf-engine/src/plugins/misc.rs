@@ -28,6 +28,7 @@ where
         fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
             const CONFIGS: &[&str] = &[
                 "2.0", "5.0", "5.1", "7.0", "7.1", "7.1.2", "7.1.4", "9.1", "9.1.4", "9.1.6",
+                "5.1.6",
             ];
             Ok(CONFIGS.get(v as usize).unwrap_or(&"5.1").to_string())
         }

@@ -3,6 +3,7 @@
 // ============================================================================
 
 use super::UpmixerPlugin;
+use super::process::FftBlockControls;
 use math_audio_iir_fir::{Biquad, BiquadFilterType};
 use rustfft::num_complex::Complex;
 
@@ -69,11 +70,9 @@ impl UpmixerPlugin {
     ///
     /// Generates a configurable rumble tone modulated by the LFE envelope
     /// with smooth attack/release to prevent clicks and pops.
-    pub(super) fn apply_subharmonic_synthesis(&mut self) {
+    pub(super) fn apply_subharmonic_synthesis(&mut self, controls: FftBlockControls) {
         // When disabled, let the envelope release smoothly instead of hard-cutting
-        if !self.subharmonic.enable_subharmonic_synth
-            && self.subharmonic.subharmonic_envelope < 1e-6
-        {
+        if !controls.subharmonic_enabled && self.subharmonic.subharmonic_envelope < 1e-6 {
             return;
         }
 
@@ -87,9 +86,9 @@ impl UpmixerPlugin {
             // Generate subharmonics based on LFE amplitude.
             // Phase increment and envelope coefficients are pre-computed in
             // initialize() / set_parameter() to avoid per-block transcendental calls.
-            let phase_inc = self.subharmonic.cached_subharmonic_phase_inc;
-            let attack_coeff = self.subharmonic.cached_subharmonic_attack_coeff;
-            let release_coeff = self.subharmonic.cached_subharmonic_release_coeff;
+            let phase_inc = controls.subharmonic_phase_inc;
+            let attack_coeff = controls.subharmonic_attack;
+            let release_coeff = controls.subharmonic_release;
 
             // Soft threshold for envelope detection - prevents clicks at threshold crossing
             // Using a sigmoid-like transition instead of hard threshold
@@ -115,16 +114,15 @@ impl UpmixerPlugin {
                 // Smooth envelope using soft threshold for click-free transitions
                 // Instead of hard threshold, use continuous envelope tracking
                 // that responds proportionally to input amplitude
-                let target_envelope = if !self.subharmonic.enable_subharmonic_synth
-                    || lfe_amp < threshold - soft_knee
-                {
-                    0.0 // Force release when disabled or below threshold
-                } else if lfe_amp > threshold + soft_knee {
-                    1.0
-                } else {
-                    // Soft knee region: smooth transition
-                    0.5 + (lfe_amp - threshold) / (2.0 * soft_knee)
-                };
+                let target_envelope =
+                    if !controls.subharmonic_enabled || lfe_amp < threshold - soft_knee {
+                        0.0 // Force release when disabled or below threshold
+                    } else if lfe_amp > threshold + soft_knee {
+                        1.0
+                    } else {
+                        // Soft knee region: smooth transition
+                        0.5 + (lfe_amp - threshold) / (2.0 * soft_knee)
+                    };
 
                 // Apply attack or release based on whether we're going up or down
                 let envelope_coeff = if target_envelope > self.subharmonic.subharmonic_envelope {
@@ -146,7 +144,7 @@ impl UpmixerPlugin {
                 // sub-harmonic distortion from instantaneous amplitude modulation
                 let sub = self.subharmonic.subharmonic_phase.sin()
                     * self.subharmonic.subharmonic_amp_envelope
-                    * self.subharmonic.subharmonic_gain.current()
+                    * controls.subharmonic_gain
                     * self.subharmonic.subharmonic_envelope;
 
                 // Only add if envelope is significant (prevents denormal issues)

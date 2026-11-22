@@ -115,7 +115,9 @@ fn test_upmixer_parameter_adjustment() {
 
     // Test parameter queries
     let params = plugin.parameters();
-    assert_eq!(params.len(), 47); // includes all upmixer parameters and auto gain controls
+    for id in ["height_gain", "bypass_heights", "bass_mode", "input_format"] {
+        assert!(params.iter().any(|parameter| parameter.id.as_str() == id));
+    }
 
     // Modify gains
     plugin

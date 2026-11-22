@@ -9,6 +9,20 @@ public class UpmixerAudioUnit: GenericRustAudioUnit {
     override public class var pluginName: String { "SOTF: Upmixer" }
     override public class var initialInputChannels: AVAudioChannelCount { 2 }
     override public class var initialOutputChannels: AVAudioChannelCount { 6 }
+    override public class var refreshParameterTreeAfterInactiveStateRestore: Bool { true }
+    override public class func parameterIsPortableAcrossTopologies(_ identifier: String) -> Bool {
+        identifier != "speaker_config" && identifier != "input_format"
+    }
+    override public class func stateValueForReconstruction(_ identifier: String, value: AUValue) -> Any? {
+        switch identifier {
+        case "bass_mode": return Int(value.rounded())
+        case "bass_cutoff_hz", "bass_gain_db", "lfe_playback_gain_db": return Double(value)
+        case "combine_input_lfe", "bass_source_front_left", "bass_source_front_right",
+             "bass_source_center", "bass_source_side_left", "bass_source_side_right",
+             "bass_source_back_left", "bass_source_back_right": return value >= 0.5
+        default: return nil
+        }
+    }
     override public class var supportedChannelCapabilities: [NSNumber]? {
         [2, 5, 6, 8, 10, 12, 14, 16].flatMap { width in
             [NSNumber(value: 2), NSNumber(value: width)]
@@ -23,9 +37,7 @@ public class UpmixerAudioUnit: GenericRustAudioUnit {
     override public func pluginConfiguration(inputFormat: AVAudioFormat,
                                              outputFormat: AVAudioFormat) -> String {
         guard let layout = auUpmixerSpeakerLayout(outputFormat) else { return "{invalid}" }
-        let indices = ["2.0": 0, "5.0": 1, "5.1": 2, "7.1": 3, "5.1.2": 4,
-                       "5.1.4": 5, "7.1.2": 6, "7.1.4": 7, "9.1.4": 8, "9.1.6": 9]
-        return "{\"speaker_config\":\(indices[layout] ?? 2)}"
+        return "{\"speaker_config\":\"\(layout)\"}"
     }
 }
 

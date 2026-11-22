@@ -184,3 +184,7 @@ pub(super) fn d_auto_gain_max_db() -> f64 {
 pub(super) fn d_auto_gain_smoothing_ms() -> f64 {
     pk(PARAMS, "auto_gain_smoothing_ms").default_f64()
 }
+
+pub(super) fn d_bass_cutoff_hz() -> f64 {
+    pk(PARAMS, "bass_cutoff_hz").default_f64()
+}

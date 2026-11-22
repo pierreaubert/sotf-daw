@@ -30,6 +30,21 @@
 #define HISS_CLEAR_PROFILE 2
 
 /**
+ * The parameter has a static specification with known automation traits.
+ */
+#define PLUGIN_PARAMETER_TRAIT_KNOWN 1
+
+/**
+ * The parameter is floating point, irrespective of any declared step size.
+ */
+#define PLUGIN_PARAMETER_TRAIT_FLOAT 2
+
+/**
+ * The parameter's static specification marks updates as realtime.
+ */
+#define PLUGIN_PARAMETER_TRAIT_REALTIME 4
+
+/**
  * Host/packaging family that can consume this C ABI.
  */
 typedef enum PluginFfiHostKind {
@@ -224,7 +239,8 @@ typedef struct ParameterInfo {
    */
   double default_value;
   /**
-   * Number of steps (0 = continuous)
+   * Declared steps, or zero when no step size is specified. Float
+   * parameters can also have steps, and setters may quantize to them.
    */
   uint32_t steps;
   /**
@@ -307,6 +323,7 @@ void *gpui_au_create_with_plugin(void *ns_view,
  * * The pointer points to thread-local storage that remains valid until the
  *   next FFI call on the same thread that may set an error. Copy the contents
  *   if you need it to outlive the next call.
+ * * Returns `NULL` when no error remains accessible during thread-local destruction.
  */
 const char *plugin_get_last_error(void);
 
@@ -645,6 +662,22 @@ const struct ParameterInfo *plugin_get_parameter_info(const struct PluginHandle 
                                                       size_t index);
 
 /**
+ * Get static parameter automation traits as a bit mask.
+ *
+ * Returns zero if the handle or index is invalid, or the parameter has no
+ * static specification. `KNOWN` is always set on a successful lookup;
+ * `FLOAT` and `REALTIME` describe the specification independently. These
+ * traits do not guarantee that every attempted update is allocation-free.
+ * Older ABI v3 libraries may not export this additive symbol. Clients that
+ * load multiple library versions should resolve it dynamically and fall back
+ * when it is absent.
+ *
+ * # Safety
+ * * `handle` must be `NULL` or a live plugin handle.
+ */
+uint32_t plugin_get_parameter_automation_traits(const struct PluginHandle *handle, size_t index);
+
+/**
  * Get one choice label for a parameter in its enumerated ABI position.
  *
  * The returned pointer references a static NUL-terminated string and is
@@ -696,6 +729,21 @@ const char *plugin_get_parameter_choice_label(const struct PluginHandle *handle,
 int plugin_set_parameter(struct PluginHandle *handle,
                          const char *param_id,
                          double normalized_value);
+
+/**
+ * Set a supported realtime float without quantizing to its declared step.
+ *
+ * Currently supported only for Upmixer `height_gain`; other parameters
+ * return `InvalidParameter`. This additive entry point may be absent from
+ * older ABI v3 libraries. Finite values outside 0..=1 are clamped.
+ *
+ * # Safety
+ * * `handle` must be `NULL` or a live plugin handle with exclusive access.
+ * * `param_id` must be `NULL` or a valid, readable, null-terminated string.
+ */
+int plugin_set_parameter_precise(struct PluginHandle *handle,
+                                 const char *param_id,
+                                 double normalized_value);
 
 /**
  * Get a parameter value (normalized 0.0-1.0).

@@ -6,6 +6,8 @@ mod decorrelation;
 mod detection;
 mod drain;
 mod fft;
+#[cfg(all(test, debug_assertions))]
+mod fft_scratch_tests;
 mod frequency_domain;
 mod gain_clock;
 mod height;
@@ -24,6 +26,9 @@ pub mod source_mask;
 #[cfg(test)]
 #[path = "lib/stream_boundary_tests.rs"]
 mod stream_boundary_tests;
+mod surround_bass;
+mod surround_processing;
+mod surround_routing;
 mod table_clock;
 #[cfg(test)]
 mod test;

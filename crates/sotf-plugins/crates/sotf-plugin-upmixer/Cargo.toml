@@ -50,7 +50,10 @@ clap = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
+libc = { workspace = true }
 sotf-plugin-gain = { workspace = true }
+sotf-plugin-matrix = { workspace = true }
+tempfile = { workspace = true }
 
 [[bench]]
 name = "upmixer-benchmark"

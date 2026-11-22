@@ -1,5 +1,5 @@
 use super::super::{
-    ChannelConflict, Plugin, PluginSettings, PluginType, UpmixerOutputSettings,
+    ChannelConflict, Plugin, PluginSettings, PluginType,
     matrix::{resize_matrix, upmixer_output_channels},
     valid_ambisonics_custom_layout,
 };
@@ -61,11 +61,13 @@ pub fn plugin_output_channels(settings: &PluginSettings, input_channels: usize) 
     match settings {
         PluginSettings::Upmixer {
             speaker_config,
-            output: UpmixerOutputSettings {
-                binaural_preview, ..
-            },
+            output,
+            multichannel,
             ..
-        } => upmixer_settings_output_channels(speaker_config, *binaural_preview),
+        } => upmixer_settings_output_channels(
+            speaker_config,
+            output.binaural_preview_active(multichannel),
+        ),
         PluginSettings::AAE { speaker_config, .. } => upmixer_output_channels(speaker_config),
         PluginSettings::AmbisonicsDecoder {
             target_layout,
@@ -692,13 +694,11 @@ impl PluginChain {
             match &plugin.settings {
                 PluginSettings::Upmixer {
                     speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
+                    output,
+                    multichannel,
                     ..
                 } => {
-                    config = Some(if *binaural_preview {
+                    config = Some(if output.binaural_preview_active(multichannel) {
                         "2.0".to_string()
                     } else {
                         speaker_config.clone()
@@ -742,13 +742,11 @@ impl PluginChain {
             match &plugin.settings {
                 PluginSettings::Upmixer {
                     speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
+                    output,
+                    multichannel,
                     ..
                 } => {
-                    return Some(if *binaural_preview {
+                    return Some(if output.binaural_preview_active(multichannel) {
                         "2.0"
                     } else {
                         speaker_config.as_str()
@@ -777,13 +775,11 @@ impl PluginChain {
             match &plugin.settings {
                 PluginSettings::Upmixer {
                     speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
+                    output,
+                    multichannel,
                     ..
                 } => {
-                    config = Some(if *binaural_preview {
+                    config = Some(if output.binaural_preview_active(multichannel) {
                         "2.0".to_string()
                     } else {
                         speaker_config.clone()
@@ -839,14 +835,14 @@ impl PluginChain {
             match &plugin.settings {
                 PluginSettings::Upmixer {
                     speaker_config,
-                    output:
-                        UpmixerOutputSettings {
-                            binaural_preview, ..
-                        },
+                    output,
+                    multichannel,
                     ..
                 } => {
-                    running_channels =
-                        upmixer_settings_output_channels(speaker_config, *binaural_preview);
+                    running_channels = upmixer_settings_output_channels(
+                        speaker_config,
+                        output.binaural_preview_active(multichannel),
+                    );
                     continue;
                 }
                 PluginSettings::AAE { speaker_config, .. } => {
@@ -1563,6 +1559,7 @@ mod tests {
                     auto_gain_max_db: 12.0,
                     auto_gain_smoothing_ms: 100.0,
                 },
+                multichannel: Default::default(),
             };
         }
         assert_eq!(chain.output_channels(), 8);
@@ -1685,6 +1682,7 @@ mod tests {
                     auto_gain_max_db: 12.0,
                     auto_gain_smoothing_ms: 100.0,
                 },
+                multichannel: Default::default(),
             };
         }
 

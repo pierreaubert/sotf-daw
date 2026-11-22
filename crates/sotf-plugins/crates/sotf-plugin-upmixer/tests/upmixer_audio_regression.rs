@@ -153,13 +153,13 @@ fn generate_test_signal(name: &str) -> Vec<f32> {
             ];
             for i in 0..num_frames {
                 let t = i as f32 / SAMPLE_RATE as f32;
-                let ch = i % 2;
                 let mut sum = 0.0_f32;
                 for (fi, &freq) in freqs.iter().enumerate() {
                     let phase = 2.0 * std::f32::consts::PI * freq * t + (fi as f32 * 0.1);
                     sum += phase.sin() * 0.1;
                 }
-                data[i * 2] = if ch == 0 { sum } else { sum * 0.95 };
+                data[i * 2] = sum;
+                data[i * 2 + 1] = sum * 0.95;
             }
         }
         "sweep_20_20k" => {

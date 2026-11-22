@@ -12,7 +12,7 @@ fn direct2_speaker_gain(doa2: f32, speaker_azimuth_rad: f32) -> f32 {
 
 impl UpmixerPlugin {
     #[inline]
-    pub(super) fn apply_vbap_panning_and_inverse_fft(&mut self) {
+    pub(super) fn prepare_vbap_spectra<const DEFER: bool>(&mut self) {
         let spectrum_size = self.core.fft_size / 2 + 1;
         let hr_mix = (self.hr_state.hr_transient_env
             * self.gains.hr_sharpen.current()
@@ -24,6 +24,14 @@ impl UpmixerPlugin {
         let gra = self.gains.gain_rear_ambient.current();
         let lfg = self.gains.lfe_gain.current();
         let hg = self.height.height_gain.current();
+        let sw = self.gains.stereo_width.current();
+        let cs = self.gains.center_spread.current();
+        let sw_cs = sw * cs;
+        for i in 0..spectrum_size {
+            let center = self.main_buffers.direct[i] * sw_cs;
+            self.panning.direct_with_center_left[i] = self.main_buffers.direct_left[i] + center;
+            self.panning.direct_with_center_right[i] = self.main_buffers.direct_right[i] + center;
+        }
 
         for ch in 0..self.core.num_output_channels {
             let spk = &self.core.speaker_config.speakers[ch];
@@ -73,10 +81,6 @@ impl UpmixerPlugin {
                     let prd_dl = prd * self.height.height_direct_leak.current() * h_leak_scale;
                     let dec = &self.decorrelation.blended_decorrelation_filters[ch];
 
-                    let sw = self.gains.stereo_width.current();
-                    let cs = self.gains.center_spread.current();
-                    let sw_cs = sw * cs;
-
                     if !is_f {
                         let rlr = self.surround.rear_late_reflection.current() * gra; // Scale by rear gain
                         // For non-front height: use dominant ambient side to preserve separation
@@ -98,9 +102,8 @@ impl UpmixerPlugin {
                         };
 
                         for i in 0..spectrum_size {
-                            let d_val = self.main_buffers.direct[i];
-                            let dl_val = self.main_buffers.direct_left[i] + d_val * sw_cs;
-                            let dr_val = self.main_buffers.direct_right[i] + d_val * sw_cs;
+                            let dl_val = self.panning.direct_with_center_left[i];
+                            let dr_val = self.panning.direct_with_center_right[i];
 
                             let d_comp = dl_val * pld_dl + dr_val * prd_dl;
                             // Stereo-preserving ambient sum: mix primary and secondary sides
@@ -133,9 +136,8 @@ impl UpmixerPlugin {
                         };
 
                         for i in 0..spectrum_size {
-                            let d_val = self.main_buffers.direct[i];
-                            let dl_val = self.main_buffers.direct_left[i] + d_val * sw_cs;
-                            let dr_val = self.main_buffers.direct_right[i] + d_val * sw_cs;
+                            let dl_val = self.panning.direct_with_center_left[i];
+                            let dr_val = self.panning.direct_with_center_right[i];
 
                             let d_comp = dl_val * pld_dl + dr_val * prd_dl;
                             let a_stereo =
@@ -146,10 +148,6 @@ impl UpmixerPlugin {
                         }
                     }
                 } else {
-                    let sw = self.gains.stereo_width.current();
-                    let cs = self.gains.center_spread.current();
-                    let sw_cs = sw * cs;
-
                     // Correctly power-balanced gain for the extracted center signal in the physical center speaker.
                     // If stereo_w=1.0, we need sqrt(2) to match the power of the original L+R phantom center.
                     // If stereo_w=0.5, we only need sqrt(1.5)=1.225 because 0.5 of the energy is still in L/R.
@@ -197,9 +195,8 @@ impl UpmixerPlugin {
                         let multi_source = self.spectral.multi_source_extraction;
 
                         for i in 0..spectrum_size {
-                            let d_val = self.main_buffers.direct[i];
-                            let dl_val = self.main_buffers.direct_left[i] + d_val * sw_cs;
-                            let dr_val = self.main_buffers.direct_right[i] + d_val * sw_cs;
+                            let dl_val = self.panning.direct_with_center_left[i];
+                            let dr_val = self.panning.direct_with_center_right[i];
 
                             let a_stereo =
                                 a_primary[i] * g_primary + a_secondary[i] * (g_secondary * 0.3);
@@ -220,8 +217,8 @@ impl UpmixerPlugin {
                         // Front speakers: use standard L/R mix + extracted center
                         for i in 0..spectrum_size {
                             let d_val = self.main_buffers.direct[i];
-                            let dl_val = self.main_buffers.direct_left[i] + d_val * sw_cs;
-                            let dr_val = self.main_buffers.direct_right[i] + d_val * sw_cs;
+                            let dl_val = self.panning.direct_with_center_left[i];
+                            let dr_val = self.panning.direct_with_center_right[i];
 
                             self.main_buffers.temp_freq_out[i] = (dl_val * plds + dr_val * prds)
                                 + (self.main_buffers.ambient_left[i] * pla
@@ -235,11 +232,29 @@ impl UpmixerPlugin {
                 self.main_buffers.temp_freq_out[0].im = 0.0;
                 self.main_buffers.temp_freq_out[spectrum_size - 1].im = 0.0;
             }
+            if DEFER {
+                self.panning.pending_spectra[ch].copy_from_slice(&self.main_buffers.temp_freq_out);
+            } else {
+                self.fft
+                    .fft_inverse
+                    .process_with_scratch(
+                        &mut self.main_buffers.temp_freq_out,
+                        &mut self.main_buffers.time_out_channels[ch],
+                        &mut self.fft.scratch,
+                    )
+                    .unwrap();
+            }
+        }
+    }
+
+    pub(super) fn inverse_vbap_range(&mut self, start: usize, end: usize) {
+        for ch in start..end {
             self.fft
                 .fft_inverse
-                .process(
-                    &mut self.main_buffers.temp_freq_out,
+                .process_with_scratch(
+                    &mut self.panning.pending_spectra[ch],
                     &mut self.main_buffers.time_out_channels[ch],
+                    &mut self.fft.scratch,
                 )
                 .unwrap();
         }

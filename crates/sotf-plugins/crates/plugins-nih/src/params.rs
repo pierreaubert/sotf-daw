@@ -98,9 +98,9 @@ pub struct DynamicParams {
     aae_solo_pair: Option<[ParamEntry; 2]>,
     /// Only native AAE opts into ordered host-boundary solo canonicalization.
     native_aae_coupled_solo: bool,
-    aae_value_refresh_generation: AtomicU64,
-    aae_value_refresh_acknowledged: AtomicU64,
-    aae_value_refresh_inflight: AtomicBool,
+    value_refresh_generation: AtomicU64,
+    value_refresh_acknowledged: AtomicU64,
+    value_refresh_inflight: AtomicBool,
     /// Set after NIH restores a serialized state. The next Ambisonics
     /// initialization must compare those restored hidden values with the
     /// selected audio configuration before synchronizing the selection.
@@ -134,8 +134,13 @@ pub struct DynamicParams {
     hiss_schema: bool,
     /// True for the SpeechDenoiser schema; gates Speech restore preflight.
     speech_schema: bool,
-    /// Upmixer snapshots rebuild FFT state; only inactive control-thread loads are safe.
+    /// Native upmixer state loads stage active snapshots until host reactivation.
     upmixer_schema: bool,
+    upmixer_revisions: Vec<Arc<AtomicU64>>,
+    upmixer_bounds: Vec<(f64, f64)>,
+    upmixer_restore: Option<Mutex<UpmixerRestore>>,
+    /// Cached native input choice for allocation-free structural fingerprinting.
+    upmixer_input_format_index: Option<usize>,
     /// Hiss generation-tagged profile carrier with staged restore.
     /// Pending values commit only after a candidate DSP initializes.
     hiss_profile_state: Option<Mutex<HissProfileRestoreState>>,
@@ -143,6 +148,61 @@ pub struct DynamicParams {
     hiss_learn_action: Option<HissMomentaryRoute>,
     /// Precomputed realtime route for the host clear action.
     hiss_clear_action: Option<HissMomentaryRoute>,
+}
+
+#[derive(Clone)]
+struct UpmixerOverlay {
+    values: Vec<Option<ParameterValue>>,
+    revisions: Vec<u64>,
+    generation: u64,
+}
+
+#[derive(Default)]
+struct UpmixerRestore {
+    pending: Option<UpmixerOverlay>,
+    previous: Vec<UpmixerOverlay>,
+    candidate: Option<UpmixerOverlay>,
+    contested: bool,
+    next_generation: u64,
+}
+
+#[doc(hidden)]
+pub struct UpmixerRestoreAttempt {
+    params: Arc<DynamicParams>,
+    committed: bool,
+}
+
+impl UpmixerRestoreAttempt {
+    pub fn new(params: Arc<DynamicParams>) -> Self {
+        Self {
+            params,
+            committed: false,
+        }
+    }
+
+    pub fn commit(&mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for UpmixerRestoreAttempt {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.params.abort_upmixer_restore();
+        }
+    }
+}
+
+fn record_upmixer_write(revision: &AtomicU64, bits: u32) {
+    let mut old = revision.load(Ordering::Acquire);
+    loop {
+        let generation = ((old >> 32) as u32).saturating_add(1);
+        let new = (u64::from(generation) << 32) | u64::from(bits);
+        match revision.compare_exchange_weak(old, new, Ordering::AcqRel, Ordering::Acquire) {
+            Ok(_) => return,
+            Err(actual) => old = actual,
+        }
+    }
 }
 
 #[derive(Default)]
@@ -453,6 +513,24 @@ fn is_de_esser_restart_parameter(id: &str) -> bool {
 
 fn is_declick_restart_parameter(id: &str) -> bool {
     matches!(id, "mode" | "bands" | "crossover_hz" | "repair_width")
+}
+
+fn is_upmixer_bass_restart_parameter(id: &str) -> bool {
+    matches!(
+        id,
+        "bass_mode"
+            | "bass_cutoff_hz"
+            | "bass_gain_db"
+            | "lfe_playback_gain_db"
+            | "combine_input_lfe"
+            | "bass_source_front_left"
+            | "bass_source_front_right"
+            | "bass_source_center"
+            | "bass_source_side_left"
+            | "bass_source_side_right"
+            | "bass_source_back_left"
+            | "bass_source_back_right"
+    )
 }
 
 fn indexed_id(id: &str, prefix: &str, suffix: &str, limit: usize) -> Option<usize> {
@@ -892,11 +970,30 @@ impl DynamicParams {
         let mut param_map = HashMap::new();
         let mut sync_entries = Vec::new();
         let mut convolution_scalar_revisions = HashMap::new();
+        let mut upmixer_revisions = Vec::new();
+        let mut upmixer_bounds = Vec::new();
 
         for info in infos {
             if info.kind == BridgedParamKind::FilePath {
                 continue;
             }
+            let upmixer_revision = (plugin_type == "Upmixer").then(|| {
+                upmixer_bounds.push((info.min_value, info.max_value));
+                #[expect(
+                    clippy::cast_possible_truncation,
+                    reason = "Schema defaults use the native integer or f32 parameter representation"
+                )]
+                let bits = match info.kind {
+                    BridgedParamKind::Bool => u32::from(info.default_value > 0.5),
+                    BridgedParamKind::Int => {
+                        u32::from_ne_bytes((info.default_value as i32).to_ne_bytes())
+                    }
+                    _ => (info.default_value as f32).to_bits(),
+                };
+                let revision = Arc::new(AtomicU64::new(u64::from(bits)));
+                upmixer_revisions.push(Arc::clone(&revision));
+                revision
+            });
             let eq_pair_draft = plugin_type == "EQ" && is_native_eq_pair_draft_parameter(&info.id);
             let hiss_momentary = plugin_type == "HissReducer"
                 && hiss_profile::is_hiss_momentary_id(info.id.as_str());
@@ -908,7 +1005,8 @@ impl DynamicParams {
                 || (plugin_type == "DeEsser" && is_de_esser_restart_parameter(&info.id))
                 || (plugin_type == "SpeechDenoiser" && info.id == "model")
                 || (plugin_type == "AnalogLimiter" && info.id == "analog_model")
-                || (plugin_type == "Declick" && is_declick_restart_parameter(&info.id));
+                || (plugin_type == "Declick" && is_declick_restart_parameter(&info.id))
+                || (plugin_type == "Upmixer" && is_upmixer_bass_restart_parameter(&info.id));
             let realtime = (info.realtime || eq_pair_draft) && !requires_restart;
             if info.kind == BridgedParamKind::Bool {
                 // Bool parameter
@@ -928,6 +1026,11 @@ impl DynamicParams {
                     param = param.non_automatable();
                 } else if !realtime {
                     param = param.hide();
+                }
+                if let Some(revision) = upmixer_revision {
+                    param = param.with_before_set(Arc::new(move |value| {
+                        record_upmixer_write(&revision, u32::from(value));
+                    }));
                 }
                 bool_params.push(param);
                 let entry = ParamEntry {
@@ -1055,6 +1158,20 @@ impl DynamicParams {
                                     .position(|label| *label == value.trim())
                                     .and_then(|index| i32::try_from(index).ok())
                             }));
+                    } else if plugin_type == "Upmixer" && info.id == "bass_mode" {
+                        param = param
+                            .with_value_to_string(Arc::new(|value| match value {
+                                0 => "Off".to_string(),
+                                1 => "Derived".to_string(),
+                                2 => "Managed".to_string(),
+                                _ => "Unknown".to_string(),
+                            }))
+                            .with_string_to_value(Arc::new(|value| match value.trim() {
+                                "Off" => Some(0),
+                                "Derived" => Some(1),
+                                "Managed" => Some(2),
+                                _ => None,
+                            }));
                     } else if plugin_type == "SpeechDenoiser"
                         && info.id == "model"
                         && let Some(labels) = speech_model_choice_labels()
@@ -1101,6 +1218,11 @@ impl DynamicParams {
                     param = param.non_automatable();
                 } else if !realtime {
                     param = param.hide();
+                }
+                if let Some(revision) = upmixer_revision {
+                    param = param.with_before_set(Arc::new(move |value| {
+                        record_upmixer_write(&revision, u32::from_ne_bytes(value.to_ne_bytes()));
+                    }));
                 }
                 int_params.push(param);
                 let entry = ParamEntry {
@@ -1152,6 +1274,11 @@ impl DynamicParams {
                 } else if !realtime {
                     param = param.hide();
                 }
+                if let Some(revision) = upmixer_revision {
+                    param = param.with_before_set(Arc::new(move |value| {
+                        record_upmixer_write(&revision, value.to_bits());
+                    }));
+                }
                 float_params.push(param);
                 let entry = ParamEntry {
                     kind: ParamKind::Float,
@@ -1185,6 +1312,12 @@ impl DynamicParams {
             })
             .flatten();
 
+        let upmixer_input_format_index = (plugin_type == "Upmixer")
+            .then(|| param_map.get("input_format"))
+            .flatten()
+            .filter(|entry| matches!(entry.kind, ParamKind::Int))
+            .map(|entry| entry.index);
+
         let parameters = Self {
             float_params,
             bool_params,
@@ -1193,9 +1326,9 @@ impl DynamicParams {
             sync_entries,
             aae_solo_pair,
             native_aae_coupled_solo,
-            aae_value_refresh_generation: AtomicU64::new(0),
-            aae_value_refresh_acknowledged: AtomicU64::new(0),
-            aae_value_refresh_inflight: AtomicBool::new(false),
+            value_refresh_generation: AtomicU64::new(0),
+            value_refresh_acknowledged: AtomicU64::new(0),
+            value_refresh_inflight: AtomicBool::new(false),
             ambisonics_state_restore_pending: AtomicBool::new(false),
             ambisonics_custom_state: (plugin_type == "AmbisonicsDecoder")
                 .then(|| Mutex::new(ambisonics_custom::AmbisonicsCustomRestoreState::default())),
@@ -1213,6 +1346,11 @@ impl DynamicParams {
             hiss_schema: plugin_type == "HissReducer",
             speech_schema: plugin_type == "SpeechDenoiser",
             upmixer_schema: plugin_type == "Upmixer",
+            upmixer_revisions,
+            upmixer_bounds,
+            upmixer_restore: (plugin_type == "Upmixer")
+                .then(|| Mutex::new(UpmixerRestore::default())),
+            upmixer_input_format_index,
             hiss_profile_state: (plugin_type == "HissReducer")
                 .then(|| Mutex::new(HissProfileRestoreState::default())),
             hiss_learn_action,
@@ -1248,7 +1386,7 @@ impl DynamicParams {
                                 && owner.bool_params[peer].disable_for_coupled_control()
                             {
                                 owner
-                                    .aae_value_refresh_generation
+                                    .value_refresh_generation
                                     .fetch_add(1, Ordering::Release);
                             }
                         }))
@@ -1304,6 +1442,17 @@ impl DynamicParams {
     /// ordinary plugin processing continues to observe committed parameters.
     pub(crate) fn initialization_value(&self, id: &str) -> Option<ParameterValue> {
         let entry = self.param_map.get(id)?;
+        if let Some(state) = &self.upmixer_restore
+            && let Ok(state) = state.lock()
+            && let Some(candidate) = &state.candidate
+            && let Some(index) = self
+                .sync_entries
+                .iter()
+                .position(|candidate| candidate.id.as_str() == id)
+            && let Some(Some(value)) = candidate.values.get(index)
+        {
+            return Some(value.clone());
+        }
         if let Some(state) = &self.convolution_state
             && let Ok(state) = state.lock()
             && let Some(pending) = &state.pending
@@ -1323,6 +1472,244 @@ impl DynamicParams {
             return Some(value.clone());
         }
         Some(self.value_for_entry(entry))
+    }
+
+    fn stage_upmixer_state(&self, snapshot: &PluginState) -> bool {
+        let Some(restore) = &self.upmixer_restore else {
+            return false;
+        };
+        let Ok(mut restore) = restore.lock() else {
+            return false;
+        };
+        if restore.pending.is_none() {
+            // No snapshot refers to the previous generations. Preserve each
+            // last written value while starting a fresh comparison epoch.
+            for revision in &self.upmixer_revisions {
+                revision.fetch_and(u64::from(u32::MAX), Ordering::AcqRel);
+            }
+        }
+        let mut values = Vec::with_capacity(self.sync_entries.len());
+        let mut revisions = Vec::with_capacity(self.sync_entries.len());
+        for (index, entry) in self.sync_entries.iter().enumerate() {
+            let revision = self.upmixer_revisions[index].load(Ordering::Acquire);
+            if revision >> 32 == u64::from(u32::MAX) {
+                return false;
+            }
+            let previous = restore.pending.as_ref().and_then(|pending| {
+                if pending.revisions[index] == revision {
+                    pending.values[index].clone()
+                } else {
+                    Some(Self::upmixer_value_from_revision(entry, revision))
+                }
+            });
+            let value = match snapshot.params.get(entry.id.as_str()) {
+                None => previous,
+                Some(NativeParamValue::F32(value))
+                    if matches!(entry.kind, ParamKind::Float)
+                        && value.is_finite()
+                        && f64::from(*value) >= self.upmixer_bounds[index].0
+                        && f64::from(*value) <= self.upmixer_bounds[index].1 =>
+                {
+                    Some(ParameterValue::Float(*value))
+                }
+                Some(NativeParamValue::I32(value))
+                    if matches!(entry.kind, ParamKind::Int)
+                        && f64::from(*value) >= self.upmixer_bounds[index].0
+                        && f64::from(*value) <= self.upmixer_bounds[index].1 =>
+                {
+                    Some(ParameterValue::Int(*value))
+                }
+                Some(NativeParamValue::Bool(value)) if matches!(entry.kind, ParamKind::Bool) => {
+                    Some(ParameterValue::Bool(*value))
+                }
+                Some(_) => return false,
+            };
+            values.push(value);
+            revisions.push(revision);
+        }
+        if restore.pending.is_some() && restore.previous.len() >= 8 {
+            return false;
+        }
+        let Some(next_generation) = restore.next_generation.checked_add(1) else {
+            return false;
+        };
+        restore.next_generation = next_generation;
+        if let Some(previous) = restore.pending.take() {
+            restore.previous.push(previous);
+        }
+        restore.pending = Some(UpmixerOverlay {
+            values,
+            revisions,
+            generation: restore.next_generation,
+        });
+        true
+    }
+
+    pub(crate) fn begin_upmixer_restore(&self) -> bool {
+        let Some(restore) = &self.upmixer_restore else {
+            return true;
+        };
+        let Ok(mut restore) = restore.lock() else {
+            return false;
+        };
+        let Some(mut candidate) = restore.pending.clone() else {
+            restore.candidate = None;
+            return true;
+        };
+        for (index, revision) in self.upmixer_revisions.iter().enumerate() {
+            let current = revision.load(Ordering::Acquire);
+            if current >> 32 == u64::from(u32::MAX) {
+                return false;
+            }
+            if current != candidate.revisions[index] {
+                candidate.values[index] = Some(Self::upmixer_value_from_revision(
+                    &self.sync_entries[index],
+                    current,
+                ));
+            }
+            candidate.revisions[index] = current;
+        }
+        restore.contested = false;
+        restore.candidate = Some(candidate);
+        true
+    }
+
+    fn abort_upmixer_restore(&self) {
+        let Some(restore) = &self.upmixer_restore else {
+            return;
+        };
+        let Ok(mut restore) = restore.lock() else {
+            return;
+        };
+        let Some(candidate) = restore.candidate.take() else {
+            return;
+        };
+        if !restore.contested
+            && restore.pending.as_ref().map(|pending| pending.generation)
+                == Some(candidate.generation)
+        {
+            // A failed candidate must not poison a later inactive restore. If
+            // there is no older staged snapshot, retain the committed values.
+            restore.pending = restore.previous.pop();
+        }
+        restore.contested = false;
+    }
+
+    pub(crate) fn complete_upmixer_restore(&self, sample_rate: f64) -> bool {
+        self.complete_upmixer_restore_with_hook(sample_rate, || {}, |_| {})
+    }
+
+    fn upmixer_value_from_revision(entry: &ParamEntry, revision: u64) -> ParameterValue {
+        let bytes = revision.to_le_bytes();
+        let bits = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+        match entry.kind {
+            ParamKind::Float => ParameterValue::Float(f32::from_bits(bits)),
+            ParamKind::Int => ParameterValue::Int(i32::from_ne_bytes(bits.to_ne_bytes())),
+            ParamKind::Bool => ParameterValue::Bool(bits != 0),
+        }
+    }
+
+    fn set_upmixer_value_untracked(
+        &self,
+        entry: &ParamEntry,
+        value: &ParameterValue,
+        sample_rate: f64,
+    ) {
+        match (entry.kind, value) {
+            (ParamKind::Float, ParameterValue::Float(value)) => {
+                self.float_params[entry.index].set_prepared_value_untracked(*value, sample_rate);
+            }
+            (ParamKind::Int, ParameterValue::Int(value)) => {
+                self.int_params[entry.index].set_prepared_value_untracked(*value, sample_rate);
+            }
+            (ParamKind::Bool, ParameterValue::Bool(value)) => {
+                self.bool_params[entry.index].set_prepared_value_untracked(*value, sample_rate);
+            }
+            _ => unreachable!("validated upmixer parameter type"),
+        }
+    }
+
+    fn complete_upmixer_restore_with_hook(
+        &self,
+        sample_rate: f64,
+        after_validation: impl FnOnce(),
+        mut before_rollback_write: impl FnMut(usize),
+    ) -> bool {
+        let Some(restore) = &self.upmixer_restore else {
+            return true;
+        };
+        let Ok(mut restore) = restore.lock() else {
+            return false;
+        };
+        let Some(candidate) = restore.candidate.clone() else {
+            return true;
+        };
+        if restore.pending.as_ref().map(|pending| pending.generation) != Some(candidate.generation)
+            || self
+                .upmixer_revisions
+                .iter()
+                .zip(&candidate.revisions)
+                .any(|(current, captured)| current.load(Ordering::Acquire) != *captured)
+        {
+            restore.contested = true;
+            return false;
+        }
+        let old_values: Vec<_> = self
+            .sync_entries
+            .iter()
+            .map(|entry| self.unmodulated_value(entry))
+            .collect();
+        let mut hook = Some(after_validation);
+        let mut touched = Vec::new();
+        for (index, (entry, value)) in self.sync_entries.iter().zip(&candidate.values).enumerate() {
+            if let Some(value) = value {
+                self.set_upmixer_value_untracked(entry, value, sample_rate);
+                touched.push(index);
+                if let Some(hook) = hook.take() {
+                    hook();
+                }
+            }
+            if self
+                .upmixer_revisions
+                .iter()
+                .zip(&candidate.revisions)
+                .any(|(current, captured)| current.load(Ordering::Acquire) != *captured)
+            {
+                for &touched_index in &touched {
+                    let entry = &self.sync_entries[touched_index];
+                    let mut retries = 0_usize;
+                    loop {
+                        let observed =
+                            self.upmixer_revisions[touched_index].load(Ordering::Acquire);
+                        let value = if observed == candidate.revisions[touched_index] {
+                            old_values[touched_index].clone()
+                        } else {
+                            Self::upmixer_value_from_revision(entry, observed)
+                        };
+                        before_rollback_write(touched_index);
+                        self.set_upmixer_value_untracked(entry, &value, sample_rate);
+                        if self.upmixer_revisions[touched_index].load(Ordering::Acquire) == observed
+                        {
+                            break;
+                        }
+                        // This rollback runs only during host reactivation, after
+                        // processing has stopped. Yield rather than overwrite a
+                        // sustained sequence of later control-thread edits.
+                        retries = retries.wrapping_add(1);
+                        if retries.trailing_zeros() >= 5 {
+                            std::thread::yield_now();
+                        }
+                    }
+                }
+                restore.contested = true;
+                return false;
+            }
+        }
+        restore.pending = None;
+        restore.previous.clear();
+        restore.candidate = None;
+        self.value_refresh_generation.fetch_add(1, Ordering::AcqRel);
+        true
     }
 
     fn value_for_entry(&self, entry: &ParamEntry) -> ParameterValue {
@@ -2180,9 +2567,9 @@ impl DynamicParams {
         }
     }
 
-    /// Allocation-free identity for structural parameters that cannot be changed by a
-    /// DynamicEQ host restart. A shelf shape/slope change may differ while the old prepared
-    /// plugin keeps processing, but any other construction-sized mismatch remains an error.
+    /// Allocation-free identity for structural parameters that cannot be changed by a host
+    /// restart. Restartable settings may differ while the old prepared plugin keeps processing,
+    /// but any other construction-sized mismatch remains an error.
     #[doc(hidden)]
     pub fn non_restartable_structural_fingerprint(&self) -> u64 {
         let mut fingerprint = 0xcbf2_9ce4_8422_2325_u64;
@@ -2233,6 +2620,40 @@ impl DynamicParams {
             self.int_params[entry.index].set_plain_value_for_initialization(plain);
         }
 
+        Ok(())
+    }
+
+    /// Synchronize the output choice with a named host-negotiated upmixer layout.
+    #[doc(hidden)]
+    pub fn set_upmixer_layout(&self, input_id: &str, output_id: &str) -> Result<(), String> {
+        let index = sotf_plugins::param_specs::upmixer::SPEAKER_CONFIGS
+            .iter()
+            .position(|id| *id == output_id)
+            .ok_or_else(|| format!("unsupported upmixer output layout {output_id}"))?;
+        let entry = self
+            .param_map
+            .get("speaker_config")
+            .ok_or("missing upmixer speaker_config parameter")?;
+        if entry.realtime || !matches!(entry.kind, ParamKind::Int) {
+            return Err("upmixer speaker_config must be a structural choice".into());
+        }
+        let index = i32::try_from(index).map_err(|_| "upmixer output choice is out of range")?;
+        self.int_params[entry.index].set_plain_value_for_initialization(index);
+        let input = match input_id {
+            "2.0" => 0,
+            "5.0" => 1,
+            "5.1" => 2,
+            "7.1" => 3,
+            _ => return Err(format!("unsupported upmixer input layout {input_id}")),
+        };
+        let entry = self
+            .param_map
+            .get("input_format")
+            .ok_or("missing upmixer input_format parameter")?;
+        if entry.realtime || !matches!(entry.kind, ParamKind::Int) {
+            return Err("upmixer input_format must be a structural choice".into());
+        }
+        self.int_params[entry.index].set_plain_value_for_initialization(input);
         Ok(())
     }
 
@@ -2671,9 +3092,12 @@ impl DynamicParams {
             if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
                 continue;
             }
-            let value = self
-                .initialization_value(entry.id.as_str())
-                .unwrap_or_else(|| self.value_for_entry(entry));
+            let value = if self.upmixer_schema && sample_rate.is_none() {
+                self.value_for_entry(entry)
+            } else {
+                self.initialization_value(entry.id.as_str())
+                    .unwrap_or_else(|| self.value_for_entry(entry))
+            };
             let current = plugin.get_parameter(&entry.id);
             if self.hiss_schema
                 && entry.id.as_str() == "frequency_hz"
@@ -2715,6 +3139,15 @@ impl DynamicParams {
                 continue;
             }
             if current.as_ref() != Some(&value) {
+                if self.upmixer_schema
+                    && matches!(
+                        entry.id.as_str(),
+                        "auto_gain_enabled" | "enable_subharmonic_synth"
+                    )
+                    && plugin.input_channels() > 2
+                {
+                    continue;
+                }
                 plugin.set_parameter(entry.id.clone(), value)?;
             }
         }
@@ -2773,12 +3206,16 @@ impl DynamicParams {
     #[doc(hidden)]
     pub fn structural_fingerprint(&self) -> u64 {
         let mut fingerprint = 0xcbf2_9ce4_8422_2325_u64;
-        for entry in self.sync_entries.iter().filter(|entry| {
+        let upmixer_surround = self
+            .upmixer_input_format_index
+            .is_some_and(|index| self.int_params[index].value() > 0);
+        for entry in self.sync_entries.iter().filter(|entry| !entry.realtime) {
             if self.hiss_schema && hiss_profile::is_hiss_momentary_id(entry.id.as_str()) {
-                return false;
+                continue;
             }
-            !entry.realtime
-        }) {
+            if upmixer_surround && entry.id.as_str() == "binaural_preview" {
+                continue;
+            }
             let bits = match entry.kind {
                 ParamKind::Float => self.float_params[entry.index].value().to_bits() as u64,
                 ParamKind::Bool => u64::from(self.bool_params[entry.index].value()),
@@ -3013,27 +3450,30 @@ unsafe impl Sync for DynamicParams {}
 // SAFETY: All parameter pointers are valid for the lifetime of DynamicParams.
 // The param_map returns stable pointers to owned fields.
 unsafe impl Params for DynamicParams {
+    fn parameter_value_rescan_pending(&self) -> bool {
+        (self.native_aae_coupled_solo || self.upmixer_schema)
+            && self.value_refresh_generation.load(Ordering::Acquire)
+                != self.value_refresh_acknowledged.load(Ordering::Acquire)
+    }
+
     fn begin_parameter_value_rescan(&self) -> Option<u64> {
-        if !self.native_aae_coupled_solo
-            || self.aae_value_refresh_generation.load(Ordering::Acquire)
-                == self.aae_value_refresh_acknowledged.load(Ordering::Acquire)
+        if !self.parameter_value_rescan_pending()
             || self
-                .aae_value_refresh_inflight
+                .value_refresh_inflight
                 .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
                 .is_err()
         {
             return None;
         }
-        Some(self.aae_value_refresh_generation.load(Ordering::Acquire))
+        Some(self.value_refresh_generation.load(Ordering::Acquire))
     }
 
     fn finish_parameter_value_rescan(&self, generation: u64, succeeded: bool) {
         if succeeded {
-            self.aae_value_refresh_acknowledged
+            self.value_refresh_acknowledged
                 .store(generation, Ordering::Release);
         }
-        self.aae_value_refresh_inflight
-            .store(false, Ordering::Release);
+        self.value_refresh_inflight.store(false, Ordering::Release);
     }
 
     fn param_map(&self) -> Vec<(String, ParamPtr, String)> {
@@ -3046,7 +3486,7 @@ unsafe impl Params for DynamicParams {
             };
             map.push((id.to_string(), ptr, String::new()));
         };
-        if self.crossover_schema {
+        if self.crossover_schema || self.upmixer_schema {
             for entry in &self.sync_entries {
                 append(entry.id.as_str(), entry);
             }
@@ -3102,9 +3542,8 @@ unsafe impl Params for DynamicParams {
                 // at the real clock rather than a provisional guessed rate.
             }
         }
-        // NIH reinitializes an already prepared plugin after every accepted snapshot,
-        // including scalar-only and sparse snapshots. Reject before any mutation so
-        // active FFT history and published latency survive until host deactivation.
+        // The immediate NIH restore path reinitializes the prepared plugin. Active
+        // upmixer snapshots must use the staging hook instead of this path.
         !(self.upmixer_schema && (is_active || is_audio_thread))
             && self.validate_aae_solo_restore(state)
             && self.validate_eq_native_state(state)
@@ -3112,6 +3551,14 @@ unsafe impl Params for DynamicParams {
             && self.validate_hiss_restore(state, is_active, is_audio_thread)
             && self.validate_ambisonics_custom_restore(state, is_active, is_audio_thread)
             && self.validate_speech_restore(state, is_active, is_audio_thread)
+    }
+
+    fn stages_active_state(&self) -> bool {
+        self.upmixer_schema
+    }
+
+    fn stage_active_state(&self, state: &PluginState) -> bool {
+        self.stage_upmixer_state(state)
     }
 
     fn defer_state_parameter_values(&self) -> bool {
@@ -3122,6 +3569,26 @@ unsafe impl Params for DynamicParams {
 
     fn serialize_parameter_overrides(&self) -> BTreeMap<String, NativeParamValue> {
         let mut overrides = BTreeMap::new();
+        if let Some(restore) = &self.upmixer_restore
+            && let Ok(restore) = restore.lock()
+            && let Some(pending) = &restore.pending
+        {
+            for (index, entry) in self.sync_entries.iter().enumerate() {
+                let observed = self.upmixer_revisions[index].load(Ordering::Acquire);
+                let value = if observed == pending.revisions[index] {
+                    pending.values[index].clone()
+                } else {
+                    Some(Self::upmixer_value_from_revision(entry, observed))
+                };
+                let value = match value {
+                    Some(ParameterValue::Float(value)) => NativeParamValue::F32(value),
+                    Some(ParameterValue::Int(value)) => NativeParamValue::I32(value),
+                    Some(ParameterValue::Bool(value)) => NativeParamValue::Bool(value),
+                    _ => continue,
+                };
+                overrides.insert(entry.id.as_str().to_string(), value);
+            }
+        }
         if self.eq_schema {
             let route = self
                 .eq_pair_route_state

@@ -1,8 +1,10 @@
 # sotf-plugin-upmixer
 
-SOTF Upmixer plugin for stereo to surround upmixing.
+SOTF Upmixer plugin for stereo upmixing and surround-input height generation.
 
-Converts stereo audio to surround formats (5.1 through 9.1.6) using FFT-based Direct/Ambient decomposition combined with VBAP panning for spatial placement.
+Converts stereo audio to surround formats using FFT-based direct/ambient decomposition and VBAP panning. For explicitly identified 5.0, 5.1, and 7.1 input, it preserves the existing speaker bed and generates optional height channels and a configurable subwoofer feed. See [USAGE.md](USAGE.md) for role ordering, bass routing, latency, and level conventions.
+
+The main and high-resolution FFTs use shared scratch storage sized during setup and replanning. This keeps their processing calls allocation-free when an FFT backend requires scratch space.
 
 ### Gain and routing control timing
 
@@ -53,7 +55,7 @@ Processing immediately after prepared enable remains allocation-free.
 
 ### Realtime scalar updates
 
-After initialization, the 34 realtime scalar setters update cached values in
+After initialization, the realtime scalar setters update cached values in
 place without allocating or freeing heap memory. Cached values use the accepted
 DSP state, including coercion and clamping. Changed targets, repeated snapshots
 and the following audio calls are checked at 48/192 kHz, FFT512/4096 and stereo/
@@ -128,11 +130,16 @@ refresh latency correctly. Steady frequency-domain crossover pre-ringing is
 part of the unchanged filtered response, not a pure-delay arrival oracle.
 
 Native CLAP/VST3 wrapper activation tests verify saved raw bypass and low-latency
-FFT states report 0/1024/2048 frames before audio. An active structural state
-change returns error/silence while retaining the prepared DSP latency; the host
-must deactivate/reactivate before the new latency is published. Automatic host
-reactivation is not implemented. Packaged native bus-layout restrictions remain
-unchanged. These are host integration checks, not an external DAW/device test.
+FFT states report 0/1024/2048 frames before audio. Historical stereo structural
+changes return error/silence until reactivation; automatic reactivation is not
+implemented for that path. Surround bass settings are visible, non-automatable
+controls: the wrapper requests host reinitialization and keeps the previously
+prepared bass path running until it occurs. Surround-input CLAP and VST3 wrappers
+negotiate named layouts and channel ordering. The built-in host and VST3 also
+support 5.1.6. CLAP does not advertise 5.1.6 or the 9.1 layouts because its
+surround extension cannot represent the top-middle or front-wide roles used by
+those layouts. These are host integration checks, not an external DAW/device
+test.
 
 
 ### Recorded center-source observations

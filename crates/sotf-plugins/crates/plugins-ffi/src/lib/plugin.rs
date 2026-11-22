@@ -408,6 +408,39 @@ fn is_eq_family_constructor_structural_id(plugin_type: &str, param_id: &str) -> 
     )
 }
 
+#[inline(always)]
+fn set_mapped_parameter(handle: &mut PluginHandle, param_id: &str, value: f64) -> PluginError {
+    match handle
+        .parameter_map
+        .set_normalized(&mut *handle.plugin, param_id, value)
+    {
+        Ok(()) => PluginError::Success,
+        Err(error) => {
+            set_last_error(&format!("Failed to set parameter: {}", error));
+            PluginError::InvalidParameter
+        }
+    }
+}
+
+fn is_upmixer_bass_structural_id(plugin_type: &str, param_id: &str) -> bool {
+    matches!(
+        param_id,
+        "bass_mode"
+            | "bass_cutoff_hz"
+            | "bass_gain_db"
+            | "lfe_playback_gain_db"
+            | "combine_input_lfe"
+            | "bass_source_front_left"
+            | "bass_source_front_right"
+            | "bass_source_center"
+            | "bass_source_side_left"
+            | "bass_source_side_right"
+            | "bass_source_back_left"
+            | "bass_source_back_right"
+            | "input_format"
+    ) && matches!(plugin_type, "Upmixer" | "upmixer")
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PluginStateRestoreKind {
     Partial,
@@ -419,6 +452,9 @@ fn replace_plugin_from_state(
     state: &[u8],
     restore_kind: PluginStateRestoreKind,
 ) -> Result<(), String> {
+    if matches!(handle.plugin_type.as_str(), "Upmixer" | "upmixer") {
+        return replace_upmixer_from_state(handle, state);
+    }
     if matches!(
         handle.plugin_type.as_str(),
         "DynamicEQ" | "dynamic_eq" | "dynamic-eq"
@@ -571,6 +607,118 @@ fn replace_plugin_from_state(
     handle
         .parameter_map
         .refresh_speech_model_index(&*handle.plugin);
+    Ok(())
+}
+
+fn replace_upmixer_from_state(handle: &mut PluginHandle, state: &[u8]) -> Result<(), String> {
+    let mut merged: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_slice(&plugins_bridge::state::try_save_state(&*handle.plugin)?)
+            .map_err(|error| format!("Failed to capture Upmixer state: {error}"))?;
+    let incoming: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(state)
+        .map_err(|error| format!("Failed to parse Upmixer state: {error}"))?;
+    for id in ["speaker_config", "input_format"] {
+        if incoming
+            .get(id)
+            .is_some_and(|value| merged.get(id) != Some(value))
+        {
+            return Err(format!(
+                "Upmixer {id} must match the negotiated host layout"
+            ));
+        }
+    }
+    for (key, value) in incoming {
+        if merged.contains_key(&key) {
+            merged.insert(key, value);
+        }
+    }
+
+    let mut config: serde_json::Value = match handle.config_json.trim() {
+        "" | "null" => serde_json::json!({}),
+        json => serde_json::from_str(json)
+            .map_err(|error| format!("Failed to parse Upmixer config: {error}"))?,
+    };
+    let config = config
+        .as_object_mut()
+        .ok_or("Upmixer configuration must be a JSON object")?;
+    let mode = merged
+        .get("bass_mode")
+        .and_then(serde_json::Value::as_i64)
+        .ok_or("Upmixer bass_mode must be an integer")?;
+    use sotf_plugins::plugin_upmixer::SurroundBassMode;
+    let mode = match mode {
+        0 => SurroundBassMode::Off,
+        1 => SurroundBassMode::Derived,
+        2 => SurroundBassMode::Managed,
+        _ => return Err("Upmixer bass_mode is out of range".into()),
+    };
+    config.insert(
+        "bass_mode".into(),
+        serde_json::to_value(mode)
+            .map_err(|error| format!("Failed to serialize Upmixer bass mode: {error}"))?,
+    );
+    for id in ["bass_cutoff_hz", "bass_gain_db", "lfe_playback_gain_db"] {
+        let value = merged
+            .get(id)
+            .and_then(serde_json::Value::as_f64)
+            .ok_or_else(|| format!("Upmixer {id} must be numeric"))?;
+        let spec = sotf_plugins::param_specs::upmixer::PARAMS
+            .iter()
+            .find(|spec| spec.engine_key == id)
+            .ok_or_else(|| format!("Missing Upmixer parameter definition for {id}"))?;
+        if !value.is_finite() || spec.clamp_f64(value) != value {
+            return Err(format!("Upmixer {id} is out of range"));
+        }
+        config.insert(id.into(), value.into());
+    }
+    let combine = merged
+        .get("combine_input_lfe")
+        .and_then(serde_json::Value::as_bool)
+        .ok_or("Upmixer combine_input_lfe must be a boolean")?;
+    config.insert("combine_input_lfe".into(), combine.into());
+    let mut mask = 0_u8;
+    for (bit, id) in [
+        "bass_source_front_left",
+        "bass_source_front_right",
+        "bass_source_center",
+        "bass_source_side_left",
+        "bass_source_side_right",
+        "bass_source_back_left",
+        "bass_source_back_right",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let selected = merged
+            .get(id)
+            .and_then(serde_json::Value::as_bool)
+            .ok_or_else(|| format!("Upmixer {id} must be a boolean"))?;
+        if selected {
+            mask |= 1 << bit;
+        }
+    }
+    config.insert("bass_source_mask".into(), mask.into());
+    let replacement_config = serde_json::to_string(&config)
+        .map_err(|error| format!("Failed to serialize Upmixer config: {error}"))?;
+    let merged = serde_json::to_vec(&merged)
+        .map_err(|error| format!("Failed to serialize Upmixer state: {error}"))?;
+    let mut replacement = super::plugin_factory::create_unprepared_plugin(
+        &handle.plugin_type,
+        &replacement_config,
+        handle.input_channels,
+        handle.output_channels,
+        handle.sample_rate,
+    )?;
+    load_changed_state(&mut *replacement, &merged, &handle.plugin_type)?;
+    replacement =
+        plugins_bridge::prepare_standalone_plugin(replacement, handle.max_callback_frames)?;
+    replacement.initialize(f64::from(handle.sample_rate))?;
+    if replacement.input_channels() != handle.input_channels
+        || replacement.output_channels() != handle.output_channels
+    {
+        return Err("Restored Upmixer channel layout differs from the handle layout".into());
+    }
+    handle.plugin = replacement;
+    handle.config_json = replacement_config;
     Ok(())
 }
 
@@ -1186,6 +1334,10 @@ fn replace_band_split_from_state(handle: &mut PluginHandle, state: &[u8]) -> Res
 mod state_tests;
 
 #[cfg(test)]
+#[path = "upmixer_state_tests.rs"]
+mod upmixer_state_tests;
+
+#[cfg(test)]
 #[path = "ffi_integration_tests.rs"]
 mod ffi_integration_tests;
 
@@ -1281,18 +1433,23 @@ fn replace_linear_phase_eq_from_state(
 /// * The pointer points to thread-local storage that remains valid until the
 ///   next FFI call on the same thread that may set an error. Copy the contents
 ///   if you need it to outlive the next call.
+/// * Returns `NULL` when no error remains accessible during thread-local destruction.
 #[unsafe(no_mangle)]
 pub extern "C" fn plugin_get_last_error() -> *const c_char {
-    let static_error = LAST_STATIC_ERROR.with(std::cell::Cell::get);
+    let static_error = LAST_STATIC_ERROR
+        .try_with(std::cell::Cell::get)
+        .unwrap_or(ptr::null());
     if !static_error.is_null() {
         return static_error;
     }
-    LAST_ERROR.with(|e| {
-        e.borrow()
-            .as_ref()
-            .map(|s| s.as_ptr())
-            .unwrap_or(ptr::null())
-    })
+    LAST_ERROR
+        .try_with(|e| {
+            e.borrow()
+                .as_ref()
+                .map(|s| s.as_ptr())
+                .unwrap_or(ptr::null())
+        })
+        .unwrap_or(ptr::null())
 }
 
 /// Get the stable ABI version for this FFI surface.
@@ -2179,6 +2336,53 @@ pub extern "C" fn plugin_get_parameter_info(
     }
 }
 
+/// The parameter has a static specification with known automation traits.
+pub const PLUGIN_PARAMETER_TRAIT_KNOWN: u32 = 1;
+/// The parameter is floating point, irrespective of any declared step size.
+pub const PLUGIN_PARAMETER_TRAIT_FLOAT: u32 = 2;
+/// The parameter's static specification marks updates as realtime.
+pub const PLUGIN_PARAMETER_TRAIT_REALTIME: u32 = 4;
+
+/// Get static parameter automation traits as a bit mask.
+///
+/// Returns zero if the handle or index is invalid, or the parameter has no
+/// static specification. `KNOWN` is always set on a successful lookup;
+/// `FLOAT` and `REALTIME` describe the specification independently. These
+/// traits do not guarantee that every attempted update is allocation-free.
+/// Older ABI v3 libraries may not export this additive symbol. Clients that
+/// load multiple library versions should resolve it dynamically and fall back
+/// when it is absent.
+///
+/// # Safety
+/// * `handle` must be `NULL` or a live plugin handle.
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_get_parameter_automation_traits(
+    handle: *const PluginHandle,
+    index: usize,
+) -> u32 {
+    if handle.is_null() {
+        return 0;
+    }
+    // SAFETY: the caller promises a live handle; this only reads its map.
+    let traits = unsafe { (&*handle).parameter_map.automation_traits(index) };
+    match traits {
+        Some((float, realtime)) => {
+            PLUGIN_PARAMETER_TRAIT_KNOWN
+                | if float {
+                    PLUGIN_PARAMETER_TRAIT_FLOAT
+                } else {
+                    0
+                }
+                | if realtime {
+                    PLUGIN_PARAMETER_TRAIT_REALTIME
+                } else {
+                    0
+                }
+        }
+        None => 0,
+    }
+}
+
 /// Get one choice label for a parameter in its enumerated ABI position.
 ///
 /// The returned pointer references a static NUL-terminated string and is
@@ -2262,6 +2466,13 @@ pub extern "C" fn plugin_set_parameter(
             }
         };
 
+        // These realtime Upmixer controls cannot match the construction guards below.
+        if matches!(param_id_str, "bypass_heights" | "bypass_surround")
+            && matches!(handle_ref.plugin_type.as_str(), "Upmixer" | "upmixer")
+        {
+            return set_mapped_parameter(handle_ref, param_id_str, normalized_value);
+        }
+
         if is_dynamic_eq_shelf_structural_id(&handle_ref.plugin_type, param_id_str) {
             set_last_error_static(
                 c"Dynamic EQ structural shelf shape, slope, and placement require state restoration",
@@ -2325,22 +2536,149 @@ pub extern "C" fn plugin_set_parameter(
             return PluginError::InvalidParameter;
         }
 
-        match handle_ref.parameter_map.set_normalized(
-            &mut *handle_ref.plugin,
-            param_id_str,
-            normalized_value,
-        ) {
-            Ok(_) => PluginError::Success,
-            Err(e) => {
-                set_last_error(&format!("Failed to set parameter: {}", e));
-                PluginError::InvalidParameter
+        // Keep the initial-byte filter aligned with `is_upmixer_bass_structural_id`;
+        // ordinary automation avoids the longer construction-parameter match.
+        if matches!(
+            param_id_str.as_bytes().first(),
+            Some(b'b' | b'c' | b'i' | b'l')
+        ) && is_upmixer_bass_structural_id(&handle_ref.plugin_type, param_id_str)
+        {
+            if handle_ref.parameter_map.upmixer_structural_noop(
+                &*handle_ref.plugin,
+                param_id_str,
+                normalized_value,
+            ) {
+                return PluginError::Success;
+            }
+            set_last_error_static(c"Upmixer surround bass changes require state restoration");
+            return PluginError::InvalidParameter;
+        }
+
+        if handle_ref.input_channels > 2
+            && matches!(
+                param_id_str,
+                "speaker_config"
+                    | "low_latency"
+                    | "binaural_preview"
+                    | "auto_gain_enabled"
+                    | "enable_subharmonic_synth"
+            )
+            && matches!(handle_ref.plugin_type.as_str(), "Upmixer" | "upmixer")
+            && let Some(upmixer) = handle_ref
+                .plugin
+                .as_any()
+                .and_then(|plugin| plugin.downcast_ref::<sotf_plugins::UpmixerPlugin>())
+            && let Some((value, structural)) = handle_ref
+                .parameter_map
+                .upmixer_surround_guard_value(param_id_str, normalized_value)
+        {
+            // The ordinary bridge accepts unchanged structural choices before
+            // asking the DSP, even while a stream is draining.
+            if structural
+                && handle_ref.parameter_map.upmixer_structural_noop(
+                    &*handle_ref.plugin,
+                    param_id_str,
+                    normalized_value,
+                )
+            {
+                return PluginError::Success;
+            }
+            if let Some(result) = upmixer.preflight_surround_parameter(param_id_str, &value) {
+                return match result {
+                    Ok(()) => PluginError::Success,
+                    Err(error) => {
+                        use sotf_plugins::UpmixerSurroundControlError as Rejection;
+
+                        let diagnostic = match error {
+                            Rejection::Draining => {
+                                c"Failed to set parameter: Upmixer: reset before changing parameters after drain"
+                            }
+                            Rejection::InvalidSpeakerConfig => {
+                                c"Failed to set parameter: speaker_config must be an integer"
+                            }
+                            Rejection::UnsupportedSpeakerConfig => {
+                                c"Failed to set parameter: changing the surround output layout requires a new plugin instance"
+                            }
+                            Rejection::InvalidLowLatency => {
+                                c"Failed to set parameter: low_latency must be a boolean"
+                            }
+                            Rejection::UnsupportedLowLatency => {
+                                c"Failed to set parameter: changing surround latency requires a new plugin instance"
+                            }
+                            Rejection::UnsupportedBinaural => {
+                                c"Failed to set parameter: binaural preview is not supported for surround input"
+                            }
+                            Rejection::UnsupportedStereoControl => {
+                                c"Failed to set parameter: this stereo-only control is not supported for surround input"
+                            }
+                        };
+                        set_last_error_static(diagnostic);
+                        PluginError::InvalidParameter
+                    }
+                };
             }
         }
+
+        set_mapped_parameter(handle_ref, param_id_str, normalized_value)
     }));
 
     result
         .unwrap_or_else(|_| {
             set_last_error("Panic in plugin_set_parameter");
+            PluginError::UnknownError
+        })
+        .into()
+}
+
+/// Set a supported realtime float without quantizing to its declared step.
+///
+/// Currently supported only for Upmixer `height_gain`; other parameters
+/// return `InvalidParameter`. This additive entry point may be absent from
+/// older ABI v3 libraries. Finite values outside 0..=1 are clamped.
+///
+/// # Safety
+/// * `handle` must be `NULL` or a live plugin handle with exclusive access.
+/// * `param_id` must be `NULL` or a valid, readable, null-terminated string.
+#[unsafe(no_mangle)]
+pub extern "C" fn plugin_set_parameter_precise(
+    handle: *mut PluginHandle,
+    param_id: *const c_char,
+    normalized_value: c_double,
+) -> c_int {
+    if handle.is_null() || param_id.is_null() {
+        set_last_error_static(c"NULL pointer in plugin_set_parameter_precise");
+        return PluginError::NullPointer.into();
+    }
+    if !normalized_value.is_finite() {
+        set_last_error_static(c"Invalid precise parameter request");
+        return PluginError::InvalidParameter.into();
+    }
+    let result = panic::catch_unwind(AssertUnwindSafe(|| unsafe {
+        let handle = &mut *handle;
+        if !matches!(handle.plugin_type.as_str(), "Upmixer" | "upmixer")
+            || CStr::from_ptr(param_id).to_bytes() != b"height_gain"
+        {
+            set_last_error_static(c"Unsupported precise parameter update");
+            return PluginError::InvalidParameter;
+        }
+        match handle
+            .parameter_map
+            .set_upmixer_height_gain_precise(&mut *handle.plugin, normalized_value)
+        {
+            Some(Ok(())) => PluginError::Success,
+            Some(Err(error)) => {
+                set_last_error(&format!("Failed to set parameter: {error}"));
+                PluginError::InvalidParameter
+            }
+            None => {
+                set_last_error_static(c"Unsupported precise parameter update");
+                PluginError::InvalidParameter
+            }
+        }
+    }));
+    result
+        .unwrap_or_else(|_| {
+            set_last_error_static(c"Panic in plugin_set_parameter_precise");
             PluginError::UnknownError
         })
         .into()

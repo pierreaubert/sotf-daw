@@ -4,6 +4,7 @@
 
 use crate::params::consts::{DECORRELATION_MODES, FREQUENCY_RESOLUTIONS};
 use serde::{Deserialize, Deserializer, Serialize};
+use sotf_host::speaker_config::{ChannelLayout, ChannelRole};
 use sotf_host::{define_choice_index_deserializer, define_choice_string_deserializer};
 
 define_choice_string_deserializer!(deserialize_frequency_resolution, FREQUENCY_RESOLUTIONS);
@@ -31,6 +32,7 @@ where
         fn visit_u64<E: de::Error>(self, v: u64) -> Result<String, E> {
             const C: &[&str] = &[
                 "2.0", "5.0", "5.1", "7.0", "7.1", "7.1.2", "7.1.4", "9.1", "9.1.4", "9.1.6",
+                "5.1.6",
             ];
             Ok(C.get(v as usize).unwrap_or(&"5.1").to_string())
         }
@@ -613,6 +615,168 @@ impl Default for UpmixerPluginOutputParams {
     }
 }
 
+/// Selects how a surround bed supplies low-frequency output.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SurroundBassMode {
+    /// Preserve the full-range bed and do not create a bass feed.
+    #[default]
+    Off,
+    /// Copy the full-range bed and derive a low-frequency feed.
+    Derived,
+    /// High-pass selected speakers and redirect their low frequencies.
+    Managed,
+}
+
+/// Stable bit ordering for the optional bass source mask.
+pub const SURROUND_BASS_SOURCE_ROLES: [ChannelRole; 7] = [
+    ChannelRole::FrontLeft,
+    ChannelRole::FrontRight,
+    ChannelRole::FrontCenter,
+    ChannelRole::SideLeft,
+    ChannelRole::SideRight,
+    ChannelRole::BackLeft,
+    ChannelRole::BackRight,
+];
+
+/// Configures explicit surround input and optional bass routing.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpmixerMultichannelParams {
+    /// Input channel roles and interleaved indices. Omit for stereo input.
+    #[serde(default)]
+    pub input_layout: Option<ChannelLayout>,
+
+    /// Selects whether the bed creates a subwoofer feed.
+    #[serde(default)]
+    pub bass_mode: SurroundBassMode,
+
+    /// Crossover frequency in hertz.
+    #[serde(default = "default_surround_bass_cutoff_hz")]
+    pub bass_cutoff_hz: f32,
+
+    /// Input roles routed to the crossover. Omit to select every main role.
+    #[serde(default)]
+    pub bass_sources: Option<Vec<ChannelRole>>,
+
+    /// Optional bit mask in `SURROUND_BASS_SOURCE_ROLES` order.
+    #[serde(default)]
+    pub bass_source_mask: Option<u8>,
+
+    /// Gain applied to redirected bass in decibels.
+    #[serde(default)]
+    pub bass_gain_db: f32,
+
+    /// Gain applied by playback to the LFE output, in decibels.
+    #[serde(default)]
+    pub lfe_playback_gain_db: f32,
+
+    /// Allow redirected bass to be combined with an existing input LFE.
+    #[serde(default)]
+    pub combine_input_lfe: bool,
+
+    /// Mute generated height channels without bypassing bass routing.
+    #[serde(default)]
+    pub bypass_heights: bool,
+
+    /// Bypass surround processing while retaining its prepared latency.
+    #[serde(default)]
+    pub bypass_surround: bool,
+}
+
+fn default_surround_bass_cutoff_hz() -> f32 {
+    80.0
+}
+
+impl Default for UpmixerMultichannelParams {
+    fn default() -> Self {
+        Self {
+            input_layout: None,
+            bass_mode: SurroundBassMode::Off,
+            bass_cutoff_hz: default_surround_bass_cutoff_hz(),
+            bass_sources: None,
+            bass_source_mask: None,
+            bass_gain_db: 0.0,
+            lfe_playback_gain_db: 0.0,
+            combine_input_lfe: false,
+            bypass_heights: false,
+            bypass_surround: false,
+        }
+    }
+}
+
+impl UpmixerMultichannelParams {
+    /// Identifies canonical input ordering; four denotes a custom role order.
+    pub fn input_format_index(&self) -> usize {
+        let Some(layout) = &self.input_layout else {
+            return 0;
+        };
+        use ChannelRole::{BackLeft as Bl, BackRight as Br, FrontCenter as C, FrontLeft as Fl};
+        use ChannelRole::{FrontRight as Fr, Lfe, SideLeft as Sl, SideRight as Sr};
+        let canonical: &[(usize, &[ChannelRole])] = &[
+            (1, &[Fl, Fr, C, Sl, Sr]),
+            (2, &[Fl, Fr, C, Lfe, Sl, Sr]),
+            (3, &[Fl, Fr, C, Lfe, Sl, Sr, Bl, Br]),
+        ];
+        canonical
+            .iter()
+            .find_map(|(index, roles)| {
+                (layout.channels.len() == roles.len()
+                    && roles
+                        .iter()
+                        .enumerate()
+                        .all(|(channel, role)| layout.role_at(channel) == Some(*role)))
+                .then_some(*index)
+            })
+            .unwrap_or(4)
+    }
+
+    /// Selects a canonical input ordering for a newly prepared instance.
+    pub fn set_input_format_index(&mut self, index: usize) -> Result<(), String> {
+        let id = match index {
+            0 => {
+                self.input_layout = None;
+                self.bass_mode = SurroundBassMode::Off;
+                return Ok(());
+            }
+            1 => "5.0",
+            2 => "5.1",
+            3 => "7.1",
+            4 if self.input_format_index() == 4 => return Ok(()),
+            _ => return Err("unsupported upmixer input format selection".into()),
+        };
+        let speakers = sotf_host::speaker_config::get_speaker_config(id)
+            .ok_or("missing input speaker layout")?;
+        self.input_layout = Some(ChannelLayout::from_speaker_config(speakers)?);
+        Ok(())
+    }
+
+    /// Returns the selected role bits; an unspecified selection enables all roles.
+    pub fn source_mask(&self) -> u8 {
+        if let Some(mask) = self.bass_source_mask {
+            return mask;
+        }
+        self.bass_sources.as_ref().map_or(0x7f, |roles| {
+            SURROUND_BASS_SOURCE_ROLES
+                .iter()
+                .enumerate()
+                .fold(0, |mask, (index, role)| {
+                    mask | if roles.contains(role) { 1 << index } else { 0 }
+                })
+        })
+    }
+
+    /// Updates one source bit while preserving the other current selections.
+    pub fn set_source_enabled(&mut self, index: usize, enabled: bool) {
+        if index >= SURROUND_BASS_SOURCE_ROLES.len() {
+            return;
+        }
+        let bit = 1 << index;
+        let mask = self.source_mask();
+        self.bass_sources = None;
+        self.bass_source_mask = Some(if enabled { mask | bit } else { mask & !bit });
+    }
+}
+
 /// Configuration parameters for UpmixerPlugin
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UpmixerPluginParams {
@@ -648,4 +812,24 @@ pub struct UpmixerPluginParams {
 
     #[serde(flatten)]
     pub output: UpmixerPluginOutputParams,
+
+    #[serde(flatten)]
+    pub multichannel: UpmixerMultichannelParams,
+}
+
+#[cfg(test)]
+mod speaker_config_tests {
+    use super::UpmixerPluginCoreParams;
+
+    #[test]
+    fn five_one_six_accepts_string_and_appended_numeric_choice() {
+        for value in [serde_json::json!("5.1.6"), serde_json::json!(10)] {
+            let settings: UpmixerPluginCoreParams =
+                serde_json::from_value(serde_json::json!({ "speaker_config": value })).unwrap();
+            assert_eq!(settings.speaker_config, "5.1.6");
+        }
+        let older: UpmixerPluginCoreParams =
+            serde_json::from_value(serde_json::json!({ "speaker_config": 9 })).unwrap();
+        assert_eq!(older.speaker_config, "9.1.6");
+    }
 }

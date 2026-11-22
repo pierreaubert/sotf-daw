@@ -4,6 +4,17 @@
 
 use super::UpmixerPlugin;
 
+#[derive(Clone, Copy)]
+pub(super) struct FftBlockControls {
+    pub(super) safety_cap_db: f32,
+    pub(super) safety_cap_linear: f32,
+    pub(super) subharmonic_enabled: bool,
+    pub(super) subharmonic_gain: f32,
+    pub(super) subharmonic_phase_inc: f32,
+    pub(super) subharmonic_attack: f32,
+    pub(super) subharmonic_release: f32,
+}
+
 /// Attack alpha for spectral flux baseline (rises with singing, ~150ms)
 const SPECTRAL_FLUX_ATTACK_ALPHA: f32 = 0.15;
 /// Release alpha for spectral flux baseline (slow decay during rests)
@@ -18,12 +29,29 @@ const HR_TRANSIENT_RELEASE_ALPHA: f32 = 0.15;
 impl UpmixerPlugin {
     /// Process one FFT block using VBAP panning
     pub fn process_fft_block(&mut self, input: &[f32], output: &mut [f32]) {
-        assert_eq!(input.len(), self.core.fft_size * 2);
         assert_eq!(
             output.len(),
             self.core.fft_size * self.core.num_output_channels
         );
+        self.prepare_fft_spectra::<false>(input);
+        let controls = self.fft_block_controls();
+        self.finish_fft_block(output, controls);
+    }
 
+    pub(super) fn fft_block_controls(&self) -> FftBlockControls {
+        FftBlockControls {
+            safety_cap_db: self.safety.safety_cap_db,
+            safety_cap_linear: self.safety.safety_cap_linear,
+            subharmonic_enabled: self.subharmonic.enable_subharmonic_synth,
+            subharmonic_gain: self.subharmonic.subharmonic_gain.current(),
+            subharmonic_phase_inc: self.subharmonic.cached_subharmonic_phase_inc,
+            subharmonic_attack: self.subharmonic.cached_subharmonic_attack_coeff,
+            subharmonic_release: self.subharmonic.cached_subharmonic_release_coeff,
+        }
+    }
+
+    pub(super) fn prepare_fft_spectra<const DEFER: bool>(&mut self, input: &[f32]) {
+        assert_eq!(input.len(), self.core.fft_size * 2);
         debug_assert!(self.core.sample_rate > 0.0 && self.core.fft_size > 0);
 
         self.apply_window_and_forward_fft(input);
@@ -91,16 +119,23 @@ impl UpmixerPlugin {
 
         let _dialogue_prob = self.detect_dialogue();
         self.process_frequency_domain_erb_bands();
+        self.prepare_vbap_spectra::<DEFER>();
+    }
 
+    pub(super) fn finish_fft_block(&mut self, output: &mut [f32], controls: FftBlockControls) {
         // 50% overlap sqrt-Hann analysis/synthesis multiplies to a Hann
         // COLA sum of 1.0; realfft inverse is unnormalized, so base scale = 1/N.
         // Multiply by sqrt(2) to compensate for the -3 dB headroom scale
         // (1/sqrt(2)) applied to the input in apply_window_and_forward_fft.
         let combined_scale = std::f32::consts::SQRT_2 / self.core.fft_size as f32;
 
-        self.apply_vbap_panning_and_inverse_fft();
-        self.apply_subharmonic_synthesis();
+        self.apply_subharmonic_synthesis(controls);
 
-        self.extract_output_and_scale(output, combined_scale);
+        self.extract_output_and_scale_with_cap(
+            output,
+            combined_scale,
+            controls.safety_cap_db,
+            controls.safety_cap_linear,
+        );
     }
 }

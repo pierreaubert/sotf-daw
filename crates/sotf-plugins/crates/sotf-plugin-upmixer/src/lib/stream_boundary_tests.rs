@@ -194,6 +194,41 @@ fn neutral_reconstruction_preserves_every_initial_window_phase() {
 }
 
 #[test]
+fn default_size_weighted_overlap_add_matches_delayed_identity() {
+    for fft_size in [1024, 2048] {
+        for phase in [
+            0,
+            1,
+            fft_size / 4,
+            fft_size / 2 - 1,
+            fft_size / 2,
+            fft_size - 1,
+        ] {
+            let mut plugin = neutral(fft_size);
+            let mut input = vec![0.0; (fft_size * 3 + 17) * 2];
+            input[phase * 2] = 0.25;
+            input[phase * 2 + 1] = -0.125;
+            let mut output = render(&mut plugin, &input, &[17, 257, 3, 512]);
+            output.extend(finish_with_capacity(&mut plugin, 257));
+            let expected_index = (plugin.latency_samples() + phase) * 2;
+            for (index, actual) in output.iter().enumerate() {
+                let expected = if index == expected_index {
+                    0.25
+                } else if index == expected_index + 1 {
+                    -0.125
+                } else {
+                    0.0
+                };
+                assert!(
+                    (actual - expected).abs() < 2e-6,
+                    "fft={fft_size} phase={phase} sample={index}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn fft_two_reconstructs_dc_nyquist_dense_signal_and_finite_eos() {
     const FFT_SIZE: usize = 2;
     const INPUT_FRAMES: usize = 29;

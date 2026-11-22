@@ -3,6 +3,7 @@ use super::super::PluginGraphEdgeKind;
 use super::misc::configure_host_oversampling;
 use super::misc::create_plugin;
 use crate::{EngineOversamplingPolicy, PluginBuildDiagnostic};
+use sotf_plugins::speaker_config::{ChannelLayout, get_speaker_config};
 use sotf_plugins::{
     EXTERNAL_PLUGIN_INSTANCE_ID_PARAMETER, PluginHost, ProcessingMode,
     create_plugin_with_external_key,
@@ -15,15 +16,64 @@ fn plugin_instance_id(parameters: &serde_json::Value) -> Option<usize> {
         .and_then(|value| usize::try_from(value).ok())
 }
 
+fn upmixer_input_layout(
+    plugin_type: &str,
+    parameters: &serde_json::Value,
+) -> Option<ChannelLayout> {
+    if !plugin_type.eq_ignore_ascii_case("upmixer") {
+        return None;
+    }
+    serde_json::from_value(parameters.get("input_layout")?.clone()).ok()
+}
+
+fn upmixer_output_layout(
+    plugin_type: &str,
+    parameters: &serde_json::Value,
+    output_channels: usize,
+) -> Option<ChannelLayout> {
+    if !plugin_type.eq_ignore_ascii_case("upmixer") {
+        return None;
+    }
+    let speaker_config =
+        if parameters.get("binaural_preview").and_then(|v| v.as_bool()) == Some(true) {
+            "2.0"
+        } else {
+            parameters
+                .get("speaker_config")
+                .and_then(|v| v.as_str())
+                .unwrap_or("5.1")
+        };
+    let layout = ChannelLayout::from_speaker_config(get_speaker_config(speaker_config)?).ok()?;
+    (layout.channels.len() == output_channels).then_some(layout)
+}
+
+fn layout_mismatch(actual: &ChannelLayout, expected: &ChannelLayout) -> Option<String> {
+    if actual.channels.len() != expected.channels.len() {
+        return None;
+    }
+    (0..actual.channels.len()).find_map(|index| {
+        let actual_role = actual.role_at(index);
+        let expected_role = expected.role_at(index);
+        (actual_role != expected_role).then(|| {
+            format!(
+                "channel {index} carries {actual_role:?}, but the upmixer expects {expected_role:?}"
+            )
+        })
+    })
+}
+
 fn requires_complete_channel_route_candidate(plugin_type: &str) -> bool {
     plugin_type.eq_ignore_ascii_case("band_split")
         || plugin_type.eq_ignore_ascii_case("bandsplit")
         || plugin_type.eq_ignore_ascii_case("crossover")
+        || plugin_type.eq_ignore_ascii_case("upmixer")
 }
 
 fn complete_channel_route_label(plugin_type: &str) -> &'static str {
     if plugin_type.eq_ignore_ascii_case("crossover") {
         "Crossover"
+    } else if plugin_type.eq_ignore_ascii_case("upmixer") {
+        "Upmixer"
     } else {
         "BandSplit"
     }
@@ -32,7 +82,7 @@ fn complete_channel_route_label(plugin_type: &str) -> &'static str {
 /// Build a plugin host from configs.
 ///
 /// Plugins that fail to create or have channel mismatches are skipped rather
-/// than aborting the entire chain, except BandSplit and Crossover: skipping a
+/// than aborting the entire chain, except BandSplit, Crossover, and Upmixer: skipping a
 /// requested channel-routing plugin would silently commit a different route
 /// and output layout. The second element of the returned tuple contains
 /// warnings about other skipped plugins.
@@ -97,6 +147,9 @@ fn build_plugin_host_with_policy_and_mode(
     configure_host_oversampling(&mut host, oversampling_policy)
         .map_err(PluginBuildDiagnostic::host)?;
     let mut current_channels = channels;
+    // The source currently supplies only a width. Retain layouts once a
+    // producer declares them, and invalidate them at unmodelled transforms.
+    let mut current_layout: Option<ChannelLayout> = None;
     let mut warnings: Vec<PluginBuildDiagnostic> = Vec::new();
 
     for (i, config) in configs.iter().enumerate() {
@@ -140,6 +193,32 @@ fn build_plugin_host_with_policy_and_mode(
                     }
                     warnings.push(diagnostic);
                     continue;
+                }
+
+                if let (Some(actual), Some(expected)) = (
+                    current_layout.as_ref(),
+                    upmixer_input_layout(&config.plugin_type, &config.parameters),
+                ) && let Some(reason) = layout_mismatch(actual, &expected)
+                {
+                    return Err(PluginBuildDiagnostic::chain_plugin(
+                        i,
+                        plugin_instance_id(&config.parameters),
+                        &config.plugin_type,
+                        format!("Upmixer candidate rejected: {reason}"),
+                    ));
+                }
+
+                let produced_layout = upmixer_output_layout(
+                    &config.plugin_type,
+                    &config.parameters,
+                    plugin.output_channels(),
+                );
+                if produced_layout.is_some() {
+                    current_layout = produced_layout;
+                } else if !config.plugin_type.eq_ignore_ascii_case("gain")
+                    || plugin.input_channels() != plugin.output_channels()
+                {
+                    current_layout = None;
                 }
 
                 // Update current channel count for next plugin
@@ -377,6 +456,7 @@ pub fn build_plugin_graph_host_with_policy(
     // sidechain key-bus validation below.
     let mut widths: HashMap<usize, (usize, usize)> = HashMap::new();
     let mut node_types: HashMap<usize, &str> = HashMap::new();
+    let mut known_output_layouts: HashMap<usize, ChannelLayout> = HashMap::new();
 
     for node_config in &config.nodes {
         // Graph context: external-key buses are routable through sidechain
@@ -403,6 +483,15 @@ pub fn build_plugin_graph_host_with_policy(
             node_config.id,
             (plugin.input_channels(), plugin.output_channels()),
         );
+        if !node_config.bypassed
+            && let Some(layout) = upmixer_output_layout(
+                &node_config.plugin_type,
+                &node_config.parameters,
+                plugin.output_channels(),
+            )
+        {
+            known_output_layouts.insert(node_config.id, layout);
+        }
         node_types.insert(node_config.id, node_config.plugin_type.as_str());
         let host_id = host
             .add_node(format!("node_{}", node_config.id), plugin)
@@ -431,6 +520,58 @@ pub fn build_plugin_graph_host_with_policy(
             })?;
         }
         id_map.insert(node_config.id, host_id);
+    }
+
+    // Gain is known to keep channel roles. For other nodes, leave roles
+    // unknown unless they explicitly declare an upmixer output layout.
+    for _ in 0..config.nodes.len() {
+        let mut changed = false;
+        for node in &config.nodes {
+            if !node.plugin_type.eq_ignore_ascii_case("gain")
+                || widths[&node.id].0 != widths[&node.id].1
+                || known_output_layouts.contains_key(&node.id)
+            {
+                continue;
+            }
+            let mut inputs = config
+                .edges
+                .iter()
+                .filter(|edge| edge.kind == PluginGraphEdgeKind::Audio && edge.to_node == node.id);
+            let Some(edge) = inputs.next() else { continue };
+            if inputs.next().is_some() {
+                continue;
+            }
+            if let Some(layout) = known_output_layouts.get(&edge.from_node).cloned()
+                && layout.channels.len() == widths[&node.id].0
+            {
+                known_output_layouts.insert(node.id, layout);
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+
+    for edge in &config.edges {
+        if edge.kind != PluginGraphEdgeKind::Audio {
+            continue;
+        }
+        let Some(actual) = known_output_layouts.get(&edge.from_node) else {
+            continue;
+        };
+        let Some(target) = config.nodes.iter().find(|node| node.id == edge.to_node) else {
+            continue;
+        };
+        if let Some(expected) = upmixer_input_layout(&target.plugin_type, &target.parameters)
+            && let Some(reason) = layout_mismatch(actual, &expected)
+        {
+            return Err(PluginBuildDiagnostic::graph_edge(
+                edge.from_node,
+                edge.to_node,
+                format!("Upmixer candidate rejected: {reason}"),
+            ));
+        }
     }
 
     // Key channels already routed per target node id. The host packs each

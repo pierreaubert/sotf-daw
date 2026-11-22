@@ -2,12 +2,14 @@ use sotf_host::param_specs::ParamSpec;
 use sotf_host::plugin_layout::*;
 
 pub const SPEAKER_CONFIGS: &[&str] = &[
-    "2.0", "5.0", "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6",
+    "2.0", "5.0", "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4", "9.1.6", "5.1.6",
 ];
 
 pub const DECORRELATION_MODES: &[&str] = &["Velvet Noise", "LFO Phase"];
 
 pub const FREQUENCY_RESOLUTIONS: &[&str] = &["ERB", "Fine ERB", "Per Bin"];
+pub const SURROUND_BASS_MODES: &[&str] = &["Off", "Derived", "Managed"];
+pub const INPUT_FORMATS: &[&str] = &["Stereo", "5.0", "5.1", "7.1", "Custom"];
 
 pub const PARAMS: &[ParamSpec] = &[
     // 0: speaker_config
@@ -550,15 +552,134 @@ pub const PARAMS: &[ParamSpec] = &[
     )
     .output()
     .doc("Auto gain transition time"),
+    ParamSpec::bool_param("Bypass Heights", "bypass_heights", false, "Height")
+        .secondary("Height")
+        .doc("Mute generated heights while leaving the bed and bass routing active"),
+    ParamSpec::choice(
+        "Bass Mode",
+        "bass_mode",
+        0,
+        SURROUND_BASS_MODES,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural()
+    .doc("Preserve the bed, derive bass, or manage selected speakers"),
+    ParamSpec::float(
+        "Bass Crossover",
+        "bass_cutoff_hz",
+        80.0,
+        20.0,
+        180.0,
+        1.0,
+        "Hz",
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural()
+    .doc("Crossover frequency for the selected speakers"),
+    ParamSpec::float(
+        "Bass Gain",
+        "bass_gain_db",
+        0.0,
+        -60.0,
+        12.0,
+        0.5,
+        "dB",
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural()
+    .doc("Gain on the generated subwoofer feed"),
+    ParamSpec::float(
+        "LFE Playback Gain",
+        "lfe_playback_gain_db",
+        0.0,
+        0.0,
+        10.0,
+        0.5,
+        "dB",
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural()
+    .doc("Downstream LFE playback boost compensated in derived bass"),
+    ParamSpec::bool_param("Combine LFE", "combine_input_lfe", false, "Surround Bass")
+        .secondary("Surround Bass")
+        .structural()
+        .doc("Explicitly combine existing LFE and generated bass"),
+    ParamSpec::bool_param(
+        "Bass Front Left",
+        "bass_source_front_left",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::bool_param(
+        "Bass Front Right",
+        "bass_source_front_right",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::bool_param("Bass Center", "bass_source_center", true, "Surround Bass")
+        .secondary("Surround Bass")
+        .structural(),
+    ParamSpec::bool_param(
+        "Bass Side Left",
+        "bass_source_side_left",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::bool_param(
+        "Bass Side Right",
+        "bass_source_side_right",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::bool_param(
+        "Bass Back Left",
+        "bass_source_back_left",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::bool_param(
+        "Bass Back Right",
+        "bass_source_back_right",
+        true,
+        "Surround Bass",
+    )
+    .secondary("Surround Bass")
+    .structural(),
+    ParamSpec::choice("Input Layout", "input_format", 0, INPUT_FORMATS, "Input")
+        .structural()
+        .setup()
+        .doc("Declared role order of the incoming audio"),
+    ParamSpec::bool_param("Bypass Surround", "bypass_surround", false, "Surround Bass")
+        .secondary("Surround Bass")
+        .doc("Return the delayed bed while bypassing height and bass processing"),
 ];
 
 /// Upmixer: 0=speaker_config, 1-4=gains, 5-11=LFE, 12-14=spatial,
 /// 15-17=hr_direct, 18-21=decorrelation, 22-24=height, 25-27=surround,
 /// 28-33=dialogue, 34=safety_cap, 35-36=analysis, 37-40=diagnostics,
-/// 41-42=source_extraction, 43=binaural_preview, 44-46=auto_gain
+/// 41-42=source_extraction, 43=binaural_preview, 44-46=auto_gain,
+const SURROUND_INPUT: ParamCondition = ParamCondition::choice_in(60, &[1, 2, 3, 4]);
+const STEREO_INPUT: ParamCondition = ParamCondition::choice(60, 0);
+
+/// 47=bypass_heights, 48-59=surround bass settings, 60=input_format, 61=bypass_surround
 pub const LAYOUT: PluginLayout = PluginLayout {
     config: &[
-        ControlSpec::selector(0), // output channels / speaker_config
+        ControlSpec::selector(0),  // output channels / speaker_config
+        ControlSpec::selector(60), // input format
     ],
     main: &[
         ControlGroup::new(
@@ -583,18 +704,36 @@ pub const LAYOUT: PluginLayout = PluginLayout {
         .with_layout(GroupLayoutHints::inferred().priority(0.9)),
     ],
     output: &[
-        ControlSpec::knob(34),   // safety_cap_db
-        ControlSpec::toggle(44), // auto_gain_enabled
+        ControlSpec::knob(34),                              // safety_cap_db
+        ControlSpec::toggle(44).enabled_when(STEREO_INPUT), // auto_gain_enabled
         ControlSpec::knob(45).enabled_when(ParamCondition::bool(44, true)), // auto_gain_max_db
         ControlSpec::knob(46).enabled_when(ParamCondition::bool(44, true)), // auto_gain_smoothing_ms
     ],
     tabs: &[
         TabSpec {
+            name: "Surround Bass",
+            controls: &[
+                ControlSpec::toggle(61).enabled_when(SURROUND_INPUT),
+                ControlSpec::selector(48).enabled_when(SURROUND_INPUT),
+                ControlSpec::knob(49).enabled_when(SURROUND_INPUT),
+                ControlSpec::knob(50).enabled_when(SURROUND_INPUT),
+                ControlSpec::knob(51).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(52).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(53).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(54).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(55).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(56).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(57).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(58).enabled_when(SURROUND_INPUT),
+                ControlSpec::toggle(59).enabled_when(SURROUND_INPUT),
+            ],
+        },
+        TabSpec {
             name: "Bass & Output",
             controls: &[
-                ControlSpec::knob(6),   // lfe_cutoff_hz
-                ControlSpec::knob(14),  // bandpass_hz
-                ControlSpec::toggle(7), // subharmonic_synth
+                ControlSpec::knob(6),                              // lfe_cutoff_hz
+                ControlSpec::knob(14),                             // bandpass_hz
+                ControlSpec::toggle(7).enabled_when(STEREO_INPUT), // subharmonic_synth
                 ControlSpec::knob(8).enabled_when(ParamCondition::bool(7, true)), // sub_gain
                 ControlSpec::knob(9).enabled_when(ParamCondition::bool(7, true)), // sub_freq
                 ControlSpec::knob(10).enabled_when(ParamCondition::bool(7, true)), // sub_attack
@@ -614,6 +753,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::knob(26),   // rear_ambient_boost
                 ControlSpec::knob(27),   // rear_late_reflection
                 ControlSpec::knob(4),    // height_gain
+                ControlSpec::toggle(47), // bypass_heights
                 ControlSpec::knob(22),   // height_hf_cap
                 ControlSpec::knob(23),   // height_transient_reduction
                 ControlSpec::knob(24),   // height_direct_leak
@@ -633,7 +773,7 @@ pub const LAYOUT: PluginLayout = PluginLayout {
                 ControlSpec::selector(36), // frequency_resolution
                 ControlSpec::toggle(41),   // multi_source_extraction
                 ControlSpec::knob(42).enabled_when(ParamCondition::bool(41, true)), // threshold
-                ControlSpec::toggle(43),   // binaural_preview
+                ControlSpec::toggle(43).enabled_when(STEREO_INPUT), // binaural_preview
             ],
         },
         TabSpec {

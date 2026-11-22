@@ -233,16 +233,18 @@ impl UpmixerPlugin {
         // 2. Forward FFT (Real->Complex)
         self.fft
             .hr_fft_forward
-            .process(
+            .process_with_scratch(
                 &mut self.hr_buffers.hr_time_domain_left,
                 &mut self.hr_buffers.hr_freq_domain_left,
+                &mut self.fft.scratch,
             )
             .unwrap();
         self.fft
             .hr_fft_forward
-            .process(
+            .process_with_scratch(
                 &mut self.hr_buffers.hr_time_domain_right,
                 &mut self.hr_buffers.hr_freq_domain_right,
+                &mut self.fft.scratch,
             )
             .unwrap();
 
@@ -306,9 +308,10 @@ impl UpmixerPlugin {
 
             self.fft
                 .hr_fft_inverse
-                .process(
+                .process_with_scratch(
                     &mut self.hr_buffers.hr_temp_freq_out,
                     &mut self.hr_buffers.hr_time_out_channels[ch_idx],
+                    &mut self.fft.scratch,
                 )
                 .unwrap();
 

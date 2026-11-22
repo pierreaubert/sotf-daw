@@ -1,13 +1,13 @@
 //! Validate the built Upmixer VST3 library with an independent macOS executable host.
 //!
-//! Run with the native library path as the only argument. All COM calls run on
+//! Run with the native library path; add `--bench` to time prepared callbacks. All COM calls run on
 //! the OS main thread. Audio buffers and JSON state cross the dynamic-library
 //! boundary through C interfaces; Rust-owned state remains inside its producer.
 //! This exercises library loading, not DAW installation or VST3 bundle packaging.
 
 #![cfg_attr(
     target_os = "macos",
-    expect(
+    allow(
         semicolon_in_expressions_from_non_local_macros,
         reason = "The pinned VST3 COM vtable generator emits expression-position semicolons"
     )
@@ -49,6 +49,11 @@ mod host {
         fn dlsym(handle: *mut c_void, name: *const c_char) -> *mut c_void;
         fn dlclose(handle: *mut c_void) -> c_int;
         fn pthread_main_np() -> c_int;
+    }
+    #[link(name = "CoreFoundation", kind = "framework")]
+    unsafe extern "C" {
+        static kCFRunLoopDefaultMode: *const c_void;
+        fn CFRunLoopRunInMode(mode: *const c_void, seconds: f64, return_after_source: u8) -> i32;
     }
 
     struct Module {
@@ -319,6 +324,11 @@ mod host {
     }
     impl<'module> Native<'module> {
         fn new(module: &'module Module) -> Self {
+            let native = Self::new_unconnected(module);
+            native.ports();
+            native
+        }
+        fn new_unconnected(module: &'module Module) -> Self {
             let factory = module.factory();
             // SAFETY: all calls use retained COM interfaces and initialized out pointers.
             let (component, processor, controller) = unsafe {
@@ -357,7 +367,7 @@ mod host {
                 unsafe { controller.set_component_handler(shared) },
                 kResultOk
             );
-            let native = Self {
+            Self {
                 component,
                 processor,
                 controller,
@@ -366,9 +376,7 @@ mod host {
                 active: false,
                 processing: false,
                 _module: module,
-            };
-            native.ports();
-            native
+            }
         }
         fn ports(&self) {
             // SAFETY: COM out values contain POD fields; interfaces remain retained.
@@ -493,6 +501,100 @@ mod host {
         fn process(&mut self, input: &[[f32; 2]]) -> Vec<f32> {
             self.process_with_scalar(input, None)
         }
+        fn benchmark_callbacks(&mut self, automated: bool) -> serde_json::Value {
+            const FRAMES: usize = 128;
+            const WARMUP: usize = 512;
+            const BLOCKS: usize = 8_000;
+            assert!(self.processing);
+            let mut inputs: [[f32; FRAMES]; 2] = std::array::from_fn(|channel| {
+                std::array::from_fn(|frame| {
+                    ((frame as f32 * (0.071 + channel as f32 * 0.013)).sin()) * 0.1
+                })
+            });
+            let mut outputs = [[0.0_f32; FRAMES]; 6];
+            let mut input_pointers: [*mut c_void; 2] =
+                std::array::from_fn(|channel| inputs[channel].as_mut_ptr().cast());
+            let mut output_pointers: [*mut c_void; 6] =
+                std::array::from_fn(|channel| outputs[channel].as_mut_ptr().cast());
+            let mut input_bus = AudioBusBuffers {
+                num_channels: 2,
+                silence_flags: 0,
+                buffers: input_pointers.as_mut_ptr(),
+            };
+            let mut output_bus = AudioBusBuffers {
+                num_channels: 6,
+                silence_flags: 0,
+                buffers: output_pointers.as_mut_ptr(),
+            };
+            // SAFETY: ProcessData contains POD fields and nullable host pointers.
+            let mut data = unsafe { std::mem::zeroed::<ProcessData>() };
+            data.process_mode = ProcessModes::kRealtime as i32;
+            data.symbolic_sample_size = SymbolicSampleSizes::kSample32 as i32;
+            data.num_samples = FRAMES as i32;
+            data.num_inputs = 1;
+            data.num_outputs = 1;
+            data.inputs = &mut input_bus;
+            data.outputs = &mut output_bus;
+            // Prepare both event queues before timing so the measured callbacks
+            // receive alternating parameter values without host-side allocation.
+            let changes: Vec<_> = if automated {
+                [0.7, 1.3]
+                    .into_iter()
+                    .map(|plain| {
+                        let id = parameter_id("gain_front_direct");
+                        // SAFETY: the retained controller exposes this parameter.
+                        let normalized =
+                            unsafe { self.controller.plain_param_to_normalized(id, plain) };
+                        let queue = ScalarQueue::allocate(id, normalized);
+                        // SAFETY: each COM allocation transfers ownership once.
+                        let queue = unsafe {
+                            VstPtr::<dyn IParamValueQueue>::owned(Box::into_raw(queue).cast())
+                                .unwrap()
+                        };
+                        let changes = ScalarChanges::allocate(queue);
+                        // SAFETY: ScalarChanges' only COM interface is IParameterChanges.
+                        unsafe {
+                            VstPtr::<dyn IParameterChanges>::owned(Box::into_raw(changes).cast())
+                                .unwrap()
+                        }
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
+            let assign_changes = |data: &mut ProcessData, index: usize| {
+                if !changes.is_empty() {
+                    // SAFETY: the retained queue lives through every synchronous callback.
+                    data.input_param_changes = unsafe {
+                        std::mem::transmute::<
+                            *mut *mut <dyn IParameterChanges as ComInterface>::VTable,
+                            StaticVstPtr<dyn IParameterChanges>,
+                        >(changes[index % changes.len()].as_ptr())
+                    };
+                }
+            };
+            let mut errors = 0;
+            for index in 0..WARMUP {
+                assign_changes(&mut data, index);
+                // SAFETY: the prepared disjoint buffers remain valid throughout each call.
+                errors += usize::from(unsafe { self.processor.process(&mut data) } != kResultOk);
+            }
+            let started = std::time::Instant::now();
+            for index in 0..BLOCKS {
+                assign_changes(&mut data, index);
+                // SAFETY: the prepared disjoint buffers remain valid throughout each call.
+                errors += usize::from(unsafe { self.processor.process(&mut data) } != kResultOk);
+            }
+            let elapsed_ns = started.elapsed().as_nanos();
+            let energy: f64 = outputs
+                .iter()
+                .flatten()
+                .map(|sample| f64::from(*sample).powi(2))
+                .sum();
+            assert_eq!(errors, 0);
+            assert!(energy.is_finite() && energy > 0.0);
+            serde_json::json!({"frames":FRAMES,"warmup_blocks":WARMUP,"blocks":BLOCKS,"automated":automated,"elapsed_ns":elapsed_ns,"errors":errors,"output_energy":energy})
+        }
         fn process_with_scalar(
             &mut self,
             input: &[[f32; 2]],
@@ -589,6 +691,31 @@ mod host {
     }
     fn state_value(state: &PluginState) -> serde_json::Value {
         serde_json::to_value(state).unwrap()
+    }
+
+    fn legacy_output_preset_compatibility(old: &Module, new: &Module) {
+        let source = Native::new_unconnected(old);
+        let target = Native::new_unconnected(new);
+        for index in 0..10 {
+            let mut state = source.saved();
+            state
+                .params
+                .insert("speaker_config".into(), ParamValue::I32(index));
+            assert_eq!(source.load(&state, false), kResultOk, "old setting {index}");
+            let bytes = source.saved_bytes();
+            assert_eq!(
+                target.load_bytes(&bytes, 0, usize::MAX),
+                kResultOk,
+                "setting {index}"
+            );
+            assert!(
+                matches!(
+                    target.saved().params.get("speaker_config"),
+                    Some(ParamValue::I32(value)) if *value == index
+                ),
+                "restored setting {index}"
+            );
+        }
     }
     fn program(position: usize, frames: usize) -> Vec<[f32; 2]> {
         (position..position + frames)
@@ -706,7 +833,7 @@ mod host {
         }
         results
     }
-    fn refused_loads(module: &Module) -> Vec<serde_json::Value> {
+    fn staged_loads(module: &Module) -> Vec<serde_json::Value> {
         let mut results = Vec::new();
         for processing in [false, true] {
             let mut native = Native::new(module);
@@ -721,59 +848,140 @@ mod host {
                     instance.pause();
                 }
             }
-            let before = native.saved();
-            let notices = native.notifications();
-            let mut structural = configured(&native, true, true);
-            structural
-                .params
-                .insert("gain_front_direct".into(), ParamValue::F32(0.7));
-            let mut scalar = native.saved();
-            scalar
-                .params
-                .insert("gain_front_direct".into(), ParamValue::F32(0.7));
-            let mut sparse = native.saved();
-            sparse.params.clear();
-            sparse
-                .params
-                .insert("gain_front_direct".into(), ParamValue::F32(0.7));
-            for snapshot in [&before, &structural, &scalar, &sparse] {
-                assert_eq!(native.load(snapshot, false), kResultFalse);
-                assert_eq!(state_value(&native.saved()), state_value(&before));
-                assert_eq!(native.latency(), 2048);
-                assert_eq!(native.notifications(), notices);
-            }
+            let requested = configured(&native, false, true);
+            assert_eq!(native.load(&requested, false), kResultOk);
+            assert_eq!(state_value(&native.saved()), state_value(&requested));
+            assert_eq!(native.latency(), 2048);
             if !processing {
                 native.start();
                 control.start();
             }
             let mut max_error = 0.0_f32;
-            for i in (4096..12_288).step_by(256) {
+            for i in (0..4096).step_by(256) {
                 let input = program(i, 256);
                 max_error = max_error.max(error(&native.process(&input), &control.process(&input)));
             }
             assert_eq!(max_error, 0.0);
             native.deactivate();
-            assert_eq!(native.load(&structural, true), kResultOk);
-            assert_eq!(state_value(&native.saved()), state_value(&structural));
-            assert_eq!(native.latency(), 0);
-            let after = native.notifications();
-            assert_eq!(after.len(), notices.len() + 1);
-            assert_ne!(
-                after.last().unwrap() & RestartFlags::kLatencyChanged as i32,
-                0
-            );
-            native.activate(96_000);
-            assert_eq!(native.latency(), 0);
-            native.start();
-            let input = program(0, 17);
-            let actual = native.process(&input);
-            for (frame, source) in actual.as_chunks::<6>().0.iter().zip(input) {
-                assert_eq!(frame, &[source[0], source[1], 0.0, 0.0, 0.0, 0.0]);
-            }
-            results.push(serde_json::json!({"processing":processing,"snapshot_shapes":4,"history_error":max_error,"exact_inactive_retry_latency":0}));
+            native.activate(48_000);
+            assert_eq!(native.latency(), 1024);
+            assert_eq!(state_value(&native.saved()), state_value(&requested));
+            results.push(serde_json::json!({"processing":processing,"history_error":max_error,"latency_after_restart":native.latency()}));
         }
         results
     }
+
+    fn staged_load_before_handler_is_attached(module: &Module) {
+        let mut native = Native::new(module);
+        // SAFETY: a zero COM pointer detaches the handler while its owner remains live.
+        assert_eq!(
+            unsafe { native.controller.set_component_handler(std::mem::zeroed()) },
+            kResultOk
+        );
+        native.activate(48_000);
+        native.start();
+        let requested = configured(&native, false, true);
+        assert_eq!(native.load(&requested, false), kResultOk);
+        assert_eq!(native.latency(), 2048);
+        // SAFETY: the handler is retained by Native until after component termination.
+        let handler: SharedVstPtr<dyn IComponentHandler> =
+            unsafe { std::mem::transmute(native._handler.as_ptr()) };
+        assert_eq!(
+            unsafe { native.controller.set_component_handler(handler) },
+            kResultOk
+        );
+        for _ in 0..100 {
+            // SAFETY: this executable runs on the OS main thread and the mode is a valid CF constant.
+            unsafe {
+                CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, 1);
+            }
+            if native
+                .notifications()
+                .iter()
+                .any(|flags| flags & RestartFlags::kReloadComponent as i32 != 0)
+            {
+                return;
+            }
+        }
+        panic!("attaching a VST3 handler did not retry the pending state restart");
+    }
+
+    fn staged_load_notifies_parameter_values(module: &Module) {
+        let mut native = Native::new(module);
+        native.activate(48_000);
+        native.start();
+        for _ in 0..10 {
+            // SAFETY: this executable runs on the OS main thread with a valid CF mode.
+            unsafe {
+                CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, 1);
+            }
+        }
+        let old_count = native.notifications().len();
+        let requested = configured(&native, false, true);
+        assert_eq!(native.load(&requested, false), kResultOk);
+        native.deactivate();
+        native.activate(48_000);
+        for _ in 0..100 {
+            // SAFETY: this executable runs on the OS main thread with a valid CF mode.
+            unsafe {
+                CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, 1);
+            }
+            let notifications = native.notifications();
+            if notifications[old_count..]
+                .iter()
+                .any(|flags| flags & RestartFlags::kParamValuesChanged as i32 != 0)
+            {
+                return;
+            }
+        }
+        panic!("VST3 host did not receive a parameter-value refresh after state commit");
+    }
+
+    fn committed_state_refreshes_when_handler_attaches_late(module: &Module) {
+        let mut native = Native::new(module);
+        // SAFETY: a zero COM pointer detaches the handler while its owner remains live.
+        assert_eq!(
+            unsafe { native.controller.set_component_handler(std::mem::zeroed()) },
+            kResultOk
+        );
+        native.activate(48_000);
+        native.start();
+        let requested = configured(&native, false, true);
+        assert_eq!(native.load(&requested, false), kResultOk);
+        native.deactivate();
+        native.activate(48_000);
+        assert_eq!(native.latency(), 1024);
+        // Give the background dispatch a chance to run before the handler exists.
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        for _ in 0..10 {
+            // SAFETY: this executable runs on the OS main thread with a valid CF mode.
+            unsafe {
+                CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, 1);
+            }
+        }
+        let old_count = native.notifications().len();
+        // SAFETY: the handler is retained by Native until after component termination.
+        let handler: SharedVstPtr<dyn IComponentHandler> =
+            unsafe { std::mem::transmute(native._handler.as_ptr()) };
+        assert_eq!(
+            unsafe { native.controller.set_component_handler(handler) },
+            kResultOk
+        );
+        for _ in 0..100 {
+            // SAFETY: this executable runs on the OS main thread with a valid CF mode.
+            unsafe {
+                CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, 1);
+            }
+            if native.notifications()[old_count..]
+                .iter()
+                .any(|flags| flags & RestartFlags::kParamValuesChanged as i32 != 0)
+            {
+                return;
+            }
+        }
+        panic!("attaching a VST3 handler did not refresh the committed state");
+    }
+
     fn invalid_streams(module: &Module) {
         let native = Native::new(module);
         let bytes = native.saved_bytes();
@@ -822,6 +1030,9 @@ mod host {
         native.notifications();
         serde_json::json!({"maximum_reference_error":max_error,"maximum_change_from_unautomated":changed,"latency":2048})
     }
+    include!("support/upmixer_vst3_surround.rs");
+    include!("support/upmixer_clap_surround.rs");
+
     /// Run native library lifecycle and independent waveform checks on the OS main thread.
     pub fn run() {
         // SAFETY: pthread_main_np has no pointer arguments or side effects.
@@ -833,13 +1044,78 @@ mod host {
         let path = std::env::args_os()
             .nth(1)
             .expect("usage: upmixer_vst3_host <libplugins_nih.dylib>");
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--legacy-presets")) {
+            let old_path = std::env::args_os().nth(3).expect("old dylib path");
+            let old = Module::open(Path::new(&old_path));
+            let new = Module::open(Path::new(&path));
+            legacy_output_preset_compatibility(&old, &new);
+            println!("SOTF_VST3_LEGACY_OUTPUT_PRESETS ok");
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--staged-state")) {
+            let module = Module::open(Path::new(&path));
+            staged_load_before_handler_is_attached(&module);
+            surround::failed_candidate_recovers(&module);
+            println!(
+                "SOTF_VST3_STAGED {}",
+                serde_json::json!(staged_loads(&module))
+            );
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--state-rescan")) {
+            let module = Module::open(Path::new(&path));
+            staged_load_notifies_parameter_values(&module);
+            committed_state_refreshes_when_handler_attaches_late(&module);
+            println!("SOTF_VST3_STATE_RESCAN ok");
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--bench")) {
+            let module = Module::open(Path::new(&path));
+            let mut cases = Vec::new();
+            for bypass in [false, true] {
+                for automated in [false, true] {
+                    let mut native = Native::new(&module);
+                    assert_eq!(
+                        native.load(&configured(&native, bypass, false), true),
+                        kResultOk
+                    );
+                    native.activate(48_000);
+                    native.start();
+                    let mut result = native.benchmark_callbacks(automated);
+                    result["bypass"] = serde_json::json!(bypass);
+                    cases.push(result);
+                }
+            }
+            println!(
+                "SOTF_VST3_BENCH {}",
+                serde_json::json!({"rate":48_000,"cases":cases})
+            );
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--surround")) {
+            let module = Module::open(Path::new(&path));
+            let result = surround::run(&module);
+            println!("SOTF_VST3_SURROUND {result}");
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--bench-surround")) {
+            let module = Module::open(Path::new(&path));
+            let result = surround::benchmark(&module);
+            println!("SOTF_VST3_SURROUND_BENCH {result}");
+            return;
+        }
+        if std::env::args_os().nth(2).as_deref() == Some(std::ffi::OsStr::new("--clap-surround")) {
+            let result = clap_surround::run(Path::new(&path));
+            println!("SOTF_CLAP_SURROUND {result}");
+            return;
+        }
         let report = {
             let module = Module::open(Path::new(&path));
             let waveforms = waveform_matrix(&module);
-            let refused = refused_loads(&module);
+            let staged = staged_loads(&module);
             invalid_streams(&module);
             let scalar = scalar_automation(&module);
-            serde_json::json!({"waveforms":waveforms,"refused_loads":refused,"malformed_stream_cases":4,"scalar_automation":scalar,"os_main_thread":true})
+            serde_json::json!({"waveforms":waveforms,"staged_loads":staged,"malformed_stream_cases":4,"scalar_automation":scalar,"os_main_thread":true})
         }; // Every plugin/factory COM reference is gone before bundleExit/dlclose.
         println!("SOTF_VST3_RESULT {report}");
     }

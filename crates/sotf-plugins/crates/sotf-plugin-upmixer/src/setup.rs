@@ -71,6 +71,8 @@ impl UpmixerPlugin {
         self.hr_buffers.hr_output_source_tags = vec![u64::MAX; hr_accumulator_frames];
         // Re-allocate blended decorrelation filters for new channel count
         let spectrum_size = self.core.fft_size / 2 + 1;
+        self.panning.pending_spectra =
+            vec![vec![Complex::new(0.0, 0.0); spectrum_size]; self.core.num_output_channels];
         self.decorrelation.blended_decorrelation_filters =
             vec![vec![Complex::new(1.0, 0.0); spectrum_size]; self.core.num_output_channels];
         self.decorrelation.prev_decorrelation_strength = -1.0; // Force recompute

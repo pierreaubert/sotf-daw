@@ -6,6 +6,7 @@
 import AVFoundation
 import AudioToolbox
 import CoreAudioKit
+import CoreFoundation
 import Foundation
 import os
 import Synchronization
@@ -41,10 +42,12 @@ private struct RenderState {
     var parameterRamps: UnsafeMutablePointer<ParameterRampState>?
     var parameterMailboxes: UnsafeMutablePointer<Unmanaged<ParameterMailbox>>?
     var parameterCount: Int
+    var preciseRampAddress: Int
     var parameterEpoch: UInt64
     var resourcesAllocated: Bool
 }
 
+// Index-based render loops avoid Swift range-iterator allocations in debug builds.
 /// Stack-owned event/ramp segment state. Keeping this out of nested Swift
 /// closures avoids `_Block_copy` heap traffic on automated render calls.
 private struct RenderSegmentProcessor {
@@ -102,13 +105,17 @@ private struct RenderSegmentProcessor {
         }
         if status == 0 {
             if let midiOut = state.midiOut {
-                for index in 0..<segmentMidiOutCount {
+                var index = 0
+                while index < segmentMidiOutCount {
                     midiOut[midiOutputCount + index].sample_offset += start
+                    index += 1
                 }
             }
             if let noteOut = state.noteExpressionOut {
-                for index in 0..<segmentNoteOutCount {
+                var index = 0
+                while index < segmentNoteOutCount {
                     noteOut[noteExpressionOutputCount + index].sample_offset += start
+                    index += 1
                 }
             }
             midiOutputCount += segmentMidiOutCount
@@ -122,30 +129,105 @@ private struct RenderSegmentProcessor {
         guard let ramps = state.parameterRamps, let ids = state.parameterIds else {
             return processSegment(start: start, count: count)
         }
+        let precise = state.preciseRampAddress
+        if precise >= 0 && precise < state.parameterCount && ramps[precise].active {
+            return processWithPreciseRamp(start: start, count: count, address: precise)
+        }
         var active = false
-        for address in 0..<state.parameterCount where ramps[address].active {
-            active = true
-            break
+        var address = 0
+        while address < state.parameterCount {
+            if ramps[address].active {
+                active = true
+                break
+            }
+            address += 1
         }
         guard active else { return processSegment(start: start, count: count) }
         var processed = 0
         while processed < count {
             let quantum = min(16, count - processed)
-            for address in 0..<state.parameterCount where ramps[address].active {
-                var ramp = ramps[address]
-                let advance = min(quantum, ramp.remaining)
-                ramp.current += ramp.step * Double(advance)
-                ramp.remaining -= advance
-                if ramp.remaining <= 0 {
-                    ramp.current = ramp.target
-                    ramp.active = false
+            var address = 0
+            while address < state.parameterCount {
+                if ramps[address].active {
+                    var ramp = ramps[address]
+                    let advance = min(quantum, ramp.remaining)
+                    ramp.current += ramp.step * Double(advance)
+                    ramp.remaining -= advance
+                    if ramp.remaining <= 0 {
+                        ramp.current = ramp.target
+                        ramp.active = false
+                    }
+                    guard let id = ids[address],
+                          plugin_set_parameter(handle, id, ramp.current) == 0 else { return -1 }
+                    ramps[address] = ramp
                 }
-                guard let id = ids[address],
-                      plugin_set_parameter(handle, id, ramp.current) == 0 else { return -1 }
-                ramps[address] = ramp
+                address += 1
             }
             guard processSegment(start: start + processed, count: quantum) == 0 else { return -1 }
             processed += quantum
+        }
+        return 0
+    }
+
+    private mutating func processWithPreciseRamp(start: Int, count: Int, address: Int) -> Int32 {
+        guard let ramps = state.parameterRamps, let ids = state.parameterIds,
+              let preciseID = ids[address] else { return -1 }
+        var processed = 0
+        var legacyFrames = 0
+        while processed < count {
+            if ramps[address].active && ramps[address].quantumRemaining == 0 {
+                var ramp = ramps[address]
+                let advance = min(16, ramp.remaining)
+                guard advance > 0 else { return -1 }
+                // Hold the current target for this quantum; never apply a
+                // future ramp value to audio before its scheduled time.
+                let applied = ramp.current
+                ramp.current += ramp.step * Double(advance)
+                ramp.remaining -= advance
+                if ramp.remaining == 0 { ramp.current = ramp.target }
+                ramp.quantumRemaining = advance
+                guard plugin_set_parameter_precise(handle, preciseID, applied) == 0 else { return -1 }
+                ramps[address] = ramp
+            }
+
+            if legacyFrames == 0 {
+                let legacyQuantum = min(16, count - processed)
+                var index = 0
+                var hasLegacy = false
+                while index < state.parameterCount {
+                    if index != address && ramps[index].active {
+                        hasLegacy = true
+                        var ramp = ramps[index]
+                        let advance = min(legacyQuantum, ramp.remaining)
+                        ramp.current += ramp.step * Double(advance)
+                        ramp.remaining -= advance
+                        if ramp.remaining <= 0 {
+                            ramp.current = ramp.target
+                            ramp.active = false
+                        }
+                        guard let id = ids[index],
+                              plugin_set_parameter(handle, id, ramp.current) == 0 else { return -1 }
+                        ramps[index] = ramp
+                    }
+                    index += 1
+                }
+                if hasLegacy { legacyFrames = legacyQuantum }
+            }
+
+            var quantum = count - processed
+            if ramps[address].active { quantum = min(quantum, ramps[address].quantumRemaining) }
+            if legacyFrames > 0 { quantum = min(quantum, legacyFrames) }
+            guard quantum > 0, processSegment(start: start + processed, count: quantum) == 0 else { return -1 }
+            processed += quantum
+            if legacyFrames > 0 { legacyFrames -= quantum }
+            if ramps[address].active {
+                ramps[address].quantumRemaining -= quantum
+                if ramps[address].quantumRemaining == 0 && ramps[address].remaining == 0 {
+                    guard plugin_set_parameter_precise(handle, preciseID, ramps[address].target) == 0
+                    else { return -1 }
+                    ramps[address].active = false
+                }
+            }
         }
         return 0
     }
@@ -156,7 +238,10 @@ private struct CachedParameterMetadata {
     var maxValue: Double = 0
     var logarithmic = false
     var steps: UInt32 = 0
+    var floatingPoint = false
     var realtime = false
+    var traitsKnown = false
+    var preciseRamp = false
 }
 
 private struct ParameterRampState {
@@ -165,6 +250,11 @@ private struct ParameterRampState {
     var target: Double = 0
     var step: Double = 0
     var remaining = 0
+    var quantumRemaining = 0
+
+    var logicalCurrent: Double {
+        current - step * Double(quantumRemaining)
+    }
 }
 
 /// One lock-free, allocation-free, coalescing publication slot per parameter.
@@ -312,6 +402,7 @@ private final class RenderStateOwner {
             parameterRamps: nil,
             parameterMailboxes: nil,
             parameterCount: 0,
+            preciseRampAddress: -1,
             parameterEpoch: 1,
             resourcesAllocated: false
         ))
@@ -349,13 +440,41 @@ private final class RenderStateOwner {
     }
 }
 
+private typealias SOTFRenderBody = (
+    UnsafeMutablePointer<AudioUnitRenderActionFlags>,
+    UnsafePointer<AudioTimeStamp>,
+    AUAudioFrameCount,
+    Int,
+    UnsafeMutablePointer<AudioBufferList>,
+    UnsafePointer<AURenderEvent>?,
+    UnsafeMutableRawPointer?
+) -> AUAudioUnitStatus
+
+private final class SOTFRenderBodyContext: NSObject, SOTFRenderContext {
+    private let body: SOTFRenderBody
+
+    init(_ body: @escaping SOTFRenderBody) {
+        self.body = body
+    }
+
+    func render(with flags: UnsafeMutablePointer<AudioUnitRenderActionFlags>,
+                time: UnsafePointer<AudioTimeStamp>,
+                frames: AUAudioFrameCount,
+                bus: Int,
+                output: UnsafeMutablePointer<AudioBufferList>,
+                events: UnsafePointer<AURenderEvent>?,
+                pull: UnsafeMutableRawPointer?) -> AUAudioUnitStatus {
+        body(flags, time, frames, bus, output, events, pull)
+    }
+}
+
 /// Base AUAudioUnit that delegates all processing to a Rust plugin via FFI.
 ///
 /// Subclasses must override:
 /// - `pluginType` (e.g., "Compressor")
 /// - `pluginSubtype` (e.g., "SOCP", 4-char code)
 /// - `pluginName` (e.g., "SOTF: Compressor")
-open class GenericRustAudioUnit: AUAudioUnit {
+open class GenericRustAudioUnit: SOTFNativeAudioUnit {
 
     /// A hostile host must not be able to turn a negotiated block size into a
     /// trapping Swift allocation. This is far above normal realtime blocks
@@ -517,6 +636,16 @@ open class GenericRustAudioUnit: AUAudioUnit {
     open func pluginConfiguration(inputFormat: AVAudioFormat,
                                   outputFormat: AVAudioFormat) -> String { "{}" }
 
+    /// Whether a host parameter can be applied after a format-driven recreation.
+    open class func parameterIsPortableAcrossTopologies(_ identifier: String) -> Bool { true }
+
+    /// Serialized value for a parameter that must be applied while rebuilding
+    /// the plugin. Return nil for parameters supported by the normal setter.
+    open class func stateValueForReconstruction(_ identifier: String, value: AUValue) -> Any? { nil }
+
+    /// Some plugins need fresh host parameter objects after an inactive restore.
+    open class var refreshParameterTreeAfterInactiveStateRestore: Bool { false }
+
     // MARK: - Properties
 
     private var inputBus: AUAudioUnitBus
@@ -575,6 +704,16 @@ open class GenericRustAudioUnit: AUAudioUnit {
         return readParameterFromRust(param: parameter)
     }
 
+    func parameterTargetForTesting(identifier: String) -> AUValue? {
+        guard let parameter = auParameters.first(where: { $0.identifier == identifier }) else { return nil }
+        return accessGate.withControlAccess {
+            guard let handle = renderStatePtr.pointee.handle else { return nil }
+            let value = identifier.withCString { plugin_get_parameter(handle, $0) }
+            guard value >= 0 else { return nil }
+            return denormalize(normalized: Float(value), param: parameter)
+        }
+    }
+
     func parameterQueueStateForTesting() -> (count: Int, publishedEpoch: UInt64, renderEpoch: UInt64) {
         accessGate.withControlAccess {
             var pending = 0
@@ -617,6 +756,14 @@ open class GenericRustAudioUnit: AUAudioUnit {
             guard address < UInt64(renderStatePtr.pointee.parameterCount),
                   let metadata = renderStatePtr.pointee.parameterMetadata else { return nil }
             return metadata[Int(address)].realtime
+        }
+    }
+
+    func parameterIsFloatingPointForTesting(address: UInt64) -> Bool? {
+        accessGate.withControlAccess {
+            guard address < UInt64(renderStatePtr.pointee.parameterCount),
+                  let metadata = renderStatePtr.pointee.parameterMetadata else { return nil }
+            return metadata[Int(address)].floatingPoint
         }
     }
 
@@ -744,6 +891,9 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 accepted = false
                 continue
             }
+            if address == renderStatePtr.pointee.preciseRampAddress {
+                renderStatePtr.pointee.parameterRamps?[address] = ParameterRampState()
+            }
         }
         return accepted
     }
@@ -838,7 +988,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
             }
             savedParameters = auParameters.compactMap { parameter in
                 let value = parameter.identifier.withCString { identifier in
-                    plugin_get_parameter(oldHandle, identifier)
+                    normalizedParameterLocked(handle: oldHandle, address: parameter.address, id: identifier)
                 }
                 return value >= 0 ? (parameter.identifier, value) : nil
             }
@@ -913,6 +1063,10 @@ open class GenericRustAudioUnit: AUAudioUnit {
         // parameter map is the authoritative host-visible automation state.
         // Reapply that intersection even after a successful state load.
         for (identifier, value) in savedParameters {
+                if !topologyUnchanged
+                    && !type(of: self).parameterIsPortableAcrossTopologies(identifier) {
+                    continue
+                }
                 var candidateHasParameter = false
                 let parameterCount = plugin_get_parameter_count(candidate)
                 if parameterCount > 0 {
@@ -933,9 +1087,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 if candidateValue >= 0, abs(candidateValue - value) <= 1.0e-12 {
                     continue
                 }
-                let status = identifier.withCString { id in
-                    plugin_set_parameter(candidate, id, value)
-                }
+                let status = setRestoredParameter(candidate, identifier: identifier, normalized: value)
                 if status != 0 {
                     // A shared identifier can still have topology-dependent
                     // validity or representation. Preserve the candidate's
@@ -965,6 +1117,17 @@ open class GenericRustAudioUnit: AUAudioUnit {
         rustMaximumFramesToRender = maximumFramesToRender
         publishLatency(candidateLatency)
         candidateCommitted = true
+    }
+
+    private func setRestoredParameter(
+        _ handle: OpaquePointer, identifier: String, normalized: Double
+    ) -> Int32 {
+        identifier.withCString { id in
+            if type(of: self).pluginType == "Upmixer" && identifier == "height_gain" {
+                return plugin_set_parameter_precise(handle, id, normalized)
+            }
+            return plugin_set_parameter(handle, id, normalized)
+        }
     }
 
     /// Apply serialized state to a fresh candidate and publish it only after
@@ -1009,9 +1172,8 @@ open class GenericRustAudioUnit: AUAudioUnit {
         for value in parameterValues {
             guard value.normalized.isFinite,
                   (0.0...1.0).contains(value.normalized),
-                  value.identifier.withCString({ id in
-                      plugin_set_parameter(candidate, id, value.normalized)
-                  }) == 0 else {
+                  setRestoredParameter(candidate, identifier: value.identifier,
+                                       normalized: value.normalized) == 0 else {
                 return false
             }
         }
@@ -1081,6 +1243,22 @@ open class GenericRustAudioUnit: AUAudioUnit {
         buildParameterTreeLocked()
     }
 
+    private func parameterAutomationTraits(
+        handle: OpaquePointer, index: Int, steps: UInt32
+    ) -> (floatingPoint: Bool, realtime: Bool, known: Bool) {
+        // Other plugin families retain their existing behavior until their
+        // specifications and structural update paths have been audited.
+        guard type(of: self).pluginType == "Upmixer" else {
+            return (steps == 0, steps == 0, false)
+        }
+        let traits = plugin_get_parameter_automation_traits(handle, index)
+        guard traits & UInt32(PLUGIN_PARAMETER_TRAIT_KNOWN) != 0 else {
+            return (steps == 0, steps == 0, false)
+        }
+        return (traits & UInt32(PLUGIN_PARAMETER_TRAIT_FLOAT) != 0,
+                traits & UInt32(PLUGIN_PARAMETER_TRAIT_REALTIME) != 0, true)
+    }
+
     /// Rebuilds every host-visible parameter artifact as one handle-owned
     /// transaction. The caller holds `accessGate`; the epoch is published only
     /// after the tree, identifiers, metadata, and ramp storage all agree.
@@ -1091,6 +1269,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
         let count = max(Int(paramCount), 0)
         var params: [AUParameter] = []
         var metadata: [CachedParameterMetadata] = []
+        var preciseRampAddress = -1
 
         for i in 0..<count {
             guard let info = plugin_get_parameter_info(handle, i) else { continue }
@@ -1109,11 +1288,16 @@ open class GenericRustAudioUnit: AUAudioUnit {
             }
 
             var parameterFlags: AudioUnitParameterOptions = [.flag_IsReadable, .flag_IsWritable]
-            // The FFI ParameterInfo contract exposes automation granularity via
-            // `steps`; continuous parameters are the ones that can be ramped.
-            let realtime = info.pointee.steps == 0
-            if realtime {
+            let traits = parameterAutomationTraits(handle: handle, index: i, steps: info.pointee.steps)
+            let preciseRamp = type(of: self).pluginType == "Upmixer" && paramId == "height_gain"
+                && traits.floatingPoint && traits.realtime
+            if preciseRamp { preciseRampAddress = i }
+            // Other FFI setters quantize declared float steps, including during ramps.
+            if traits.floatingPoint && traits.realtime && (info.pointee.steps == 0 || preciseRamp) {
                 parameterFlags.insert(.flag_CanRamp)
+            }
+            if traits.known && !traits.realtime {
+                parameterFlags.insert(.flag_NonRealTime)
             }
             let param = AUParameterTree.createParameter(
                 withIdentifier: paramId,
@@ -1134,7 +1318,10 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 maxValue: info.pointee.max_value,
                 logarithmic: info.pointee.logarithmic,
                 steps: info.pointee.steps,
-                realtime: realtime
+                floatingPoint: traits.floatingPoint,
+                realtime: traits.realtime,
+                traitsKnown: traits.known,
+                preciseRamp: preciseRamp
             ))
         }
 
@@ -1180,6 +1367,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
         renderStatePtr.pointee.parameterIds = ids
         renderStatePtr.pointee.parameterMetadata = cachedMetadata
         renderStatePtr.pointee.parameterRamps = ramps
+        renderStatePtr.pointee.preciseRampAddress = preciseRampAddress
         renderStatePtr.pointee.parameterMailboxes = newMailboxes
         renderStatePtr.pointee.parameterCount = params.count
         auParameters = params
@@ -1236,6 +1424,13 @@ open class GenericRustAudioUnit: AUAudioUnit {
                   info.pointee.steps == metadata[index].steps else {
                 return false
             }
+            let traits = parameterAutomationTraits(handle: handle, index: index, steps: info.pointee.steps)
+            let preciseRamp = type(of: self).pluginType == "Upmixer"
+                && strcmp(id, "height_gain") == 0 && traits.floatingPoint && traits.realtime
+            guard traits.floatingPoint == metadata[index].floatingPoint,
+                  traits.realtime == metadata[index].realtime,
+                  traits.known == metadata[index].traitsKnown,
+                  preciseRamp == metadata[index].preciseRamp else { return false }
         }
         return true
     }
@@ -1290,11 +1485,25 @@ open class GenericRustAudioUnit: AUAudioUnit {
             guard drainParameterMailboxesLocked(handle: handle) else { return param.minValue }
             let paramId = param.identifier
             let normalized = paramId.withCString { idPtr in
-                plugin_get_parameter(handle, idPtr)
+                normalizedParameterLocked(handle: handle, address: param.address, id: idPtr)
             }
             if normalized < 0 { return param.minValue }
             return denormalize(normalized: Float(normalized), param: param)
         }
+    }
+
+    private func normalizedParameterLocked(
+        handle: OpaquePointer, address: AUParameterAddress, id: UnsafePointer<CChar>
+    ) -> Double {
+        let state = renderStatePtr.pointee
+        if state.preciseRampAddress >= 0,
+           address == AUParameterAddress(state.preciseRampAddress),
+           let ramps = state.parameterRamps, let ids = state.parameterIds,
+           let currentID = ids[state.preciseRampAddress], strcmp(currentID, id) == 0,
+           ramps[state.preciseRampAddress].active {
+            return ramps[state.preciseRampAddress].logicalCurrent
+        }
+        return plugin_get_parameter(handle, id)
     }
 
     /// Returns parameter metadata while the Rust handle is exclusively owned;
@@ -1328,9 +1537,11 @@ open class GenericRustAudioUnit: AUAudioUnit {
         if param.unit == .hertz && param.minValue > 0 {
             let logMin = log(param.minValue)
             let logMax = log(param.maxValue)
-            return exp(logMin + normalized * (logMax - logMin))
+            let value = exp(logMin + normalized * (logMax - logMin))
+            return min(max(value, param.minValue), param.maxValue)
         }
-        return param.minValue + normalized * (param.maxValue - param.minValue)
+        let value = param.minValue + normalized * (param.maxValue - param.minValue)
+        return min(max(value, param.minValue), param.maxValue)
     }
 
     // MARK: - AUAudioUnit Overrides
@@ -1582,7 +1793,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
 
     // MARK: - Audio Processing
 
-    public override var internalRenderBlock: AUInternalRenderBlock {
+    public override func makeSOTFRenderContext() -> any SOTFRenderContext {
         // Capture the POINTER, not the values. The pointed-to struct is updated
         // by allocateRenderResources, so the render thread always sees current state.
         let stateOwner = renderStateOwner
@@ -1592,7 +1803,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
             ? nil
             : midiOutputEventBlock
 
-        return { (
+        return SOTFRenderBodyContext { (
             actionFlags,
             timestamp,
             frameCount,
@@ -1633,16 +1844,22 @@ open class GenericRustAudioUnit: AUAudioUnit {
             if let ids = state.parameterIds,
                let mailboxes = state.parameterMailboxes {
                 var accepted = true
-                for address in 0..<state.parameterCount {
-                    let mailbox = mailboxes[address].takeUnretainedValue()
+                var address = 0
+                while address < state.parameterCount {
+                    let currentAddress = address
+                    address += 1
+                    let mailbox = mailboxes[currentAddress].takeUnretainedValue()
                     guard let pending = mailbox.pendingValue() else { continue }
                     mailbox.markApplied(pending.version)
                     guard pending.value.isFinite,
                           (0.0...1.0).contains(pending.value),
-                          let id = ids[address],
+                          let id = ids[currentAddress],
                           plugin_set_parameter(handle, id, Double(pending.value)) == 0 else {
                         accepted = false
                         continue
+                    }
+                    if currentAddress == state.preciseRampAddress {
+                        state.parameterRamps?[currentAddress] = ParameterRampState()
                     }
                 }
                 if !accepted { return kAudioUnitErr_InvalidParameter }
@@ -1692,19 +1909,21 @@ open class GenericRustAudioUnit: AUAudioUnit {
                     return kAudioUnitErr_InvalidPropertyValue
                 }
                 let bytesPerChannel = frames * MemoryLayout<Float>.size
-                for channel in 0..<outputChannels {
+                var channel = 0
+                while channel < outputChannels {
                     let buffer = outputBufferList[channel]
                     guard (skipRenderArgumentChecks || buffer.mNumberChannels == 1),
                           buffer.mData == nil || skipRenderArgumentChecks
                             || Int(buffer.mDataByteSize) >= bytesPerChannel else {
                         return kAudioUnitErr_InvalidPropertyValue
                     }
+                    channel += 1
                 }
             }
 
             // Pull input audio
             var pullFlags = AudioUnitRenderActionFlags(rawValue: 0)
-            let status = pullInputBlock(&pullFlags, timestamp, frameCount, 0, inputBufferList)
+            let status = sotf_call_pull(pullInputBlock, &pullFlags, timestamp, frameCount, 0, inputBufferList)
             guard status == noErr else { return status }
 
             guard let scratchIn = state.scratchIn, let scratchOut = state.scratchOut else {
@@ -1728,13 +1947,15 @@ open class GenericRustAudioUnit: AUAudioUnit {
                     return kAudioUnitErr_InvalidPropertyValue
                 }
                 let bytesPerChannel = frames * MemoryLayout<Float>.size
-                for channel in 0..<inputChannels {
+                var channel = 0
+                while channel < inputChannels {
                     let buffer = inputBuffers[channel]
                     guard (skipRenderArgumentChecks || buffer.mNumberChannels == 1),
                           buffer.mData != nil,
                           skipRenderArgumentChecks || Int(buffer.mDataByteSize) >= bytesPerChannel else {
                         return kAudioUnitErr_InvalidPropertyValue
                     }
+                    channel += 1
                 }
             }
 
@@ -1745,22 +1966,30 @@ open class GenericRustAudioUnit: AUAudioUnit {
                     scratchIn.update(from: src, count: frames * inputChannels)
                 }
             } else {
-                for ch in 0..<inputChannels {
+                var ch = 0
+                while ch < inputChannels {
                     guard let mData = inputBuffers[ch].mData else {
                         return kAudioUnitErr_InvalidPropertyValue
                     }
                     let src = mData.assumingMemoryBound(to: Float.self)
-                    for frame in 0..<frames {
+                    var frame = 0
+                    while frame < frames {
                         scratchIn[frame * inputChannels + ch] = src[frame]
+                        frame += 1
                     }
+                    ch += 1
                 }
             }
 
             var hasActiveRamp = false
             if let ramps = state.parameterRamps {
-                for address in 0..<state.parameterCount where ramps[address].active {
-                    hasActiveRamp = true
-                    break
+                var address = 0
+                while address < state.parameterCount {
+                    if ramps[address].active {
+                        hasActiveRamp = true
+                        break
+                    }
+                    address += 1
                 }
             }
             if realtimeEventListHead == nil && !hasActiveRamp && midiOutputBlock == nil {
@@ -1780,7 +2009,8 @@ open class GenericRustAudioUnit: AUAudioUnit {
                     guard let ownedOutput = state.ownedOutput else {
                         return kAudioUnitErr_Uninitialized
                     }
-                    for ch in 0..<outputChannels {
+                    var ch = 0
+                    while ch < outputChannels {
                         let dst: UnsafeMutablePointer<Float>
                         if let mData = outputBufferList[ch].mData {
                             dst = mData.assumingMemoryBound(to: Float.self)
@@ -1788,12 +2018,15 @@ open class GenericRustAudioUnit: AUAudioUnit {
                             dst = ownedOutput.advanced(by: ch * frames)
                             outputBufferList[ch].mData = UnsafeMutableRawPointer(dst)
                         }
-                        for frame in 0..<frames {
+                        var frame = 0
+                        while frame < frames {
                             dst[frame] = scratchOut[frame * outputChannels + ch]
+                            frame += 1
                         }
                         outputBufferList[ch].mDataByteSize = UInt32(
                             frames * MemoryLayout<Float>.size
                         )
+                        ch += 1
                     }
                 }
                 return noErr
@@ -1869,7 +2102,12 @@ open class GenericRustAudioUnit: AUAudioUnit {
                     if head.eventType == .parameterRamp,
                        event.rampDurationSampleFrames > 0,
                        let ramps = state.parameterRamps {
-                        let startValue = plugin_get_parameter(handle, id)
+                        let startValue: Double
+                        if address == state.preciseRampAddress && ramps[address].active {
+                            startValue = ramps[address].logicalCurrent
+                        } else {
+                            startValue = plugin_get_parameter(handle, id)
+                        }
                         guard startValue >= 0 else { return kAudioUnitErr_InvalidParameter }
                         let totalDuration = Int(event.rampDurationSampleFrames)
                         ramps[address] = ParameterRampState(
@@ -1900,7 +2138,8 @@ open class GenericRustAudioUnit: AUAudioUnit {
             }
 
             if let midiOutputBlock = midiOutputBlock, let midiOut = state.midiOut {
-                for i in 0..<segmentProcessor.midiOutputCount {
+                var i = 0
+                while i < segmentProcessor.midiOutputCount {
                     var event = midiOut[i]
                     let callbackStatus: OSStatus = withUnsafeBytes(of: &event.data) { bytes in
                         if let base = bytes.baseAddress {
@@ -1918,6 +2157,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
                         return kAudioUnitErr_InvalidParameter
                     }
                     guard callbackStatus == noErr else { return callbackStatus }
+                    i += 1
                 }
             }
             // AUv3 exposes no callback through which this `aufx` wrapper can
@@ -1941,7 +2181,8 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 guard let ownedOutput = state.ownedOutput else {
                     return kAudioUnitErr_Uninitialized
                 }
-                for ch in 0..<outputChannels {
+                var ch = 0
+                while ch < outputChannels {
                     let dst: UnsafeMutablePointer<Float>
                     if let mData = outputBufferList[ch].mData {
                         dst = mData.assumingMemoryBound(to: Float.self)
@@ -1949,10 +2190,13 @@ open class GenericRustAudioUnit: AUAudioUnit {
                         dst = ownedOutput.advanced(by: ch * frames)
                         outputBufferList[ch].mData = UnsafeMutableRawPointer(dst)
                     }
-                    for frame in 0..<frames {
+                    var frame = 0
+                    while frame < frames {
                         dst[frame] = scratchOut[frame * outputChannels + ch]
+                        frame += 1
                     }
                     outputBufferList[ch].mDataByteSize = UInt32(frames * MemoryLayout<Float>.size)
+                    ch += 1
                 }
             }
 
@@ -1986,7 +2230,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
 
     public override var fullState: [String: Any]? {
         get {
-            guard let snapshot: (Data, [(String, AUValue)]) = accessGate.withControlAccess({
+            guard let snapshot: (Data, [(String, AUValue)], Bool) = accessGate.withControlAccess({
                 guard let handle = renderStatePtr.pointee.handle else { return nil }
                 guard drainParameterMailboxesLocked(handle: handle) else { return nil }
                 var len: Int = 0
@@ -1994,7 +2238,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 defer { plugin_free_state(data, len) }
                 let values = auParameters.map { parameter -> (String, AUValue) in
                     let normalized = parameter.identifier.withCString {
-                        plugin_get_parameter(handle, $0)
+                        normalizedParameterLocked(handle: handle, address: parameter.address, id: $0)
                     }
                     return (
                         parameter.identifier,
@@ -2003,7 +2247,10 @@ open class GenericRustAudioUnit: AUAudioUnit {
                             : parameter.minValue
                     )
                 }
-                return (Data(bytes: data, count: len), values)
+                let state = renderStatePtr.pointee
+                let rampActive = state.preciseRampAddress >= 0
+                    && state.parameterRamps?[state.preciseRampAddress].active == true
+                return (Data(bytes: data, count: len), values, rampActive)
             }) else { return nil }
 
             var state: [String: Any] = [
@@ -2015,8 +2262,19 @@ open class GenericRustAudioUnit: AUAudioUnit {
                 "sotf_state": snapshot.0,
             ]
 
+            let serialized: [String: Any]?
+            if type(of: self).pluginType == "Upmixer" {
+                serialized = (try? JSONSerialization.jsonObject(with: snapshot.0)) as? [String: Any]
+            } else {
+                serialized = nil
+            }
             for (identifier, value) in snapshot.1 {
-                state[identifier] = value
+                if !(snapshot.2 && identifier == "height_gain"),
+                   let raw = serialized?[identifier] as? NSNumber {
+                    state[identifier] = raw.floatValue
+                } else {
+                    state[identifier] = value
+                }
             }
 
             return state
@@ -2025,7 +2283,14 @@ open class GenericRustAudioUnit: AUAudioUnit {
             guard let state = newValue else { return }
 
             if let data = state["sotf_state"] as? Data {
+                let serialized: [String: Any]?
+                if type(of: self).pluginType == "Upmixer" {
+                    serialized = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+                } else {
+                    serialized = nil
+                }
                 var parameterValues: [(identifier: String, normalized: Double)] = []
+                var reconstructionValues: [String: Any] = [:]
                 var invalidParameterValue = false
                 for parameter in auParameters {
                     guard let raw = state[parameter.identifier] else { continue }
@@ -2033,22 +2298,60 @@ open class GenericRustAudioUnit: AUAudioUnit {
                         invalidParameterValue = true
                         break
                     }
-                    let normalized = normalize(value: number.floatValue, param: parameter)
+                    let value = number.floatValue
+                    guard value.isFinite, value >= parameter.minValue, value <= parameter.maxValue else {
+                        invalidParameterValue = true
+                        break
+                    }
+                    let normalized = normalize(value: value, param: parameter)
                     guard normalized.isFinite, (0.0...1.0).contains(normalized) else {
                         invalidParameterValue = true
                         break
                     }
-                    parameterValues.append((parameter.identifier, Double(normalized)))
+                    let reconstruction = type(of: self).stateValueForReconstruction(
+                        parameter.identifier, value: value
+                    )
+                    if let raw = serialized?[parameter.identifier] as? NSNumber,
+                       raw.floatValue.bitPattern == value.bitPattern,
+                       reconstruction == nil
+                           || (reconstruction is Double && CFGetTypeID(raw) != CFBooleanGetTypeID()) {
+                        continue
+                    }
+                    if let reconstruction {
+                        reconstructionValues[parameter.identifier] = reconstruction
+                    } else {
+                        parameterValues.append((parameter.identifier, Double(normalized)))
+                    }
                 }
                 guard !invalidParameterValue else { return }
+                var restoredData = data
+                if !reconstructionValues.isEmpty {
+                    guard var object = serialized
+                        ?? ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any]) else {
+                        return
+                    }
+                    for (identifier, value) in reconstructionValues {
+                        object[identifier] = value
+                    }
+                    guard let updated = try? JSONSerialization.data(withJSONObject: object) else { return }
+                    restoredData = updated
+                }
+                let refreshTree = type(of: self).refreshParameterTreeAfterInactiveStateRestore
+                    && accessGate.withControlAccess { !renderStatePtr.pointee.resourcesAllocated }
+                if refreshTree { willChangeValue(forKey: "parameterTree") }
                 willChangeValue(forKey: "allParameterValues")
                 willChangeValue(forKey: "latency")
                 defer {
                     didChangeValue(forKey: "latency")
                     didChangeValue(forKey: "allParameterValues")
+                    if refreshTree { didChangeValue(forKey: "parameterTree") }
                 }
                 let loaded = accessGate.withControlAccess {
-                    replacePluginStateLocked(data, parameterValues: parameterValues)
+                    let loaded = replacePluginStateLocked(restoredData, parameterValues: parameterValues)
+                    if loaded && refreshTree && !renderStatePtr.pointee.resourcesAllocated {
+                        buildParameterTreeLocked()
+                    }
+                    return loaded
                 }
                 guard loaded else { return }
                 return
@@ -2083,7 +2386,7 @@ open class GenericRustAudioUnit: AUAudioUnit {
     }
 
     public func exportPreset(named name: String) -> Data? {
-        accessGate.withControlAccess {
+        guard let snapshot: (data: Data, logicalHeight: Double?) = accessGate.withControlAccess({
             guard let handle = renderStatePtr.pointee.handle else { return nil }
             guard drainParameterMailboxesLocked(handle: handle) else { return nil }
             var len = 0
@@ -2092,8 +2395,28 @@ open class GenericRustAudioUnit: AUAudioUnit {
             }
             guard let ptr = ptr, len > 0 else { return nil }
             defer { plugin_free_state(ptr, len) }
-            return Data(bytes: ptr, count: len)
-        }
+            let state = renderStatePtr.pointee
+            var logicalHeight: Double?
+            if state.preciseRampAddress >= 0,
+               let ramps = state.parameterRamps, let metadata = state.parameterMetadata,
+               ramps[state.preciseRampAddress].active {
+                let info = metadata[state.preciseRampAddress]
+                let normalized = ramps[state.preciseRampAddress].logicalCurrent
+                logicalHeight = info.minValue + normalized * (info.maxValue - info.minValue)
+            }
+            return (Data(bytes: ptr, count: len), logicalHeight)
+        }) else { return nil }
+        guard let logicalHeight = snapshot.logicalHeight else { return snapshot.data }
+        // The preset envelope contains serialized plugin bytes rather than AU's
+        // top-level parameter overrides. Preserve the current ramp value there.
+        guard var document = (try? JSONSerialization.jsonObject(with: snapshot.data)) as? [String: Any],
+              let bytes = document["state"] as? [NSNumber],
+              var state = (try? JSONSerialization.jsonObject(with: Data(bytes.map(\.uint8Value)))) as? [String: Any]
+        else { return nil }
+        state["height_gain"] = logicalHeight
+        guard let rewritten = try? JSONSerialization.data(withJSONObject: state) else { return nil }
+        document["state"] = Array(rewritten)
+        return try? JSONSerialization.data(withJSONObject: document)
     }
 
     public func importPresetDocument(_ data: Data) -> Bool {

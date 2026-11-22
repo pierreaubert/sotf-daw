@@ -25,7 +25,7 @@ fn param_index_coverage() {
 
 #[test]
 fn param_count() {
-    assert_eq!(PARAMS.len(), 47, "Expected 47 params");
+    assert_eq!(PARAMS.len(), 62, "Expected 62 params");
 }
 
 #[test]

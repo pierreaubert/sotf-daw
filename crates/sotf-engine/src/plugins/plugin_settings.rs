@@ -549,6 +549,16 @@ pub struct UpmixerOutputSettings {
     pub auto_gain_smoothing_ms: f64,
 }
 
+impl UpmixerOutputSettings {
+    /// Returns whether the stereo-only binaural preview is active for this input.
+    pub fn binaural_preview_active(
+        &self,
+        input: &sotf_plugins::plugin_upmixer::UpmixerMultichannelParams,
+    ) -> bool {
+        self.binaural_preview && input.input_layout.is_none()
+    }
+}
+
 /// One engine-side custom ambisonics loudspeaker position.
 ///
 /// Field-for-field mirror of `sotf_plugin_ambisonics::CustomSpeaker` so the
@@ -759,6 +769,8 @@ pub enum PluginSettings {
         bypass: UpmixerBypassSettings,
         #[serde(flatten)]
         output: UpmixerOutputSettings,
+        #[serde(flatten)]
+        multichannel: sotf_plugins::plugin_upmixer::UpmixerMultichannelParams,
     },
     AAE {
         #[serde(default = "default_aae_speaker_config")]
@@ -1997,7 +2009,12 @@ impl PluginSettings {
     /// Returns the fixed input channel count this plugin requires, or None if it adapts to any.
     pub fn required_input_channels(&self) -> Option<usize> {
         match self {
-            Self::Upmixer { .. } => Some(2),
+            Self::Upmixer { multichannel, .. } => Some(
+                multichannel
+                    .input_layout
+                    .as_ref()
+                    .map_or(2, |layout| layout.channels.len()),
+            ),
             Self::AAE { .. } => Some(2),
             Self::StereoImager { .. } => Some(2),
             Self::XTC { .. } => Some(2),
@@ -2144,6 +2161,7 @@ impl PluginSettings {
                         auto_gain_max_db: p(u, "auto_gain_max_db").default_f64(),
                         auto_gain_smoothing_ms: p(u, "auto_gain_smoothing_ms").default_f64(),
                     },
+                    multichannel: Default::default(),
                 }
             }
             PluginType::Compressor => {
@@ -3205,6 +3223,7 @@ mod tests {
                 auto_gain_max_db: 12.0,
                 auto_gain_smoothing_ms: 100.0,
             },
+            multichannel: Default::default(),
         };
 
         let json = serde_json::to_value(&settings).expect("serialize");

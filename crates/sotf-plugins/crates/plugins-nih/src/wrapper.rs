@@ -2,6 +2,8 @@
 
 use nih_plug::audio_setup::{AudioIOLayout, PortNames, new_nonzero_u32};
 use nih_plug::context::PluginApi;
+#[doc(hidden)]
+pub mod native_upmixer_layout;
 use sotf_host::external_plugin::{
     MAX_AMBISONICS_CUSTOM_SPEAKERS, NativeCrossoverInputLayout as CrossoverInputLayout,
 };
@@ -1204,6 +1206,9 @@ pub fn migrate_crossover_state(state: &mut nih_plug::wrapper::state::PluginState
 #[doc(hidden)]
 #[macro_export]
 macro_rules! sotf_nih_layouts {
+    ("Upmixer", $default:expr) => {
+        &$crate::wrapper::native_upmixer_layout::VST3_LAYOUTS
+    };
     ("AmbisonicsDecoder", $default:expr) => {
         &$crate::wrapper::AMBISONICS_VST3_LAYOUTS
     };
@@ -1268,6 +1273,9 @@ macro_rules! sotf_nih_is_ambisonics {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! sotf_nih_supports_surround {
+    ("Upmixer") => {
+        true
+    };
     ("AmbisonicsDecoder") => {
         true
     };
@@ -1344,6 +1352,8 @@ macro_rules! sotf_nih_plugin {
             crossover_active_output_buses: u64,
             crossover_host_to_sotf: [usize; 16],
             eq_native_host_to_sotf: [usize; 16],
+            upmixer_input_host_to_sotf: [usize; 16],
+            upmixer_output_host_to_sotf: [usize; 16],
             sample_rate: f64,
             structural_fingerprint: u64,
             non_restartable_structural_fingerprint: u64,
@@ -1442,6 +1452,8 @@ macro_rules! sotf_nih_plugin {
                     crossover_active_output_buses: 1,
                     crossover_host_to_sotf: [0; 16],
                     eq_native_host_to_sotf: [0; 16],
+                    upmixer_input_host_to_sotf: [0; 16],
+                    upmixer_output_host_to_sotf: [0; 16],
                     sample_rate: 48000.0,
                     structural_fingerprint: 0,
                     non_restartable_structural_fingerprint: 0,
@@ -1615,6 +1627,25 @@ macro_rules! sotf_nih_plugin {
                 } else {
                     None
                 };
+                let upmixer_layout = if matches!($plugin_type, "Upmixer") {
+                    let Some(index) = $crate::wrapper::native_upmixer_layout::layout_index(
+                        audio_io_layout, context.plugin_api(),
+                    ) else { return false; };
+                    let Some(pair) = $crate::wrapper::native_upmixer_layout::pair(index, context.plugin_api())
+                    else { return false; };
+                    if self.params.set_upmixer_layout(pair.input.id(), pair.output.id()).is_err() {
+                        return false;
+                    }
+                    Some(pair)
+                } else {
+                    None
+                };
+                if upmixer_layout.is_some() && !self.params.begin_upmixer_restore() {
+                    return false;
+                }
+                let mut upmixer_restore_attempt = upmixer_layout
+                    .is_some()
+                    .then(|| $crate::params::UpmixerRestoreAttempt::new(self.params.clone()));
                 if matches!($plugin_type, "EQ") && eq_native_input_layout_index.is_none() {
                     return false;
                 }
@@ -1853,6 +1884,18 @@ macro_rules! sotf_nih_plugin {
                 let main_output_channels = audio_io_layout
                     .main_output_channels
                     .map_or(0, |channels| channels.get() as usize);
+                let mut upmixer_input_host_to_sotf = [0; 16];
+                let mut upmixer_output_host_to_sotf = [0; 16];
+                if let Some(pair) = upmixer_layout {
+                    for host_channel in 0..pair.input.channels() {
+                        let Some(channel) = pair.input.host_to_sotf(context.plugin_api(), host_channel) else { return false; };
+                        upmixer_input_host_to_sotf[host_channel] = channel;
+                    }
+                    for host_channel in 0..pair.output.channels() {
+                        let Some(channel) = pair.output.host_to_sotf(context.plugin_api(), host_channel) else { return false; };
+                        upmixer_output_host_to_sotf[host_channel] = channel;
+                    }
+                }
                 if audio_io_layout.aux_output_ports.len() > self.aux_output_channels.len() {
                     return false;
                 }
@@ -1974,6 +2017,12 @@ macro_rules! sotf_nih_plugin {
                             candidate_main_input_channels,
                             route,
                         )
+                    } else if let Some(pair) = upmixer_layout {
+                        $crate::params::configuration::create_native_upmixer_plugin(
+                            candidate_sample_rate,
+                            &self.params,
+                            pair,
+                        )
                     } else if matches!($plugin_type, "Crossover") {
                         $crate::params::configuration::create_plugin_with_input_channels(
                             $plugin_type,
@@ -2000,6 +2049,12 @@ macro_rules! sotf_nih_plugin {
                         &self.params,
                         candidate_main_input_channels,
                         route,
+                    )
+                } else if let Some(pair) = upmixer_layout {
+                    $crate::params::configuration::create_native_upmixer_plugin(
+                        candidate_sample_rate,
+                        &self.params,
+                        pair,
                     )
                 } else if matches!($plugin_type, "Crossover") {
                     $crate::params::configuration::create_plugin_with_input_channels(
@@ -2133,6 +2188,14 @@ macro_rules! sotf_nih_plugin {
                             return false;
                         }
 
+                        if upmixer_layout.is_some()
+                            && !self.params.complete_upmixer_restore(candidate_sample_rate)
+                        {
+                            return false;
+                        }
+                        if let Some(attempt) = upmixer_restore_attempt.as_mut() {
+                            attempt.commit();
+                        }
                         context.set_latency_samples(latency);
                         self.interleaved_in = interleaved_in;
                         self.interleaved_out = interleaved_out;
@@ -2156,6 +2219,10 @@ macro_rules! sotf_nih_plugin {
                         }
                         if eq_native_input_layout_index.is_some() {
                             self.eq_native_host_to_sotf = eq_native_host_to_sotf;
+                        }
+                        if upmixer_layout.is_some() {
+                            self.upmixer_input_host_to_sotf = upmixer_input_host_to_sotf;
+                            self.upmixer_output_host_to_sotf = upmixer_output_host_to_sotf;
                         }
                         if let Some(active_buses) = crossover_active_output_buses {
                             self.crossover_active_output_buses = active_buses;
@@ -2385,7 +2452,7 @@ macro_rules! sotf_nih_plugin {
                     self.params.structural_fingerprint() != self.structural_fingerprint;
                 if structural_state_changed {
                     let non_restartable_state_changed =
-                        if matches!($plugin_type, "DynamicEQ") {
+                        if matches!($plugin_type, "DynamicEQ" | "Upmixer") {
                             self.params.non_restartable_structural_fingerprint()
                                 != self.non_restartable_structural_fingerprint
                         } else if matches!($plugin_type, "Convolution") {
@@ -2406,10 +2473,10 @@ macro_rules! sotf_nih_plugin {
                         };
                     if non_restartable_state_changed {
                         // Construction-sized state is reconstructed by initialize().
-                        // Only DynamicEQ's visible, non-automatable shelf controls may
-                        // change while the old prepared instance continues processing;
-                        // all other structural edits still fail rather than rebuilding
-                        // or destroying plugin resources on the render thread.
+                        // Restartable DynamicEQ and Upmixer controls may change while
+                        // their old prepared instances continue processing. Other
+                        // structural edits fail instead of rebuilding or destroying
+                        // plugin resources on the render thread.
                         $crate::wrapper::silence_host_outputs(buffer, aux);
                         return nih_plug::prelude::ProcessStatus::Error(
                             "Structural parameter state changed; reactivate plugin",
@@ -2445,7 +2512,13 @@ macro_rules! sotf_nih_plugin {
                 // Interleave main inputs and any additional input bus.
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
-                    if matches!($plugin_type, "Crossover" | "EQ") {
+                    if matches!($plugin_type, "Upmixer") {
+                        for host_channel in 0..input_channels {
+                            let sotf_channel = self.upmixer_input_host_to_sotf[host_channel];
+                            self.interleaved_in[frame * input_channels + sotf_channel] =
+                                channel_slices[host_channel][frame];
+                        }
+                    } else if matches!($plugin_type, "Crossover" | "EQ") {
                         for host_channel in 0..input_channels {
                             let sotf_channel = if matches!($plugin_type, "Crossover") {
                                 self.crossover_host_to_sotf[host_channel]
@@ -2491,7 +2564,9 @@ macro_rules! sotf_nih_plugin {
                 let channel_slices = buffer.as_slice();
                 for frame in 0..num_frames {
                     for ch in 0..self.main_output_channels {
-                        let source_channel = if matches!($plugin_type, "Crossover") {
+                        let source_channel = if matches!($plugin_type, "Upmixer") {
+                            self.upmixer_output_host_to_sotf[ch]
+                        } else if matches!($plugin_type, "Crossover") {
                             let width = self.main_input_channels;
                             let host_channel = ch % width;
                             let band = ch / width;
@@ -2603,7 +2678,7 @@ macro_rules! sotf_nih_plugin {
             fn vst3_restart_component_on_required_parameter_change() -> bool {
                 matches!(
                     $plugin_type,
-                    "DynamicEQ" | "Convolution" | "EQ" | "DeEsser"
+                    "DynamicEQ" | "Convolution" | "EQ" | "DeEsser" | "Upmixer"
                 )
             }
 
@@ -2629,7 +2704,9 @@ macro_rules! sotf_nih_plugin {
                 is_input: bool,
                 bus_index: usize,
             ) -> Option<u64> {
-                if matches!($plugin_type, "AmbisonicsDecoder") && bus_index == 0 {
+                if matches!($plugin_type, "Upmixer") {
+                    $crate::wrapper::native_upmixer_layout::vst3_bus_arrangement(layout_index, is_input, bus_index)
+                } else if matches!($plugin_type, "AmbisonicsDecoder") && bus_index == 0 {
                     $crate::wrapper::ambisonics_vst3_arrangement(layout_index, is_input)
                 } else if matches!($plugin_type, "BandSplit") {
                     $crate::wrapper::band_split_vst3_bus_arrangement(
@@ -2724,7 +2801,9 @@ macro_rules! sotf_nih_plugin {
                 $crate::sotf_nih_supports_surround!($plugin_type);
 
             fn clap_audio_io_layouts() -> &'static [nih_plug::prelude::AudioIOLayout] {
-                if matches!($plugin_type, "AmbisonicsDecoder") {
+                if matches!($plugin_type, "Upmixer") {
+                    &$crate::wrapper::native_upmixer_layout::CLAP_LAYOUTS
+                } else if matches!($plugin_type, "AmbisonicsDecoder") {
                     &$crate::wrapper::AMBISONICS_CLAP_LAYOUTS
                 } else if matches!($plugin_type, "BandSplit") {
                     &$crate::wrapper::BAND_SPLIT_CLAP_LAYOUTS
@@ -2749,7 +2828,7 @@ macro_rules! sotf_nih_plugin {
                     } else {
                         clap_sys::ext::surround::CLAP_PORT_SURROUND
                     })
-                } else if matches!($plugin_type, "EQ")
+                } else if matches!($plugin_type, "EQ" | "Upmixer")
                     && Self::clap_audio_io_layouts()
                         .get(layout_index)
                         .and_then(|layout| {
@@ -2794,7 +2873,9 @@ macro_rules! sotf_nih_plugin {
                 is_input: bool,
                 port_index: usize,
             ) -> Option<&'static [u8]> {
-                if matches!($plugin_type, "AmbisonicsDecoder") && !is_input && port_index == 0 {
+                if matches!($plugin_type, "Upmixer") {
+                    $crate::wrapper::native_upmixer_layout::clap_channel_map(layout_index, is_input, port_index)
+                } else if matches!($plugin_type, "AmbisonicsDecoder") && !is_input && port_index == 0 {
                     $crate::wrapper::ambisonics_clap_channel_map(layout_index % 6)
                 } else if matches!($plugin_type, "Crossover") {
                     $crate::wrapper::crossover_clap_channel_map(
@@ -2816,6 +2897,8 @@ macro_rules! sotf_nih_plugin {
             fn clap_surround_channel_mask_supported(channel_mask: u64) -> bool {
                 matches!($plugin_type, "AmbisonicsDecoder")
                     && $crate::wrapper::ambisonics_clap_channel_mask_supported(channel_mask)
+                    || (matches!($plugin_type, "Upmixer")
+                        && $crate::wrapper::native_upmixer_layout::clap_channel_mask_supported(channel_mask))
                     || (matches!($plugin_type, "Crossover")
                         && $crate::wrapper::crossover_clap_channel_mask_supported(channel_mask))
                     || (matches!($plugin_type, "EQ")

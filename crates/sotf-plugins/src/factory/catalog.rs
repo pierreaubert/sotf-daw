@@ -93,6 +93,7 @@ pub enum PluginMaturity {
 pub const STANDARD_CHANNEL_WIDTHS: &[usize] = &[1, 2, 4, 6, 8, 12];
 pub const MONO_CHANNEL_WIDTH: &[usize] = &[1];
 pub const STEREO_CHANNEL_WIDTH: &[usize] = &[2];
+const UPMIXER_INPUT_WIDTHS: &[usize] = &[2, 5, 6, 8];
 pub const AMBISONIC_WIDTHS: &[usize] = &[4, 9, 16, 25, 36, 49, 64];
 /// Backward-compatible alias retained for callers that still name FOA while
 /// using the complete Ambisonics-width admission contract.
@@ -137,6 +138,7 @@ pub enum PluginChannelOutputModel {
     Fixed(usize),
     Configurable {
         description: &'static str,
+        /// Output of the default configuration; some inputs require a compatible override.
         default_output: PluginDefaultChannelOutput,
     },
     InputTimesBands,
@@ -604,9 +606,9 @@ pub const PLUGIN_CATALOG: &[PluginCatalogEntry] = &[
             "sotf-plugin-upmixer",
             "Upmixer",
             Beta,
-            PluginSupportedInputLayouts::Enumerated(STEREO_CHANNEL_WIDTH),
+            PluginSupportedInputLayouts::Enumerated(UPMIXER_INPUT_WIDTHS),
             PluginChannelOutputModel::Configurable {
-                description: "stereo to configured speaker layout",
+                description: "stereo or explicit surround input to configured speaker layout; 7.1 input requires an output larger than the default 5.1",
                 default_output: PluginDefaultChannelOutput::Fixed(6),
             },
             PluginLatencyModel::FrameBased("STFT frame and hop configuration"),

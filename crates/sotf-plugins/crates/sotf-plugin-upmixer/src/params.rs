@@ -27,6 +27,7 @@ use d::d_auto_gain_enabled;
 use d::d_auto_gain_max_db;
 use d::d_auto_gain_smoothing_ms;
 use d::d_bandpass_hz;
+use d::d_bass_cutoff_hz;
 use d::d_bypass_all_processing;
 use d::d_bypass_decorrelation;
 use d::d_bypass_transient_detection;
@@ -170,6 +171,40 @@ pub struct Params {
     pub auto_gain_max_db: f64,
     #[serde(default = "d_auto_gain_smoothing_ms")]
     pub auto_gain_smoothing_ms: f64,
+    #[serde(default)]
+    pub bypass_heights: bool,
+    #[serde(default)]
+    pub bass_mode: usize,
+    #[serde(default = "d_bass_cutoff_hz")]
+    pub bass_cutoff_hz: f64,
+    #[serde(default)]
+    pub bass_gain_db: f64,
+    #[serde(default)]
+    pub lfe_playback_gain_db: f64,
+    #[serde(default)]
+    pub combine_input_lfe: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_front_left: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_front_right: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_center: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_side_left: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_side_right: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_back_left: bool,
+    #[serde(default = "bass_source_default")]
+    pub bass_source_back_right: bool,
+    #[serde(default)]
+    pub input_format: usize,
+    #[serde(default)]
+    pub bypass_surround: bool,
+}
+
+fn bass_source_default() -> bool {
+    true
 }
 
 impl Default for Params {
@@ -222,6 +257,21 @@ impl Default for Params {
             auto_gain_enabled: d_auto_gain_enabled(),
             auto_gain_max_db: d_auto_gain_max_db(),
             auto_gain_smoothing_ms: d_auto_gain_smoothing_ms(),
+            bypass_heights: false,
+            bass_mode: 0,
+            bass_cutoff_hz: d_bass_cutoff_hz(),
+            bass_gain_db: 0.0,
+            lfe_playback_gain_db: 0.0,
+            combine_input_lfe: false,
+            bass_source_front_left: true,
+            bass_source_front_right: true,
+            bass_source_center: true,
+            bass_source_side_left: true,
+            bass_source_side_right: true,
+            bass_source_back_left: true,
+            bass_source_back_right: true,
+            input_format: 0,
+            bypass_surround: false,
         }
     }
 }
@@ -293,6 +343,37 @@ impl PluginParamDef for Params {
             44 => Some(if self.auto_gain_enabled { 1.0 } else { 0.0 }),
             45 => Some(self.auto_gain_max_db),
             46 => Some(self.auto_gain_smoothing_ms),
+            47 => Some(if self.bypass_heights { 1.0 } else { 0.0 }),
+            48 => Some(self.bass_mode as f64),
+            49 => Some(self.bass_cutoff_hz),
+            50 => Some(self.bass_gain_db),
+            51 => Some(self.lfe_playback_gain_db),
+            52 => Some(if self.combine_input_lfe { 1.0 } else { 0.0 }),
+            53 => Some(if self.bass_source_front_left {
+                1.0
+            } else {
+                0.0
+            }),
+            54 => Some(if self.bass_source_front_right {
+                1.0
+            } else {
+                0.0
+            }),
+            55 => Some(if self.bass_source_center { 1.0 } else { 0.0 }),
+            56 => Some(if self.bass_source_side_left { 1.0 } else { 0.0 }),
+            57 => Some(if self.bass_source_side_right {
+                1.0
+            } else {
+                0.0
+            }),
+            58 => Some(if self.bass_source_back_left { 1.0 } else { 0.0 }),
+            59 => Some(if self.bass_source_back_right {
+                1.0
+            } else {
+                0.0
+            }),
+            60 => Some(self.input_format as f64),
+            61 => Some(if self.bypass_surround { 1.0 } else { 0.0 }),
             _ => None,
         }
     }
@@ -346,6 +427,21 @@ impl PluginParamDef for Params {
             44 => self.auto_gain_enabled = PARAMS[44].clamp_f64(value) > 0.5,
             45 => self.auto_gain_max_db = PARAMS[45].clamp_f64(value),
             46 => self.auto_gain_smoothing_ms = PARAMS[46].clamp_f64(value),
+            47 => self.bypass_heights = PARAMS[47].clamp_f64(value) > 0.5,
+            48 => self.bass_mode = PARAMS[48].clamp_f64(value) as usize,
+            49 => self.bass_cutoff_hz = PARAMS[49].clamp_f64(value),
+            50 => self.bass_gain_db = PARAMS[50].clamp_f64(value),
+            51 => self.lfe_playback_gain_db = PARAMS[51].clamp_f64(value),
+            52 => self.combine_input_lfe = PARAMS[52].clamp_f64(value) > 0.5,
+            53 => self.bass_source_front_left = PARAMS[53].clamp_f64(value) > 0.5,
+            54 => self.bass_source_front_right = PARAMS[54].clamp_f64(value) > 0.5,
+            55 => self.bass_source_center = PARAMS[55].clamp_f64(value) > 0.5,
+            56 => self.bass_source_side_left = PARAMS[56].clamp_f64(value) > 0.5,
+            57 => self.bass_source_side_right = PARAMS[57].clamp_f64(value) > 0.5,
+            58 => self.bass_source_back_left = PARAMS[58].clamp_f64(value) > 0.5,
+            59 => self.bass_source_back_right = PARAMS[59].clamp_f64(value) > 0.5,
+            60 => self.input_format = PARAMS[60].clamp_f64(value) as usize,
+            61 => self.bypass_surround = PARAMS[61].clamp_f64(value) > 0.5,
             _ => {}
         }
     }

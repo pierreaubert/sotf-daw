@@ -275,12 +275,16 @@ fn create_plugin_inner(
         }
 
         "upmixer" => {
-            if channels != 2 {
-                return Err(format!("Upmixer requires 2 input channels, got {channels}"));
-            }
             let params: UpmixerPluginParams = serde_json::from_value(parameters.clone())
                 .map_err(|e| format!("Failed to parse upmixer params: {e}"))?;
-            let plugin = UpmixerPlugin::from_params(params);
+            let plugin = UpmixerPlugin::try_from_params(params)
+                .map_err(|e| format!("Failed to create upmixer: {e}"))?;
+            if plugin.input_channels() != channels {
+                return Err(format!(
+                    "Upmixer input layout has {} channels, but the host supplies {channels}",
+                    plugin.input_channels()
+                ));
+            }
             Ok(Box::new(plugin))
         }
 

@@ -136,6 +136,102 @@ mod sidechain_graph;
 mod test;
 
 #[test]
+fn surround_upmixer_host_rejects_layout_mismatch_instead_of_skipping_it() {
+    use sotf_plugins::speaker_config::{ChannelLayout, get_speaker_config};
+
+    let layout = ChannelLayout::from_speaker_config(get_speaker_config("5.0").unwrap()).unwrap();
+    let config = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": layout,
+            "speaker_config": "7.1.4"
+        }),
+    );
+    let (host, warnings) = build_plugin_host(std::slice::from_ref(&config), 48_000, 5).unwrap();
+    assert!(warnings.is_empty());
+    assert_eq!(host.output_channels(), 12);
+    let failure = build_plugin_host(std::slice::from_ref(&config), 48_000, 6)
+        .err()
+        .unwrap();
+    assert!(failure.message.contains("Upmixer candidate rejected"));
+    let undeclared = PluginConfig::new("upmixer", serde_json::json!({"speaker_config": "7.1"}));
+    assert!(build_plugin_host(&[undeclared], 48_000, 5).is_err());
+}
+
+#[test]
+fn upmixer_rejects_known_same_width_but_different_speaker_roles() {
+    use sotf_plugins::speaker_config::{ChannelLayout, get_speaker_config};
+
+    let layout =
+        |name| ChannelLayout::from_speaker_config(get_speaker_config(name).unwrap()).unwrap();
+    let source = |output| {
+        PluginConfig::new(
+            "upmixer",
+            serde_json::json!({
+                "input_layout": layout("5.0"), "speaker_config": output
+            }),
+        )
+    };
+    let target = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": layout("7.1"), "speaker_config": "7.1.4"
+        }),
+    );
+    let gain = PluginConfig::new("gain", serde_json::json!({}));
+
+    let compatible = [source("7.1"), gain.clone(), target.clone()];
+    assert!(build_plugin_host(&compatible, 48_000, 5).is_ok());
+    let incompatible = [source("5.1.2"), gain, target.clone()];
+    let error = build_plugin_host(&incompatible, 48_000, 5).err().unwrap();
+    assert!(
+        error.message.contains("upmixer expects"),
+        "{}",
+        error.message
+    );
+
+    let mut reordered = layout("7.1");
+    reordered.channels.reverse();
+    let same_roles = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": reordered, "speaker_config": "7.1.4"
+        }),
+    );
+    assert!(build_plugin_host(&[source("7.1"), same_roles], 48_000, 5).is_ok());
+    let mut swapped = layout("7.1");
+    swapped.channels[0].index = 1;
+    swapped.channels[1].index = 0;
+    let wrong_order = PluginConfig::new(
+        "upmixer",
+        serde_json::json!({
+            "input_layout": swapped, "speaker_config": "7.1.4"
+        }),
+    );
+    assert!(build_plugin_host(&[source("7.1"), wrong_order], 48_000, 5).is_err());
+
+    let graph = PluginGraphConfig::try_new(
+        vec![
+            PluginGraphNodeConfig::try_new(1, "upmixer", incompatible[0].parameters.clone(), 5)
+                .unwrap(),
+            PluginGraphNodeConfig::try_new(2, "gain", serde_json::json!({}), 8).unwrap(),
+            PluginGraphNodeConfig::try_new(3, "upmixer", target.parameters, 8).unwrap(),
+        ],
+        vec![
+            PluginGraphEdgeConfig::new(1, 2),
+            PluginGraphEdgeConfig::new(2, 3),
+        ],
+    )
+    .unwrap();
+    let error = build_plugin_graph_host(&graph, 48_000, 5).err().unwrap();
+    assert!(
+        error.message.contains("upmixer expects"),
+        "{}",
+        error.message
+    );
+}
+
+#[test]
 fn test_downmix_adapts_to_current_chain_channel_count() {
     let sample_rate = 48000;
     let settings = PluginSettings::default_for(&PluginType::Downmix).unwrap();

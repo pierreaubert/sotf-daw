@@ -3,6 +3,7 @@ use super::drain::UpmixerDrain;
 use super::frequency_domain;
 use super::misc::hr_delay_buffer_len;
 use super::misc::periodic_sqrt_hann_window;
+use super::surround_processing::SurroundProcessor;
 use super::types::UpmixerDiagnostics;
 use super::types::control_stats;
 use crate::params::{PARAMS as UP, SPEAKER_CONFIGS};
@@ -19,11 +20,23 @@ use sotf_host::plugin::{
 };
 use sotf_host::simd::{enable_ftz_daz, flush_denormals_inplace};
 use sotf_host::smoothing::Smoother;
-use sotf_host::speaker_config::{SpeakerConfig, get_speaker_config};
+use sotf_host::speaker_config::{ChannelLayout, SpeakerConfig, get_speaker_config};
 use std::sync::Arc;
 
 /// Smallest transform with a positive 50% overlap hop and valid WOLA geometry.
 const MIN_FFT_SIZE: usize = 2;
+const DEFERRED_STEP_FRAMES: usize = 32;
+const DEFERRED_CHANNELS_PER_STEP: usize = 2;
+const MIN_DEFERRED_HOP_FRAMES: usize = 256;
+
+#[derive(Default)]
+struct DeferredFft {
+    active: bool,
+    eager_for_small_callbacks: bool,
+    until_next: usize,
+    next_channel: usize,
+    controls: Option<super::process::FftBlockControls>,
+}
 
 /// Stereo to multi-channel surround upmixer using FFT-based Direct/Ambient decomposition
 pub(super) struct UpmixerCore {
@@ -39,6 +52,7 @@ pub(super) struct UpmixerCore {
     pub(super) num_output_channels: usize,
     /// When true, output is binaural (2ch) instead of surround
     pub(super) binaural_preview: bool,
+    pub(super) defer_surround_analysis: bool,
     /// Initial latency counter to ensure OLA buffer is primed before output
     pub(super) latency_filled: usize,
     /// Remaining leading silence frames needed to align output with latency_samples().
@@ -47,6 +61,8 @@ pub(super) struct UpmixerCore {
 }
 
 pub(super) struct UpmixerFft {
+    /// Scratch shared by the sequential main and high-resolution transforms.
+    pub(super) scratch: Vec<Complex<f32>>,
     /// Forward FFT planner (low-resolution path)
     pub(super) fft_forward: Arc<dyn RealToComplex<f32>>,
     /// Inverse FFT planner (low-resolution path)
@@ -57,6 +73,22 @@ pub(super) struct UpmixerFft {
     pub(super) hr_fft_forward: Arc<dyn RealToComplex<f32>>,
     /// Inverse FFT planner (high-resolution path)
     pub(super) hr_fft_inverse: Arc<dyn ComplexToReal<f32>>,
+}
+
+impl UpmixerFft {
+    /// Prepares enough scratch for every current FFT plan.
+    pub(super) fn prepare_scratch(&mut self) {
+        let required = [
+            self.fft_forward.get_scratch_len(),
+            self.fft_inverse.get_scratch_len(),
+            self.hr_fft_forward.get_scratch_len(),
+            self.hr_fft_inverse.get_scratch_len(),
+        ]
+        .into_iter()
+        .max()
+        .unwrap_or(0);
+        self.scratch.resize(required, Complex::new(0.0, 0.0));
+    }
 }
 
 pub(super) struct UpmixerGains {
@@ -113,6 +145,8 @@ pub(super) struct UpmixerParamSmoothers {
 }
 
 pub(super) struct UpmixerSafety {
+    pub(super) final_target_delay: Vec<f64>,
+    pub(super) final_target_cursor: usize,
     /// Safety cap on upmixer output peak (in dB)
     pub(super) safety_cap_db: f32,
     /// Previous safety scale for smoothing between blocks
@@ -290,6 +324,8 @@ pub(super) struct UpmixerSpectral {
 pub(super) struct UpmixerHeight {
     /// Height channel gain (0.0 to 2.0)
     pub(super) height_gain: Smoother,
+    pub(super) requested_height_gain: f32,
+    pub(super) bypass_heights: bool,
     // Height channel parameters
     pub(super) height_hf_cap_hz: f32,
     pub(super) height_transient_reduction: Smoother,
@@ -323,6 +359,9 @@ pub(super) struct UpmixerSurround {
 }
 
 pub(super) struct UpmixerPanning {
+    pub(super) pending_spectra: Vec<Vec<Complex<f32>>>,
+    pub(super) direct_with_center_left: Vec<Complex<f32>>,
+    pub(super) direct_with_center_right: Vec<Complex<f32>>,
     /// Panning gains for left source (pre-calculated for each speaker)
     pub(super) panning_gains_left: Vec<f32>,
     /// Panning gains for right source (pre-calculated for each speaker)
@@ -488,6 +527,9 @@ pub(super) struct UpmixerHrState {
 
 /// Stereo to multi-channel surround upmixer using FFT-based Direct/Ambient decomposition
 pub struct UpmixerPlugin {
+    deferred_fft: DeferredFft,
+    pub(super) surround_processor: Option<Box<SurroundProcessor>>,
+    pub(super) multichannel_params: Box<UpmixerMultichannelParams>,
     #[cfg(feature = "qa")]
     pub(super) source_masks: crate::source_mask::SourceMasks,
     pub(super) drain: UpmixerDrain,
@@ -513,7 +555,106 @@ pub struct UpmixerPlugin {
     pub(super) hr_state: UpmixerHrState,
 }
 
+/// Allocation-free reasons why a surround control cannot be changed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UpmixerSurroundControlError {
+    /// A drain has begun and the instance must be reset.
+    Draining,
+    /// The speaker selection has the wrong value type.
+    InvalidSpeakerConfig,
+    /// A different output layout needs a new instance.
+    UnsupportedSpeakerConfig,
+    /// The latency selection has the wrong value type.
+    InvalidLowLatency,
+    /// A different latency needs a new instance.
+    UnsupportedLowLatency,
+    /// Binaural preview is unavailable for surround input.
+    UnsupportedBinaural,
+    /// A stereo-only control is unavailable for surround input.
+    UnsupportedStereoControl,
+}
+
+impl UpmixerSurroundControlError {
+    /// Describe the rejection using the plugin's existing error wording.
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::Draining => "Upmixer: reset before changing parameters after drain",
+            Self::InvalidSpeakerConfig => "speaker_config must be an integer",
+            Self::UnsupportedSpeakerConfig => {
+                "changing the surround output layout requires a new plugin instance"
+            }
+            Self::InvalidLowLatency => "low_latency must be a boolean",
+            Self::UnsupportedLowLatency => {
+                "changing surround latency requires a new plugin instance"
+            }
+            Self::UnsupportedBinaural => "binaural preview is not supported for surround input",
+            Self::UnsupportedStereoControl => {
+                "this stereo-only control is not supported for surround input"
+            }
+        }
+    }
+}
+
 impl UpmixerPlugin {
+    /// Check a surround control without allocating an error message.
+    /// `None` delegates to the ordinary setter; `Some(Ok(()))` is a no-op.
+    ///
+    /// # Errors
+    /// Returns a typed reason if the stream is draining or the change is unsupported.
+    pub fn preflight_surround_parameter(
+        &self,
+        id: &str,
+        value: &ParameterValue,
+    ) -> Option<Result<(), UpmixerSurroundControlError>> {
+        use UpmixerSurroundControlError as Rejection;
+
+        let processor = self.surround_processor.as_ref()?;
+        if processor.is_draining() {
+            return Some(Err(Rejection::Draining));
+        }
+        match id {
+            "speaker_config" => Some(
+                value
+                    .as_int()
+                    .ok_or(Rejection::InvalidSpeakerConfig)
+                    .and_then(|index| {
+                        if SPEAKER_CONFIGS.get(index as usize).copied()
+                            == Some(self.core.speaker_config.id)
+                        {
+                            Ok(())
+                        } else {
+                            Err(Rejection::UnsupportedSpeakerConfig)
+                        }
+                    }),
+            ),
+            "low_latency" => Some(
+                value
+                    .as_bool()
+                    .ok_or(Rejection::InvalidLowLatency)
+                    .and_then(|enabled| {
+                        if enabled == self.params.low_latency {
+                            Ok(())
+                        } else {
+                            Err(Rejection::UnsupportedLowLatency)
+                        }
+                    }),
+            ),
+            "binaural_preview" => Some(if value.as_bool() == Some(false) {
+                Ok(())
+            } else {
+                Err(Rejection::UnsupportedBinaural)
+            }),
+            "auto_gain_enabled" | "enable_subharmonic_synth" => {
+                Some(if value.as_bool() == Some(false) {
+                    Ok(())
+                } else {
+                    Err(Rejection::UnsupportedStereoControl)
+                })
+            }
+            _ => None,
+        }
+    }
+
     /// Return a snapshot of internal control signals for offline diagnostics.
     pub fn diagnostics(&self) -> UpmixerDiagnostics {
         UpmixerDiagnostics {
@@ -631,7 +772,6 @@ impl UpmixerPlugin {
         let num_output_channels = speaker_config.total_channels;
 
         // Panning gains will be calculated by recalculate_panning_gains() below.
-        // The upmixer is stereo-only; input_channels() returns 2.
         let panning_gains_left = Vec::with_capacity(num_output_channels);
         let panning_gains_right = Vec::with_capacity(num_output_channels);
 
@@ -661,6 +801,8 @@ impl UpmixerPlugin {
 
             binaural_preview: false,
 
+            defer_surround_analysis: false,
+
             latency_filled: 0,
 
             startup_padding_remaining: fft_size.max(hr_fft_size),
@@ -668,7 +810,8 @@ impl UpmixerPlugin {
             cached_parameters: Vec::new(),
         };
 
-        let fft = UpmixerFft {
+        let mut fft = UpmixerFft {
+            scratch: Vec::new(),
             fft_forward,
 
             fft_inverse,
@@ -679,6 +822,7 @@ impl UpmixerPlugin {
 
             hr_fft_inverse,
         };
+        fft.prepare_scratch();
 
         let gains = UpmixerGains {
             clock_phase: 0,
@@ -734,6 +878,8 @@ impl UpmixerPlugin {
         };
 
         let safety = UpmixerSafety {
+            final_target_delay: Vec::new(),
+            final_target_cursor: 0,
             safety_cap_db: default_safety_cap_db(),
 
             prev_safety_scale: 1.0,
@@ -926,6 +1072,8 @@ impl UpmixerPlugin {
 
         let height = UpmixerHeight {
             height_gain: Smoother::new(height_gain, 5.0, sample_rate),
+            requested_height_gain: height_gain,
+            bypass_heights: false,
 
             height_hf_cap_hz: default_height_hf_cap_hz(),
 
@@ -965,6 +1113,9 @@ impl UpmixerPlugin {
         };
 
         let panning = UpmixerPanning {
+            pending_spectra: vec![vec![zero_complex; spectrum_size]; num_output_channels],
+            direct_with_center_left: vec![zero_complex; spectrum_size],
+            direct_with_center_right: vec![zero_complex; spectrum_size],
             panning_gains_left,
 
             panning_gains_right,
@@ -1118,6 +1269,9 @@ impl UpmixerPlugin {
         };
 
         let mut plugin = Self {
+            deferred_fft: DeferredFft::default(),
+            surround_processor: None,
+            multichannel_params: Box::default(),
             #[cfg(feature = "qa")]
             source_masks: crate::source_mask::SourceMasks::default(),
             drain: UpmixerDrain::new(hop_size, num_output_channels),
@@ -1252,7 +1406,25 @@ impl UpmixerPlugin {
     /// Both paths share the high-resolution lookahead when its fixed 512-frame
     /// window is longer than the selected main FFT.
     pub(super) fn output_latency_frames(&self) -> usize {
-        self.core.fft_size.max(self.fft.hr_fft_size)
+        self.core.fft_size.max(self.fft.hr_fft_size) + self.deferred_extra_frames()
+    }
+
+    fn deferred_fft_enabled(&self) -> bool {
+        self.core.defer_surround_analysis
+            && self.core.sample_rate >= 96_000.0
+            && self.core.hop_size >= MIN_DEFERRED_HOP_FRAMES
+            && self.core.num_output_channels <= 16
+    }
+
+    fn deferred_extra_frames(&self) -> usize {
+        if self.deferred_fft_enabled() {
+            self.core
+                .num_output_channels
+                .div_ceil(DEFERRED_CHANNELS_PER_STEP)
+                * DEFERRED_STEP_FRAMES
+        } else {
+            0
+        }
     }
 
     /// Start a fresh HR source timeline at the current accepted input frame.
@@ -1417,7 +1589,7 @@ impl UpmixerPlugin {
             1 => Some(self.gains.gain_front_direct.target() as f64),
             2 => Some(self.gains.gain_front_ambient.target() as f64),
             3 => Some(self.gains.gain_rear_ambient.target() as f64),
-            4 => Some(self.height.height_gain.target() as f64),
+            4 => Some(self.height.requested_height_gain as f64),
             5 => Some(self.gains.lfe_gain.target() as f64),
             6 => Some(self.param_smoothers.lfe_cutoff_hz_smoother.target() as f64),
             7 => Some(if self.subharmonic.enable_subharmonic_synth {
@@ -1492,6 +1664,33 @@ impl UpmixerPlugin {
             }),
             45 => Some(self.safety.auto_gain_max_db as f64),
             46 => Some(self.safety.auto_gain_smoothing_ms as f64),
+            47 => Some(if self.height.bypass_heights { 1.0 } else { 0.0 }),
+            48 => Some(match self.multichannel_params.bass_mode {
+                SurroundBassMode::Off => 0.0,
+                SurroundBassMode::Derived => 1.0,
+                SurroundBassMode::Managed => 2.0,
+            }),
+            49 => Some(f64::from(self.multichannel_params.bass_cutoff_hz)),
+            50 => Some(f64::from(self.multichannel_params.bass_gain_db)),
+            51 => Some(f64::from(self.multichannel_params.lfe_playback_gain_db)),
+            52 => Some(if self.multichannel_params.combine_input_lfe {
+                1.0
+            } else {
+                0.0
+            }),
+            53..=59 => Some(
+                if self.multichannel_params.source_mask() & (1 << (index - 53)) != 0 {
+                    1.0
+                } else {
+                    0.0
+                },
+            ),
+            60 => Some(self.multichannel_params.input_format_index() as f64),
+            61 => Some(if self.multichannel_params.bypass_surround {
+                1.0
+            } else {
+                0.0
+            }),
             _ => None,
         }
     }
@@ -1532,10 +1731,16 @@ impl UpmixerPlugin {
                 .gains
                 .gain_rear_ambient
                 .set_target(UP[3].clamp_f64(value) as f32),
-            4 => self
-                .height
-                .height_gain
-                .set_target(UP[4].clamp_f64(value) as f32),
+            4 => {
+                self.height.requested_height_gain = UP[4].clamp_f64(value) as f32;
+                self.height
+                    .height_gain
+                    .set_target(if self.height.bypass_heights {
+                        0.0
+                    } else {
+                        self.height.requested_height_gain
+                    });
+            }
             5 => self
                 .gains
                 .lfe_gain
@@ -1640,6 +1845,17 @@ impl UpmixerPlugin {
             44 => self.safety.auto_gain_enabled = UP[44].clamp_f64(value) > 0.5,
             45 => self.safety.auto_gain_max_db = UP[45].clamp_f64(value) as f32,
             46 => self.safety.auto_gain_smoothing_ms = UP[46].clamp_f64(value) as f32,
+            47 => {
+                self.height.bypass_heights = UP[47].clamp_f64(value) > 0.5;
+                self.height
+                    .height_gain
+                    .set_target(if self.height.bypass_heights {
+                        0.0
+                    } else {
+                        self.height.requested_height_gain
+                    });
+            }
+            61 => self.multichannel_params.bypass_surround = UP[61].clamp_f64(value) > 0.5,
             _ => {}
         }
     }
@@ -1648,8 +1864,43 @@ impl UpmixerPlugin {
         self.core.cached_parameters = param_bridge::build_parameters(UP, |i| self.param_value(i));
     }
 
-    /// Create a new upmixer plugin from configuration parameters
+    /// Creates an upmixer from validated configuration parameters.
+    ///
+    /// # Panics
+    /// Panics if the surround layout or bass routing is invalid.
     pub fn from_params(params: UpmixerPluginParams) -> Self {
+        Self::try_from_params(params).expect("valid upmixer configuration")
+    }
+
+    /// Creates an upmixer and validates explicit surround routing.
+    ///
+    /// # Errors
+    /// Returns an error if a surround layout or bass routing is invalid.
+    pub fn try_from_params(params: UpmixerPluginParams) -> PluginResult<Self> {
+        if params.multichannel.input_layout.is_none() {
+            if params.multichannel.bass_mode != SurroundBassMode::Off {
+                return Err("surround bass routing requires a surround input layout".into());
+            }
+            return Ok(Self::from_stereo_params(params));
+        }
+        if params.core.binaural_preview {
+            return Err("binaural preview is not supported for surround input".into());
+        }
+        if params.output.auto_gain_enabled || params.subharmonic.enable_subharmonic_synth {
+            return Err(
+                "auto gain and subharmonic synthesis are not supported for surround input".into(),
+            );
+        }
+        let config = get_speaker_config(&params.core.speaker_config)
+            .ok_or_else(|| format!("invalid speaker config: {}", params.core.speaker_config))?;
+        let output = ChannelLayout::from_speaker_config(config)?;
+        let processor = SurroundProcessor::from_params(&output, params.clone(), 44_100.0)?;
+        let mut plugin = Self::from_stereo_params(params);
+        plugin.surround_processor = Some(Box::new(processor));
+        Ok(plugin)
+    }
+
+    fn from_stereo_params(params: UpmixerPluginParams) -> Self {
         // Low-latency mode halves the FFT size from 2048 to 1024 (21ms vs 43ms at 48kHz).
         // If the user explicitly set a custom fft_size, low_latency overrides it.
         // Preserve upward rounding while ensuring the half-overlap hop is nonzero.
@@ -1788,6 +2039,11 @@ impl UpmixerPlugin {
         plugin.params.bypass_decorrelation = params.bypass.bypass_decorrelation;
         plugin.params.bypass_transient_detection = params.bypass.bypass_transient_detection;
         plugin.params.bypass_all_processing = params.bypass.bypass_all_processing;
+        plugin.height.bypass_heights = params.multichannel.bypass_heights;
+        if plugin.height.bypass_heights {
+            plugin.height.height_gain.reset(0.0);
+        }
+        *plugin.multichannel_params = params.multichannel;
 
         // Frequency resolution (canonicalized for analyzer band selection)
         plugin.params.frequency_resolution =
@@ -1828,6 +2084,7 @@ impl UpmixerPlugin {
         let mut planner = RealFftPlanner::<f32>::new();
         self.fft.fft_forward = planner.plan_fft_forward(new_fft_size);
         self.fft.fft_inverse = planner.plan_fft_inverse(new_fft_size);
+        self.fft.prepare_scratch();
 
         self.main_buffers.window = periodic_sqrt_hann_window(new_fft_size);
 
@@ -1842,6 +2099,9 @@ impl UpmixerPlugin {
         self.main_buffers.time_out_channels = vec![vec![0.0; new_fft_size]; nch];
 
         // Buffers sized to spectrum_size
+        self.panning.pending_spectra = vec![vec![zero_complex; spectrum_size]; nch];
+        self.panning.direct_with_center_left = vec![zero_complex; spectrum_size];
+        self.panning.direct_with_center_right = vec![zero_complex; spectrum_size];
         self.main_buffers.freq_domain_left = vec![zero_complex; spectrum_size];
         self.main_buffers.freq_domain_right = vec![zero_complex; spectrum_size];
         self.main_buffers.direct = vec![zero_complex; spectrum_size];
@@ -1979,12 +2239,19 @@ impl UpmixerPlugin {
 }
 
 impl Plugin for UpmixerPlugin {
+    fn as_any(&self) -> Option<&dyn std::any::Any> {
+        Some(self)
+    }
+
     fn guarantees_identity_frame_geometry(&self) -> bool {
         // WOLA startup is emitted as silence; every accepted frame has output.
         true
     }
 
     fn tail_length(&self) -> sotf_host::plugin::TailLength {
+        if let Some(processor) = &self.surround_processor {
+            return processor.tail_length();
+        }
         if self.params.bypass_all_processing {
             return sotf_host::plugin::TailLength::Finite(0);
         }
@@ -1999,23 +2266,33 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn info(&self) -> PluginInfo {
+        let input = if self.surround_processor.is_some() {
+            "Surround"
+        } else {
+            "Stereo"
+        };
         PluginInfo::new(
-            format!("Stereo to {} Upmixer", self.core.speaker_config.name),
+            format!("{input} to {} Upmixer", self.core.speaker_config.name),
             "2.1.0",
             "SotF",
         )
         .with_description(format!(
-            "Converts stereo to {} using FFT-based Direct/Ambient decomposition and VBAP panning (Smoothed)",
+            "Converts {input} to {} using FFT-based direct/ambient processing",
             self.core.speaker_config.name
         ))
     }
 
     fn input_channels(&self) -> usize {
-        2 // Stereo
+        self.surround_processor
+            .as_ref()
+            .map_or(2, |processor| processor.input_channels())
     }
 
     fn output_channels(&self) -> usize {
-        self.effective_output_channels()
+        self.surround_processor.as_ref().map_or_else(
+            || self.effective_output_channels(),
+            |processor| processor.output_channels(),
+        )
     }
 
     fn compile_metadata(&self) -> PluginCompileMetadata {
@@ -2027,6 +2304,30 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn set_parameter(&mut self, id: ParameterId, value: ParameterValue) -> PluginResult<()> {
+        if matches!(
+            id.as_str(),
+            "bass_mode"
+                | "bass_cutoff_hz"
+                | "bass_gain_db"
+                | "lfe_playback_gain_db"
+                | "combine_input_lfe"
+                | "bass_source_front_left"
+                | "bass_source_front_right"
+                | "bass_source_center"
+                | "bass_source_side_left"
+                | "bass_source_side_right"
+                | "bass_source_back_left"
+                | "bass_source_back_right"
+                | "input_format"
+        ) {
+            if self.get_parameter(&id).as_ref() == Some(&value) {
+                return Ok(());
+            }
+            return Err("changing surround bass settings requires a new plugin instance".into());
+        }
+        if let Some(result) = self.preflight_surround_parameter(id.as_str(), &value) {
+            return result.map_err(|error| error.message().to_string());
+        }
         if self.drain.remaining.is_some() {
             return Err("Upmixer: reset before changing parameters after drain".into());
         }
@@ -2062,6 +2363,30 @@ impl Plugin for UpmixerPlugin {
         }
         let bypass_before = self.params.bypass_all_processing;
         let idx = param_bridge::set_parameter(UP, &id, &value, |i, v| self.set_param_value(i, v))?;
+        let analysis_value = if self.surround_processor.is_some()
+            && matches!(idx, 3 | 17..=33 | 36..=38 | 41 | 42)
+        {
+            param_bridge::get_parameter(UP, &id, |i| self.param_value(i))
+        } else {
+            None
+        };
+        if let Some(processor) = &mut self.surround_processor {
+            match idx {
+                4 => processor.set_height_gain(self.height.requested_height_gain)?,
+                34 => processor
+                    .set_height_safety_cap(self.param_smoothers.safety_cap_db_smoother.target()),
+                39 | 61 => processor.set_bypass(
+                    self.params.bypass_all_processing || self.multichannel_params.bypass_surround,
+                ),
+                47 => processor.set_height_bypass(self.height.bypass_heights),
+                3 | 17..=33 | 36..=38 | 41 | 42 => {
+                    let accepted =
+                        analysis_value.expect("validated analysis parameter has a value");
+                    processor.set_analysis_parameter(&id, &accepted)?;
+                }
+                _ => {}
+            }
+        }
         // Side effects based on PARAMS index
         match idx {
             0 => {
@@ -2136,7 +2461,8 @@ impl Plugin for UpmixerPlugin {
                 self.generate_decorrelation_filters();
                 self.decorrelation.prev_decorrelation_strength = -1.0;
             }
-            39 if self.params.bypass_all_processing != bypass_before => self.reset(),
+            39 if self.params.bypass_all_processing != bypass_before
+                && self.surround_processor.is_none() => self.reset(),
             40 => self.try_start_ml_inference(), // enable_ml_detection
             44 => {
                 if self.safety.auto_gain_enabled {
@@ -2158,12 +2484,18 @@ impl Plugin for UpmixerPlugin {
             }
             _ => {}
         }
-        if UP[idx].update_mode == sotf_host::param_specs::UpdateMode::Realtime {
-            // PARAMS and the cache share index order. Refresh from accepted DSP state
-            // so coercion and clamping match get_parameter without rebuilding metadata.
+        if UP[idx].update_mode == sotf_host::param_specs::UpdateMode::Realtime
+            || matches!(
+                id.as_str(),
+                "lfe_cutoff_hz" | "bandpass_hz" | "height_hf_cap_hz" | "bypass_all_processing"
+            )
+        {
+            // The three filter targets and bypass leave metadata unchanged, as do
+            // realtime controls. PARAMS and the cache share index order.
+            // Refresh from accepted DSP state so coercion and clamping match.
             self.core.cached_parameters[idx].default_value =
                 param_bridge::get_parameter(UP, &id, |i| self.param_value(i))
-                    .expect("validated realtime parameter has a value");
+                    .expect("validated parameter has a value");
         } else {
             self.rebuild_cached_parameters();
         }
@@ -2190,6 +2522,12 @@ impl Plugin for UpmixerPlugin {
                 "Invalid sample rate: {} Hz (valid range: {}-{} Hz)",
                 sample_rate, MIN_SAMPLE_RATE, MAX_SAMPLE_RATE
             ));
+        }
+
+        if let Some(processor) = &mut self.surround_processor {
+            processor.initialize(sample_rate)?;
+            self.core.sample_rate = sample_rate;
+            return Ok(());
         }
 
         self.flush_gain_clock();
@@ -2338,11 +2676,22 @@ impl Plugin for UpmixerPlugin {
         // Start ML inference thread if enabled
         self.try_start_ml_inference();
 
+        self.safety
+            .auto_gain_reference
+            .resize(self.output_latency_frames() * 2, 0.0);
+        let target_delay = self.deferred_extra_frames();
+        let target = f64::from(self.param_smoothers.safety_cap_db_smoother.target());
+        self.safety.final_target_delay.resize(target_delay, target);
         self.reset();
         Ok(())
     }
 
     fn reset(&mut self) {
+        if let Some(processor) = &mut self.surround_processor {
+            processor.reset();
+            return;
+        }
+        self.deferred_fft = DeferredFft::default();
         #[cfg(feature = "qa")]
         {
             self.source_masks.snapshot = crate::source_mask::SourceMaskSnapshot::default();
@@ -2470,6 +2819,10 @@ impl Plugin for UpmixerPlugin {
 
         self.safety.prev_safety_scale = 1.0;
         self.safety.final_safety_scale = 1.0;
+        self.safety.final_target_delay.fill(f64::from(
+            self.param_smoothers.safety_cap_db_smoother.target(),
+        ));
+        self.safety.final_target_cursor = 0;
         self.safety.auto_gain_reference.fill(0.0);
         self.safety.auto_gain_reference_position = 0;
         if let Some(auto_gain) = &mut self.safety.auto_gain {
@@ -2493,6 +2846,9 @@ impl Plugin for UpmixerPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> Result<usize, String> {
+        if let Some(processor) = &mut self.surround_processor {
+            return processor.process(input, output, context);
+        }
         if context.num_frames > 0 && self.drain.remaining.is_some() {
             return Err("Upmixer: reset before processing input after drain".into());
         }
@@ -2507,11 +2863,19 @@ impl Plugin for UpmixerPlugin {
     }
 
     fn drain_output_frames_max(&self) -> usize {
-        self.core.hop_size
+        self.surround_processor
+            .as_ref()
+            .map_or(self.core.hop_size, |processor| {
+                processor.drain_output_frames_max()
+            })
     }
 
     fn drain_call_bound(&self) -> Option<std::num::NonZeroU64> {
-        self.drain_stream_call_bound()
+        if let Some(processor) = &self.surround_processor {
+            processor.drain_call_bound()
+        } else {
+            self.drain_stream_call_bound()
+        }
     }
 
     fn drain(
@@ -2519,11 +2883,17 @@ impl Plugin for UpmixerPlugin {
         output: &mut [f32],
         context: &ProcessContext,
     ) -> PluginResult<PluginDrainResult> {
-        self.drain_stream(output, context)
+        if let Some(processor) = &mut self.surround_processor {
+            processor.drain(output, context)
+        } else {
+            self.drain_stream(output, context)
+        }
     }
 
     fn latency_samples(&self) -> usize {
-        if self.params.bypass_all_processing {
+        if let Some(processor) = &self.surround_processor {
+            processor.latency_samples()
+        } else if self.params.bypass_all_processing {
             0
         } else {
             self.output_latency_frames()
@@ -2532,7 +2902,76 @@ impl Plugin for UpmixerPlugin {
 }
 
 impl UpmixerPlugin {
+    fn advance_deferred_fft(&mut self) {
+        let start = self.deferred_fft.next_channel;
+        let end = (start + DEFERRED_CHANNELS_PER_STEP).min(self.core.num_output_channels);
+        self.inverse_vbap_range(start, end);
+        self.deferred_fft.next_channel = end;
+        if end < self.core.num_output_channels {
+            self.deferred_fft.until_next = DEFERRED_STEP_FRAMES;
+            return;
+        }
+
+        let mut output_block = std::mem::take(&mut self.output.output_block);
+        let controls = self
+            .deferred_fft
+            .controls
+            .take()
+            .expect("pending FFT controls");
+        self.finish_fft_block(&mut output_block, controls);
+        let mask = self.output.output_accumulator_mask;
+        let nch = self.core.num_output_channels;
+        let capacity = mask + 1;
+        let position = self.output.next_add_position;
+        let first_samples = self.core.fft_size.min(capacity - position) * nch;
+        let first_start = position * nch;
+        for (destination, source) in self.output.output_accumulator
+            [first_start..first_start + first_samples]
+            .iter_mut()
+            .zip(&output_block[..first_samples])
+        {
+            *destination += *source;
+        }
+        let remaining_samples = output_block.len() - first_samples;
+        for (destination, source) in self.output.output_accumulator[..remaining_samples]
+            .iter_mut()
+            .zip(&output_block[first_samples..])
+        {
+            *destination += *source;
+        }
+        self.output.output_block = output_block;
+        self.output.next_add_position = (position + self.core.hop_size) & mask;
+        self.output.main_next_add_source_frame += self.core.hop_size as i64;
+        self.output.output_accumulator_fill += self.core.hop_size;
+        self.core.latency_filled += self.core.hop_size;
+        let discard = self
+            .output
+            .startup_discard_remaining
+            .min(self.output.output_accumulator_fill);
+        for frame in 0..discard {
+            let offset = ((self.output.output_read_position + frame) & mask) * nch;
+            self.output.output_accumulator[offset..offset + nch].fill(0.0);
+        }
+        self.output.output_read_position = (self.output.output_read_position + discard) & mask;
+        self.output.output_accumulator_fill -= discard;
+        self.output.startup_discard_remaining -= discard;
+        self.deferred_fft.active = false;
+    }
+
     pub(super) fn process_stream(
+        &mut self,
+        input: &[f32],
+        output: &mut [f32],
+        context: &ProcessContext,
+    ) -> Result<usize, String> {
+        if self.deferred_fft_enabled() {
+            self.process_stream_impl::<true>(input, output, context)
+        } else {
+            self.process_stream_impl::<false>(input, output, context)
+        }
+    }
+
+    fn process_stream_impl<const DEFER: bool>(
         &mut self,
         input: &[f32],
         output: &mut [f32],
@@ -2571,13 +3010,29 @@ impl UpmixerPlugin {
             return Ok(0);
         }
 
+        // Very short callbacks leave too little time per deferred step. Flush any
+        // pending block and keep eager processing until reset, without changing PDC.
+        let minimum_scheduled_frames = if self.core.sample_rate <= 96_000.0 {
+            8
+        } else if self.core.sample_rate <= 192_000.0 {
+            16
+        } else {
+            32
+        };
+        if DEFER && context.num_frames < minimum_scheduled_frames {
+            while self.deferred_fft.active {
+                self.advance_deferred_fft();
+            }
+            self.deferred_fft.eager_for_small_callbacks = true;
+        }
+
         // If bypass is enabled, just copy stereo input to output and return
         if self.params.bypass_all_processing {
             self.advance_analysis_clock(n);
             let num_frames = context.num_frames;
             for i in 0..num_frames {
                 // Raw bypass is uncapped, but control time still passes.
-                self.advance_final_safety_control();
+                self.advance_final_safety_control::<false>();
                 let left = input[i * 2];
                 let right = input[i * 2 + 1];
 
@@ -2607,8 +3062,11 @@ impl UpmixerPlugin {
 
             // Step 1: Fill input buffer if we have more input
             if input_pos < context.num_frames {
-                let samples_to_copy = (input_samples - input_pos * 2)
+                let mut samples_to_copy = (input_samples - input_pos * 2)
                     .min(self.core.fft_size * 2 - self.main_buffers.input_buffer_fill);
+                if DEFER && self.deferred_fft.active {
+                    samples_to_copy = samples_to_copy.min(self.deferred_fft.until_next * 2);
+                }
 
                 if samples_to_copy > 0 {
                     made_progress = true;
@@ -2711,6 +3169,12 @@ impl UpmixerPlugin {
                         .accepted_input_frames
                         .saturating_add((samples_to_copy / 2) as u64);
                     input_pos += samples_to_copy / 2;
+                    if DEFER && self.deferred_fft.active {
+                        self.deferred_fft.until_next -= samples_to_copy / 2;
+                        if self.deferred_fft.until_next == 0 {
+                            self.advance_deferred_fft();
+                        }
+                    }
                 }
             }
 
@@ -2747,6 +3211,26 @@ impl UpmixerPlugin {
                 }
 
                 let temp_input = std::mem::take(&mut self.main_buffers.temp_input_block);
+                if DEFER && !self.deferred_fft.eager_for_small_callbacks {
+                    debug_assert!(!self.deferred_fft.active);
+                    self.prepare_fft_spectra::<true>(&temp_input);
+                    self.main_buffers.temp_input_block = temp_input;
+                    self.prepare_hr_output_gains();
+                    let controls = self.fft_block_controls();
+                    self.deferred_fft = DeferredFft {
+                        active: true,
+                        eager_for_small_callbacks: false,
+                        until_next: DEFERRED_STEP_FRAMES,
+                        next_channel: 0,
+                        controls: Some(controls),
+                    };
+                    let shift_amount = self.core.hop_size * 2;
+                    self.main_buffers
+                        .input_buffer
+                        .copy_within(shift_amount..self.main_buffers.input_buffer_fill, 0);
+                    self.main_buffers.input_buffer_fill -= shift_amount;
+                    continue;
+                }
                 let mut output_block = std::mem::take(&mut self.output.output_block);
                 self.process_fft_block(&temp_input, &mut output_block);
 
@@ -2762,15 +3246,25 @@ impl UpmixerPlugin {
                     self.output.output_accumulator_mask + 1,
                 );
 
-                // Accumulate to ring buffer (flat interleaved)
-                for i in 0..self.core.fft_size {
-                    let write_idx = (self.output.next_add_position + i) & mask;
-                    let acc_base = write_idx * nch;
-                    let src_base = i * nch;
-                    for ch in 0..nch {
-                        self.output.output_accumulator[acc_base + ch] +=
-                            output_block[src_base + ch];
-                    }
+                // The ring holds at least four FFT blocks, so at most one wrap is needed.
+                let capacity = mask + 1;
+                let position = self.output.next_add_position;
+                let first_frames = self.core.fft_size.min(capacity - position);
+                let first_samples = first_frames * nch;
+                let first_start = position * nch;
+                for (destination, source) in self.output.output_accumulator
+                    [first_start..first_start + first_samples]
+                    .iter_mut()
+                    .zip(&output_block[..first_samples])
+                {
+                    *destination += *source;
+                }
+                let remaining_samples = output_block.len() - first_samples;
+                for (destination, source) in self.output.output_accumulator[..remaining_samples]
+                    .iter_mut()
+                    .zip(&output_block[first_samples..])
+                {
+                    *destination += *source;
                 }
 
                 self.output.output_block = output_block;
@@ -2949,7 +3443,10 @@ impl UpmixerPlugin {
                 output_pos,
                 out_nch,
             )?;
-            self.apply_final_safety_cap(&mut output[..output_pos * out_nch], output_pos);
+            self.apply_final_safety_cap_impl::<DEFER>(
+                &mut output[..output_pos * out_nch],
+                output_pos,
+            );
         }
         Ok(output_pos)
     }

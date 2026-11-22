@@ -165,6 +165,47 @@ pub fn create_plugin_with_input_channels(
     Ok(plugin)
 }
 
+/// Construct an upmixer using the exact speaker roles negotiated by the host.
+#[doc(hidden)]
+pub fn create_native_upmixer_plugin(
+    sample_rate: f64,
+    params: &DynamicParams,
+    pair: crate::wrapper::native_upmixer_layout::LayoutPair,
+) -> Result<Box<dyn Plugin>, String> {
+    use crate::wrapper::native_upmixer_layout::SpeakerLayout;
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+
+    let mut config: Map<String, Value> =
+        serde_json::from_str(&constructor_config("Upmixer", params)?)
+            .map_err(|error| format!("upmixer configuration: {error}"))?;
+    config.insert(
+        "speaker_config".into(),
+        Value::String(pair.output.id().into()),
+    );
+    if pair.input == SpeakerLayout::Stereo {
+        config.insert("bass_mode".into(), Value::String("off".into()));
+    } else {
+        // Keep the host's stereo setting, but prepare the negotiated surround output.
+        config.insert("binaural_preview".into(), Value::Bool(false));
+        let speakers = get_speaker_config(pair.input.id()).ok_or("unknown upmixer input layout")?;
+        let layout = ChannelLayout::from_speaker_config(speakers)?;
+        config.insert(
+            "input_layout".into(),
+            serde_json::to_value(layout).map_err(|error| error.to_string())?,
+        );
+    }
+    let config = serde_json::to_string(&config).map_err(|error| error.to_string())?;
+    let mut plugin =
+        plugins_bridge::create_plugin("Upmixer", pair.input.channels(), sample_rate, &config)?;
+    restore_structural_values("Upmixer", params, plugin.as_mut())?;
+    if (plugin.input_channels(), plugin.output_channels())
+        != (pair.input.channels(), pair.output.channels())
+    {
+        return Err("upmixer DSP does not match the negotiated speaker layout".into());
+    }
+    Ok(plugin)
+}
+
 /// Construct a native EQ candidate for one negotiated, equal-width speaker
 /// layout and a validated committed stereo-pair route.
 ///
@@ -418,7 +459,7 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
         if is_profile_command(name, id) {
             continue;
         }
-        let value = if name == "Convolution" {
+        let value = if matches!(name, "Convolution" | "Upmixer") {
             params.initialization_value(entry.id.as_str())
         } else {
             params.value(entry.id.as_str())
@@ -447,10 +488,41 @@ fn constructor_config(name: &str, params: &DynamicParams) -> Result<String, Stri
             band_split_constructor_value(id, value)?
         } else if name == "DeEsser" {
             de_esser_constructor_value(id, value)?
+        } else if name == "Upmixer" && id == "bass_mode" {
+            match value.as_int() {
+                Some(0) => Value::from("off"),
+                Some(1) => Value::from("derived"),
+                Some(2) => Value::from("managed"),
+                _ => return Err("invalid upmixer bass mode".into()),
+            }
         } else {
             scalar_json(value)
         };
         config.insert(key.to_string(), value);
+    }
+    if name == "Upmixer" {
+        let mut source_mask = 0_u8;
+        for (index, id) in [
+            "bass_source_front_left",
+            "bass_source_front_right",
+            "bass_source_center",
+            "bass_source_side_left",
+            "bass_source_side_right",
+            "bass_source_back_left",
+            "bass_source_back_right",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let selected = config
+                .remove(id)
+                .and_then(|value| value.as_bool())
+                .ok_or_else(|| format!("missing upmixer parameter {id}"))?;
+            if selected {
+                source_mask |= 1 << index;
+            }
+        }
+        config.insert("bass_source_mask".into(), Value::from(source_mask));
     }
     if name == "BandSplit" {
         // The native cutoff is realtime, but the DSP needs an initial cutoff
@@ -598,6 +670,14 @@ fn restore_structural_values(
 ) -> Result<(), String> {
     for entry in params.sync_entries.iter().filter(|entry| !entry.realtime) {
         let id = canonical_id(name, entry.id.as_str());
+        if name == "Upmixer" {
+            if plugin.input_channels() > 2 && id == "binaural_preview" {
+                continue;
+            }
+            if plugin.input_channels() == 2 && id == "bass_mode" {
+                continue;
+            }
+        }
         // Never replay saved momentary commands during activation.
         if is_profile_command(name, id) {
             continue;

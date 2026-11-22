@@ -453,7 +453,8 @@ pub use plugin_upmixer::{
     UpmixerPluginDecorrelationParams, UpmixerPluginDialogueParams, UpmixerPluginGainsParams,
     UpmixerPluginHeightParams, UpmixerPluginMlParams, UpmixerPluginOutputParams,
     UpmixerPluginParams, UpmixerPluginSpectralParams, UpmixerPluginSubharmonicParams,
-    UpmixerPluginSurroundParams, default_hr_sharpen as upmixer_default_hr_sharpen,
+    UpmixerPluginSurroundParams, UpmixerSurroundControlError,
+    default_hr_sharpen as upmixer_default_hr_sharpen,
     default_safety_cap_db as upmixer_default_safety_cap_db,
     default_subharmonic_gain as upmixer_default_subharmonic_gain,
 };

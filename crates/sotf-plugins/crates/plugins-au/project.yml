@@ -27,6 +27,7 @@ targetTemplates:
         headerVisibility: public
     settings:
       SWIFT_OBJC_BRIDGING_HEADER: Shared/BridgingHeader.h
+      CLANG_ENABLE_OBJC_ARC: YES
       CODE_SIGN_IDENTITY: "-"
       CODE_SIGN_STYLE: Automatic
       LIBRARY_SEARCH_PATHS:

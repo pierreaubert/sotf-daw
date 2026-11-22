@@ -213,6 +213,90 @@ routing_test!(stereo_routing, StereoWrapper, "Gain");
 routing_test!(mono_to_stereo_routing, MonoWrapper, "MonoToStereo");
 routing_test!(ambisonics_routing, AmbisonicsWrapper, "AmbisonicsDecoder");
 routing_test!(upmixer_routing, UpmixerWrapper, "Upmixer");
+
+#[path = "wrapper/native_upmixer_callbacks.rs"]
+mod native_upmixer_callbacks;
+
+#[test]
+fn native_upmixer_surround_layouts_preserve_each_host_bed_channel() {
+    use crate::wrapper::native_upmixer_layout::{CLAP_LAYOUTS, SpeakerLayout, VST3_LAYOUTS, pair};
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+
+    for api in [PluginApi::Clap, PluginApi::Vst3] {
+        let layouts: &[AudioIOLayout] = if api == PluginApi::Clap {
+            &CLAP_LAYOUTS
+        } else {
+            &VST3_LAYOUTS
+        };
+        for (layout_index, layout) in layouts.iter().enumerate() {
+            let pair = pair(layout_index, api).unwrap();
+            if pair.input == SpeakerLayout::Stereo {
+                continue;
+            }
+            let input_roles =
+                ChannelLayout::from_speaker_config(get_speaker_config(pair.input.id()).unwrap())
+                    .unwrap();
+            let output_roles =
+                ChannelLayout::from_speaker_config(get_speaker_config(pair.output.id()).unwrap())
+                    .unwrap();
+            let mut plugin = UpmixerWrapper::default();
+            initialize_on_layout(&mut plugin, layout, api);
+            let latency = plugin.inner.as_ref().unwrap().latency_samples();
+            let block = 257;
+            let mut position = 0;
+            while position < latency + block {
+                let frames = block.min(latency + block - position);
+                let mut channels = vec![vec![0.0_f32; frames]; pair.output.channels()];
+                for channel in 0..pair.input.channels() {
+                    channels[channel].fill((channel + 1) as f32 / 16.0);
+                }
+                let mut buffer = Buffer::default();
+                // SAFETY: each vector owns a distinct channel for this callback.
+                unsafe {
+                    buffer.set_slices(frames, |slices| {
+                        slices.extend(channels.iter_mut().map(Vec::as_mut_slice))
+                    });
+                }
+                let mut aux = AuxiliaryBuffers {
+                    inputs: &mut [],
+                    outputs: &mut [],
+                };
+                let status =
+                    plugin.process_with_api(&mut buffer, &mut aux, api, Default::default());
+                assert!(
+                    !matches!(status, ProcessStatus::Error(_)),
+                    "{api:?} {pair:?}: {status:?}"
+                );
+                for output_channel in 0..pair.output.channels() {
+                    let sotf_output = pair.output.host_to_sotf(api, output_channel).unwrap();
+                    let role = output_roles.role_at(sotf_output).unwrap();
+                    let matching_input = (0..pair.input.channels()).find(|channel| {
+                        let sotf_input = pair.input.host_to_sotf(api, *channel).unwrap();
+                        input_roles.role_at(sotf_input) == Some(role)
+                    });
+                    if let Some(source) = matching_input {
+                        for (frame, actual) in buffer.as_slice_immutable()[output_channel]
+                            .iter()
+                            .enumerate()
+                        {
+                            let expected = if position + frame >= latency {
+                                (source + 1) as f32 / 16.0
+                            } else {
+                                0.0
+                            };
+                            assert_eq!(
+                                actual.to_bits(),
+                                expected.to_bits(),
+                                "{api:?} {pair:?}, role {role:?}"
+                            );
+                        }
+                    }
+                }
+                position += frames;
+            }
+        }
+    }
+}
 routing_test!(aae_routing, AaeWrapper, "AAE");
 routing_test!(band_split_routing, SplitWrapper, "BandSplit");
 routing_test!(band_merge_routing, MergeWrapper, "BandMerge");
@@ -318,6 +402,190 @@ fn restored_params(
         }
     }
     crate::params::DynamicParams::from_infos(&infos)
+}
+
+#[test]
+fn native_upmixer_restores_surround_bass_settings_before_activation() {
+    use sotf_host::parameters::{ParameterId, ParameterValue};
+    let mut plugin = UpmixerWrapper {
+        params: restored_params(
+            "Upmixer",
+            &[
+                ("bass_mode", 2.0),
+                ("bass_cutoff_hz", 90.0),
+                ("bass_gain_db", -3.0),
+                ("bass_source_front_left", 0.0),
+                ("bass_source_front_right", 0.0),
+                ("bass_source_side_left", 0.0),
+                ("bass_source_side_right", 0.0),
+                ("bass_source_back_left", 0.0),
+                ("bass_source_back_right", 0.0),
+            ],
+        ),
+        ..Default::default()
+    };
+    initialize_on_layout(
+        &mut plugin,
+        &crate::wrapper::native_upmixer_layout::CLAP_LAYOUTS[2],
+        PluginApi::Clap,
+    );
+    let inner = plugin.inner.as_mut().unwrap();
+    assert_eq!(
+        inner.get_parameter(&ParameterId::from("bass_mode")),
+        Some(ParameterValue::Int(2))
+    );
+    assert_eq!(
+        inner.get_parameter(&ParameterId::from("bass_source_center")),
+        Some(ParameterValue::Bool(true))
+    );
+    assert_eq!(
+        inner.get_parameter(&ParameterId::from("bass_source_front_left")),
+        Some(ParameterValue::Bool(false))
+    );
+    let input = [0.7, 0.6, 0.5, 0.4, 0.3].repeat(256);
+    let mut output = vec![0.0; 256 * 6];
+    let context = sotf_host::ProcessContext::new(48_000, 256);
+    for _ in 0..200 {
+        inner.process(&input, &mut output, &context).unwrap();
+    }
+    let last = &output[255 * 6..];
+    assert_eq!(last[0], 0.7);
+    assert!(last[2].abs() < 1e-5);
+    assert!((last[3] - 0.5 * 10.0_f32.powf(-3.0 / 20.0)).abs() < 1e-5);
+}
+
+#[test]
+fn native_upmixer_retains_surround_bass_settings_across_stereo_layout() {
+    use sotf_host::parameters::{ParameterId, ParameterValue};
+    let bridge = plugins_bridge::ParamBridge::new(get_param_specs("Upmixer"));
+    let mut infos: Vec<_> = (0..bridge.count())
+        .filter_map(|index| bridge.info(index))
+        .collect();
+    for info in &mut infos {
+        info.id = legacy_external_param_id("Upmixer", &info.id).into_owned();
+        match info.id.as_str() {
+            "bass_mode" => info.default_value = 1.0,
+            "bass_cutoff_hz" => info.default_value = 90.0,
+            "bass_gain_db" => info.default_value = -3.0,
+            "bass_source_front_left" => info.default_value = 0.0,
+            _ => {}
+        }
+    }
+    let render_stereo = |plugin: &mut UpmixerWrapper| {
+        let input: Vec<f32> = (0..128)
+            .flat_map(|frame| {
+                let phase = frame as f32 * 0.11;
+                [phase.sin() * 0.1, (phase * 1.3).sin() * 0.1]
+            })
+            .collect();
+        let mut rendered = Vec::new();
+        let mut output = vec![0.0; 128 * 6];
+        let context = sotf_host::ProcessContext::new(48_000, 128);
+        for _ in 0..32 {
+            plugin
+                .inner
+                .as_mut()
+                .unwrap()
+                .process(&input, &mut output, &context)
+                .unwrap();
+            rendered.extend_from_slice(&output);
+        }
+        rendered
+    };
+    for (api, bass_mode) in [
+        (PluginApi::Clap, 1),
+        (PluginApi::Clap, 2),
+        (PluginApi::Vst3, 1),
+        (PluginApi::Vst3, 2),
+    ] {
+        let mut mode_infos = infos.clone();
+        mode_infos
+            .iter_mut()
+            .find(|info| info.id == "bass_mode")
+            .unwrap()
+            .default_value = f64::from(bass_mode);
+        let params = crate::params::DynamicParams::from_infos_for_plugin("Upmixer", &mode_infos);
+        let mut plugin = UpmixerWrapper {
+            params: params.clone(),
+            ..Default::default()
+        };
+        let layouts = match api {
+            PluginApi::Clap => &crate::wrapper::native_upmixer_layout::CLAP_LAYOUTS[..],
+            PluginApi::Vst3 => &crate::wrapper::native_upmixer_layout::VST3_LAYOUTS[..],
+            _ => unreachable!(),
+        };
+        for iteration in 0..2 {
+            initialize_on_layout(&mut plugin, &layouts[0], api);
+            assert_eq!(
+                params.value("bass_mode"),
+                Some(ParameterValue::Int(bass_mode))
+            );
+            assert_eq!(
+                params.value("bass_cutoff_hz"),
+                Some(ParameterValue::Float(90.0))
+            );
+            assert_eq!(
+                params.value("bass_gain_db"),
+                Some(ParameterValue::Float(-3.0))
+            );
+            assert_eq!(
+                params.value("bass_source_front_left"),
+                Some(ParameterValue::Bool(false))
+            );
+            assert_eq!(
+                plugin
+                    .inner
+                    .as_ref()
+                    .unwrap()
+                    .get_parameter(&ParameterId::from("bass_mode")),
+                Some(ParameterValue::Int(0))
+            );
+            let mut reference = UpmixerWrapper::default();
+            initialize_on_layout(&mut reference, &layouts[0], api);
+            assert_eq!(render_stereo(&mut plugin), render_stereo(&mut reference));
+            if iteration == 0 {
+                initialize_on_layout(&mut plugin, &layouts[2], api);
+                assert_eq!(
+                    params.value("bass_mode"),
+                    Some(ParameterValue::Int(bass_mode))
+                );
+                assert_eq!(
+                    plugin
+                        .inner
+                        .as_ref()
+                        .unwrap()
+                        .get_parameter(&ParameterId::from("bass_mode")),
+                    Some(ParameterValue::Int(bass_mode))
+                );
+                for (id, value) in [
+                    ("bass_cutoff_hz", ParameterValue::Float(90.0)),
+                    ("bass_gain_db", ParameterValue::Float(-3.0)),
+                    ("bass_source_front_left", ParameterValue::Bool(false)),
+                ] {
+                    assert_eq!(
+                        plugin
+                            .inner
+                            .as_ref()
+                            .unwrap()
+                            .get_parameter(&ParameterId::from(id)),
+                        Some(value)
+                    );
+                }
+                let input = [0.04, 0.03, 0.02, 0.01, 0.05].repeat(128);
+                let mut output = vec![0.0; 128 * 6];
+                let context = sotf_host::ProcessContext::new(48_000, 128);
+                for _ in 0..100 {
+                    plugin
+                        .inner
+                        .as_mut()
+                        .unwrap()
+                        .process(&input, &mut output, &context)
+                        .unwrap();
+                }
+                assert!(output[127 * 6 + 3] > 0.01);
+            }
+        }
+    }
 }
 
 #[test]

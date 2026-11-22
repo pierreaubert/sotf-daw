@@ -720,6 +720,14 @@ impl_param_accessors! {
                 multi_source_extraction: bool, multi_source_threshold: f64,
                 binaural_preview: bool,
                 auto_gain_enabled: bool, auto_gain_max_db: f64, auto_gain_smoothing_ms: f64,
+                bypass_heights: bool,
+                bass_mode: usize, bass_cutoff_hz: f64, bass_gain_db: f64,
+                lfe_playback_gain_db: f64, combine_input_lfe: bool,
+                bass_source_front_left: bool, bass_source_front_right: bool,
+                bass_source_center: bool, bass_source_side_left: bool,
+                bass_source_side_right: bool, bass_source_back_left: bool, bass_source_back_right: bool,
+                input_format: usize,
+                bypass_surround: bool,
             ]
         },
         FletcherMunson {
@@ -825,6 +833,7 @@ impl PluginSettings {
             dialogue,
             bypass,
             output,
+            multichannel,
             ..
         } = self
         else {
@@ -878,6 +887,19 @@ impl PluginSettings {
             44 => Some(b2f(output.auto_gain_enabled)),
             45 => Some(output.auto_gain_max_db),
             46 => Some(output.auto_gain_smoothing_ms),
+            47 => Some(b2f(multichannel.bypass_heights)),
+            48 => Some(match multichannel.bass_mode {
+                sotf_plugins::plugin_upmixer::SurroundBassMode::Off => 0.0,
+                sotf_plugins::plugin_upmixer::SurroundBassMode::Derived => 1.0,
+                sotf_plugins::plugin_upmixer::SurroundBassMode::Managed => 2.0,
+            }),
+            49 => Some(f64::from(multichannel.bass_cutoff_hz)),
+            50 => Some(f64::from(multichannel.bass_gain_db)),
+            51 => Some(f64::from(multichannel.lfe_playback_gain_db)),
+            52 => Some(b2f(multichannel.combine_input_lfe)),
+            53..=59 => Some(b2f(multichannel.source_mask() & (1 << (index - 53)) != 0)),
+            60 => Some(multichannel.input_format_index() as f64),
+            61 => Some(b2f(multichannel.bypass_surround)),
             _ => None,
         }
     }
@@ -894,6 +916,7 @@ impl PluginSettings {
             dialogue,
             bypass,
             output,
+            multichannel,
             ..
         } = self
         else {
@@ -947,6 +970,23 @@ impl PluginSettings {
             44 => output.auto_gain_enabled = f2b(value),
             45 => output.auto_gain_max_db = value,
             46 => output.auto_gain_smoothing_ms = value,
+            47 => multichannel.bypass_heights = f2b(value),
+            48 => {
+                multichannel.bass_mode = match value as usize {
+                    1 => sotf_plugins::plugin_upmixer::SurroundBassMode::Derived,
+                    2 => sotf_plugins::plugin_upmixer::SurroundBassMode::Managed,
+                    _ => sotf_plugins::plugin_upmixer::SurroundBassMode::Off,
+                }
+            }
+            49 => multichannel.bass_cutoff_hz = value as f32,
+            50 => multichannel.bass_gain_db = value as f32,
+            51 => multichannel.lfe_playback_gain_db = value as f32,
+            52 => multichannel.combine_input_lfe = f2b(value),
+            53..=59 => multichannel.set_source_enabled(index - 53, f2b(value)),
+            60 => {
+                let _ = multichannel.set_input_format_index(value as usize);
+            }
+            61 => multichannel.bypass_surround = f2b(value),
             _ => {}
         }
     }

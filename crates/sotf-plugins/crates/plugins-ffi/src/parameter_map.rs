@@ -43,7 +43,8 @@ pub struct ParameterInfo {
     pub max_value: f64,
     /// Default value
     pub default_value: f64,
-    /// Number of steps (0 = continuous)
+    /// Declared steps, or zero when no step size is specified. Float
+    /// parameters can also have steps, and setters may quantize to them.
     pub steps: u32,
     /// Whether this parameter uses logarithmic scaling
     pub logarithmic: bool,
@@ -513,6 +514,38 @@ impl ParameterMap {
         self.cached_infos.get(index)
     }
 
+    /// Returns the static specification's float and update-mode traits, when available.
+    pub fn automation_traits(&self, index: usize) -> Option<(bool, bool)> {
+        use sotf_host::param_specs::UpdateMode;
+
+        let id = self.cached_ids.get(index)?;
+        let spec = self.bridge.spec(self.bridge.find_index(id.as_str())?)?;
+        Some((
+            matches!(spec.param_type, ParamType::Float { .. }),
+            spec.update_mode == UpdateMode::Realtime,
+        ))
+    }
+
+    /// Set Upmixer height gain without applying its declared step.
+    pub fn set_upmixer_height_gain_precise(
+        &self,
+        plugin: &mut dyn Plugin,
+        normalized: f64,
+    ) -> Option<Result<(), String>> {
+        use sotf_host::param_specs::UpdateMode;
+
+        let index = self.bridge.find_index("height_gain")?;
+        let spec = self.bridge.spec(index)?;
+        let ParamType::Float { min, max, .. } = spec.param_type else {
+            return None;
+        };
+        if spec.update_mode != UpdateMode::Realtime || spec.unit.eq_ignore_ascii_case("Hz") {
+            return None;
+        }
+        let raw = min + normalized.clamp(0.0, 1.0) * (max - min);
+        Some(self.bridge.set_raw(plugin, "height_gain", raw))
+    }
+
     /// Get the param_id string for a given index.
     pub fn param_id_at(&self, index: usize) -> Option<&str> {
         self.cached_infos.get(index).map(|info| {
@@ -700,6 +733,57 @@ impl ParameterMap {
             },
         };
         Some(info.normalize(raw))
+    }
+
+    /// Whether an Upmixer construction parameter decodes to its current value.
+    /// These Upmixer values are numeric, so the live read does not allocate.
+    pub fn upmixer_structural_noop(
+        &self,
+        plugin: &dyn Plugin,
+        param_id: &str,
+        normalized: f64,
+    ) -> bool {
+        use sotf_host::param_specs::ParamType;
+
+        let Some(index) = self.bridge.find_index(param_id) else {
+            return false;
+        };
+        let Some(spec) = self.bridge.spec(index) else {
+            return false;
+        };
+        let Some(current) = self.bridge.get_raw(plugin, param_id) else {
+            return false;
+        };
+        let Some(requested) = self.bridge.denormalize(index, normalized) else {
+            return false;
+        };
+        match spec.param_type {
+            ParamType::Float { .. } => (current as f32) == (requested as f32),
+            ParamType::Int { .. } | ParamType::Choice { .. } => {
+                (current as i32) == (requested as i32)
+            }
+            ParamType::Bool { .. } => (current >= 0.5) == (requested >= 0.5),
+            ParamType::FilePath => false,
+        }
+    }
+
+    /// Decode the Upmixer surround controls handled by its preflight check.
+    pub fn upmixer_surround_guard_value(
+        &self,
+        param_id: &str,
+        normalized: f64,
+    ) -> Option<(ParameterValue, bool)> {
+        use sotf_host::param_specs::UpdateMode;
+
+        let index = self.bridge.find_index(param_id)?;
+        let spec = self.bridge.spec(index)?;
+        let raw = self.bridge.denormalize(index, normalized)?;
+        let value = match spec.param_type {
+            ParamType::Bool { .. } => ParameterValue::Bool(raw > 0.5),
+            ParamType::Choice { .. } => ParameterValue::Int(raw.round() as i32),
+            _ => return None,
+        };
+        Some((value, spec.update_mode != UpdateMode::Realtime))
     }
 
     /// Cached normalized value for a DeEsser structural id.

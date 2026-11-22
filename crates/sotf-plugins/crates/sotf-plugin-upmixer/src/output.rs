@@ -4,6 +4,17 @@
 
 use super::UpmixerPlugin;
 
+#[inline(always)]
+fn pack_output<const CHANNELS: usize>(channels: &[Vec<f32>], output: &mut [f32], scale: f32) {
+    let frames = output.len() / CHANNELS;
+    let channels: [&[f32]; CHANNELS] = std::array::from_fn(|channel| &channels[channel][..frames]);
+    for (index, frame) in output.chunks_exact_mut(CHANNELS).enumerate() {
+        for channel in 0..CHANNELS {
+            frame[channel] = channels[channel][index] * scale;
+        }
+    }
+}
+
 // Physical release anchor: retain the former 0.02 release step over the
 // representative 1024-frame / 48 kHz callback, independent of actual callbacks.
 pub(super) fn safety_clock_coefficients(sample_rate: f64) -> (f64, f64) {
@@ -27,8 +38,13 @@ impl UpmixerPlugin {
     }
 
     #[inline]
-    pub(super) fn advance_final_safety_control(&mut self) {
-        let target = f64::from(self.param_smoothers.safety_cap_db_smoother.target());
+    pub(super) fn advance_final_safety_control<const DELAY: bool>(&mut self) {
+        let mut target = f64::from(self.param_smoothers.safety_cap_db_smoother.target());
+        if DELAY {
+            let cursor = self.safety.final_target_cursor;
+            std::mem::swap(&mut target, &mut self.safety.final_target_delay[cursor]);
+            self.safety.final_target_cursor = (cursor + 1) % self.safety.final_target_delay.len();
+        }
         let current = self.safety.final_cap_db;
         // The existing 50 ms one-pole and near-target snap, evaluated on each
         // generated output frame. f64 state avoids high-rate f32 convergence stalls.
@@ -56,14 +72,28 @@ impl UpmixerPlugin {
     /// No future frame can attenuate the current frame. The earlier per-FFT
     /// bed-channel stage remains separate and keeps its existing coefficients.
     #[inline]
+    #[cfg(test)]
     pub(super) fn apply_final_safety_cap(&mut self, output: &mut [f32], num_frames: usize) {
+        if self.safety.final_target_delay.is_empty() {
+            self.apply_final_safety_cap_impl::<false>(output, num_frames);
+        } else {
+            self.apply_final_safety_cap_impl::<true>(output, num_frames);
+        }
+    }
+
+    #[inline]
+    pub(super) fn apply_final_safety_cap_impl<const DELAY: bool>(
+        &mut self,
+        output: &mut [f32],
+        num_frames: usize,
+    ) {
         let channels = self.effective_output_channels();
         if channels == 0 {
             return;
         }
         let count = (num_frames * channels).min(output.len());
         for frame in output[..count].chunks_exact_mut(channels) {
-            self.advance_final_safety_control();
+            self.advance_final_safety_control::<DELAY>();
             if self.safety.final_cap_db < 0.0 {
                 continue;
             }
@@ -92,8 +122,24 @@ impl UpmixerPlugin {
 
     /// Phase 5: Extract real parts from time domain and apply final scaling
     #[inline]
+    #[cfg(test)]
     pub(super) fn extract_output_and_scale(&mut self, output: &mut [f32], combined_scale: f32) {
-        // ... (skipping some comments)
+        self.extract_output_and_scale_with_cap(
+            output,
+            combined_scale,
+            self.safety.safety_cap_db,
+            self.safety.safety_cap_linear,
+        );
+    }
+
+    #[inline]
+    pub(super) fn extract_output_and_scale_with_cap(
+        &mut self,
+        output: &mut [f32],
+        combined_scale: f32,
+        safety_cap_db: f32,
+        safety_cap_linear: f32,
+    ) {
         let taper_len = self.main_buffers.edge_taper_table.len();
         for ch in 0..self.core.num_output_channels {
             // Synthesis window for WOLA. Frequency-domain routing can change phase
@@ -122,7 +168,7 @@ impl UpmixerPlugin {
         // erratic peaks that would modulate the safety cap and cause scratchiness in
         // the bed channels (L/R/C/surround).
         let mut target_safety_scale = 1.0_f32;
-        if self.safety.safety_cap_db >= 0.0 {
+        if safety_cap_db >= 0.0 {
             let mut max_abs = 0.0_f32;
             for ch in 0..self.core.num_output_channels {
                 if self.panning.cached_is_height[ch] {
@@ -136,7 +182,7 @@ impl UpmixerPlugin {
             }
 
             if max_abs > 0.0 {
-                let cap_linear = self.safety.safety_cap_linear;
+                let cap_linear = safety_cap_linear;
                 let effective_peak = max_abs * combined_scale;
                 // Guard against division by zero or negative values (defensive)
                 if effective_peak > 0.0 && effective_peak.is_finite() && effective_peak > cap_linear
@@ -163,13 +209,32 @@ impl UpmixerPlugin {
         let start_scale = self.safety.prev_safety_scale;
         self.safety.prev_safety_scale = end_scale;
 
-        for i in 0..self.core.fft_size {
-            let idx = i * self.core.num_output_channels;
-            let t = i as f32 / self.core.fft_size as f32;
-            let block_safety_scale = start_scale + t * (end_scale - start_scale);
-            let final_scale = combined_scale * block_safety_scale;
-            for ch in 0..self.core.num_output_channels {
-                output[idx + ch] = self.main_buffers.time_out_channels[ch][i] * final_scale;
+        if start_scale == end_scale {
+            let final_scale = combined_scale * start_scale;
+            let channels = &self.main_buffers.time_out_channels;
+            match self.core.num_output_channels {
+                6 => pack_output::<6>(channels, output, final_scale),
+                8 => pack_output::<8>(channels, output, final_scale),
+                10 => pack_output::<10>(channels, output, final_scale),
+                12 => pack_output::<12>(channels, output, final_scale),
+                16 => pack_output::<16>(channels, output, final_scale),
+                n => {
+                    for ch in 0..n {
+                        for (frame, sample) in output.chunks_exact_mut(n).zip(&channels[ch]) {
+                            frame[ch] = *sample * final_scale;
+                        }
+                    }
+                }
+            }
+        } else {
+            for i in 0..self.core.fft_size {
+                let idx = i * self.core.num_output_channels;
+                let t = i as f32 / self.core.fft_size as f32;
+                let block_safety_scale = start_scale + t * (end_scale - start_scale);
+                let final_scale = combined_scale * block_safety_scale;
+                for ch in 0..self.core.num_output_channels {
+                    output[idx + ch] = self.main_buffers.time_out_channels[ch][i] * final_scale;
+                }
             }
         }
 

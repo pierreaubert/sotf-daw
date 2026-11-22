@@ -397,6 +397,40 @@ fn test_normalize_gains_l2_zero_input_is_noop() {
 }
 
 #[test]
+fn five_one_six_has_distinct_height_roles_and_meter_channels() {
+    let config = get_speaker_config("5.1.6").expect("5.1.6 must be available by name");
+    assert!(get_available_configs().contains(&"5.1.6"));
+    let layout = ChannelLayout::from_speaker_config(config).unwrap();
+    let roles = [
+        ChannelRole::FrontLeft,
+        ChannelRole::FrontRight,
+        ChannelRole::FrontCenter,
+        ChannelRole::Lfe,
+        ChannelRole::SideLeft,
+        ChannelRole::SideRight,
+        ChannelRole::TopFrontLeft,
+        ChannelRole::TopFrontRight,
+        ChannelRole::TopBackLeft,
+        ChannelRole::TopBackRight,
+        ChannelRole::TopMiddleLeft,
+        ChannelRole::TopMiddleRight,
+    ];
+    assert_eq!(config.total_channels, roles.len());
+    for (index, role) in roles.into_iter().enumerate() {
+        assert_eq!(layout.role_at(index), Some(role), "channel {index}");
+    }
+    let mut meters = config
+        .meter_groups
+        .iter()
+        .flat_map(|group| group.channels)
+        .map(|channel| channel.index)
+        .collect::<Vec<_>>();
+    meters.sort_unstable();
+    assert_eq!(meters, (0..12).collect::<Vec<_>>());
+    assert_eq!(get_speaker_config_by_channels(12).unwrap().id, "7.1.4");
+}
+
+#[test]
 fn explicit_channel_layouts_cover_every_published_speaker_config() {
     for id in get_available_configs() {
         let config = get_speaker_config(id).unwrap();

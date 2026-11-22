@@ -2,12 +2,20 @@
 
 // Rust guideline compliant 2026-02-21
 use clap_sys::audio_buffer::clap_audio_buffer;
+use clap_sys::events::{
+    CLAP_CORE_EVENT_SPACE_ID, CLAP_EVENT_PARAM_VALUE, clap_event_header, clap_event_param_value,
+    clap_input_events,
+};
 use clap_sys::ext::audio_ports::{
     CLAP_EXT_AUDIO_PORTS, clap_audio_port_info, clap_plugin_audio_ports,
 };
+use clap_sys::ext::audio_ports_config::{
+    CLAP_EXT_AUDIO_PORTS_CONFIG, clap_plugin_audio_ports_config,
+};
 use clap_sys::ext::latency::{CLAP_EXT_LATENCY, clap_host_latency, clap_plugin_latency};
 use clap_sys::ext::params::{
-    CLAP_EXT_PARAMS, clap_host_params, clap_param_clear_flags, clap_param_rescan_flags,
+    CLAP_EXT_PARAMS, clap_host_params, clap_param_clear_flags, clap_param_info,
+    clap_param_rescan_flags, clap_plugin_params,
 };
 use clap_sys::ext::state::{CLAP_EXT_STATE, clap_plugin_state};
 use clap_sys::factory::plugin_factory::{CLAP_PLUGIN_FACTORY_ID, clap_plugin_factory};
@@ -18,7 +26,7 @@ use clap_sys::stream::{clap_istream, clap_ostream};
 use nih_plug::wrapper::state::{ParamValue, PluginState};
 use std::ffi::{CStr, c_char, c_void};
 use std::ptr;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
 use std::thread::{self, ThreadId};
 
 const MAX_FRAMES: usize = 257;
@@ -30,6 +38,9 @@ struct HostState {
     latency_changes: AtomicUsize,
     rescans: AtomicUsize,
     wrong_thread: AtomicBool,
+    plugin: AtomicPtr<clap_plugin>,
+    reenter_on_rescan: AtomicBool,
+    reentered: AtomicBool,
     main_thread: ThreadId,
 }
 
@@ -75,9 +86,29 @@ unsafe extern "C" fn latency_changed(host: *const clap_host) {
 }
 unsafe extern "C" fn rescan(host: *const clap_host, _: clap_param_rescan_flags) {
     // SAFETY: the callback's host data is retained by Native throughout its lifetime.
-    unsafe { host_state(host) }
-        .rescans
-        .fetch_add(1, Ordering::AcqRel);
+    let state = unsafe { host_state(host) };
+    state.wrong_thread.fetch_or(
+        thread::current().id() != state.main_thread,
+        Ordering::AcqRel,
+    );
+    state.rescans.fetch_add(1, Ordering::AcqRel);
+    if state.reenter_on_rescan.load(Ordering::Acquire) {
+        let plugin = state.plugin.load(Ordering::Acquire);
+        if !plugin.is_null() {
+            let mut bytes = Vec::new();
+            let stream = clap_ostream {
+                ctx: (&mut bytes as *mut Vec<u8>).cast(),
+                write: Some(write),
+            };
+            // SAFETY: the host retains the initialized plugin and stream for this synchronous callback.
+            let ext = unsafe {
+                ((*plugin).get_extension.unwrap())(plugin, CLAP_EXT_STATE.as_ptr())
+                    .cast::<clap_plugin_state>()
+            };
+            let success = !ext.is_null() && unsafe { ((*ext).save.unwrap())(plugin, &stream) };
+            state.reentered.store(success, Ordering::Release);
+        }
+    }
 }
 unsafe extern "C" fn clear(_: *const clap_host, _: u32, _: clap_param_clear_flags) {}
 unsafe extern "C" fn no_request(_: *const clap_host) {}
@@ -150,6 +181,9 @@ impl Native {
             latency_changes: AtomicUsize::new(0),
             rescans: AtomicUsize::new(0),
             wrong_thread: AtomicBool::new(false),
+            plugin: AtomicPtr::new(ptr::null_mut()),
+            reenter_on_rescan: AtomicBool::new(false),
+            reentered: AtomicBool::new(false),
             main_thread: thread::current().id(),
         });
         let host = Box::new(clap_host {
@@ -179,6 +213,7 @@ impl Native {
             ((*factory).create_plugin.unwrap())(factory, &*host, ID.as_ptr())
         };
         assert!(!plugin.is_null());
+        state.plugin.store(plugin.cast_mut(), Ordering::Release);
         let native = Self {
             plugin,
             _host: host,
@@ -343,7 +378,9 @@ impl Native {
         };
         // SAFETY: channel-pointer arrays and disjoint planar buffers contain frames_count
         // samples and remain live for this exclusive synchronous audio callback.
-        let status = unsafe { ((*self.plugin).process.unwrap())(self.plugin, &process) };
+        let status = assert_no_alloc::assert_no_alloc(|| unsafe {
+            ((*self.plugin).process.unwrap())(self.plugin, &process)
+        });
         let mut interleaved = Vec::with_capacity(input.len() * 6);
         for i in 0..input.len() {
             for channel in &out {
@@ -376,6 +413,300 @@ fn configured(native: &Native, bypass: bool, low_latency: bool) -> PluginState {
     state
 }
 
+unsafe extern "C" fn one_event(_: *const clap_input_events) -> u32 {
+    1
+}
+unsafe extern "C" fn event_at(
+    list: *const clap_input_events,
+    index: u32,
+) -> *const clap_event_header {
+    if index != 0 {
+        return ptr::null();
+    }
+    // SAFETY: the event is retained by the synchronous flush call.
+    unsafe { &(*((*list).ctx.cast::<clap_event_param_value>())).header }
+}
+
+fn automate_clap(native: &Native, name: &[u8], value: f64) {
+    // SAFETY: plugin extension, event and list remain live during this synchronous flush.
+    unsafe {
+        let params =
+            ((*native.plugin).get_extension.unwrap())(native.plugin, CLAP_EXT_PARAMS.as_ptr())
+                .cast::<clap_plugin_params>();
+        let id = (0..((*params).count.unwrap())(native.plugin))
+            .find_map(|index| {
+                let mut info = std::mem::MaybeUninit::<clap_param_info>::uninit();
+                assert!(((*params).get_info.unwrap())(
+                    native.plugin,
+                    index,
+                    info.as_mut_ptr()
+                ));
+                let info = info.assume_init();
+                (CStr::from_ptr(info.name.as_ptr()).to_bytes() == name).then_some(info.id)
+            })
+            .unwrap();
+        let event = clap_event_param_value {
+            header: clap_event_header {
+                size: std::mem::size_of::<clap_event_param_value>() as u32,
+                time: 0,
+                space_id: CLAP_CORE_EVENT_SPACE_ID,
+                type_: CLAP_EVENT_PARAM_VALUE,
+                flags: 0,
+            },
+            param_id: id,
+            cookie: ptr::null_mut(),
+            note_id: -1,
+            port_index: -1,
+            channel: -1,
+            key: -1,
+            value,
+        };
+        let events = clap_input_events {
+            ctx: (&event as *const clap_event_param_value).cast_mut().cast(),
+            size: Some(one_event),
+            get: Some(event_at),
+        };
+        assert_no_alloc::assert_no_alloc(|| {
+            ((*params).flush.unwrap())(native.plugin, &events, ptr::null())
+        });
+    }
+}
+
+#[test]
+fn active_state_keeps_subsequent_clap_automation_across_restart() {
+    let mut native = Native::new();
+    native.activate(48_000.0);
+    native.start();
+    let mut state = configured(&native, false, true);
+    state
+        .params
+        .insert("gain_front_direct".into(), ParamValue::F32(0.3));
+    assert!(native.load(&state, 3));
+    automate_clap(&native, b"Front Direct", 0.35);
+    automate_clap(&native, b"Front Direct", 0.5);
+    let saved = native.saved();
+    println!(
+        "saved gain after automation: {:?}",
+        saved.params.get("gain_front_direct")
+    );
+    assert!(
+        matches!(saved.params.get("gain_front_direct"), Some(ParamValue::F32(value)) if *value == 1.0)
+    );
+    native.deactivate();
+    native.activate(48_000.0);
+    assert_eq!(native.latency(), 1024);
+    assert!(
+        matches!(native.saved().params.get("gain_front_direct"), Some(ParamValue::F32(value)) if *value == 1.0)
+    );
+}
+
+#[test]
+fn failed_surround_candidate_keeps_the_previous_pending_snapshot() {
+    use crate::wrapper::native_upmixer_layout::{CLAP_LAYOUTS, SpeakerLayout, pair};
+    use nih_plug::context::PluginApi;
+    let mut native = Native::new();
+    let index = (0..CLAP_LAYOUTS.len())
+        .find(|&index| {
+            let layout = pair(index, PluginApi::Clap).unwrap();
+            layout.input == SpeakerLayout::FiveOne && layout.output == SpeakerLayout::FiveOneFour
+        })
+        .unwrap();
+    // SAFETY: select while inactive on the live plugin's owning host thread.
+    unsafe {
+        let configs = ((*native.plugin).get_extension.unwrap())(
+            native.plugin,
+            CLAP_EXT_AUDIO_PORTS_CONFIG.as_ptr(),
+        )
+        .cast::<clap_plugin_audio_ports_config>();
+        assert!(((*configs).select.unwrap())(native.plugin, index as u32));
+        assert!(((*native.plugin).activate.unwrap())(
+            native.plugin,
+            96_000.0,
+            1,
+            MAX_FRAMES as u32
+        ));
+    }
+    native.active = true;
+    let mut valid = native.saved();
+    valid
+        .params
+        .insert("height_gain".into(), ParamValue::F32(0.3));
+    assert!(native.load(&valid, 3));
+    let mut invalid = valid.clone();
+    invalid
+        .params
+        .insert("bass_mode".into(), ParamValue::I32(1));
+    invalid
+        .params
+        .insert("combine_input_lfe".into(), ParamValue::Bool(false));
+    assert!(native.load(&invalid, 3));
+    native.deactivate();
+    // SAFETY: activation is retried only after deactivation with the same negotiated layout.
+    assert!(!unsafe {
+        ((*native.plugin).activate.unwrap())(native.plugin, 96_000.0, 1, MAX_FRAMES as u32)
+    });
+    assert!(matches!(
+        native.saved().params.get("bass_mode"),
+        Some(ParamValue::I32(0))
+    ));
+    assert!(
+        matches!(native.saved().params.get("height_gain"), Some(ParamValue::F32(value)) if *value == 0.3)
+    );
+    // SAFETY: the preceding failed activation left the instance inactive.
+    assert!(unsafe {
+        ((*native.plugin).activate.unwrap())(native.plugin, 96_000.0, 1, MAX_FRAMES as u32)
+    });
+    native.active = true;
+    assert_eq!(native.latency(), 2176);
+}
+
+#[test]
+fn failed_first_surround_candidate_can_be_replaced_while_inactive() {
+    use crate::wrapper::native_upmixer_layout::{CLAP_LAYOUTS, SpeakerLayout, pair};
+    use nih_plug::context::PluginApi;
+    let mut native = Native::new();
+    let index = (0..CLAP_LAYOUTS.len())
+        .find(|&index| {
+            let layout = pair(index, PluginApi::Clap).unwrap();
+            layout.input == SpeakerLayout::FiveOne && layout.output == SpeakerLayout::FiveOneFour
+        })
+        .unwrap();
+    // SAFETY: layout selection and activation occur while inactive on the host thread.
+    unsafe {
+        let configs = ((*native.plugin).get_extension.unwrap())(
+            native.plugin,
+            CLAP_EXT_AUDIO_PORTS_CONFIG.as_ptr(),
+        )
+        .cast::<clap_plugin_audio_ports_config>();
+        assert!(((*configs).select.unwrap())(native.plugin, index as u32));
+        assert!(((*native.plugin).activate.unwrap())(
+            native.plugin,
+            96_000.0,
+            1,
+            MAX_FRAMES as u32
+        ));
+    }
+    native.active = true;
+    let valid = native.saved();
+    let mut invalid = valid.clone();
+    invalid
+        .params
+        .insert("bass_mode".into(), ParamValue::I32(1));
+    invalid
+        .params
+        .insert("combine_input_lfe".into(), ParamValue::Bool(false));
+    assert!(native.load(&invalid, 3));
+    native.deactivate();
+    // SAFETY: candidate activation is retried after the host deactivated the plugin.
+    assert!(!unsafe {
+        ((*native.plugin).activate.unwrap())(native.plugin, 96_000.0, 1, MAX_FRAMES as u32)
+    });
+    let mut sparse = valid;
+    sparse.params.retain(|id, _| id == "height_gain");
+    sparse
+        .params
+        .insert("height_gain".into(), ParamValue::F32(0.3));
+    assert!(
+        native.load(&sparse, 3),
+        "a valid inactive replacement must be accepted"
+    );
+    // SAFETY: the failed activation left this instance inactive.
+    assert!(unsafe {
+        ((*native.plugin).activate.unwrap())(native.plugin, 96_000.0, 1, MAX_FRAMES as u32)
+    });
+    native.active = true;
+    assert_eq!(native.latency(), 2176);
+    assert!(matches!(
+        native.saved().params.get("bass_mode"),
+        Some(ParamValue::I32(0))
+    ));
+}
+
+#[test]
+fn active_state_is_staged_until_reactivation() {
+    let mut subject = Native::new();
+    let mut control = Native::new();
+    for native in [&mut subject, &mut control] {
+        native.activate(48_000.0);
+        native.start();
+        for position in (0..4096).step_by(256) {
+            assert_ne!(
+                native.process(&program(position, 256)).0,
+                CLAP_PROCESS_ERROR
+            );
+        }
+    }
+    let requested = configured(&subject, false, true);
+    let old_restarts = subject.state.restarts.load(Ordering::Acquire);
+    assert!(subject.load(&requested, 3));
+    for _ in 0..100 {
+        subject.pump();
+        if subject.state.restarts.load(Ordering::Acquire) > old_restarts {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(subject.state.restarts.load(Ordering::Acquire) > old_restarts);
+    assert_eq!(subject.latency(), 2048);
+    assert_eq!(
+        serde_json::to_value(subject.saved().params).unwrap(),
+        serde_json::to_value(&requested.params).unwrap()
+    );
+    for position in (4096..8192).step_by(256) {
+        let input = program(position, 256);
+        assert_eq!(subject.process(&input).1, control.process(&input).1);
+    }
+    subject.deactivate();
+    let old_rescans = subject.state.rescans.load(Ordering::Acquire);
+    subject
+        .state
+        .reenter_on_rescan
+        .store(true, Ordering::Release);
+    subject.activate(48_000.0);
+    assert_eq!(subject.latency(), 1024);
+    for _ in 0..100 {
+        subject.pump();
+        if subject.state.rescans.load(Ordering::Acquire) > old_rescans {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert!(
+        subject.state.rescans.load(Ordering::Acquire) > old_rescans,
+        "host did not receive refreshed state parameter values"
+    );
+    assert!(!subject.state.wrong_thread.load(Ordering::Acquire));
+    assert!(subject.state.reentered.load(Ordering::Acquire));
+    assert_eq!(
+        serde_json::to_value(subject.saved().params).unwrap(),
+        serde_json::to_value(&requested.params).unwrap()
+    );
+}
+
+#[test]
+fn staged_state_can_be_committed_and_destroyed_repeatedly() {
+    // Keep one instance alive so other instances share its background worker.
+    let mut survivor = Native::new();
+    survivor.activate(48_000.0);
+    for iteration in 0..64 {
+        let mut native = Native::new();
+        native.activate(48_000.0);
+        native.start();
+        let snapshot = configured(&native, false, true);
+        assert!(native.load(&snapshot, 3));
+        assert_ne!(
+            native.process(&program(iteration * 16, 16)).0,
+            CLAP_PROCESS_ERROR
+        );
+        native.deactivate();
+        native.activate(48_000.0);
+        assert_eq!(native.latency(), 1024);
+        // Drop with the commit's host-refresh task possibly still queued.
+    }
+    survivor.start();
+    assert_ne!(survivor.process(&program(0, 16)).0, CLAP_PROCESS_ERROR);
+}
+
 #[test]
 fn exported_clap_active_structural_load_cannot_change_latency_before_restart() {
     let mut subject = Native::new();
@@ -384,7 +715,6 @@ fn exported_clap_active_structural_load_cannot_change_latency_before_restart() {
     subject.start();
     let input = vec![[0.03, -0.02]; MAX_FRAMES];
     assert_ne!(subject.process(&input).0, CLAP_PROCESS_ERROR);
-    let before = subject.saved();
     let mut changed = configured(&subject, true, false);
     changed
         .params
@@ -397,15 +727,15 @@ fn exported_clap_active_structural_load_cannot_change_latency_before_restart() {
         subject.latency(),
         subject.state.restarts.load(Ordering::Acquire) - restarts
     );
-    assert!(
-        !loaded,
-        "active snapshot replaced DSP before host accepted restart"
-    );
+    assert!(loaded);
     assert_eq!(subject.latency(), 2048);
     assert_eq!(
         serde_json::to_value(subject.saved().params).unwrap(),
-        serde_json::to_value(before.params).unwrap()
+        serde_json::to_value(changed.params).unwrap()
     );
+    subject.deactivate();
+    subject.activate(48_000.0);
+    assert_eq!(subject.latency(), 0);
 }
 
 fn state_value(state: &PluginState) -> serde_json::Value {
@@ -521,7 +851,7 @@ fn exported_clap_inactive_state_latency_and_audio_match_direct_dsp() {
 }
 
 #[test]
-fn exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry() {
+fn exported_clap_staged_snapshots_preserve_history_and_sparse_ordering() {
     for processing in [false, true] {
         let mut subject = Native::new();
         let mut control = Native::new();
@@ -535,8 +865,7 @@ fn exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry()
                 );
             }
         }
-        // Stop processing without deactivation: active snapshots remain unsafe
-        // even if the callback is temporarily suspended.
+        // A stopped but active instance still stages snapshots until deactivation.
         if !processing {
             for native in [&mut subject, &mut control] {
                 // SAFETY: paired with the successful start above; no processing overlaps.
@@ -548,7 +877,6 @@ fn exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry()
         }
         subject.pump();
         let before = subject.saved();
-        let before_json = state_value(&before);
         let counts = (
             subject.state.restarts.load(Ordering::Acquire),
             subject.state.latency_changes.load(Ordering::Acquire),
@@ -568,19 +896,20 @@ fn exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry()
             .params
             .insert("gain_front_direct".into(), ParamValue::F32(0.7));
         for state in [&structural, &scalar, &before, &sparse] {
-            assert!(!subject.load(state, 3));
+            assert!(subject.load(state, 3));
             subject.pump();
-            assert_eq!(state_value(&subject.saved()), before_json);
             assert_eq!(subject.latency(), 2048);
             assert_eq!(
                 (
-                    subject.state.restarts.load(Ordering::Acquire),
                     subject.state.latency_changes.load(Ordering::Acquire),
                     subject.state.rescans.load(Ordering::Acquire),
                 ),
-                counts
+                (counts.1, counts.2)
             );
         }
+        assert!(
+            matches!(subject.saved().params.get("gain_front_direct"), Some(ParamValue::F32(value)) if *value == 0.7)
+        );
         if !processing {
             subject.start();
             control.start();
@@ -599,32 +928,17 @@ fn exported_clap_rejected_snapshots_preserve_history_then_allow_inactive_retry()
         }
         assert_eq!(
             error, 0.0,
-            "failed loads must retain the entire DSP history"
+            "staged loads must retain the entire DSP history"
         );
         subject.deactivate();
-        // Retry the exact rejected snapshot, including its changed scalar value.
-        let retry = structural;
-        assert!(subject.load(&retry, usize::MAX));
-        subject.pump();
-        assert_eq!(state_value(&subject.saved()), state_value(&retry));
-        assert_eq!(subject.latency(), 0);
-        assert_eq!(
-            subject.state.latency_changes.load(Ordering::Acquire),
-            counts.1 + 1
-        );
-        assert_eq!(subject.state.restarts.load(Ordering::Acquire), counts.0);
         subject.activate(96_000.0);
-        assert_eq!(subject.latency(), 0);
-        subject.start();
-        let input = program(0, 17);
-        let (status, actual) = subject.process(&input);
-        assert_ne!(status, CLAP_PROCESS_ERROR);
-        for (frame, source) in actual.as_chunks::<6>().0.iter().zip(input) {
-            assert_eq!(frame, &[source[0], source[1], 0.0, 0.0, 0.0, 0.0]);
-        }
+        assert_eq!(subject.latency(), 2048);
+        assert!(
+            matches!(subject.saved().params.get("gain_front_direct"), Some(ParamValue::F32(value)) if *value == 0.7)
+        );
         assert!(!subject.state.wrong_thread.load(Ordering::Acquire));
         println!(
-            "exported_clap_reject processing={processing} snapshots=4 history_error={error} retry_latency=0"
+            "exported_clap_staged processing={processing} snapshots=4 history_error={error} latency=2048"
         );
     }
 }
@@ -647,7 +961,7 @@ fn exported_clap_truncated_or_invalid_streams_preserve_state() {
 }
 
 #[test]
-fn upmixer_snapshot_policy_rejects_active_and_audio_thread_before_mutation() {
+fn direct_upmixer_deserialization_still_rejects_active_and_audio_threads() {
     use nih_plug::prelude::Plugin;
     let native = Native::new();
     let snapshot = configured(&native, true, true);

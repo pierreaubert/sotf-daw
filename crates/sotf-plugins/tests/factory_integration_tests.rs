@@ -371,11 +371,11 @@ fn create_plugin_rejects_malformed_parameters() {
 
 #[test]
 fn create_plugin_rejects_channel_mismatch() {
-    // Upmixer requires exactly 2 input channels.
+    // The default upmixer input is stereo; 5.0 requires an explicit role layout.
     let result = create_plugin("upmixer", &serde_json::json!({}), 5, SAMPLE_RATE);
     match result {
         Err(err) => assert!(
-            err.contains("2 input channels") || err.contains("requires"),
+            err.contains("input layout has 2 channels") && err.contains("host supplies 5"),
             "unexpected error: {err}"
         ),
         Ok(_) => panic!("expected error for channel mismatch"),

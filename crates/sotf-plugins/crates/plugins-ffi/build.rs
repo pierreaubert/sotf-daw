@@ -194,4 +194,5 @@ void gpui_au_scroll_wheel(void *context, float x, float y, float dx, float dy);
 
 const BRIDGING_HEADER: &str = r#"#include "sotf_audio_plugin_ffi.h"
 #include "gpui_au_ffi.h"
+#include "../GenericAU/NativeAudioUnit.h"
 "#;

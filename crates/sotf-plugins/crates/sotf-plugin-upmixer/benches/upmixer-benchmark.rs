@@ -320,6 +320,64 @@ fn bench_upmixer_production_config(c: &mut Criterion) {
     group.finish();
 }
 
+/// Measure full multichannel processing against the available audio time.
+fn bench_surround_input(c: &mut Criterion) {
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+    use sotf_plugin_upmixer::{SurroundBassMode, UpmixerPluginParams};
+
+    let mut group = c.benchmark_group("upmixer_surround_input");
+    group.warm_up_time(Duration::from_secs(1));
+    group.measurement_time(Duration::from_secs(2));
+    group.sample_size(20);
+    for (input_id, output_id, mode) in [
+        ("5.0", "5.1.4", SurroundBassMode::Off),
+        ("5.1", "7.1.4", SurroundBassMode::Derived),
+        ("7.1", "9.1.6", SurroundBassMode::Managed),
+    ] {
+        for sample_rate in [48_000_u32, 96_000] {
+            for block_size in [128_usize, 512] {
+                let layout =
+                    ChannelLayout::from_speaker_config(get_speaker_config(input_id).unwrap())
+                        .unwrap();
+                let input_channels = layout.channels.len();
+                let mut params = UpmixerPluginParams::default();
+                params.core.speaker_config = output_id.into();
+                params.multichannel.input_layout = Some(layout);
+                params.multichannel.bass_mode = mode;
+                params.multichannel.combine_input_lfe = true;
+                let mut upmixer = UpmixerPlugin::try_from_params(params).unwrap();
+                upmixer.initialize(f64::from(sample_rate)).unwrap();
+                let stereo = generate_realistic_input(block_size, sample_rate, true);
+                let input: Vec<f32> = (0..block_size)
+                    .flat_map(|frame| {
+                        let stereo = &stereo;
+                        (0..input_channels).map(move |channel| {
+                            stereo[frame * 2 + channel % 2] * (0.4 + channel as f32 * 0.05)
+                        })
+                    })
+                    .collect();
+                let mut output = vec![0.0; block_size * upmixer.output_channels()];
+                let context = ProcessContext::new(sample_rate, block_size);
+                warmup_plugin(&mut upmixer, &input, &mut output, &context, 32);
+                group.throughput(Throughput::Elements(block_size as u64));
+                let name = format!("{input_id}_to_{output_id}_{mode:?}/{sample_rate}/{block_size}");
+                group.bench_function(name, |b| {
+                    b.iter(|| {
+                        upmixer
+                            .process(
+                                black_box(&input),
+                                black_box(&mut output),
+                                black_box(&context),
+                            )
+                            .unwrap()
+                    })
+                });
+            }
+        }
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_multi_source_processing_matrix,
@@ -327,6 +385,7 @@ criterion_group!(
     bench_upmixer_configs,
     bench_upmixer_fft_sizes,
     bench_upmixer_production_config,
+    bench_surround_input,
 );
 
 criterion_main!(benches);

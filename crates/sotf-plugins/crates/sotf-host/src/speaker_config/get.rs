@@ -5,6 +5,7 @@ use super::consts::CONFIG_5_0;
 use super::consts::CONFIG_5_1;
 use super::consts::CONFIG_5_1_2;
 use super::consts::CONFIG_5_1_4;
+use super::consts::CONFIG_5_1_6;
 use super::consts::CONFIG_7_1;
 use super::consts::CONFIG_7_1_2;
 use super::consts::CONFIG_7_1_4;
@@ -27,6 +28,7 @@ pub fn get_speaker_config(id: &str) -> Option<&'static SpeakerConfig> {
         "7.1" => Some(&CONFIG_7_1),
         "5.1.2" => Some(&CONFIG_5_1_2),
         "5.1.4" => Some(&CONFIG_5_1_4),
+        "5.1.6" => Some(&CONFIG_5_1_6),
         "7.1.2" => Some(&CONFIG_7_1_2),
         "7.1.4" => Some(&CONFIG_7_1_4),
         "9.1.4" => Some(&CONFIG_9_1_4),
@@ -42,7 +44,7 @@ pub fn get_speaker_config(id: &str) -> Option<&'static SpeakerConfig> {
 pub fn get_available_configs() -> &'static [&'static str] {
     &[
         "1.0", "2.0", "2.1", "5.0", "5.1", "7.1", "5.1.2", "5.1.4", "7.1.2", "7.1.4", "9.1.4",
-        "9.1.6",
+        "9.1.6", "5.1.6",
     ]
 }
 

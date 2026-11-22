@@ -161,32 +161,21 @@ fn generate_config(
         signals: Vec::new(),
     };
 
-    // Create plugin using new() with valid parameters
-    let mut plugin = UpmixerPlugin::new(
-        fft_size, config_id, 1.0,   // gain_front_direct
-        0.5,   // gain_front_ambient
-        1.0,   // gain_rear_ambient
-        120.0, // lfe_cutoff_hz
-        0.5,   // stereo_width
-        250.0, // bandpass_hz
-        0.5,   // height_gain
-        1.0,   // lfe_gain
-        false, // enable_subharmonic_synth
-        0.5,   // subharmonic_gain
-    );
-
-    plugin
-        .initialize(f64::from(sample_rate))
-        .map_err(|e| anyhow::anyhow!("initialize failed: {}", e))?;
-
-    let num_output_channels = plugin.output_channels();
-    println!(
-        "  Config {} -> {} output channels",
-        config_id, num_output_channels
-    );
-
-    // Generate each signal
-    for signal in SIGNALS {
+    // Each reference starts with a fresh processor, just like the regression tests.
+    for (index, signal) in SIGNALS.iter().enumerate() {
+        let mut plugin = UpmixerPlugin::new(
+            fft_size, config_id, 1.0, 0.5, 1.0, 120.0, 0.5, 250.0, 0.5, 1.0, false, 0.5,
+        );
+        plugin
+            .initialize(f64::from(sample_rate))
+            .map_err(|e| anyhow::anyhow!("initialize failed: {}", e))?;
+        let num_output_channels = plugin.output_channels();
+        if index == 0 {
+            println!(
+                "  Config {} -> {} output channels",
+                config_id, num_output_channels
+            );
+        }
         let output_file = format!("{}.wav", signal.name);
         let output_path = config_dir.join(&output_file);
 
@@ -248,15 +237,15 @@ fn generate_signal(
             let freqs = [
                 40.0, 80.0, 160.0, 320.0, 640.0, 1280.0, 2560.0, 5120.0, 10240.0, 16000.0,
             ];
-            for (i, sample) in data.iter_mut().enumerate() {
+            for i in 0..actual_frames {
                 let t = i as f32 / sample_rate as f32;
-                let ch = i % 2;
                 let mut sum = 0.0_f32;
                 for (fi, &freq) in freqs.iter().enumerate() {
                     let phase = 2.0 * std::f32::consts::PI * freq * t + (fi as f32 * 0.1);
                     sum += phase.sin() * 0.1;
                 }
-                *sample = if ch == 0 { sum } else { sum * 0.95 }; // Slight stereo difference
+                data[i * 2] = sum;
+                data[i * 2 + 1] = sum * 0.95;
             }
         }
         "sweep_20_20k" => {
@@ -421,6 +410,34 @@ mod tests {
         let a = generate_signal("pink_noise", 48_000, 2048, 2048).unwrap();
         let b = generate_signal("pink_noise", 48_000, 2048, 2048).unwrap();
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn multisine_uses_one_time_point_for_each_stereo_frame() {
+        let signal = generate_signal("multisine", 48_000, 1024, 512).unwrap();
+        assert!(signal.chunks_exact(2).any(|frame| frame[0].abs() > 0.01));
+        for frame in signal.chunks_exact(2) {
+            assert_eq!(frame[1], frame[0] * 0.95);
+        }
+    }
+
+    #[test]
+    fn each_exported_signal_starts_from_fresh_plugin_state() {
+        let directory = tempfile::tempdir().unwrap();
+        generate_config(directory.path(), "5.1", "test", 48_000, 512).unwrap();
+        for signal in ["multisine", "sweep_20_20k", "dialogue"] {
+            let input = generate_signal(signal, 48_000, 5120, 512).unwrap();
+            let mut plugin = test_upmixer(512);
+            plugin.initialize(48_000.0).unwrap();
+            let expected = process_upmixer(&mut plugin, &input, 48_000, 512, 6).unwrap();
+            let path = directory.path().join("5.1").join(format!("{signal}.wav"));
+            let actual = hound::WavReader::open(path)
+                .unwrap()
+                .into_samples::<f32>()
+                .collect::<Result<Vec<_>, _>>()
+                .unwrap();
+            assert_eq!(actual, expected, "signal {signal}");
+        }
     }
 
     #[test]

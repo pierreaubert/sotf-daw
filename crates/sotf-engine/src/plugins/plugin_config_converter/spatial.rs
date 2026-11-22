@@ -118,6 +118,7 @@ pub fn convert_upmixer(settings: &PluginSettings, _sample_rate: f64) -> Option<P
         dialogue,
         bypass,
         output,
+        multichannel,
         ..
     } = settings
     else {
@@ -182,7 +183,7 @@ pub fn convert_upmixer(settings: &PluginSettings, _sample_rate: f64) -> Option<P
         enable_ml_detection,
         multi_source_extraction,
         multi_source_threshold,
-        binaural_preview,
+        binaural_preview: _,
         auto_gain_enabled,
         auto_gain_max_db,
         auto_gain_smoothing_ms,
@@ -202,7 +203,7 @@ pub fn convert_upmixer(settings: &PluginSettings, _sample_rate: f64) -> Option<P
             "lfe_cutoff_hz": lfe_cutoff_hz,
             "lfe_gain": lfe_gain,
             "bandpass_hz": bandpass_hz,
-            "enable_subharmonic_synth": enable_subharmonic_synth,
+            "enable_subharmonic_synth": *enable_subharmonic_synth && multichannel.input_layout.is_none(),
             "subharmonic_gain": subharmonic_gain,
             "subharmonic_freq_hz": subharmonic_freq_hz,
             "subharmonic_attack_ms": subharmonic_attack_ms,
@@ -233,10 +234,20 @@ pub fn convert_upmixer(settings: &PluginSettings, _sample_rate: f64) -> Option<P
             "enable_ml_detection": enable_ml_detection,
             "multi_source_extraction": multi_source_extraction,
             "multi_source_threshold": multi_source_threshold,
-            "binaural_preview": binaural_preview,
-            "auto_gain_enabled": auto_gain_enabled,
+            "binaural_preview": output.binaural_preview_active(multichannel),
+            "auto_gain_enabled": *auto_gain_enabled && multichannel.input_layout.is_none(),
             "auto_gain_max_db": auto_gain_max_db,
             "auto_gain_smoothing_ms": auto_gain_smoothing_ms,
+            "input_layout": multichannel.input_layout,
+            "bass_mode": multichannel.bass_mode,
+            "bass_cutoff_hz": multichannel.bass_cutoff_hz,
+            "bass_sources": multichannel.bass_sources,
+            "bass_source_mask": multichannel.bass_source_mask,
+            "bass_gain_db": multichannel.bass_gain_db,
+            "lfe_playback_gain_db": multichannel.lfe_playback_gain_db,
+            "combine_input_lfe": multichannel.combine_input_lfe,
+            "bypass_heights": multichannel.bypass_heights,
+            "bypass_surround": multichannel.bypass_surround,
         }),
     ))
 }

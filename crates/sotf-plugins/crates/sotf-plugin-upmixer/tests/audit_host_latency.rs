@@ -70,7 +70,7 @@ fn all_structural_controls_are_rejected_by_every_live_admission_route() {
             (p.id, value)
         })
         .collect();
-    assert_eq!(controls.len(), 13);
+    assert!(!controls.is_empty());
     let mut checked = 0;
     for prepared in [false, true] {
         for route in 0..6 {
@@ -108,7 +108,7 @@ fn all_structural_controls_are_rejected_by_every_live_admission_route() {
         }
     }
     println!("structural_admission checks={checked}");
-    assert_eq!(checked, 156);
+    assert_eq!(checked, controls.len() * 12);
 }
 
 fn upmixer(fft: usize, bypass: bool, rate: u32) -> UpmixerPlugin {
@@ -198,6 +198,136 @@ fn actual_upmixer_parallel_branch_is_compensated_to_the_reported_latency() {
             }
         }
     }
+}
+
+#[test]
+fn surround_upmixer_latency_aligns_with_a_parallel_dry_graph_branch() {
+    use sotf_host::GraphEdge;
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+    use sotf_plugin_upmixer::UpmixerPluginParams;
+
+    let layout = ChannelLayout::from_speaker_config(get_speaker_config("5.1").unwrap()).unwrap();
+    for bypass in [false, true] {
+        let params: UpmixerPluginParams = serde_json::from_value(serde_json::json!({
+            "fft_size": 512, "input_layout": layout,
+            "speaker_config": "5.1.4", "bypass_all_processing": bypass
+        }))
+        .unwrap();
+        let mut reference = UpmixerPlugin::from_params(params.clone());
+        reference.initialize(48_000.0).unwrap();
+        let latency = reference.latency_samples();
+        assert_eq!(latency, 512);
+
+        let mut host = DawHost::new(10, 48_000);
+        host.set_parallel_enabled(false).unwrap();
+        let reduce = host
+            .add_node(
+                "bed".into(),
+                Box::new(sotf_plugin_matrix::MatrixPlugin::new(10, 6)),
+            )
+            .unwrap();
+        let wet = host
+            .add_node(
+                "upmixer".into(),
+                Box::new(UpmixerPlugin::from_params(params)),
+            )
+            .unwrap();
+        let gain =
+            serde_json::from_value(serde_json::json!({"gain_db":0.0,"smoothing_ms":0.0})).unwrap();
+        host.add_node(
+            "dry".into(),
+            Box::new(sotf_host::parametric_plugin::ParametricPluginAdapter::new(
+                sotf_plugin_gain::GainPlugin::from_params(10, gain).unwrap(),
+            )),
+        )
+        .unwrap();
+        host.add_edge(GraphEdge::new(reduce, wet)).unwrap();
+        host.build().unwrap();
+        assert_eq!(host.total_latency_samples(), latency);
+
+        let frames = latency + 4096;
+        let mut input = vec![0.0_f32; frames * 10];
+        for frame in 0..frames {
+            for channel in 0..6 {
+                input[frame * 10 + channel] =
+                    (((frame * 17 + channel * 31) % 101) as f32 - 50.0) / 2048.0;
+            }
+        }
+        let mut actual = vec![0.0; frames * 10];
+        let mut expected = vec![0.0; frames * 10];
+        let pattern = [17, 257, 31, 512];
+        let (mut offset, mut call) = (0, 0);
+        while offset < frames {
+            let count = pattern[call % pattern.len()].min(frames - offset);
+            let wide = offset * 10..(offset + count) * 10;
+            host.process(&input[wide.clone()], &mut actual[wide.clone()])
+                .unwrap();
+            let bed: Vec<_> = input[wide.clone()]
+                .chunks_exact(10)
+                .flat_map(|frame| frame[..6].iter().copied())
+                .collect();
+            reference
+                .process(
+                    &bed,
+                    &mut expected[wide],
+                    &ProcessContext::new(48_000, count),
+                )
+                .unwrap();
+            offset += count;
+            call += 1;
+        }
+        for frame in latency..frames {
+            for channel in 0..10 {
+                expected[frame * 10 + channel] += input[(frame - latency) * 10 + channel];
+            }
+        }
+        let error = actual
+            .iter()
+            .zip(&expected)
+            .map(|(a, b)| (a - b).abs())
+            .fold(0.0_f32, f32::max);
+        assert!(
+            error < 2e-6,
+            "bypass={bypass}, latency={latency}, error={error}"
+        );
+        assert!(actual[..latency * 10].iter().all(|sample| *sample == 0.0));
+    }
+}
+
+#[test]
+fn host_can_automate_surround_bypass_without_changing_latency() {
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+    use sotf_plugin_upmixer::{SurroundBassMode, UpmixerPluginParams};
+
+    let mut params = UpmixerPluginParams::default();
+    params.core.fft_size = 512;
+    params.core.speaker_config = "5.1.4".into();
+    params.multichannel.input_layout =
+        Some(ChannelLayout::from_speaker_config(get_speaker_config("5.0").unwrap()).unwrap());
+    params.multichannel.bass_mode = SurroundBassMode::Derived;
+    let mut host = DawHost::new(5, 48_000);
+    host.add_plugin(Box::new(UpmixerPlugin::try_from_params(params).unwrap()))
+        .unwrap();
+    host.build().unwrap();
+    let latency = host.total_latency_samples();
+    assert_eq!(latency, 512);
+    let input = vec![0.1; 4096 * 5];
+    let mut output = vec![0.0; 4096 * 10];
+    host.process(&input, &mut output).unwrap();
+    assert!(output[(4096 - 1) * 10 + 3] > 0.4);
+    host.set_plugin_parameter(0, "bypass_surround", ParameterValue::Bool(true))
+        .unwrap();
+    host.process(&input, &mut output).unwrap();
+    assert_eq!(host.total_latency_samples(), latency);
+    let frame = &output[(4096 - 1) * 10..];
+    assert!(frame[3].abs() < 1e-8);
+    assert_eq!([frame[0], frame[1], frame[2], frame[4], frame[5]], [0.1; 5]);
+    assert!(frame[6..].iter().all(|sample| sample.abs() < 1e-8));
+    host.set_plugin_parameter(0, "bypass_surround", ParameterValue::Bool(false))
+        .unwrap();
+    host.process(&input, &mut output).unwrap();
+    assert_eq!(host.total_latency_samples(), latency);
+    assert!(output[(4096 - 1) * 10 + 3] > 0.4);
 }
 
 #[test]

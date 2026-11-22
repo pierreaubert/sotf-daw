@@ -5,7 +5,7 @@ use crate::UpmixerPlugin;
 
 impl UpmixerPlugin {
     pub(super) fn is_gain_clock_parameter(index: usize) -> bool {
-        matches!(index, 1..=5 | 8 | 12..=13 | 16..=17 | 23..=28)
+        matches!(index, 1..=5 | 8 | 12..=13 | 16..=17 | 23..=28 | 47)
     }
 
     pub(super) fn advance_analysis_clock(&mut self, mut frames: usize) {

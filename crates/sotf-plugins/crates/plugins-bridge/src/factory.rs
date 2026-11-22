@@ -271,7 +271,13 @@ pub fn create_plugin(
         // ============================================================
         "Upmixer" | "upmixer" => {
             let params: sotf_plugin_upmixer::UpmixerPluginParams = parse_params(config_json)?;
-            let plugin = sotf_plugin_upmixer::UpmixerPlugin::from_params(params);
+            let plugin = sotf_plugin_upmixer::UpmixerPlugin::try_from_params(params)?;
+            if plugin.input_channels() != channels {
+                return Err(format!(
+                    "Upmixer input layout has {} channels, but the host supplies {channels}",
+                    plugin.input_channels()
+                ));
+            }
             Ok(Box::new(plugin))
         }
 

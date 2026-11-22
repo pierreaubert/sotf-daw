@@ -2,6 +2,306 @@
 
 use super::*;
 
+#[cfg(feature = "upmixer")]
+#[test]
+fn staged_upmixer_state_keeps_later_away_and_back_automation() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let entry = params.param_map.get("height_gain").unwrap();
+    let original = params.float_params[entry.index].unmodulated_plain_value();
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), NativeParamValue::F32(0.3))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    params.float_params[entry.index].set_plain_value_for_initialization(0.7);
+    params.float_params[entry.index].set_plain_value_for_initialization(original);
+    assert!(
+        matches!(params.serialize_parameter_overrides().get("height_gain"), Some(NativeParamValue::F32(value)) if *value == original)
+    );
+    assert!(params.begin_upmixer_restore());
+    assert_eq!(
+        params.initialization_value("height_gain"),
+        Some(ParameterValue::Float(original))
+    );
+    assert!(params.complete_upmixer_restore(48_000.0));
+    assert_eq!(
+        params.value("height_gain"),
+        Some(ParameterValue::Float(original))
+    );
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn invalid_staged_upmixer_replacement_keeps_the_preceding_snapshot() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let state = |value| PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), value)].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&state(NativeParamValue::F32(0.3))));
+    assert!(!params.stage_upmixer_state(&state(NativeParamValue::Bool(true))));
+    assert!(!params.stage_upmixer_state(&state(NativeParamValue::F32(1000.0))));
+    assert!(params.begin_upmixer_restore());
+    assert_eq!(
+        params.initialization_value("height_gain"),
+        Some(ParameterValue::Float(0.3))
+    );
+    assert!(params.complete_upmixer_restore(48_000.0));
+    assert_eq!(
+        params.value("height_gain"),
+        Some(ParameterValue::Float(0.3))
+    );
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn staged_upmixer_commit_does_not_erase_a_later_host_edit() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let entry = params.param_map.get("height_gain").unwrap();
+    let front_before = params.value("gain_front_direct").unwrap();
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [
+            ("gain_front_direct".into(), NativeParamValue::F32(0.3)),
+            ("height_gain".into(), NativeParamValue::F32(0.3)),
+        ]
+        .into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    assert!(params.begin_upmixer_restore());
+    let committed = params.complete_upmixer_restore_with_hook(
+        48_000.0,
+        || {
+            params.float_params[entry.index].set_plain_value_for_initialization(0.7);
+        },
+        |_| {},
+    );
+    assert!(!committed);
+    assert_eq!(
+        params.value("height_gain"),
+        Some(ParameterValue::Float(0.7))
+    );
+    assert_eq!(params.value("gain_front_direct"), Some(front_before));
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn contested_upmixer_commit_rolls_back_other_values_and_keeps_latest_edit() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let entry = params.param_map.get("gain_front_direct").unwrap();
+    let height_before = params.value("height_gain").unwrap();
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [
+            ("gain_front_direct".into(), NativeParamValue::F32(0.3)),
+            ("height_gain".into(), NativeParamValue::F32(0.3)),
+        ]
+        .into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    assert!(params.begin_upmixer_restore());
+    let committed = params.complete_upmixer_restore_with_hook(
+        48_000.0,
+        || {
+            params.float_params[entry.index].set_plain_value_for_initialization(0.7);
+        },
+        |_| {},
+    );
+    assert!(!committed);
+    assert_eq!(
+        params.value("gain_front_direct"),
+        Some(ParameterValue::Float(0.7))
+    );
+    assert_eq!(params.value("height_gain"), Some(height_before));
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn contested_upmixer_commit_keeps_a_host_write_paused_before_its_parameter_store() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let index = params
+        .sync_entries
+        .iter()
+        .position(|entry| entry.id.as_str() == "gain_front_direct")
+        .unwrap();
+    let entry = &params.sync_entries[index];
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [("gain_front_direct".into(), NativeParamValue::F32(0.3))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    assert!(params.begin_upmixer_restore());
+    let committed = params.complete_upmixer_restore_with_hook(
+        48_000.0,
+        || {
+            // The host has entered its pre-write hook but has not stored its value yet.
+            record_upmixer_write(&params.upmixer_revisions[index], 0.7_f32.to_bits());
+        },
+        |_| {},
+    );
+    assert!(!committed);
+    assert_eq!(
+        params.value("gain_front_direct"),
+        Some(ParameterValue::Float(0.7))
+    );
+    params.float_params[entry.index].set_prepared_value_untracked(0.7, 48_000.0);
+    assert_eq!(
+        params.value("gain_front_direct"),
+        Some(ParameterValue::Float(0.7))
+    );
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn contested_upmixer_rollback_keeps_every_later_host_edit() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let index = params
+        .sync_entries
+        .iter()
+        .position(|entry| entry.id.as_str() == "gain_front_direct")
+        .unwrap();
+    let entry = &params.sync_entries[index];
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [("gain_front_direct".into(), NativeParamValue::F32(0.3))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    assert!(params.begin_upmixer_restore());
+    let writes = std::cell::Cell::new(0);
+    let committed = params.complete_upmixer_restore_with_hook(
+        48_000.0,
+        || {
+            params.float_params[entry.index].set_plain_value_for_initialization(0.5);
+        },
+        |touched| {
+            if touched == index && writes.get() < 96 {
+                let value = if writes.get() % 2 == 0 { 0.7 } else { 0.8 };
+                params.float_params[entry.index].set_plain_value_for_initialization(value);
+                writes.set(writes.get() + 1);
+            }
+        },
+    );
+    assert!(!committed);
+    assert_eq!(writes.get(), 96);
+    assert_eq!(
+        params.value("gain_front_direct"),
+        Some(ParameterValue::Float(0.8))
+    );
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn failed_upmixer_candidate_restores_the_previous_pending_snapshot() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let state = |value| PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), NativeParamValue::F32(value))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&state(0.3)));
+    assert!(params.stage_upmixer_state(&state(0.7)));
+    assert!(params.begin_upmixer_restore());
+    {
+        let _attempt = UpmixerRestoreAttempt::new(Arc::clone(&params));
+        assert_eq!(
+            params.initialization_value("height_gain"),
+            Some(ParameterValue::Float(0.7))
+        );
+        // Candidate construction fails before commit.
+    }
+    assert!(
+        matches!(params.serialize_parameter_overrides().get("height_gain"), Some(NativeParamValue::F32(value)) if *value == 0.3)
+    );
+    assert!(params.begin_upmixer_restore());
+    assert_eq!(
+        params.initialization_value("height_gain"),
+        Some(ParameterValue::Float(0.3))
+    );
+    assert!(params.complete_upmixer_restore(48_000.0));
+    assert_eq!(
+        params.value("height_gain"),
+        Some(ParameterValue::Float(0.3))
+    );
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn failed_old_upmixer_candidate_keeps_a_newer_pending_snapshot() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let state = |value| PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), NativeParamValue::F32(value))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&state(0.3)));
+    assert!(params.begin_upmixer_restore());
+    {
+        let _attempt = UpmixerRestoreAttempt::new(Arc::clone(&params));
+        assert!(params.stage_upmixer_state(&state(0.7)));
+        assert!(!params.complete_upmixer_restore(48_000.0));
+    }
+    assert!(params.begin_upmixer_restore());
+    assert_eq!(
+        params.initialization_value("height_gain"),
+        Some(ParameterValue::Float(0.7))
+    );
+    assert!(params.complete_upmixer_restore(48_000.0));
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn upmixer_pending_snapshot_history_is_bounded_without_losing_the_latest() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let state = |value| PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), NativeParamValue::F32(value))].into(),
+        fields: BTreeMap::new(),
+    };
+    for index in 0..9 {
+        assert!(params.stage_upmixer_state(&state(index as f32 / 10.0)));
+    }
+    assert!(!params.stage_upmixer_state(&state(0.9)));
+    assert!(
+        matches!(params.serialize_parameter_overrides().get("height_gain"), Some(NativeParamValue::F32(value)) if *value == 0.8)
+    );
+    assert!(params.begin_upmixer_restore());
+    assert!(params.complete_upmixer_restore(48_000.0));
+    assert!(params.stage_upmixer_state(&state(0.9)));
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn upmixer_can_stage_a_new_snapshot_after_a_long_running_session() {
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &schema_infos("Upmixer"));
+    let index = params
+        .sync_entries
+        .iter()
+        .position(|entry| entry.id.as_str() == "height_gain")
+        .unwrap();
+    params.upmixer_revisions[index].store(
+        (u64::from(u32::MAX) << 32) | u64::from(0.7_f32.to_bits()),
+        Ordering::Release,
+    );
+    let snapshot = PluginState {
+        version: String::new(),
+        params: [("height_gain".into(), NativeParamValue::F32(0.3))].into(),
+        fields: BTreeMap::new(),
+    };
+    assert!(params.stage_upmixer_state(&snapshot));
+    assert!(params.begin_upmixer_restore());
+    assert!(params.complete_upmixer_restore(48_000.0));
+    assert_eq!(
+        params.value("height_gain"),
+        Some(ParameterValue::Float(0.3))
+    );
+}
+
 pub(super) fn schema_infos(name: &str) -> Vec<BridgedParamInfo> {
     let bridge = plugins_bridge::ParamBridge::new(crate::wrapper::get_param_specs(name));
     let mut infos: Vec<_> = (0..bridge.count())
@@ -27,6 +327,57 @@ pub(super) fn schema_infos(name: &str) -> Vec<BridgedParamInfo> {
         info.id = crate::wrapper::legacy_external_param_id(name, &info.id).into_owned();
     }
     infos
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn native_upmixer_parameter_indices_are_stable_across_instances() {
+    let infos = schema_infos("Upmixer");
+    assert!(!infos.is_empty());
+    let parameter_ids = || {
+        DynamicParams::from_infos_for_plugin("Upmixer", &infos)
+            .param_map()
+            .into_iter()
+            .map(|(id, _, _)| id)
+            .collect::<Vec<_>>()
+    };
+    let expected = parameter_ids();
+    assert_eq!(expected.len(), infos.len());
+    assert_eq!(
+        expected
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        expected.len()
+    );
+    for _ in 0..10 {
+        assert_eq!(parameter_ids(), expected);
+    }
+}
+
+#[cfg(feature = "upmixer")]
+#[test]
+fn native_upmixer_syncs_nondefault_realtime_controls() {
+    let mut infos = schema_infos("Upmixer");
+    for (id, value) in [("height_gain", 0.5), ("bypass_heights", 1.0)] {
+        let info = infos.iter_mut().find(|info| info.id == id).unwrap();
+        assert!(info.realtime);
+        info.default_value = value;
+    }
+    let params = DynamicParams::from_infos_for_plugin("Upmixer", &infos);
+    let mut plugin = plugins_bridge::create_plugin("Upmixer", 2, 48_000.0, "{}").unwrap();
+    plugin.initialize(48_000.0).unwrap();
+    for _ in 0..2 {
+        params.sync_to_plugin(plugin.as_mut()).unwrap();
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("height_gain")),
+            Some(ParameterValue::Float(0.5))
+        );
+        assert_eq!(
+            plugin.get_parameter(&ParameterId::from("bypass_heights")),
+            Some(ParameterValue::Bool(true))
+        );
+    }
 }
 
 #[test]
@@ -472,7 +823,7 @@ fn every_exposed_structural_control_restores_or_rejects_unsupported_layout() {
             let must_reject = matches!(
                 (name, info.id.as_str()),
                 ("AAE" | "Upmixer", "speaker_config")
-                    | ("Upmixer", "binaural_preview")
+                    | ("Upmixer", "binaural_preview" | "bass_mode" | "input_format")
                     | ("Binaural", "input_channels")
                     | ("Beamformer", "num_mics")
                     | ("BandMerge", "bands")

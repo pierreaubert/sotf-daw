@@ -39,6 +39,19 @@ fn default_params(plugin_type: &str, channels: usize) -> serde_json::Value {
         .collect();
 
     match plugin_type {
+        "upmixer" if matches!(channels, 5 | 6 | 8) => {
+            let id = match channels {
+                5 => "5.0",
+                6 => "5.1",
+                _ => "7.1",
+            };
+            let layout = sotf_host::speaker_config::ChannelLayout::from_speaker_config(
+                sotf_host::speaker_config::get_speaker_config(id).unwrap(),
+            )
+            .unwrap();
+            let output = if channels == 8 { "7.1" } else { "5.1" };
+            serde_json::json!({"input_layout": layout, "speaker_config": output})
+        }
         "loudness_compensation" | "fletcher_munson" => serde_json::json!({
             "low_freq": 100.0,
             "high_freq": 10000.0,
@@ -269,16 +282,30 @@ fn catalog_default_channel_output_contracts_hold() {
         };
 
         for &channels in supported_inputs {
-            let expected_output = match entry.metadata.channel_layout.output {
-                PluginChannelOutputModel::PreservesInput => channels,
-                PluginChannelOutputModel::Fixed(output) => output,
-                PluginChannelOutputModel::Configurable { default_output, .. } => {
-                    default_output.channels(channels)
+            let expected_output = if plugin_type == "upmixer" && channels == 8 {
+                // The 5.1 default cannot preserve a 7.1 bed. The adapted test
+                // configuration selects 7.1 instead and must preserve all roles.
+                let mut default = default_params(plugin_type, channels);
+                default.as_object_mut().unwrap().remove("speaker_config");
+                if !matches!(
+                    create_plugin(plugin_type, &default, channels, SAMPLE_RATE),
+                    Err(error) if error.contains("cannot preserve")
+                ) {
+                    failures.push("upmixer@8ch must reject the default 5.1 output".into());
                 }
-                PluginChannelOutputModel::InputTimesBands => channels * 2,
-                PluginChannelOutputModel::InputDividedByBands => channels / 2,
-                PluginChannelOutputModel::DescriptorDefined
-                | PluginChannelOutputModel::PlatformNegotiated => continue,
+                8
+            } else {
+                match entry.metadata.channel_layout.output {
+                    PluginChannelOutputModel::PreservesInput => channels,
+                    PluginChannelOutputModel::Fixed(output) => output,
+                    PluginChannelOutputModel::Configurable { default_output, .. } => {
+                        default_output.channels(channels)
+                    }
+                    PluginChannelOutputModel::InputTimesBands => channels * 2,
+                    PluginChannelOutputModel::InputDividedByBands => channels / 2,
+                    PluginChannelOutputModel::DescriptorDefined
+                    | PluginChannelOutputModel::PlatformNegotiated => continue,
+                }
             };
             let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 try_instantiate_and_process(plugin_type, channels)

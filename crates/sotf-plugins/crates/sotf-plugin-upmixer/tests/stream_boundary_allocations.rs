@@ -204,6 +204,335 @@ fn measure_heap<T>(operation: impl FnOnce() -> T) -> (T, (usize, usize)) {
 }
 
 #[test]
+fn scheduled_surround_reset_automation_and_drain_do_not_allocate() {
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+    use sotf_host::{ParameterId, ParameterValue};
+    use sotf_plugin_upmixer::SurroundBassMode;
+
+    const FRAMES: usize = 64;
+    for rate in [96_000_u32, 192_000, 384_000] {
+        for (input_id, output_id) in [("5.0", "5.1.4"), ("5.1", "7.1.4"), ("7.1", "9.1.6")] {
+            for mode in [
+                SurroundBassMode::Off,
+                SurroundBassMode::Derived,
+                SurroundBassMode::Managed,
+            ] {
+                let layout =
+                    ChannelLayout::from_speaker_config(get_speaker_config(input_id).unwrap())
+                        .unwrap();
+                let input_channels = layout.channels.len();
+                let mut params = UpmixerPluginParams::default();
+                params.core.speaker_config = output_id.into();
+                params.multichannel.input_layout = Some(layout);
+                params.multichannel.bass_mode = mode;
+                params.multichannel.combine_input_lfe = true;
+                let mut reused = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+                let mut fresh = UpmixerPlugin::try_from_params(params).unwrap();
+                reused.initialize(f64::from(rate)).unwrap();
+                fresh.initialize(f64::from(rate)).unwrap();
+                assert_eq!(reused.latency_samples(), 2176);
+                let input = vec![0.02; FRAMES * input_channels];
+                let mut reused_output = vec![0.0; FRAMES * reused.output_channels()];
+                let mut fresh_output = vec![0.0; FRAMES * fresh.output_channels()];
+                let mut tiny_output = vec![0.0; reused.output_channels()];
+                let context = ProcessContext::new(rate, FRAMES);
+                let tiny_context = ProcessContext::new(rate, 1);
+                let gain: ParameterId = "height_gain".into();
+                let cap: ParameterId = "safety_cap_db".into();
+                let height_bypass: ParameterId = "bypass_heights".into();
+                let surround_bypass: ParameterId = "bypass_surround".into();
+                for name in [
+                    "height_gain",
+                    "safety_cap_db",
+                    "bypass_heights",
+                    "bypass_surround",
+                ] {
+                    assert!(
+                        reused
+                            .parameters()
+                            .iter()
+                            .any(|parameter| parameter.id.as_str() == name
+                                && parameter.update_mode
+                                    == sotf_host::param_specs::UpdateMode::Realtime)
+                    );
+                }
+                let (_, counts) = measure_heap(|| {
+                    for _ in 0..17 {
+                        assert_eq!(
+                            reused
+                                .process(&input, &mut reused_output, &context)
+                                .unwrap(),
+                            FRAMES
+                        );
+                    }
+                    assert_eq!(
+                        reused
+                            .process(&input[..input_channels], &mut tiny_output, &tiny_context)
+                            .unwrap(),
+                        1
+                    );
+                    reused.reset();
+                    for _ in 0..64 {
+                        assert_eq!(
+                            reused
+                                .process(&input, &mut reused_output, &context)
+                                .unwrap(),
+                            FRAMES
+                        );
+                        assert_eq!(
+                            fresh.process(&input, &mut fresh_output, &context).unwrap(),
+                            FRAMES
+                        );
+                        assert_eq!(reused_output, fresh_output);
+                    }
+                    for block in 0..80 {
+                        reused
+                            .set_parameter(
+                                gain.clone(),
+                                ParameterValue::Float(if block % 2 == 0 { 0.3 } else { 1.2 }),
+                            )
+                            .unwrap();
+                        reused
+                            .set_parameter(
+                                cap.clone(),
+                                ParameterValue::Float(if block % 2 == 0 { 0.0 } else { 3.0 }),
+                            )
+                            .unwrap();
+                        reused
+                            .set_parameter(
+                                height_bypass.clone(),
+                                ParameterValue::Bool(block % 2 == 0),
+                            )
+                            .unwrap();
+                        reused
+                            .set_parameter(
+                                surround_bypass.clone(),
+                                ParameterValue::Bool(block % 2 != 0),
+                            )
+                            .unwrap();
+                        assert_eq!(
+                            reused
+                                .process(&input, &mut reused_output, &context)
+                                .unwrap(),
+                            FRAMES
+                        );
+                        if block % 17 == 0 {
+                            reused.reset();
+                        }
+                    }
+                    let mut calls = 0;
+                    while !reused.drain(&mut reused_output, &context).unwrap().complete {
+                        calls += 1;
+                        // Managed and derived bass allow a two-second IIR tail.
+                        assert!(calls < 30_000);
+                    }
+                });
+                assert_eq!(
+                    counts,
+                    (0, 0),
+                    "input={input_id} output={output_id} mode={mode:?} rate={rate}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn every_realtime_surround_control_and_pending_fft_switch_has_no_heap_activity() {
+    use sotf_host::ParameterValue;
+    use sotf_host::param_specs::UpdateMode;
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+
+    const FRAMES: usize = 64;
+    for rate in [96_000_u32, 192_000, 384_000] {
+        let mut params = UpmixerPluginParams::default();
+        params.core.speaker_config = "5.1.4".into();
+        params.multichannel.input_layout =
+            Some(ChannelLayout::from_speaker_config(get_speaker_config("5.0").unwrap()).unwrap());
+        let prepared = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+        for name in ["auto_gain_enabled", "enable_subharmonic_synth"] {
+            assert!(
+                prepared
+                    .parameters()
+                    .iter()
+                    .any(|parameter| parameter.id.as_str() == name
+                        && parameter.update_mode == UpdateMode::Realtime)
+            );
+            let mut rejected = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+            rejected.initialize(f64::from(rate)).unwrap();
+            let id = name.into();
+            let before = rejected.get_parameter(&id);
+            assert!(
+                rejected
+                    .set_parameter(id.clone(), ParameterValue::Bool(true))
+                    .is_err()
+            );
+            assert_eq!(rejected.get_parameter(&id), before);
+        }
+        let controls: Vec<_> = prepared
+            .parameters()
+            .into_iter()
+            .filter(|parameter| parameter.update_mode == UpdateMode::Realtime)
+            .filter(|parameter| {
+                !matches!(
+                    parameter.id.as_str(),
+                    "auto_gain_enabled" | "enable_subharmonic_synth"
+                )
+            })
+            .map(|parameter| {
+                let changed = match (
+                    &parameter.default_value,
+                    &parameter.min_value,
+                    &parameter.max_value,
+                ) {
+                    (ParameterValue::Bool(value), _, _) => ParameterValue::Bool(!value),
+                    (
+                        ParameterValue::Float(_),
+                        Some(ParameterValue::Float(lo)),
+                        Some(ParameterValue::Float(hi)),
+                    ) => ParameterValue::Float(lo + 0.37 * (hi - lo)),
+                    _ => panic!("unexpected realtime type: {}", parameter.id.as_str()),
+                };
+                (parameter.id, changed)
+            })
+            .collect();
+        assert!(!controls.is_empty());
+        for (id, changed) in controls {
+            for switch in [false, true] {
+                let mut plugin = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+                plugin.initialize(f64::from(rate)).unwrap();
+                assert_eq!(plugin.latency_samples(), 2176);
+                let input = vec![0.02; FRAMES * 5];
+                let mut output = vec![0.0; FRAMES * plugin.output_channels()];
+                let mut tiny_output = vec![0.0; plugin.output_channels()];
+                let context = ProcessContext::new(rate, FRAMES);
+                let tiny_context = ProcessContext::new(rate, 1);
+                for _ in 0..17 {
+                    assert_eq!(
+                        plugin.process(&input, &mut output, &context).unwrap(),
+                        FRAMES
+                    );
+                }
+                let (_, counts) = measure_heap(|| {
+                    plugin.set_parameter(id.clone(), changed.clone()).unwrap();
+                    if switch {
+                        assert_eq!(
+                            plugin
+                                .process(&input[..5], &mut tiny_output, &tiny_context)
+                                .unwrap(),
+                            1
+                        );
+                    } else {
+                        assert_eq!(
+                            plugin.process(&input, &mut output, &context).unwrap(),
+                            FRAMES
+                        );
+                    }
+                    assert_eq!(
+                        plugin.process(&input, &mut output, &context).unwrap(),
+                        FRAMES
+                    );
+                    plugin.reset();
+                    assert_eq!(
+                        plugin.process(&input, &mut output, &context).unwrap(),
+                        FRAMES
+                    );
+                });
+                assert_eq!(
+                    counts,
+                    (0, 0),
+                    "rate={rate} parameter={} switch={switch}",
+                    id.as_str()
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn surround_reinitialization_keeps_bed_and_height_latency_aligned() {
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+    use sotf_plugin_upmixer::SurroundBassMode;
+
+    for (input_id, output_id) in [("5.0", "5.1.4"), ("7.1", "9.1.6")] {
+        for mode in [
+            SurroundBassMode::Off,
+            SurroundBassMode::Derived,
+            SurroundBassMode::Managed,
+        ] {
+            let layout =
+                ChannelLayout::from_speaker_config(get_speaker_config(input_id).unwrap()).unwrap();
+            let channels = layout.channels.len();
+            let mut params = UpmixerPluginParams::default();
+            params.core.speaker_config = output_id.into();
+            params.multichannel.input_layout = Some(layout);
+            params.multichannel.bass_mode = mode;
+            params.multichannel.combine_input_lfe = true;
+            let mut reused = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+            for rate in [48_000_u32, 96_000, 192_000, 384_000, 48_000, 96_000] {
+                reused.initialize(f64::from(rate)).unwrap();
+                let mut fresh = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+                fresh.initialize(f64::from(rate)).unwrap();
+                assert_eq!(
+                    reused.latency_samples(),
+                    if rate >= 96_000 { 2176 } else { 2048 }
+                );
+                assert_eq!(reused.latency_samples(), fresh.latency_samples());
+                let input: Vec<f32> = (0..4096 * channels)
+                    .map(|index| 0.08 * ((index as f32) * 0.027).sin())
+                    .collect();
+                let mut actual = vec![0.0; 4096 * reused.output_channels()];
+                let mut expected = vec![0.0; actual.len()];
+                let context = ProcessContext::new(rate, 4096);
+                reused.process(&input, &mut actual, &context).unwrap();
+                fresh.process(&input, &mut expected, &context).unwrap();
+                assert!(
+                    actual
+                        .iter()
+                        .zip(expected.iter())
+                        .all(|(a, b)| a.to_bits() == b.to_bits()),
+                    "input={input_id} output={output_id} mode={mode:?} rate={rate}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn surround_low_latency_requires_a_new_instance_and_reports_its_latency() {
+    use sotf_host::ParameterValue;
+    use sotf_host::speaker_config::{ChannelLayout, get_speaker_config};
+
+    for (rate, normal, low) in [(48_000.0, 2048, 1024), (96_000.0, 2176, 1152)] {
+        let mut params = UpmixerPluginParams::default();
+        params.core.speaker_config = "5.1.4".into();
+        params.multichannel.input_layout =
+            Some(ChannelLayout::from_speaker_config(get_speaker_config("5.0").unwrap()).unwrap());
+        let mut plugin = UpmixerPlugin::try_from_params(params.clone()).unwrap();
+        plugin.initialize(rate).unwrap();
+        assert_eq!(plugin.latency_samples(), normal);
+
+        assert!(
+            plugin
+                .set_parameter("low_latency".into(), ParameterValue::Bool(true))
+                .is_err()
+        );
+        assert_eq!(plugin.latency_samples(), normal, "rate={rate}");
+
+        params.core.low_latency = true;
+        let mut replacement = UpmixerPlugin::try_from_params(params).unwrap();
+        replacement.initialize(rate).unwrap();
+        assert_eq!(replacement.latency_samples(), low, "rate={rate}");
+        assert!(
+            replacement
+                .set_parameter("low_latency".into(), ParameterValue::Bool(false))
+                .is_err()
+        );
+        assert_eq!(replacement.latency_samples(), low, "rate={rate}");
+    }
+}
+
+#[test]
 fn realtime_scalar_updates_and_first_audio_have_no_heap_activity() {
     use sotf_host::{ParameterValue, param_specs::UpdateMode};
 
@@ -235,7 +564,14 @@ fn realtime_scalar_updates_and_first_audio_have_no_heap_activity() {
                         (p, changed)
                     })
                     .collect();
-                assert_eq!(cases.len(), 34);
+                for id in ["height_gain", "bypass_heights"] {
+                    assert!(
+                        cases
+                            .iter()
+                            .any(|(parameter, _)| parameter.id.as_str() == id)
+                    );
+                }
+                let case_count = cases.len();
                 let input = vec![0.02; 17 * 2];
                 let mut output = vec![0.0; 17 * plugin.output_channels()];
                 let report = std::thread::spawn(move || {
@@ -275,8 +611,8 @@ fn realtime_scalar_updates_and_first_audio_have_no_heap_activity() {
                 .join()
                 .unwrap();
                 println!(
-                    "SCALAR_HEAP rate={rate} fft={fft} layout={layout} controls=34 setter={:?} audio={:?}",
-                    report.0, report.1
+                    "SCALAR_HEAP rate={rate} fft={fft} layout={layout} controls={case_count} setter={:?} audio={:?}",
+                    report.0, report.1,
                 );
                 reports.push(report);
             }
@@ -332,13 +668,47 @@ fn scalar_cache_preserves_canonical_types_clamps_and_rejected_state() {
 fn resource_controls_are_structural_and_scalar_controls_remain_realtime() {
     use sotf_host::param_specs::UpdateMode;
     let plugin = UpmixerPlugin::from_params(UpmixerPluginParams::default());
-    let structural = [0, 6, 14, 18, 20, 21, 22, 35, 36, 37, 39, 40, 43];
+    let structural = [
+        "speaker_config",
+        "lfe_cutoff_hz",
+        "bandpass_hz",
+        "decorrelation_mode",
+        "velvet_noise_duration_ms",
+        "velvet_noise_density",
+        "height_hf_cap_hz",
+        "low_latency",
+        "frequency_resolution",
+        "bypass_decorrelation",
+        "bypass_all_processing",
+        "enable_ml_detection",
+        "binaural_preview",
+        "bass_mode",
+        "bass_cutoff_hz",
+        "bass_gain_db",
+        "lfe_playback_gain_db",
+        "combine_input_lfe",
+        "bass_source_front_left",
+        "bass_source_front_right",
+        "bass_source_center",
+        "bass_source_side_left",
+        "bass_source_side_right",
+        "bass_source_back_left",
+        "bass_source_back_right",
+        "input_format",
+    ];
     let parameters = plugin.parameters();
-    assert_eq!(parameters.len(), 47);
-    for (index, parameter) in parameters.iter().enumerate() {
+    for id in structural {
+        assert!(
+            parameters
+                .iter()
+                .any(|parameter| parameter.id.as_str() == id),
+            "missing {id}"
+        );
+    }
+    for parameter in &parameters {
         assert_eq!(
             parameter.update_mode,
-            if structural.contains(&index) {
+            if structural.contains(&parameter.id.as_str()) {
                 UpdateMode::Structural
             } else {
                 UpdateMode::Realtime
